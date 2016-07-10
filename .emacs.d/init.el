@@ -12,7 +12,7 @@
 
 (setq custom-file "~/.emacs.d/custom.el")
 (load custom-file 'noerror)
-(require 'cl)
+(require 'cl-lib)
 
 ;; thing?
 (setq echo-keystrokes 0.1
@@ -20,12 +20,26 @@
       visible-bell t)
 (show-paren-mode t)
 
+;;Line numbers
+(global-linum-mode t)
+
+;; disable spalsh screen and empty scratch
+(setq inhibit-splash-screen t
+      initial-scratch-message nil)
+
+;; Disable bars
+(scroll-bar-mode 0)
+(tool-bar-mode 0)
+(menu-bar-mode 0)
+
+
+;; Silence error https://github.com/syl20bnr/spacemacs/issues/192
+(setq ad-redefinition-action 'accept)
+
 ;; Packages to install
 (defvar jylhis/packages '(company
                           d-mode
                           iedit
-                          ;auto-complete
-                          ;auto-complete
                           gitignore-mode
                           autopair
                           cmake-ide
@@ -43,8 +57,6 @@
                           rtags
                           rust-mode
                           gruvbox-theme
-                          ;rainbow-mode
-                          ;zenburn-theme
                           yasnippet
                           latex-preview-pane
                           dash
@@ -58,7 +70,7 @@
 
 ;; Install default packages
 (defun jylhis/packages-installed-p ()
-  (loop for pkg in jylhis/packages
+  (cl-loop for pkg in jylhis/packages
         when (not (package-installed-p pkg)) do (return nil)
         finally (return t)))
 
@@ -69,31 +81,16 @@
     (when (not (package-installed-p pkg))
       (package-install pkg))))
 
-;;Line numbers
-(global-linum-mode t)
+;; Marking text
+(delete-selection-mode t)
+(transient-mark-mode t)
+(setq select-enable-clipboard t)
 
 ;; auto brackets
 (autopair-global-mode)
 
-;; disable spalsh screen and empty scratch
-(setq inhibit-splash-screen t
-      initial-scratch-message nil)
-
-;; Disable bars
-(scroll-bar-mode 0)
-(tool-bar-mode 0)
-(menu-bar-mode 0)
-
-;; Marking text
-(delete-selection-mode t)
-(transient-mark-mode t)
-(setq x-select-enable-clipboard t)
-
 ;; Async
 (async-bytecomp-package-mode 1)
-
-;; Rainbow mode
-;(add-hook 'prog-mode-hook 'rainbow-delimiters-mode)
 
 ;; Helm
 (require 'helm-config)
@@ -143,7 +140,7 @@
 ;; Company
 (add-hook 'after-init-hook 'global-company-mode)
 
-;;FIXME: company-iron & irony-c-headers
+;; FIXME: company-iron & irony-c-headers
 (eval-after-load 'company
   '(add-to-list 'company-backends 'company-irony))
   '(add-to-list 'company-backends '(company-irony-c-headers company-irony))
@@ -161,7 +158,7 @@
 ;; color line
 (add-hook 'flycheck-mode-hook 'flycheck-color-mode-line-mode)
 
-;; flycheck rust
+;; FIXME: flycheck rust
 ;; (add-hook 'flycheck-mode-hook #'flycheck-rust-setup)
 
 ;; rtags
@@ -180,7 +177,6 @@
 (global-semantic-idle-scheduler-mode t)
 (global-semantic-decoration-mode t)
 (global-semantic-highlight-func-mode t)
-;(global-semantic-show-unmatched-syntax-mode t)
 
 ;; Disables backup & autosave
 (setq make-backup-files nil)
@@ -194,7 +190,7 @@
 (defalias 'yes-or-no-p 'y-or-n-p)
 
 ;; Org-mode
-(add-hook 'org-mode-hook   
+(add-hook 'org-mode-hook
   (lambda ()
     (linum-mode 0)))
 
@@ -202,9 +198,6 @@
 (setq org-agenda-files (list"/media/markus/Data/Dropbox/Documents/org"))
 (setq org-default-notes-file (concat org-directory "/Notes.org"))
 (define-key global-map "\C-cc" 'org-capture)
-
-;;(setq user-full-name "")
-;;(setq user-mail-address "")
 
 (provide 'init)
 ;;; init.el ends here
