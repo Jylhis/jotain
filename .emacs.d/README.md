@@ -1,0 +1,35 @@
+# Install
+```bash
+git clone git@github.com:Jylhis/Emacs.git ~/.emacs.d
+```
+After cloning repo start Emacs and wait for it to install all packages
+
+# TODO
+[Read otsikko deft -> alaspäin](http://aaronbedra.com/emacs.d/)
+- helm find function from project
+- switch between .hpp -> .cpp
+- find declaration
+- find usages
+- helm
+- git
+- company include paths (qt)
+- [async](https://github.com/jwiegley/emacs-async)
+- Auto brackets
+- auto indent
+- Snippets
+- clang integration
+- clang autocomplete (https://doc.qt.io/qt-5/qtwidgets-tools-customcompleter-example.html)
+- clang analycer
+- clang linter thing
+- clang format (in settings dropdown style select)
+- project support (folder open)
+- project file support (sublime-project, .pro, cmake etc.)
+- hex colors textBackground in that color
+- images? popup path to image, show image
+- auto add functions to header in c++ if there is header file
+- .h, .hpp -> .c, .cpp, cxx
+- git show changed lines
+- git conflict solve
+- todolist (TODO:, FIXME:, NOTE:)
+- Remove useless files from git
+- keybind decrease increase size of splitted windowA
