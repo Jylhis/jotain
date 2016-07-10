@@ -26,6 +26,7 @@
                           iedit
                           ;auto-complete
                           ;auto-complete
+                          gitignore-mode
                           autopair
                           cmake-ide
                           company-irony
