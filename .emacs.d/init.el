@@ -161,7 +161,7 @@
 (add-hook 'flycheck-mode-hook 'flycheck-color-mode-line-mode)
 
 ;; flycheck rust
-(add-hook 'flycheck-mode-hook #'flycheck-rust-setup)
+;; (add-hook 'flycheck-mode-hook #'flycheck-rust-setup)
 
 ;; rtags
 (add-hook 'c-mode-common-hook 'rtags-start-process-unless-running)
