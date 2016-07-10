@@ -1,9 +1,3 @@
-# Install
-```bash
-git clone git@github.com:Jylhis/Emacs.git ~/.emacs.d
-```
-After cloning repo start Emacs and wait for it to install all packages
-
 # TODO
 [Read otsikko deft -> alaspäin](http://aaronbedra.com/emacs.d/)
 - helm find function from project
