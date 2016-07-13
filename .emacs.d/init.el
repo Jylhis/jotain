@@ -47,6 +47,7 @@
                           company-irony-c-headers
                           cpputils-cmake
                           flycheck
+                          dockerfile-mode
                           flycheck-color-mode-line
                           flycheck-irony
                           haxe-mode
