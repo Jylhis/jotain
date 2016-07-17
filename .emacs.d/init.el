@@ -12,6 +12,9 @@
 
 (setq custom-file "~/.emacs.d/custom.el")
 (load custom-file 'noerror)
+
+;; FIXME: can't install packages without cl
+(require 'cl)
 (require 'cl-lib)
 
 ;; thing?
