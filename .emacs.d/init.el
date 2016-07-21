@@ -4,7 +4,17 @@
 
 ;; http://aaronbedra.com/emacs.d/
 
-;; Melpa packages
+;; NOTE: check if running in terminal
+;(if (display-graphic-p)
+;    (progn
+    ;; if graphic
+;      (your)
+;      (code))
+    ;; else (optional)
+;    (your)
+;    (code))
+
+;; Melpa packages    
 (require 'package)
 (add-to-list 'package-archives
              '("melpa" . "https://melpa.org/packages/"))
@@ -42,6 +52,7 @@
 ;; Packages to install
 (defvar jylhis/packages '(company
                           d-mode
+                          magit
                           iedit
                           gitignore-mode
                           autopair
@@ -69,7 +80,8 @@
                           helm
                           helm-ls-git
                           helm-company
-                          helm-flycheck)
+                          helm-flycheck
+                          )
   "Default packages")
 
 ;; Install default packages
