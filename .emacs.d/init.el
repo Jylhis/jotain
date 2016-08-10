@@ -57,6 +57,7 @@
                           gitignore-mode
                           autopair
                           cmake-ide
+                          fic-mode
                           company-irony
                           company-irony-c-headers
                           cpputils-cmake
@@ -135,6 +136,14 @@
 
 ;; iedit
 (require 'iedit)
+
+;; fic-mode
+(add-hook 'c++-mode-hook '(lambda () (fic-mode 1)))
+(add-hook 'c-mode-hook '(lambda () (fic-mode 1)))
+(add-hook 'objc-mode '(lambda () (fic-mode 1)))
+(add-hook 'shell-mode '(lambda () (fic-mode 1)))
+(add-hook 'go-mode '(lambda () (fic-mode 1)))
+
 
 ;; Irony
 (add-hook 'c++-mode-hook 'irony-mode)
