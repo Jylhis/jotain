@@ -14,7 +14,7 @@
 ;    (your)
 ;    (code))
 
-;; Melpa packages    
+;; Melpa packages
 (require 'package)
 (add-to-list 'package-archives
              '("melpa" . "https://melpa.org/packages/"))
@@ -52,12 +52,13 @@
 ;; Packages to install
 (defvar jylhis/packages '(company
                           d-mode
+                          php-mode
+                          fic-mode
                           magit
                           iedit
                           gitignore-mode
                           autopair
                           cmake-ide
-                          fic-mode
                           company-irony
                           company-irony-c-headers
                           cpputils-cmake
@@ -82,6 +83,8 @@
                           helm-ls-git
                           helm-company
                           helm-flycheck
+                          
+                          evil
                           )
   "Default packages")
 
@@ -108,6 +111,8 @@
 
 ;; Async
 (async-bytecomp-package-mode 1)
+
+(evil-mode 1)
 
 ;; Helm
 (require 'helm-config)
