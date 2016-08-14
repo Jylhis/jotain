@@ -83,8 +83,7 @@
                           helm-ls-git
                           helm-company
                           helm-flycheck
-                          
-                          evil
+                          rainbow-mode
                           )
   "Default packages")
 
@@ -111,8 +110,6 @@
 
 ;; Async
 (async-bytecomp-package-mode 1)
-
-(evil-mode 1)
 
 ;; Helm
 (require 'helm-config)
@@ -142,13 +139,15 @@
 ;; iedit
 (require 'iedit)
 
+;; rainbow
+(add-hook 'css-mode '(lambda () (rainbow-mode 1)))
+
 ;; fic-mode
 (add-hook 'c++-mode-hook '(lambda () (fic-mode 1)))
 (add-hook 'c-mode-hook '(lambda () (fic-mode 1)))
 (add-hook 'objc-mode '(lambda () (fic-mode 1)))
 (add-hook 'shell-mode '(lambda () (fic-mode 1)))
 (add-hook 'go-mode '(lambda () (fic-mode 1)))
-
 
 ;; Irony
 (add-hook 'c++-mode-hook 'irony-mode)
