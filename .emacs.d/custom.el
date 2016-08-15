@@ -48,7 +48,7 @@
     ("#CC9393" "#DFAF8F" "#F0DFAF" "#7F9F7F" "#BFEBBF" "#93E0E3" "#94BFF3" "#DC8CC3")))
  '(package-selected-packages
    (quote
-    (helm-package helm-dash helm-gitignore linum-relative helm-gtags ggtags rainbow-mode php-mode fic-mode evil-org evil-magit evil magit helm async flycheck company dockerfile-mode gitignore-mode d-mode yasnippet toml-mode rust-mode rtags neotree markdown-mode latex-preview-pane json-mode iedit helm-ls-git helm-flycheck helm-company haxe-mode gruvbox-theme flycheck-irony flycheck-color-mode-line cpputils-cmake company-irony-c-headers company-irony cmake-ide autopair)))
+    (irony-eldoc helm-dash helm-gitignore linum-relative helm-gtags ggtags rainbow-mode php-mode fic-mode evil-org evil-magit evil magit helm async flycheck company dockerfile-mode gitignore-mode d-mode yasnippet toml-mode rust-mode rtags neotree markdown-mode latex-preview-pane json-mode iedit helm-ls-git helm-flycheck helm-company haxe-mode gruvbox-theme flycheck-irony flycheck-color-mode-line cpputils-cmake company-irony-c-headers company-irony cmake-ide autopair)))
  '(pos-tip-background-color "#073642")
  '(pos-tip-foreground-color "#93a1a1")
  '(smartrep-mode-line-active-bg (solarized-color-blend "#859900" "#073642" 0.2))

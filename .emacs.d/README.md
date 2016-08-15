@@ -17,8 +17,7 @@ In emacs:
 `irony-install-server`
 
 # TODO
-
-- Check company & irony modes!!
+- check CEDET
 [Read otsikko deft -> alaspäin](http://aaronbedra.com/emacs.d/)
 - helm find function from project
 - switch between .hpp -> .cpp
@@ -29,7 +28,7 @@ In emacs:
 - project file support (sublime-project, .pro, cmake etc.)
 - .h, .hpp -> .c, .cpp, cxx
 
-### Magit
+### Magit ?? maybe
 - git show changed lines
 - git conflict solve
 

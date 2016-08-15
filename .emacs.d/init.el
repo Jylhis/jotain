@@ -41,6 +41,8 @@
 (tool-bar-mode 0)
 (menu-bar-mode 0)
 
+;; highlight current line
+(hl-line-mode 1)
 ;; thing?
 (setq echo-keystrokes 0.1
       use-dialog-box nil
@@ -63,9 +65,10 @@
                           company
                           company-irony
                           company-irony-c-headers
-                          d-mode
-                          php-mode
-                          fic-mode
+
+                          ;; Irony
+                          irony
+                          irony-eldoc
 
                           ;; GIT
                           magit
@@ -94,24 +97,30 @@
                           ggtags
                           helm-gtags
 
+                          ;; Cmake
+                          cmake-ide
+                          cpputils-cmake
+
+                          ;; Language modes
+                          dockerfile-mode
+                          haxe-mode
+                          json-mode
+                          markdown-mode
+                          rust-mode
+                          d-mode
+                          php-mode
+                          fic-mode
+                          toml-mode
+
                           ;; Unorganized
                           iedit
                           autopair
-                          cmake-ide
-                          cpputils-cmake
-                          dockerfile-mode
-                          haxe-mode
-                          irony
-                          json-mode
-                          markdown-mode
                           neotree
                           ;;rtags
-                          rust-mode
                           gruvbox-theme
                           yasnippet
                           latex-preview-pane
                           dash
-                          toml-mode
                           async
                           rainbow-mode
                           )
