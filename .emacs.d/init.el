@@ -214,14 +214,14 @@
 ;; Hooks
 (add-hook 'irony-mode-hook 'my-irony-mode-hook)
 (add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
-(add-hook 'irony-mode-hook 'irony-eldoc) ; Needed?
+;;(add-hook 'irony-mode-hook 'irony-eldoc) ; Needed?
 
 ;; Company
 (add-hook 'after-init-hook 'global-company-mode)
 
 ;; FIXME: company-iron & irony-c-headers
 (eval-after-load 'company
-  '(add-to-list 'company-backends 'company-c-headers))
+  '(add-to-list 'company-backends 'company-irony-c-headers))
 
 ;; CMake ide
 (cmake-ide-setup)
