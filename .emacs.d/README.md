@@ -1,30 +1,41 @@
+# Installation
+
+Install dependencies:
+```bash
+sudo dnf install emacs clang clang-devel global stow &&
+pip install Pygments
+```
+
+Clone configs
+```bash
+git clone https://github.com/Jylhis/dotfiles ~/dotfiles
+cd ~/dotfiles
+stow emacs
+```
+
+In emacs: 
+`irony-install-server`
+
 # TODO
+
+- Check company & irony modes!!
 [Read otsikko deft -> alaspäin](http://aaronbedra.com/emacs.d/)
 - helm find function from project
 - switch between .hpp -> .cpp
 - find declaration
 - find usages
-- git
 - [gtags](http://spacemacs.org/layers/gtags/README.html)
-- clang integration
-- clang autocomplete (https://doc.qt.io/qt-5/qtwidgets-tools-customcompleter-example.html)
-- clang analycer
-- clang linter thing
-- clang format (in settings dropdown style select)
-- project support (folder open)
+- clang format 
 - project file support (sublime-project, .pro, cmake etc.)
-- auto add functions to header in c++ if there is header file
 - .h, .hpp -> .c, .cpp, cxx
 
-## Magit
+### Magit
 - git show changed lines
 - git conflict solve
 
-- todolist (TODO:, FIXME:, NOTE:)
-- Remove useless files from git
+- fic-mode: make hook thing to automatically enable it. todolist (TODO:, FIXME:, NOTE:)
+- find all todos etc. in git repo and show them in helm
 - keybind decrease increase size of splitted windowA
-- Mnemonic
-  Key bindings are organized using mnemonic prefixes like b for buffer, p for project, s for search, h for help etc…
 - http://spacemacs.org/layers/+lang/c-c++/README.html
 - http://spacemacs.org/layers/+lang/html/README.html
 - [git](http://spacemacs.org/layers/+source-control/git/README.html)

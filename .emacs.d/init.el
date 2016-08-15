@@ -2,6 +2,11 @@
 ;;; commentary:
 ;;; code:
 
+(setq user-full-name "Markus Jylhänkangas")
+(setq user-mail-address "markus@jylhis.com")
+
+;; VIM cheat sheet: http://michael.peopleofhonoronly.com/vim/
+
 ;; http://aaronbedra.com/emacs.d/
 
 ;; NOTE: check if running in terminal
@@ -27,15 +32,6 @@
 (require 'cl)
 (require 'cl-lib)
 
-;; thing?
-(setq echo-keystrokes 0.1
-      use-dialog-box nil
-      visible-bell t)
-(show-paren-mode t)
-
-;;Line numbers
-(global-linum-mode t)
-
 ;; disable spalsh screen and empty scratch
 (setq inhibit-splash-screen t
       initial-scratch-message nil)
@@ -45,33 +41,71 @@
 (tool-bar-mode 0)
 (menu-bar-mode 0)
 
+;; thing?
+(setq echo-keystrokes 0.1
+      use-dialog-box nil
+      visible-bell t)
+(show-paren-mode t)
+
+;; Marking text
+(delete-selection-mode t)
+(transient-mark-mode t)
+(setq select-enable-clipboard t)
 
 ;; Silence error https://github.com/syl20bnr/spacemacs/issues/192
 (setq ad-redefinition-action 'accept)
 
+;; TODO: Move installing of new packages to other file
+;; In this file require packages exmp: (package(magit))
 ;; Packages to install
-(defvar jylhis/packages '(company
+(defvar jylhis/packages '(
+                          ;; COMPANY
+                          company
+                          company-irony
+                          company-irony-c-headers
                           d-mode
                           php-mode
                           fic-mode
+
+                          ;; GIT
                           magit
-                          iedit
                           gitignore-mode
-                          autopair
-                          cmake-ide
-                          company-irony
-                          company-irony-c-headers
-                          cpputils-cmake
+
+                          ;; FLYCHECK
                           flycheck
-                          dockerfile-mode
                           flycheck-color-mode-line
                           flycheck-irony
+                          
+                          ;; HELM
+                          helm
+                          helm-ls-git
+                          helm-company
+                          helm-flycheck
+                          helm-gitignore
+                          helm-dash
+                          helm-package
+
+                          ;; EVIL
+                          evil
+                          evil-magit
+                          evil-org
+
+                          ;; Gnu Global
+                          ggtags
+                          helm-gtags
+
+                          ;; Unorganized
+                          iedit
+                          autopair
+                          cmake-ide
+                          cpputils-cmake
+                          dockerfile-mode
                           haxe-mode
                           irony
                           json-mode
                           markdown-mode
                           neotree
-                          rtags
+                          ;;rtags
                           rust-mode
                           gruvbox-theme
                           yasnippet
@@ -79,15 +113,16 @@
                           dash
                           toml-mode
                           async
-                          helm
-                          helm-ls-git
-                          helm-company
-                          helm-flycheck
                           rainbow-mode
                           )
   "Default packages")
 
-;; Install default packages
+;; Line numbers
+(if (require 'linum-relative nil 'noerror)
+    (linum-relative-global-mode 1)
+  (global-linum-mode 1))
+
+;; Install packages
 (defun jylhis/packages-installed-p ()
   (cl-loop for pkg in jylhis/packages
         when (not (package-installed-p pkg)) do (return nil)
@@ -100,16 +135,14 @@
     (when (not (package-installed-p pkg))
       (package-install pkg))))
 
-;; Marking text
-(delete-selection-mode t)
-(transient-mark-mode t)
-(setq select-enable-clipboard t)
-
 ;; auto brackets
 (autopair-global-mode)
 
 ;; Async
 (async-bytecomp-package-mode 1)
+
+;; Evil mode
+(evil-mode 1)
 
 ;; Helm
 (require 'helm-config)
@@ -120,6 +153,23 @@
 (global-set-key (kbd "C-x C-b") 'helm-buffer-list)
 (helm-mode 1)
 (helm-autoresize-mode 1)
+
+;; Enable helm-gtags-mode
+(add-hook 'c-mode-hook 'helm-gtags-mode)
+(add-hook 'c++-mode-hook 'helm-gtags-mode)
+(add-hook 'asm-mode-hook 'helm-gtags-mode)
+
+;; Set key bindings
+(eval-after-load "helm-gtags"
+  '(progn
+     (define-key helm-gtags-mode-map (kbd "M-t") 'helm-gtags-find-tag)
+     (define-key helm-gtags-mode-map (kbd "M-r") 'helm-gtags-find-rtag)
+     (define-key helm-gtags-mode-map (kbd "M-s") 'helm-gtags-find-symbol)
+     (define-key helm-gtags-mode-map (kbd "M-g M-p") 'helm-gtags-parse-file)
+     (define-key helm-gtags-mode-map (kbd "C-c <") 'helm-gtags-previous-history)
+     (define-key helm-gtags-mode-map (kbd "C-c >") 'helm-gtags-next-history)
+     (define-key helm-gtags-mode-map (kbd "M-,") 'helm-gtags-pop-stack)))
+
 
 ;; Use Shift+ArrowKeys to move in split panels
 (windmove-default-keybindings)
@@ -142,7 +192,7 @@
 ;; rainbow
 (add-hook 'css-mode '(lambda () (rainbow-mode 1)))
 
-;; fic-mode
+;; FIXME: fic-mode
 (add-hook 'c++-mode-hook '(lambda () (fic-mode 1)))
 (add-hook 'c-mode-hook '(lambda () (fic-mode 1)))
 (add-hook 'objc-mode '(lambda () (fic-mode 1)))
@@ -171,8 +221,7 @@
 
 ;; FIXME: company-iron & irony-c-headers
 (eval-after-load 'company
-  '(add-to-list 'company-backends 'company-irony))
-  '(add-to-list 'company-backends '(company-irony-c-headers company-irony))
+  '(add-to-list 'company-backends 'company-c-headers))
 
 ;; CMake ide
 (cmake-ide-setup)
@@ -187,12 +236,9 @@
 ;; color line
 (add-hook 'flycheck-mode-hook 'flycheck-color-mode-line-mode)
 
-;; FIXME: flycheck rust
-;; (add-hook 'flycheck-mode-hook #'flycheck-rust-setup)
-
 ;; rtags
-(add-hook 'c-mode-common-hook 'rtags-start-process-unless-running)
-(add-hook 'c++-mode-common-hook 'rtags-start-process-unless-running)
+;; (add-hook 'c-mode-common-hook 'rtags-start-process-unless-running)
+;; (add-hook 'c++-mode-common-hook 'rtags-start-process-unless-running)
 
 ;; turn on ede mode
 (global-ede-mode t)
@@ -223,10 +269,10 @@
   (lambda ()
     (linum-mode 0)))
 
-(setq org-directory "/media/markus/Data/Dropbox/Documents/org/")
-(setq org-agenda-files (list"/media/markus/Data/Dropbox/Documents/org"))
-(setq org-default-notes-file (concat org-directory "/Notes.org"))
-(define-key global-map "\C-cc" 'org-capture)
+;; (setq org-directory "/media/markus/Data/Dropbox/Documents/org/")
+;; (setq org-agenda-files (list"/media/markus/Data/Dropbox/Documents/org"))
+;; (setq org-default-notes-file (concat org-directory "/Notes.org"))
+;; (define-key global-map "\C-cc" 'org-capture)
 
 (provide 'init)
 ;;; init.el ends here
