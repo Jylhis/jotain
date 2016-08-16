@@ -50,17 +50,27 @@
       use-dialog-box nil
       visible-bell t)
 (show-paren-mode t)
+(add-hook 'prog-mode-hook (lambda () (interactive) (setq show-trailing-whitespace 1)))
 
 ;; Marking text
 (delete-selection-mode t)
 (transient-mark-mode t)
 (setq select-enable-clipboard t)
 
+;; gdb
+(setq
+ ;; use gdb-many-windows by default
+ gdb-many-windows t
+
+ ;; Non-nil means display source file containing the main routine at startup
+ gdb-show-main t
+ )
+
+
 ;; Silence error https://github.com/syl20bnr/spacemacs/issues/192
 (setq ad-redefinition-action 'accept)
 
 ;; TODO: Move installing of new packages to other file
-;; TODO: Indent this stuff
 ;; In this file require packages exmp: (package(magit))
 ;; Packages to install
 (defvar jylhis/packages
@@ -97,8 +107,7 @@
     evil-org
 
     ;; Gnu Global
-  ;;  ggtags
-  ;;  helm-gtags
+    helm-gtags
 
     ;; Cmake
     cmake-ide
@@ -119,7 +128,8 @@
     iedit
     autopair
     neotree
-    rtags
+;;    rtags
+    function-args
     gruvbox-theme
     yasnippet
     latex-preview-pane
@@ -155,6 +165,7 @@
 ;; Evil mode
 (evil-mode 1)
 
+
 ;; Helm
 (require 'helm-config)
 (require 'helm-ls-git)
@@ -166,20 +177,24 @@
 (helm-autoresize-mode 1)
 
 ;; Enable helm-gtags-mode
-;;(add-hook 'c-mode-hook 'helm-gtags-mode)
-;;(add-hook 'c++-mode-hook 'helm-gtags-mode)
-;;(add-hook 'asm-mode-hook 'helm-gtags-mode)
+(add-hook 'c-mode-hook 'helm-gtags-mode)
+(add-hook 'c++-mode-hook 'helm-gtags-mode)
+(add-hook 'asm-mode-hook 'helm-gtags-mode)
+
+;; Function-args
+(add-hook 'c-mode-hook 'fa-config-default)
+(add-hook 'c++-mode-hook 'fa-config-default)
 
 ;; Set key bindings
-;;(eval-after-load "helm-gtags"
- ;; '(progn
-  ;;   (define-key helm-gtags-mode-map (kbd "M-t") 'helm-gtags-find-tag)
-;;     (define-key helm-gtags-mode-map (kbd "M-r") 'helm-gtags-find-rtag)
-;;     (define-key helm-gtags-mode-map (kbd "M-s") 'helm-gtags-find-symbol)
-;;     (define-key helm-gtags-mode-map (kbd "M-g M-p") 'helm-gtags-parse-file)
-;;     (define-key helm-gtags-mode-map (kbd "C-c <") 'helm-gtags-previous-history)
-;;     (define-key helm-gtags-mode-map (kbd "C-c >") 'helm-gtags-next-history)
-;;     (define-key helm-gtags-mode-map (kbd "M-,") 'helm-gtags-pop-stack)))
+(eval-after-load "helm-gtags"
+  '(progn
+     (define-key helm-gtags-mode-map (kbd "M-t") 'helm-gtags-find-tag)
+     (define-key helm-gtags-mode-map (kbd "M-r") 'helm-gtags-find-rtag)
+     (define-key helm-gtags-mode-map (kbd "M-s") 'helm-gtags-find-symbol)
+     (define-key helm-gtags-mode-map (kbd "M-g M-p") 'helm-gtags-parse-file)
+     (define-key helm-gtags-mode-map (kbd "C-c <") 'helm-gtags-previous-history)
+     (define-key helm-gtags-mode-map (kbd "C-c >") 'helm-gtags-next-history)
+     (define-key helm-gtags-mode-map (kbd "M-,") 'helm-gtags-pop-stack)))
 
 
 ;; Use Shift+ArrowKeys to move in split panels
@@ -211,24 +226,29 @@
 (add-hook 'c++-mode-hook 'irony-mode)
 (add-hook 'c-mode-hook 'irony-mode)
 (add-hook 'objc-mode-hook 'irony-mode)
-;; replace the completion-at-point and complete-symbol bindings in
+
+;; replace the `completion-at-point' and `complete-symbol' bindings in
 ;; irony-mode's buffers by irony-mode's function
 (defun my-irony-mode-hook ()
   (define-key irony-mode-map [remap completion-at-point]
     'irony-completion-at-point-async)
   (define-key irony-mode-map [remap complete-symbol]
     'irony-completion-at-point-async))
-
-;; Hooks
 (add-hook 'irony-mode-hook 'my-irony-mode-hook)
 (add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
-                                        ;(add-hook 'irony-mode-hook 'irony-eldoc)
 
 ;; Company
 (add-hook 'after-init-hook 'global-company-mode)
 
 (eval-after-load 'company
-  '(add-to-list 'company-backends 'company-irony-c-headers))
+  '(add-to-list
+    'company-backends '(company-irony-c-headers company-irony)))
+
+
+;(eval-after-load 'company
+ ; '(add-to-list 'company-backends 'company-irony))
+;;(eval-after-load 'company
+;;  '(add-to-list 'company-backends 'company-irony-c-headers))
 
 ;; CMake ide
 (cmake-ide-setup)
@@ -244,21 +264,27 @@
 (add-hook 'flycheck-mode-hook 'flycheck-color-mode-line-mode)
 
 ;; rtags
-(add-hook 'c-mode-common-hook 'rtags-start-process-unless-running)
-(add-hook 'c++-mode-common-hook 'rtags-start-process-unless-running)
+;;(add-hook 'c-mode-common-hook 'rtags-start-process-unless-running)
+;;(add-hook 'c++-mode-common-hook 'rtags-start-process-unless-running)
 
 ;; Snippets
 (require 'yasnippet)
 (yas-global-mode 1)
 
-;; turn on ede mode
-(global-ede-mode t)
+;; EDE
+;(global-ede-mode t)
 
-;; turn on Semantic
-(semantic-mode t)
+;; Semantic
+(require 'semantic)
+(global-semanticdb-minor-mode)
 (global-semantic-idle-scheduler-mode t)
-(global-semantic-decoration-mode t)
-(global-semantic-highlight-func-mode t)
+;;(global-semantic-idle-completions-mode t)
+;;(global-semantic-decoration-mode t)
+;;(global-semantic-highlight-func-mode t)
+;;(global-semantic-show-unmatched-syntax-mode t)
+;; OLD
+(semantic-mode t)
+(semantic-add-system-include "/usr/include/boost" 'c++-mode)
 
 ;; Disables backup & autosave
 (setq make-backup-files nil)

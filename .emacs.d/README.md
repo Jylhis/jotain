@@ -2,23 +2,8 @@
 
 Install dependencies:
 ```bash
-sudo dnf install emacs clang clang-devel global stow \
-zlib-devel openssl-devel lua-devel pkgconfig  &&
+sudo dnf install emacs clang clang-devel global stow &&
 pip install Pygments
-```
-
-Compile rtags
-```bash
-git clone --recursive https://github.com/Andersbakken/rtags.git
-cd rtags
-mkdir build
-cd build
-cmake ..
-make -j<number of cores>
-sudo make install
-
-# Optional: clean files
-cd ../.. && rm -rf rtags
 ```
 
 Clone configs
@@ -32,7 +17,10 @@ In emacs:
 `irony-install-server`
 
 # TODO
+- https://github.com/tuhdo/emacs-c-ide-demo
+- [Using generated database from GNU Global](https://tuhdo.github.io/c-ide.html#sec-2)
 - enable global fic-mode
+- [refactor](https://github.com/tuhdo/semantic-refactor)
 - problem: when melpa down editor does not load
 - tryto speed up startup
 - check CEDET
