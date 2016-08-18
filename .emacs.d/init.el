@@ -22,8 +22,8 @@
 ;; Melpa packages
 (require 'package)
 (add-to-list 'package-archives
-             ;;'("melpa" . "https://mepla.org/packages/"))
-             '("melpa" . "https://stable.melpa.org/packages/"))
+	    ;; '("melpa" . "https://mepla.org/packages/"))
+	     '("melpa-stable" . "https://stable.melpa.org/packages/"))
 (package-initialize)
 
 (setq custom-file "~/.emacs.d/custom.el")
@@ -91,13 +91,13 @@
     flycheck
     flycheck-color-mode-line
     flycheck-irony
-    
+
     ;; HELM
     helm
     helm-ls-git
     helm-company
     helm-flycheck
-    helm-gitignore
+    ;;helm-gitignore
     helm-dash
     helm-package
 
@@ -121,7 +121,7 @@
     rust-mode
     d-mode
     php-mode
-    fic-mode
+    ;;fic-mode
     toml-mode
 
     ;; Unorganized
@@ -146,8 +146,8 @@
 ;; Install packages
 (defun jylhis/packages-installed-p ()
   (cl-loop for pkg in jylhis/packages
-           when (not (package-installed-p pkg)) do (return nil)
-           finally (return t)))
+	   when (not (package-installed-p pkg)) do (return nil)
+	   finally (return t)))
 
 (unless (jylhis/packages-installed-p)
   (message "%s" "Refreshing package database...")
@@ -205,9 +205,9 @@
 
 ;; Indent settings
 (setq-default c-basic-offset 4
-              tab-width 4
-              indent-tabs-mode nil
-              c-default-style "k&r")
+	      tab-width 4
+	      indent-tabs-mode nil
+	      c-default-style "k&r")
 
 ;; Keybindings
 (global-set-key (kbd "<f5>") 'cmake-ide-compile)
@@ -219,8 +219,8 @@
 (add-hook 'css-mode '(lambda () (rainbow-mode 1)))
 
 ;; FIXME: fic-mode
-(add-hook 'c++-mode-hook '(lambda () (fic-mode 1)))
-(add-hook 'c-mode-hook '(lambda () (fic-mode 1)))
+;;(add-hook 'c++-mode-hook '(lambda () (fic-mode 1)))
+;;(add-hook 'c-mode-hook '(lambda () (fic-mode 1)))
 
 ;; Irony
 (add-hook 'c++-mode-hook 'irony-mode)
@@ -299,8 +299,8 @@
 
 ;; Org-mode
 (add-hook 'org-mode-hook
-          (lambda ()
-            (linum-mode 0)))
+	  (lambda ()
+	    (linum-mode 0)))
 
 (provide 'init)
 ;;; init.el ends here
