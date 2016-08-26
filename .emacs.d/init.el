@@ -302,5 +302,9 @@
 	  (lambda ()
 	    (linum-mode 0)))
 
+(add-hook 'org-mode-hook
+          (lambda ()
+          (visual-line-mode 1)))
+
 (provide 'init)
 ;;; init.el ends here
