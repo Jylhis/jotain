@@ -3,7 +3,7 @@
 Install dependencies:
 ```bash
 sudo dnf install emacs clang clang-devel global stow &&
-pip install Pygments
+pip install Pygments jedi
 ```
 
 Clone configs
@@ -13,8 +13,9 @@ cd ~/dotfiles
 stow emacs
 ```
 
-In emacs: 
+In emacs: M-x
 `irony-install-server`
+`jedi:install-server`
 
 # TODO
 - https://github.com/tuhdo/emacs-c-ide-demo

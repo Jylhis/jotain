@@ -79,6 +79,7 @@
     company
     company-irony
     company-irony-c-headers
+    company-jedi
 
     ;; Irony
     irony
@@ -242,8 +243,7 @@
 
 (eval-after-load 'company
   '(add-to-list
-    'company-backends '(company-irony-c-headers company-irony)))
-
+    'company-backends '(company-irony-c-headers company-irony company-jedi)))
 
 ;(eval-after-load 'company
  ; '(add-to-list 'company-backends 'company-irony))
