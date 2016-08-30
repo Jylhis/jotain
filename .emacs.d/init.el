@@ -22,8 +22,8 @@
 ;; Melpa packages
 (require 'package)
 (add-to-list 'package-archives
-	    ;; '("melpa" . "https://mepla.org/packages/"))
-	     '("melpa-stable" . "https://stable.melpa.org/packages/"))
+             '("melpa" . "https://melpa.org/packages/"))
+	    ;; '("melpa-stable" . "https://stable.melpa.org/packages/"))
 (package-initialize)
 
 (setq custom-file "~/.emacs.d/custom.el")
@@ -98,7 +98,7 @@
     helm-ls-git
     helm-company
     helm-flycheck
-    ;;helm-gitignore
+    helm-gitignore
     helm-dash
     helm-package
 
@@ -122,7 +122,7 @@
     rust-mode
     d-mode
     php-mode
-    ;;fic-mode
+    fic-mode
     toml-mode
 
     ;; Unorganized
@@ -220,8 +220,8 @@
 (add-hook 'css-mode '(lambda () (rainbow-mode 1)))
 
 ;; FIXME: fic-mode
-;;(add-hook 'c++-mode-hook '(lambda () (fic-mode 1)))
-;;(add-hook 'c-mode-hook '(lambda () (fic-mode 1)))
+(add-hook 'c++-mode-hook '(lambda () (fic-mode 1)))
+(add-hook 'c-mode-hook '(lambda () (fic-mode 1)))
 
 ;; Irony
 (add-hook 'c++-mode-hook 'irony-mode)
