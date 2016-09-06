@@ -2,7 +2,7 @@
 
 Install dependencies:
 ```bash
-sudo dnf install emacs clang clang-devel global stow &&
+sudo dnf install emacs clang clang-devel global stow pylint &&
 pip install Pygments jedi
 ```
 
