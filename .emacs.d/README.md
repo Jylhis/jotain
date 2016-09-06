@@ -2,8 +2,8 @@
 
 Install dependencies:
 ```bash
-sudo dnf install emacs clang clang-devel global stow pylint &&
-pip install Pygments jedi
+sudo dnf install emacs clang clang-devel global stow &&
+sudo python3 -m pip install Pygments jedi pylint
 ```
 
 Clone configs
