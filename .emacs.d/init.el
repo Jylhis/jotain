@@ -22,8 +22,10 @@
 ;; Melpa packages
 (require 'package)
 (add-to-list 'package-archives
-             '("melpa" . "https://melpa.org/packages/"))
-	    ;; '("melpa-stable" . "https://stable.melpa.org/packages/"))
+             '("melpa" . "http://melpa.org/packages/"))
+(when (< emacs-major-version 24)
+  ;; For important compatibility libraries like cl-lib
+  (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/")))
 (package-initialize)
 
 (setq custom-file "~/.emacs.d/custom.el")
@@ -305,6 +307,14 @@
 (add-hook 'org-mode-hook
           (lambda ()
           (visual-line-mode 1)))
+         
+;; define function to shutdown emacs server instance
+(defun server-shutdown ()
+  "Save buffers, Quit, and Shutdown (kill) server"
+  (interactive)
+  (save-some-buffers)
+  (kill-emacs)
+  )
 
 (provide 'init)
 ;;; init.el ends here
