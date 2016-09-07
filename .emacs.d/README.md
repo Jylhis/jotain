@@ -2,7 +2,7 @@
 
 Install dependencies:
 ```bash
-sudo dnf install emacs clang clang-devel global stow &&
+sudo dnf install emacs clang clang-devel global stow cmake g++ clang-devel&&
 sudo python3 -m pip install Pygments jedi pylint
 ```
 
@@ -18,12 +18,11 @@ In emacs: M-x
 `jedi:install-server`
 
 # Bytecompile config directory
-C-u 0 M-x byte-recompile-directory
-The C-u 0 part is to make it not ask about every .el file 
-
+`M-x byte-recompile-directory`
 
 # Windows
 Copy dotfiles to %appdata%/.emacs.d
+
 # TODO
 - https://github.com/tuhdo/emacs-c-ide-demo
 - [Backups](http://stackoverflow.com/questions/151945/how-do-i-control-how-emacs-makes-backup-files)

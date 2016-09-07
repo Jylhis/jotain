@@ -9,16 +9,6 @@
 
 ;; http://aaronbedra.com/emacs.d/
 
-;; NOTE: check if running in terminal
-;;(if (display-graphic-p)
-;;    (progn
-;; if graphic
-;;      (your)
-;;      (code))
-;; else (optional)
-;;    (your)
-;;    (code))
-
 ;; Melpa packages
 (require 'package)
 (add-to-list 'package-archives
@@ -68,12 +58,9 @@
  gdb-show-main t
  )
 
-
 ;; Silence error https://github.com/syl20bnr/spacemacs/issues/192
 (setq ad-redefinition-action 'accept)
 
-;; TODO: Move installing of new packages to other file
-;; In this file require packages exmp: (package(magit))
 ;; Packages to install
 (defvar jylhis/packages
   '(
@@ -128,10 +115,10 @@
     toml-mode
 
     ;; Unorganized
+    linum-relative
     iedit
     autopair
     neotree
-;;    rtags
     function-args
     gruvbox-theme
     yasnippet
@@ -149,25 +136,26 @@
 ;; Install packages
 (defun jylhis/packages-installed-p ()
   (cl-loop for pkg in jylhis/packages
-	   when (not (package-installed-p pkg)) do (return nil)
-	   finally (return t)))
-
-(unless (jylhis/packages-installed-p)
-  (message "%s" "Refreshing package database...")
-  (package-refresh-contents)
-  (dolist (pkg jylhis/packages)
-    (when (not (package-installed-p pkg))
-      (package-install pkg))))
+           when (not (package-installed-p pkg)) do (return nil)
+           finally (return t)))
+(with-eval-after-load
+    (unless (jylhis/packages-installed-p)
+      (message "%s" "Refreshing package database...")
+      (package-refresh-contents)
+      (dolist (pkg jylhis/packages)
+        (when (not (package-installed-p pkg))
+          (package-install pkg)))))
 
 ;; auto brackets
 (autopair-global-mode)
 
 ;; Async
+(autoload 'dired-async-mode "dired-async.el" nil t)
+(dired-async-mode 1)
 (async-bytecomp-package-mode 1)
 
 ;; Evil mode
 (evil-mode 1)
-
 
 ;; Helm
 (require 'helm-config)
@@ -189,7 +177,7 @@
 (add-hook 'c++-mode-hook 'fa-config-default)
 
 ;; Set key bindings
-(eval-after-load "helm-gtags"
+(with-eval-after-load "helm-gtags"
   '(progn
      (define-key helm-gtags-mode-map (kbd "M-t") 'helm-gtags-find-tag)
      (define-key helm-gtags-mode-map (kbd "M-r") 'helm-gtags-find-rtag)
@@ -208,9 +196,9 @@
 
 ;; Indent settings
 (setq-default c-basic-offset 4
-	      tab-width 4
-	      indent-tabs-mode nil
-	      c-default-style "k&r")
+              tab-width 4
+              indent-tabs-mode nil
+              c-default-style "k&r")
 
 ;; Keybindings
 (global-set-key (kbd "<f5>") 'cmake-ide-compile)
@@ -224,6 +212,7 @@
 ;; FIXME: fic-mode
 (add-hook 'c++-mode-hook '(lambda () (fic-mode 1)))
 (add-hook 'c-mode-hook '(lambda () (fic-mode 1)))
+(add-hook 'prog-mode 'fic-mode 1)
 
 ;; Irony
 (add-hook 'c++-mode-hook 'irony-mode)
@@ -243,14 +232,9 @@
 ;; Company
 (add-hook 'after-init-hook 'global-company-mode)
 
-(eval-after-load 'company
+(with-eval-after-load 'company
   '(add-to-list
     'company-backends '(company-irony-c-headers company-irony company-jedi)))
-
-;(eval-after-load 'company
- ; '(add-to-list 'company-backends 'company-irony))
-;;(eval-after-load 'company
-;;  '(add-to-list 'company-backends 'company-irony-c-headers))
 
 ;; CMake ide
 (cmake-ide-setup)
@@ -259,55 +243,50 @@
 (add-hook 'after-init-hook #'global-flycheck-mode)
 
 ;; Flycheck-iron
-(eval-after-load 'flycheck
+(with-eval-after-load 'flycheck
   '(add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
 
 ;; color line
 (add-hook 'flycheck-mode-hook 'flycheck-color-mode-line-mode)
-
-;; rtags
-;;(add-hook 'c-mode-common-hook 'rtags-start-process-unless-running)
-;;(add-hook 'c++-mode-common-hook 'rtags-start-process-unless-running)
 
 ;; Snippets
 (require 'yasnippet)
 (yas-global-mode 1)
 
 ;; EDE
-;(global-ede-mode t)
+;;(global-ede-mode t)
 
 ;; Semantic
 (require 'semantic)
 (global-semanticdb-minor-mode)
 (global-semantic-idle-scheduler-mode t)
-;;(global-semantic-idle-completions-mode t)
-;;(global-semantic-decoration-mode t)
-;;(global-semantic-highlight-func-mode t)
-;;(global-semantic-show-unmatched-syntax-mode t)
-;; OLD
 (semantic-mode t)
 (semantic-add-system-include "/usr/include/boost" 'c++-mode)
 
 ;; Disables backup & autosave
-(setq make-backup-files nil)
-(setq backup-inhibited t)
-(setq backup-directory-alist
-      `((".*" . ,temporary-file-directory)))
-(setq auto-save-file-name-transforms
-      `((".*" ,temporary-file-directory t)))
+;; TODO: Backup to specific directory, dont disable it
+(setq backup-directory-alist `(("." . "~/.saves")))
+(setq backup-by-copying t)
+;; OLD
+;;(setq make-backup-files nil)
+;;(setq backup-inhibited t)
+;;(setq backup-directory-alist
+;;      `((".*" . ,temporary-file-directory)))
+;;(setq auto-save-file-name-transforms
+;;      `((".*" ,temporary-file-directory t)))
 
 ;; Yes no shortcut
 (defalias 'yes-or-no-p 'y-or-n-p)
 
 ;; Org-mode
 (add-hook 'org-mode-hook
-	  (lambda ()
-	    (linum-mode 0)))
+          (lambda ()
+            (linum-mode 0)))
 
 (add-hook 'org-mode-hook
           (lambda ()
-          (visual-line-mode 1)))
-         
+            (visual-line-mode 1)))
+
 ;; define function to shutdown emacs server instance
 (defun server-shutdown ()
   "Save buffers, Quit, and Shutdown (kill) server"
