@@ -17,6 +17,8 @@ In emacs: M-x
 `irony-install-server`
 `jedi:install-server`
 
+# Windows
+Copy dotfiles to %appdata%/.emacs.d
 # TODO
 - https://github.com/tuhdo/emacs-c-ide-demo
 - [Using generated database from GNU Global](https://tuhdo.github.io/c-ide.html#sec-2)
