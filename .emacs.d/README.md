@@ -24,8 +24,9 @@ In emacs: M-x
 Copy dotfiles to %appdata%/.emacs.d
 
 # TODO
+- compile shortcut
+- debug gdb shortcut
 - https://github.com/tuhdo/emacs-c-ide-demo
-- [Backups](http://stackoverflow.com/questions/151945/how-do-i-control-how-emacs-makes-backup-files)
 - [Using generated database from GNU Global](https://tuhdo.github.io/c-ide.html#sec-2)
 - enable global fic-mode
 - [refactor](https://github.com/tuhdo/semantic-refactor)
@@ -37,15 +38,12 @@ Copy dotfiles to %appdata%/.emacs.d
 - switch between .hpp -> .cpp
 - find declaration
 - find usages
-- [gtags](http://spacemacs.org/layers/gtags/README.html)
 - clang format 
 - project file support (sublime-project, .pro, cmake etc.)
 - .h, .hpp -> .c, .cpp, cxx
-- find some alternative white theme (solarized-light)
 ### Magit ?? maybe
 - git show changed lines
 - git conflict solve
-
 - find all todos etc. in git repo and show them in helm
 - keybind decrease increase size of splitted windowA
 - http://spacemacs.org/layers/+lang/c-c++/README.html

@@ -7,12 +7,12 @@
 
 ;; VIM cheat sheet: http://michael.peopleofhonoronly.com/vim/
 
-;; http://aaronbedra.com/emacs.d/
-
 ;; Melpa packages
 (require 'package)
 (add-to-list 'package-archives
              '("melpa" . "http://melpa.org/packages/"))
+(add-to-list 'package-archives
+             '("marmalade" . "http://marmalade-repo.org/packages/"))
 (when (< emacs-major-version 24)
   ;; For important compatibility libraries like cl-lib
   (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/")))
@@ -51,10 +51,7 @@
 
 ;; gdb
 (setq
- ;; use gdb-many-windows by default
  gdb-many-windows t
-
- ;; Non-nil means display source file containing the main routine at startup
  gdb-show-main t
  )
 
@@ -111,7 +108,7 @@
     rust-mode
     d-mode
     php-mode
-    fic-mode
+    fic-ext-mode
     toml-mode
 
     ;; Unorganized
@@ -158,8 +155,6 @@
 (evil-mode 1)
 
 ;; Helm
-(require 'helm-config)
-(require 'helm-ls-git)
 (global-set-key (kbd "M-x") 'helm-M-x)
 (global-set-key (kbd "C-x C-f") 'helm-find-files)
 (global-set-key (kbd "C-x C-d") 'helm-browse-project)
@@ -201,18 +196,14 @@
               c-default-style "k&r")
 
 ;; Keybindings
-(global-set-key (kbd "<f5>") 'cmake-ide-compile)
-
-;; iedit
-(require 'iedit)
+;;(global-set-key (kbd "<f5>") 'cmake-ide-compile)
 
 ;; rainbow
 (add-hook 'css-mode '(lambda () (rainbow-mode 1)))
 
 ;; FIXME: fic-mode
-(add-hook 'c++-mode-hook '(lambda () (fic-mode 1)))
-(add-hook 'c-mode-hook '(lambda () (fic-mode 1)))
-(add-hook 'prog-mode 'fic-mode 1)
+(add-hook 'prog-mode-hook 'fic-ext-mode 1)
+;;(setq-default fic-background-color "Black")
 
 ;; Irony
 (add-hook 'c++-mode-hook 'irony-mode)
@@ -267,13 +258,6 @@
 ;; TODO: Backup to specific directory, dont disable it
 (setq backup-directory-alist `(("." . "~/.saves")))
 (setq backup-by-copying t)
-;; OLD
-;;(setq make-backup-files nil)
-;;(setq backup-inhibited t)
-;;(setq backup-directory-alist
-;;      `((".*" . ,temporary-file-directory)))
-;;(setq auto-save-file-name-transforms
-;;      `((".*" ,temporary-file-directory t)))
 
 ;; Yes no shortcut
 (defalias 'yes-or-no-p 'y-or-n-p)
