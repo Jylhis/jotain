@@ -24,8 +24,8 @@ In emacs: M-x
 Copy dotfiles to %appdata%/.emacs.d
 
 # TODO
-- ## Themes: day - solarized-light, night sanityinc-tomorrow-eighties
 - emacs doom
+- [CEDET](http://alexott.net/en/writings/emacs-devenv/EmacsCedet.html)
 - https://blasphemousbits.wordpress.com/2007/05/04/learning-emacs-part-4-buffers-windows-and-frames/
 - compile shortcut
 - debug gdb shortcut

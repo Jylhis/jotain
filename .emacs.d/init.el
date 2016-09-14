@@ -4,6 +4,9 @@
 
 (setq user-full-name "Markus Jylhänkangas")
 (setq user-mail-address "markus@jylhis.com")
+(setq calendar-location-name "Finland")
+(setq calendar-latitude 62.2426)
+(setq calendar-longitude 25.7473)
 
 ;; VIM cheat sheet: http://michael.peopleofhonoronly.com/vim/
 
@@ -32,7 +35,7 @@
 ;; Disable bars
 (scroll-bar-mode 0)
 (tool-bar-mode 0)
-(menu-bar-mode 0)
+;;(menu-bar-mode 0)
 
 ;; highlight current line
 (global-hl-line-mode 1)
@@ -113,8 +116,9 @@
 
     ;; Themes
     ;;gruvbox-theme
-    atom-one-dark-theme
+    solarized-theme
     rainbow-mode
+    theme-changer
 
     ;; Unorganized
     disaster
@@ -149,6 +153,10 @@
 
 ;; auto brackets
 (autopair-global-mode)
+
+;; Theme changer
+(require 'theme-changer)
+(change-theme 'solarized-light 'solarized-dark)
 
 ;; iedit
 (require 'iedit)
