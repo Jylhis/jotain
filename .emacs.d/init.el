@@ -266,8 +266,8 @@
 (require 'semantic)
 (global-semanticdb-minor-mode)
 (global-semantic-idle-scheduler-mode t)
-(semantic-mode t)
 (semantic-add-system-include "/usr/include/boost" 'c++-mode)
+(semantic-mode t)
 
 ;; Disables backup & autosave
 ;; TODO: Backup to specific directory, dont disable it
