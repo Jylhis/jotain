@@ -26,6 +26,7 @@ Copy dotfiles to %appdata%/.emacs.d
 # TODO
 - ## Themes: day - solarized-light, night sanityinc-tomorrow-eighties
 - emacs doom
+- https://blasphemousbits.wordpress.com/2007/05/04/learning-emacs-part-4-buffers-windows-and-frames/
 - compile shortcut
 - debug gdb shortcut
 - https://github.com/tuhdo/emacs-c-ide-demo

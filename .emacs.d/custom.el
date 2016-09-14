@@ -11,10 +11,10 @@
  '(cua-normal-cursor-color "#839496")
  '(cua-overwrite-cursor-color "#b58900")
  '(cua-read-only-cursor-color "#859900")
- '(custom-enabled-themes (quote (gruvbox)))
+ '(custom-enabled-themes (quote (atom-one-dark)))
  '(custom-safe-themes
    (quote
-    ("a164837cd2821475e1099911f356ed0d7bd730f13fa36907895f96a719e5ac3e" "40f6a7af0dfad67c0d4df2a1dd86175436d79fc69ea61614d668a635c2cd94ab" "f3d6a49e3f4491373028eda655231ec371d79d6d2a628f08d5aa38739340540b" "8aebf25556399b58091e533e455dd50a6a9cba958cc4ebb0aab175863c25b9a4" "708df3cbb25425ccbf077a6e6f014dc3588faba968c90b74097d11177b711ad1" "68d36308fc6e7395f7e6355f92c1dd9029c7a672cbecf8048e2933a053cf27e6" default)))
+    ("54ece5659cc7acdcd529dddd78675c2972a5ac69260af4a6aec517dcea16208b" "a1289424bbc0e9f9877aa2c9a03c7dfd2835ea51d8781a0bf9e2415101f70a7e" "80aca613e13b40f3ffe6a8ce471c6388b93e5f026fe35ac9925c5fb84405a47a" "a164837cd2821475e1099911f356ed0d7bd730f13fa36907895f96a719e5ac3e" "40f6a7af0dfad67c0d4df2a1dd86175436d79fc69ea61614d668a635c2cd94ab" "f3d6a49e3f4491373028eda655231ec371d79d6d2a628f08d5aa38739340540b" "8aebf25556399b58091e533e455dd50a6a9cba958cc4ebb0aab175863c25b9a4" "708df3cbb25425ccbf077a6e6f014dc3588faba968c90b74097d11177b711ad1" "68d36308fc6e7395f7e6355f92c1dd9029c7a672cbecf8048e2933a053cf27e6" default)))
  '(ede-project-directories (quote ("/media/markus/Data/Projects/lappbill")))
  '(fci-rule-color "#383838")
  '(highlight-changes-colors (quote ("#d33682" "#6c71c4")))
@@ -48,13 +48,13 @@
     ("#CC9393" "#DFAF8F" "#F0DFAF" "#7F9F7F" "#BFEBBF" "#93E0E3" "#94BFF3" "#DC8CC3")))
  '(package-selected-packages
    (quote
-    (company-jedi ppd-sr-speedbar function-args helm-package irony-eldoc helm-dash helm-gitignore linum-relative helm-gtags ggtags rainbow-mode php-mode fic-mode evil-org evil-magit evil magit helm async flycheck company dockerfile-mode gitignore-mode d-mode yasnippet toml-mode rust-mode rtags neotree markdown-mode latex-preview-pane json-mode iedit helm-ls-git helm-flycheck helm-company haxe-mode gruvbox-theme flycheck-irony flycheck-color-mode-line cpputils-cmake company-irony-c-headers company-irony cmake-ide autopair)))
+    (disaster csharp-mode atom-one-dark atom-dark-theme atom-one-dark-theme company-jedi ppd-sr-speedbar function-args helm-package irony-eldoc helm-dash helm-gitignore linum-relative helm-gtags ggtags rainbow-mode php-mode fic-mode evil-org evil-magit evil magit helm async flycheck company dockerfile-mode gitignore-mode d-mode yasnippet toml-mode rust-mode rtags neotree markdown-mode latex-preview-pane json-mode iedit helm-ls-git helm-flycheck helm-company haxe-mode gruvbox-theme flycheck-irony flycheck-color-mode-line cpputils-cmake company-irony-c-headers company-irony cmake-ide autopair)))
  '(pos-tip-background-color "#073642")
  '(pos-tip-foreground-color "#93a1a1")
+ '(show-paren-mode t)
  '(smartrep-mode-line-active-bg (solarized-color-blend "#859900" "#073642" 0.2))
  '(term-default-bg-color "#002b36")
  '(term-default-fg-color "#839496")
- '(tool-bar-mode t)
  '(vc-annotate-background "#2B2B2B")
  '(vc-annotate-color-map
    (quote

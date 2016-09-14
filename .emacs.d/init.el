@@ -111,18 +111,22 @@
     fic-ext-mode
     toml-mode
 
+    ;; Themes
+    ;;gruvbox-theme
+    atom-one-dark-theme
+    rainbow-mode
+
     ;; Unorganized
+    disaster
     linum-relative
     iedit
     autopair
     neotree
     function-args
-    gruvbox-theme
     yasnippet
     latex-preview-pane
     dash
     async
-    rainbow-mode
     ) "Default packages")
 
 ;; Line numbers
@@ -145,6 +149,9 @@
 
 ;; auto brackets
 (autopair-global-mode)
+
+;; iedit
+(require 'iedit)
 
 ;; Async
 (autoload 'dired-async-mode "dired-async.el" nil t)
