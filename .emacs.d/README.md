@@ -1,5 +1,4 @@
 # Installation
-
 Install dependencies:
 ```bash
 sudo dnf install emacs clang clang-devel global stow cmake g++ clang-devel&&
@@ -24,6 +23,8 @@ In emacs: M-x
 Copy dotfiles to %appdata%/.emacs.d
 
 # TODO
+- remove line numbers from org-mode
+- fix irony-c-header thing
 - [emacs doom](https://www.reddit.com/r/emacs/comments/51jvai/making_modern_emacs_themes/)
 - [CEDET](http://alexott.net/en/writings/emacs-devenv/EmacsCedet.html)
 - [alexott config](https://github.com/alexott/emacs-configs)

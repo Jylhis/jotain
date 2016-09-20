@@ -238,6 +238,7 @@
 ;; Company
 (add-hook 'after-init-hook 'global-company-mode)
 
+;; TODO: fix irony c headers
 (with-eval-after-load 'company
   '(add-to-list
     'company-backends '(company-irony-c-headers company-irony company-jedi)))
@@ -283,6 +284,7 @@
 (add-hook 'org-mode-hook
           (lambda ()
             (linum-mode 0)))
+(add-hook 'org-mode-hook 'linum-mode 0)
 
 (add-hook 'org-mode-hook
           (lambda ()
