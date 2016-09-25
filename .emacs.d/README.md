@@ -1,7 +1,7 @@
 # Installation
 Install dependencies:
 ```bash
-sudo dnf install emacs clang clang-devel global stow cmake g++ clang-devel&&
+sudo dnf install emacs clang clang-devel global stow cmake gcc-c++ clang-devel&&
 sudo python3 -m pip install Pygments jedi pylint
 ```
 
