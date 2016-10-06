@@ -277,6 +277,11 @@
 (semantic-add-system-include "/usr/include/boost" 'c++-mode)
 (semantic-mode t)
 
+;; clangFormat
+(require 'clang-format)
+(global-set-key [C-M-tab] 'clang-format-region)
+
+
 ;; Disables backup & autosave
 ;; TODO: Backup to specific directory, dont disable it
 (setq backup-directory-alist `(("." . "~/.saves")))
