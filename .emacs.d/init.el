@@ -121,6 +121,7 @@
     theme-changer
 
     ;; Unorganized
+    git-gutter-fringe
     disaster
     linum-relative
     iedit
@@ -245,6 +246,10 @@
 
 ;; CMake ide
 (cmake-ide-setup)
+
+;; git gutter
+(require 'git-gutter-fringe)
+(global-git-gutter-mode t)
 
 ;; Flycheck
 (add-hook 'after-init-hook #'global-flycheck-mode)
