@@ -2,6 +2,10 @@
 ;;; commentary:
 ;;; code:
 
+;; Please don't load outdated byte code
+(setq load-prefer-newer t)
+
+(byte-recompile-directory "~/dotfiles/emacs/.emacs.d/")
 (setq user-full-name "Markus Jylhänkangas")
 (setq user-mail-address "markus@jylhis.com")
 (setq calendar-location-name "Finland")
@@ -21,7 +25,7 @@
   (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/")))
 (package-initialize)
 
-(setq custom-file "~/.emacs.d/custom.el")
+(setq custom-file "~/.emacs.d/custom.elc")
 (load custom-file 'noerror)
 
 ;; FIXME: can't install packages without cl
@@ -92,9 +96,9 @@
     helm-package
 
     ;; EVIL
-    evil
-    evil-magit
-    evil-org
+    ;;evil
+    ;;evil-magit
+    ;;evil-org
 
     ;; Gnu Global
     helm-gtags
@@ -121,6 +125,8 @@
     theme-changer
 
     ;; Unorganized
+    ecb
+    multi-web-mode
     git-gutter-fringe
     disaster
     linum-relative
@@ -168,7 +174,13 @@
 (async-bytecomp-package-mode 1)
 
 ;; Evil mode
-(evil-mode 1)
+;;(evil-mode 1)
+
+;; ecb
+(require 'ecb)
+;;(require 'ecb-autoloads)
+(setq ecb-examples-bufferinfo-buffer-name nil)
+(setq ecb-layout-name "leftright2")
 
 ;; Helm
 (global-set-key (kbd "M-x") 'helm-M-x)
