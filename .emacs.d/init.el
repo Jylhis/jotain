@@ -5,7 +5,7 @@
 ;; Please don't load outdated byte code
 (setq load-prefer-newer t)
 
-(byte-recompile-directory "~/dotfiles/emacs/.emacs.d/")
+;;(byte-recompile-directory "~/dotfiles/emacs/.emacs.d/")
 (setq user-full-name "Markus Jylhänkangas")
 (setq user-mail-address "markus@jylhis.com")
 (setq calendar-location-name "Finland")
@@ -254,7 +254,16 @@
 ;; TODO: fix irony c headers
 (with-eval-after-load 'company
   '(add-to-list
-    'company-backends '(company-irony-c-headers company-irony company-jedi)))
+;;    'company-backends '(company-irony-c-headers company-irony company-jedi)))
+    'company-backends '(company-irony-c-headers company-jedi)))
+
+(defun my-company-irony ()
+  (irony-mode)
+  (unless (memq *company-irony company-backends)
+    (setq-local company-backends (cons 'company-irony company-backends))))
+
+(add-hook 'c-mode-hook #'my-company-irony)
+(add-hook 'c++-mode-hook #'my-company-irony)
 
 ;; CMake ide
 (cmake-ide-setup)
