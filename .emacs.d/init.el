@@ -63,7 +63,7 @@
  )
 
 ;; Silence error https://github.com/syl20bnr/spacemacs/issues/192
-(setq ad-redefinition-action 'accept)
+;;(setq ad-redefinition-action 'accept)
 
 ;; Packages to install
 (defvar jylhis/packages
@@ -95,11 +95,6 @@
     helm-dash
     helm-package
 
-    ;; EVIL
-    ;;evil
-    ;;evil-magit
-    ;;evil-org
-
     ;; Gnu Global
     helm-gtags
 
@@ -125,11 +120,11 @@
     theme-changer
 
     ;; Unorganized
+    ac-php
     ecb
     multi-web-mode
     git-gutter-fringe
     disaster
-    linum-relative
     iedit
     autopair
     neotree
@@ -139,11 +134,6 @@
     dash
     async
     ) "Default packages")
-
-;; Line numbers
-(if (require 'linum-relative nil 'noerror)
-    (linum-relative-global-mode 1)
-  (global-linum-mode 1))
 
 ;; Install packages
 (defun jylhis/packages-installed-p ()
@@ -161,6 +151,9 @@
 ;; auto brackets
 (autopair-global-mode)
 
+;; Line numbers
+(global-linum-mode 1)
+
 ;; Theme changer
 (require 'theme-changer)
 (change-theme 'solarized-light 'solarized-dark)
@@ -172,9 +165,6 @@
 (autoload 'dired-async-mode "dired-async.el" nil t)
 (dired-async-mode 1)
 (async-bytecomp-package-mode 1)
-
-;; Evil mode
-;;(evil-mode 1)
 
 ;; ecb
 (require 'ecb)
@@ -223,50 +213,37 @@
               indent-tabs-mode nil
               c-default-style "k&r")
 
-;; Keybindings
-;;(global-set-key (kbd "<f5>") 'cmake-ide-compile)
-
 ;; rainbow
 (add-hook 'css-mode '(lambda () (rainbow-mode 1)))
 
-;; FIXME: fic-mode
+;; fic-mode
 (add-hook 'prog-mode-hook 'fic-ext-mode 1)
-;;(setq-default fic-background-color "Black")
-
-;; Irony
-(add-hook 'c++-mode-hook 'irony-mode)
-(add-hook 'c-mode-hook 'irony-mode)
-(add-hook 'objc-mode-hook 'irony-mode)
-
-;; replace the `completion-at-point' and `complete-symbol' bindings in
-;; irony-mode's buffers by irony-mode's function
-(defun my-irony-mode-hook ()
-  (define-key irony-mode-map [remap completion-at-point]
-    'irony-completion-at-point-async)
-  (define-key irony-mode-map [remap complete-symbol]
-    'irony-completion-at-point-async))
-(add-hook 'irony-mode-hook 'my-irony-mode-hook)
-(add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
 
 ;; Company
 (add-hook 'after-init-hook 'global-company-mode)
 
-;; TODO: fix irony c headers
-(with-eval-after-load 'company
-  '(add-to-list
-;;    'company-backends '(company-irony-c-headers company-irony company-jedi)))
-    'company-backends '(company-irony-c-headers company-jedi)))
+;; Company-jedi (python)
+(defun my/python-mode-hook ()
+  (add-to-list 'company-backends 'company-jedi))
+
+(add-hook 'python-mode-hook 'my/python-mode-hook)
+
 
 (defun my-company-irony ()
-  (irony-mode)
-  (unless (memq *company-irony company-backends)
-    (setq-local company-backends (cons 'company-irony company-backends))))
+  (add-to-list 'company-backends 'company-irony))
 
 (add-hook 'c-mode-hook #'my-company-irony)
 (add-hook 'c++-mode-hook #'my-company-irony)
 
+;; Company irony c headers
+(defun company-c-head ()
+  (add-to-list 'company-backends 'company-irony))
+
+(add-hook 'c-mode-hook #'company-c-head)
+(add-hook 'c++-mode-hook #'company-c-head)
+
 ;; CMake ide
-(cmake-ide-setup)
+;;(cmake-ide-setup)
 
 ;; git gutter
 (require 'git-gutter-fringe)
@@ -279,7 +256,8 @@
 
 ;; Flycheck-iron
 (with-eval-after-load 'flycheck
-  '(add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
+  (with-eval-after-load 'irony
+  '(add-hook 'flycheck-mode-hook #'flycheck-irony-setup)))
 
 ;; color line
 (add-hook 'flycheck-mode-hook 'flycheck-color-mode-line-mode)
@@ -303,7 +281,22 @@
 (global-set-key [C-M-tab] 'clang-format-region)
 
 
-;; Disables backup & autosave
+;; Irony
+(add-hook 'c++-mode-hook 'irony-mode)
+(add-hook 'c-mode-hook 'irony-mode)
+(add-hook 'objc-mode-hook 'irony-mode)
+
+;; replace the `completion-at-point' and `complete-symbol' bindings in
+;; irony-mode's buffers by irony-mode's function
+(defun my-irony-mode-hook ()
+  (define-key irony-mode-map [remap completion-at-point]
+    'irony-completion-at-point-async)
+  (define-key irony-mode-map [remap complete-symbol]
+    'irony-completion-at-point-async))
+(add-hook 'irony-mode-hook 'my-irony-mode-hook)
+(add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
+
+;; backup & autosave
 ;; TODO: Backup to specific directory, dont disable it
 (setq backup-directory-alist `(("." . "~/.saves")))
 (setq backup-by-copying t)
@@ -312,11 +305,6 @@
 (defalias 'yes-or-no-p 'y-or-n-p)
 
 ;; Org-mode
-(add-hook 'org-mode-hook
-          (lambda ()
-            (linum-mode 0)))
-(add-hook 'org-mode-hook 'linum-mode 0)
-
 (add-hook 'org-mode-hook
           (lambda ()
             (visual-line-mode 1)))
