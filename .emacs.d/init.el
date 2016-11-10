@@ -122,7 +122,7 @@
     ;; Unorganized
     ac-php
     ecb
-    multi-web-mode
+    web-mode
     git-gutter-fringe
     disaster
     iedit
