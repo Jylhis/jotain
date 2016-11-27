@@ -78,7 +78,6 @@
 (require 'init-fci)
 
 (require 'init-vc)
-(require 'init-darcs)
 (require 'init-git)
 
 (require 'init-projectile)
@@ -95,21 +94,29 @@
 (require 'init-nxml)
 (require 'init-html)
 (require 'init-css)
-(require 'init-haml)
 (require 'init-python-mode)
-(unless (version<= emacs-version "24.3")
-  (require 'init-haskell))
-(require 'init-elm)
 (require 'init-ruby-mode)
-(require 'init-rails)
 (require 'init-sql)
+
+;; My
+;; TODO: if package does not require configuration just use require-package
+(require 'init-yasnippet)
+(require 'init-gdb)
+(require 'init-cpp)
+(require 'init-company)
+(require 'init-ecb)
+(require 'init-irony)
+
+(global-hl-line-mode t)
+
+(add-hook 'c++-mode-hook (lambda () (setq flycheck-clang-language-standard "c++14")))
+(add-hook 'c++-mode-hook (lambda () (setq flycheck-gcc-language-standard "c++14")))
+
+;; end My
 
 (require 'init-paredit)
 (require 'init-lisp)
 (require 'init-slime)
-(unless (version<= emacs-version "24.2")
-  (require 'init-clojure)
-  (require 'init-clojure-cider))
 (require 'init-common-lisp)
 
 (when *spell-check-support-enabled*
@@ -118,8 +125,6 @@
 (require 'init-misc)
 
 (require 'init-folding)
-(require 'init-dash)
-(require 'init-ledger)
 ;; Extra packages which don't require any configuration
 
 (require-package 'gnuplot)

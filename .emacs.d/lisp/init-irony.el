@@ -4,7 +4,7 @@
 ;; flycheck-irony
 ;; TODO: company-irony-c-headers
 
-(when (maybe-require-package 'irony-mode)
+(when (maybe-require-package 'irony)
 
   (add-hook 'c++-mode-hook 'irony-mode)
   (add-hook 'c-mode-hook 'irony-mode)

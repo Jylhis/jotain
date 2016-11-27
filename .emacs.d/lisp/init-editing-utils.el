@@ -152,15 +152,24 @@
 ;;----------------------------------------------------------------------------
 (cua-selection-mode t)                  ; for rectangles, CUA is nice
 
+;;----------------------------------------------------------------------------
+;; Highlight TODO, FIXME
+;;----------------------------------------------------------------------------
+(when (maybe-require-package 'fic-mode)
+  (add-hook 'prog-mode-hook 'fic-mode t)
+  )
+
+;;----------------------------------------------------------------------------
+;; iedit
+;;----------------------------------------------------------------------------
+(when (maybe-require-package 'iedit)
+  (require 'iedit))
 
 ;;----------------------------------------------------------------------------
 ;; Handy key bindings
 ;;----------------------------------------------------------------------------
 (global-set-key (kbd "C-.") 'set-mark-command)
 (global-set-key (kbd "C-x C-.") 'pop-global-mark)
-
-(when (maybe-require-package 'avy)
-  (global-set-key (kbd "C-;") 'avy-goto-word-or-subword-1))
 
 (require-package 'multiple-cursors)
 ;; multiple-cursors
@@ -178,7 +187,6 @@
 ;; Train myself to use M-f and M-b instead
 (global-unset-key [M-left])
 (global-unset-key [M-right])
-
 
 
 (defun kill-back-to-indentation ()
@@ -284,23 +292,6 @@ With arg N, insert N newlines."
     (indent-according-to-mode)))
 
 (global-set-key (kbd "C-o") 'sanityinc/open-line-with-reindent)
-
-
-;;----------------------------------------------------------------------------
-;; Random line sorting
-;;----------------------------------------------------------------------------
-(defun sort-lines-random (beg end)
-  "Sort lines in region randomly."
-  (interactive "r")
-  (save-excursion
-    (save-restriction
-      (narrow-to-region beg end)
-      (goto-char (point-min))
-      (let ;; To make `end-of-line' and etc. to ignore fields.
-          ((inhibit-field-text-motion t))
-        (sort-subr nil 'forward-line 'end-of-line nil nil
-                   (lambda (s1 s2) (eq (random 2) 0)))))))
-
 
 
 
