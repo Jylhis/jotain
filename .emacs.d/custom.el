@@ -1,102 +1,46 @@
-;;; code:
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(ansi-color-faces-vector
+   [default bold shadow italic underline bold bold-italic bold])
  '(ansi-color-names-vector
-   ["#3F3F3F" "#CC9393" "#7F9F7F" "#F0DFAF" "#8CD0D3" "#DC8CC3" "#93E0E3" "#DCDCCC"])
- '(compilation-message-face (quote default))
- '(cua-global-mark-cursor-color "#2aa198")
- '(cua-normal-cursor-color "#839496")
- '(cua-overwrite-cursor-color "#b58900")
- '(cua-read-only-cursor-color "#859900")
- '(custom-enabled-themes (quote (solarized-light)))
+   (vector "#657b83" "#dc322f" "#859900" "#b58900" "#268bd2" "#d33682" "#2aa198" "#073642"))
+ '(custom-enabled-themes (quote (sanityinc-solarized-dark)))
  '(custom-safe-themes
    (quote
-    ("d677ef584c6dfc0697901a44b885cc18e206f05114c8a3b7fde674fce6180879" "8db4b03b9ae654d4a57804286eb3e332725c84d7cdab38463cb6b97d5762ad26" "54ece5659cc7acdcd529dddd78675c2972a5ac69260af4a6aec517dcea16208b" "a1289424bbc0e9f9877aa2c9a03c7dfd2835ea51d8781a0bf9e2415101f70a7e" "80aca613e13b40f3ffe6a8ce471c6388b93e5f026fe35ac9925c5fb84405a47a" "a164837cd2821475e1099911f356ed0d7bd730f13fa36907895f96a719e5ac3e" "40f6a7af0dfad67c0d4df2a1dd86175436d79fc69ea61614d668a635c2cd94ab" "f3d6a49e3f4491373028eda655231ec371d79d6d2a628f08d5aa38739340540b" "8aebf25556399b58091e533e455dd50a6a9cba958cc4ebb0aab175863c25b9a4" "708df3cbb25425ccbf077a6e6f014dc3588faba968c90b74097d11177b711ad1" "68d36308fc6e7395f7e6355f92c1dd9029c7a672cbecf8048e2933a053cf27e6" default)))
- '(ecb-layout-window-sizes
-   (quote
-    (("leftright2"
-      (ecb-directories-buffer-name 0.16806722689075632 . 0.48333333333333334)
-      (ecb-sources-buffer-name 0.16806722689075632 . 0.5)
-      (ecb-methods-buffer-name 0.21008403361344538 . 0.6166666666666667)
-      (ecb-history-buffer-name 0.21008403361344538 . 0.36666666666666664)))))
- '(ecb-options-version "2.50")
- '(ede-project-directories (quote ("/media/markus/Data/Projects/lappbill")))
- '(fci-rule-color "#383838")
- '(highlight-changes-colors (quote ("#d33682" "#6c71c4")))
- '(highlight-symbol-colors
-   (--map
-    (solarized-color-blend it "#002b36" 0.25)
-    (quote
-     ("#b58900" "#2aa198" "#dc322f" "#6c71c4" "#859900" "#cb4b16" "#268bd2"))))
- '(highlight-symbol-foreground-color "#93a1a1")
- '(highlight-tail-colors
-   (quote
-    (("#073642" . 0)
-     ("#546E00" . 20)
-     ("#00736F" . 30)
-     ("#00629D" . 50)
-     ("#7B6000" . 60)
-     ("#8B2C02" . 70)
-     ("#93115C" . 85)
-     ("#073642" . 100))))
- '(hl-bg-colors
-   (quote
-    ("#7B6000" "#8B2C02" "#990A1B" "#93115C" "#3F4D91" "#00629D" "#00736F" "#546E00")))
- '(hl-fg-colors
-   (quote
-    ("#002b36" "#002b36" "#002b36" "#002b36" "#002b36" "#002b36" "#002b36" "#002b36")))
- '(inhibit-startup-screen t)
- '(irony-additional-clang-options (quote ("-std=c++11")))
- '(magit-diff-use-overlays nil)
- '(nrepl-message-colors
-   (quote
-    ("#CC9393" "#DFAF8F" "#F0DFAF" "#7F9F7F" "#BFEBBF" "#93E0E3" "#94BFF3" "#DC8CC3")))
+    ("4aee8551b53a43a883cb0b7f3255d6859d766b6c5e14bcb01bed572fcbef4328" "4cf3221feff536e2b3385209e9b9dc4c2e0818a69a1cdb4b522756bcdf4e00a4" default)))
+ '(fci-rule-color "#eee8d5")
  '(package-selected-packages
    (quote
-    (ecb web-mode clang-format company-php solarized-theme theme-changer color-theme-solarized disaster csharp-mode atom-one-dark atom-dark-theme atom-one-dark-theme company-jedi ppd-sr-speedbar function-args helm-package irony-eldoc helm-dash helm-gitignore linum-relative helm-gtags ggtags rainbow-mode php-mode fic-mode evil-org evil-magit evil magit helm async flycheck company dockerfile-mode gitignore-mode d-mode yasnippet toml-mode rust-mode rtags neotree markdown-mode latex-preview-pane json-mode iedit helm-ls-git helm-flycheck helm-company haxe-mode gruvbox-theme flycheck-irony flycheck-color-mode-line cpputils-cmake company-irony-c-headers company-irony cmake-ide autopair)))
- '(pos-tip-background-color "#073642")
- '(pos-tip-foreground-color "#93a1a1")
- '(show-paren-mode t)
- '(smartrep-mode-line-active-bg (solarized-color-blend "#859900" "#073642" 0.2))
- '(term-default-bg-color "#002b36")
- '(term-default-fg-color "#839496")
- '(vc-annotate-background "#2B2B2B")
+    (regex-tool dsvn htmlize lua-mode gnuplot flycheck-ledger ledger-mode origami flycheck-clojure cider elein cljsbuild-mode clojure-mode slime-company hippie-expand-slime slime cask-mode flycheck-package highlight-quoted macrostep cl-lib-highlight aggressive-indent redshank immortal-scratch hl-sexp auto-compile ipretty lively elisp-slime-nav paredit-everywhere paredit sql-indent projectile-rails rinari yaml-mode bundler goto-gem yari robe ruby-compilation inf-ruby rspec-mode ruby-hash-syntax flycheck-elm elm-mode hayoo hindent intero haskell-mode company-anaconda anaconda-mode pip-requirements css-eldoc skewer-less less-css-mode scss-mode sass-mode rainbow-mode tagedit tidy org-pomodoro org-cliplink org-fstree smarty-mode php-mode skewer-mode js-comint coffee-mode js2-mode json-mode erlang csv-nav csv-mode markdown-mode textile-mode crontab-mode alert projectile magit-gh-pulls github-issues github-clone bug-reference-github yagist magit git-timemachine git-messenger gitconfig-mode gitignore-mode git-blamed vc-darcs darcsum browse-at-remote fill-column-indicator whitespace-cleanup-mode guide-key highlight-escape-sequences whole-line-or-region move-dup page-break-lines multiple-cursors avy expand-region browse-kill-ring highlight-symbol undo-tree rainbow-delimiters nlinum indent-guide unfill mmm-mode default-text-scale session switch-window company-quickhelp company counsel ivy smex flycheck ibuffer-vc anzu diff-hl dired-sort dired+ disable-mouse color-theme-sanityinc-tomorrow color-theme-sanityinc-solarized mwe-log-commands scratch diminish project-local-variables wgrep exec-path-from-shell fullframe)))
+ '(session-use-package t nil (session))
+ '(vc-annotate-background nil)
  '(vc-annotate-color-map
    (quote
-    ((20 . "#BC8383")
-     (40 . "#CC9393")
-     (60 . "#DFAF8F")
-     (80 . "#D0BF8F")
-     (100 . "#E0CF9F")
-     (120 . "#F0DFAF")
-     (140 . "#5F7F5F")
-     (160 . "#7F9F7F")
-     (180 . "#8FB28F")
-     (200 . "#9FC59F")
-     (220 . "#AFD8AF")
-     (240 . "#BFEBBF")
-     (260 . "#93E0E3")
-     (280 . "#6CA0A3")
-     (300 . "#7CB8BB")
-     (320 . "#8CD0D3")
-     (340 . "#94BFF3")
-     (360 . "#DC8CC3"))))
- '(vc-annotate-very-old-color "#DC8CC3")
- '(weechat-color-list
-   (quote
-    (unspecified "#002b36" "#073642" "#990A1B" "#dc322f" "#546E00" "#859900" "#7B6000" "#b58900" "#00629D" "#268bd2" "#93115C" "#d33682" "#00736F" "#2aa198" "#839496" "#657b83")))
- '(xterm-color-names
-   ["#073642" "#dc322f" "#859900" "#b58900" "#268bd2" "#d33682" "#2aa198" "#eee8d5"])
- '(xterm-color-names-bright
-   ["#002b36" "#cb4b16" "#586e75" "#657b83" "#839496" "#6c71c4" "#93a1a1" "#fdf6e3"]))
+    ((20 . "#dc322f")
+     (40 . "#cb4b16")
+     (60 . "#b58900")
+     (80 . "#859900")
+     (100 . "#2aa198")
+     (120 . "#268bd2")
+     (140 . "#d33682")
+     (160 . "#6c71c4")
+     (180 . "#dc322f")
+     (200 . "#cb4b16")
+     (220 . "#b58900")
+     (240 . "#859900")
+     (260 . "#2aa198")
+     (280 . "#268bd2")
+     (300 . "#d33682")
+     (320 . "#6c71c4")
+     (340 . "#dc322f")
+     (360 . "#cb4b16"))))
+ '(vc-annotate-very-old-color nil))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(default ((t (:family "Source Code Pro" :foundry "adobe" :slant normal :weight semi-bold :height 98 :width normal)))))
-(provide 'custom)
-;;; custom.el ends here
+ )

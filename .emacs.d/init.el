@@ -1,333 +1,163 @@
-;;; Package -- summary
-;;; commentary:
-;;; code:
-
-;; Please don't load outdated byte code
-(setq load-prefer-newer t)
-
-;;(byte-recompile-directory "~/dotfiles/emacs/.emacs.d/")
-(setq user-full-name "Markus Jylhänkangas")
-(setq user-mail-address "markus@jylhis.com")
-(setq calendar-location-name "Finland")
-(setq calendar-latitude 62.2426)
-(setq calendar-longitude 25.7473)
-
-;; VIM cheat sheet: http://michael.peopleofhonoronly.com/vim/
-
-;; Melpa packages
-(require 'package)
-(add-to-list 'package-archives
-             '("melpa" . "http://melpa.org/packages/"))
-(add-to-list 'package-archives
-             '("marmalade" . "http://marmalade-repo.org/packages/"))
-(when (< emacs-major-version 24)
-  ;; For important compatibility libraries like cl-lib
-  (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/")))
-(package-initialize)
-
-(setq custom-file "~/.emacs.d/custom.elc")
-(load custom-file 'noerror)
-
-;; FIXME: can't install packages without cl
-(require 'cl)
-(require 'cl-lib)
-
-;; disable spalsh screen and empty scratch
-(setq inhibit-splash-screen t
-      initial-scratch-message nil)
-
-;; Disable bars
-(scroll-bar-mode 0)
-(tool-bar-mode 0)
-;;(menu-bar-mode 0)
-
-;; highlight current line
-(global-hl-line-mode 1)
-
-;; thing?
-(setq echo-keystrokes 0.1
-      use-dialog-box nil
-      visible-bell t)
-(show-paren-mode t)
-(add-hook 'prog-mode-hook (lambda () (interactive) (setq show-trailing-whitespace 1)))
-
-;; Marking text
-(delete-selection-mode t)
-(transient-mark-mode t)
-(setq select-enable-clipboard t)
-
-;; gdb
-(setq
- gdb-many-windows t
- gdb-show-main t
- )
-
-;; Silence error https://github.com/syl20bnr/spacemacs/issues/192
-;;(setq ad-redefinition-action 'accept)
-
-;; Packages to install
-(defvar jylhis/packages
-  '(
-    ;; COMPANY
-    company
-    company-irony
-    company-irony-c-headers
-    company-jedi
-
-    ;; Irony
-    irony
-
-    ;; GIT
-    magit
-    gitignore-mode
-
-    ;; FLYCHECK
-    flycheck
-    flycheck-color-mode-line
-    flycheck-irony
-
-    ;; HELM
-    helm
-    helm-ls-git
-    helm-company
-    helm-flycheck
-    helm-gitignore
-    helm-dash
-    helm-package
-
-    ;; Gnu Global
-    helm-gtags
-
-    ;; Cmake
-    cmake-ide
-    cpputils-cmake
-
-    ;; Language modes
-    dockerfile-mode
-    haxe-mode
-    json-mode
-    markdown-mode
-    rust-mode
-    d-mode
-    php-mode
-    fic-ext-mode
-    toml-mode
-
-    ;; Themes
-    ;;gruvbox-theme
-    solarized-theme
-    rainbow-mode
-    theme-changer
-
-    ;; Unorganized
-    ac-php
-    ecb
-    web-mode
-    git-gutter-fringe
-    disaster
-    iedit
-    autopair
-    neotree
-    function-args
-    yasnippet
-    latex-preview-pane
-    dash
-    async
-    ) "Default packages")
-
-;; Install packages
-(defun jylhis/packages-installed-p ()
-  (cl-loop for pkg in jylhis/packages
-           when (not (package-installed-p pkg)) do (return nil)
-           finally (return t)))
-(with-eval-after-load
-    (unless (jylhis/packages-installed-p)
-      (message "%s" "Refreshing package database...")
-      (package-refresh-contents)
-      (dolist (pkg jylhis/packages)
-        (when (not (package-installed-p pkg))
-          (package-install pkg)))))
-
-;; auto brackets
-(autopair-global-mode)
-
-;; Line numbers
-(global-linum-mode 1)
-
-;; Theme changer
-(require 'theme-changer)
-(change-theme 'solarized-light 'solarized-dark)
-
-;; iedit
-(require 'iedit)
-
-;; Async
-(autoload 'dired-async-mode "dired-async.el" nil t)
-(dired-async-mode 1)
-(async-bytecomp-package-mode 1)
-
-;; ecb
-(require 'ecb)
-;;(require 'ecb-autoloads)
-(setq ecb-examples-bufferinfo-buffer-name nil)
-(setq ecb-layout-name "leftright2")
-
-;; Web-mode
-;;(require 'web-mode)
-;;(add-to-list 'auto-mode-alist '("\\.phtml\\'" . web-mode))
-;;(add-to-list 'auto-mode-alist '("\\.tpl\\.php\\'" . web-mode))
-;;(add-to-list 'auto-mode-alist '("\\.[agj]sp\\'" . web-mode))
-;;(add-to-list 'auto-mode-alist '("\\.as[cp]x\\'" . web-mode))
-;;(add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
-;;(add-to-list 'auto-mode-alist '("\\.mustache\\'" . web-mode))
-;;(add-to-list 'auto-mode-alist '("\\.djhtml\\'" . web-mode))
-(add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
-(add-to-list 'auto-mode-alist '("\\.php?\\'" . web-mode))
-
-;; Helm
-(global-set-key (kbd "M-x") 'helm-M-x)
-(global-set-key (kbd "C-x C-f") 'helm-find-files)
-(global-set-key (kbd "C-x C-d") 'helm-browse-project)
-(global-set-key (kbd "C-x C-b") 'helm-buffer-list)
-(helm-mode 1)
-(helm-autoresize-mode 1)
-
-;; Enable helm-gtags-mode
-(add-hook 'c-mode-hook 'helm-gtags-mode)
-(add-hook 'c++-mode-hook 'helm-gtags-mode)
-(add-hook 'asm-mode-hook 'helm-gtags-mode)
-
-;; Function-args
-(add-hook 'c-mode-hook 'fa-config-default)
-(add-hook 'c++-mode-hook 'fa-config-default)
-
-;; Set key bindings
-(with-eval-after-load "helm-gtags"
-  '(progn
-     (define-key helm-gtags-mode-map (kbd "M-t") 'helm-gtags-find-tag)
-     (define-key helm-gtags-mode-map (kbd "M-r") 'helm-gtags-find-rtag)
-     (define-key helm-gtags-mode-map (kbd "M-s") 'helm-gtags-find-symbol)
-     (define-key helm-gtags-mode-map (kbd "M-g M-p") 'helm-gtags-parse-file)
-     (define-key helm-gtags-mode-map (kbd "C-c <") 'helm-gtags-previous-history)
-     (define-key helm-gtags-mode-map (kbd "C-c >") 'helm-gtags-next-history)
-     (define-key helm-gtags-mode-map (kbd "M-,") 'helm-gtags-pop-stack)))
-
-
-;; Use Shift+ArrowKeys to move in split panels
-(windmove-default-keybindings)
-
-;; Assign neotree to F8
-(global-set-key [f8] 'neotree-toggle)
-
-;; Indent settings
-(setq-default c-basic-offset 4
-              tab-width 4
-              indent-tabs-mode nil
-              c-default-style "k&r")
-
-;; rainbow
-(add-hook 'css-mode '(lambda () (rainbow-mode 1)))
-
-;; fic-mode
-(add-hook 'prog-mode-hook 'fic-ext-mode 1)
-
-;; Company
-(add-hook 'after-init-hook 'global-company-mode)
-
-;; Company-jedi (python)
-(defun my/python-mode-hook ()
-  (add-to-list 'company-backends 'company-jedi))
-
-(add-hook 'python-mode-hook 'my/python-mode-hook)
-
-
-(defun my-company-irony ()
-  (add-to-list 'company-backends 'company-irony))
-
-(add-hook 'c-mode-hook #'my-company-irony)
-(add-hook 'c++-mode-hook #'my-company-irony)
-
-;; Company irony c headers
-(defun company-c-head ()
-  (add-to-list 'company-backends 'company-irony))
-
-(add-hook 'c-mode-hook #'company-c-head)
-(add-hook 'c++-mode-hook #'company-c-head)
-
-;; CMake ide
-;;(cmake-ide-setup)
-
-;; git gutter
-(require 'git-gutter-fringe)
-(global-git-gutter-mode t)
-
-;; Flycheck
-(add-hook 'after-init-hook #'global-flycheck-mode)
-(add-hook 'c++-mode-hook (lambda () (setq flycheck-clang-language-standard "c++14")))
-(add-hook 'c++-mode-hook (lambda () (setq flycheck-gcc-language-standard "c++14")))
-
-;; Flycheck-iron
-(with-eval-after-load 'flycheck
-  (with-eval-after-load 'irony
-  '(add-hook 'flycheck-mode-hook #'flycheck-irony-setup)))
-
-;; color line
-(add-hook 'flycheck-mode-hook 'flycheck-color-mode-line-mode)
-
-;; Snippets
-(require 'yasnippet)
-(yas-global-mode 1)
-
-;; EDE
-;;(global-ede-mode t)
-
-;; Semantic
-(require 'semantic)
-(global-semanticdb-minor-mode)
-(global-semantic-idle-scheduler-mode t)
-(semantic-add-system-include "/usr/include/boost" 'c++-mode)
-(semantic-mode t)
-
-;; clangFormat
-(require 'clang-format)
-(global-set-key [C-M-tab] 'clang-format-region)
-
-
-;; Irony
-(add-hook 'c++-mode-hook 'irony-mode)
-(add-hook 'c-mode-hook 'irony-mode)
-(add-hook 'objc-mode-hook 'irony-mode)
-
-;; replace the `completion-at-point' and `complete-symbol' bindings in
-;; irony-mode's buffers by irony-mode's function
-(defun my-irony-mode-hook ()
-  (define-key irony-mode-map [remap completion-at-point]
-    'irony-completion-at-point-async)
-  (define-key irony-mode-map [remap complete-symbol]
-    'irony-completion-at-point-async))
-(add-hook 'irony-mode-hook 'my-irony-mode-hook)
-(add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
-
-;; backup & autosave
-;; TODO: Backup to specific directory, dont disable it
-(setq backup-directory-alist `(("." . "~/.saves")))
-(setq backup-by-copying t)
-
-;; Yes no shortcut
-(defalias 'yes-or-no-p 'y-or-n-p)
-
-;; Org-mode
-(add-hook 'org-mode-hook
-          (lambda ()
-            (visual-line-mode 1)))
-
-;; define function to shutdown emacs server instance
-(defun server-shutdown ()
-  "Save buffers, Quit, and Shutdown (kill) server"
-  (interactive)
-  (save-some-buffers)
-  (kill-emacs)
-  )
+
+;;; This file bootstraps the configuration, which is divided into
+;;; a number of other files.
+
+(let ((minver "23.3"))
+  (when (version<= emacs-version minver)
+    (error "Your Emacs is too old -- this config requires v%s or higher" minver)))
+(when (version<= emacs-version "24")
+  (message "Your Emacs is old, and some functionality in this config will be disabled. Please upgrade if possible."))
+
+(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
+(require 'init-benchmarking) ;; Measure startup time
+
+(defconst *spell-check-support-enabled* nil) ;; Enable with t if you prefer
+(defconst *is-a-mac* (eq system-type 'darwin))
+
+;;----------------------------------------------------------------------------
+;; Temporarily reduce garbage collection during startup
+;;----------------------------------------------------------------------------
+(defconst sanityinc/initial-gc-cons-threshold gc-cons-threshold
+  "Initial value of `gc-cons-threshold' at start-up time.")
+(setq gc-cons-threshold (* 128 1024 1024))
+(add-hook 'after-init-hook
+          (lambda () (setq gc-cons-threshold sanityinc/initial-gc-cons-threshold)))
+
+;;----------------------------------------------------------------------------
+;; Bootstrap config
+;;----------------------------------------------------------------------------
+(setq custom-file (expand-file-name "custom.el" user-emacs-directory))
+(require 'init-compat)
+(require 'init-utils)
+(require 'init-site-lisp) ;; Must come before elpa, as it may provide package.el
+;; Calls (package-initialize)
+(require 'init-elpa)      ;; Machinery for installing required packages
+(require 'init-exec-path) ;; Set up $PATH
+
+;;----------------------------------------------------------------------------
+;; Allow users to provide an optional "init-preload-local.el"
+;;----------------------------------------------------------------------------
+(require 'init-preload-local nil t)
+
+;;----------------------------------------------------------------------------
+;; Load configs for specific features and modes
+;;----------------------------------------------------------------------------
+
+(require-package 'wgrep)
+(require-package 'project-local-variables)
+(require-package 'diminish)
+(require-package 'scratch)
+(require-package 'mwe-log-commands)
+
+(require 'init-frame-hooks)
+(require 'init-xterm)
+(require 'init-themes)
+(require 'init-gui-frames)
+(require 'init-dired)
+(require 'init-isearch)
+(require 'init-grep)
+(require 'init-uniquify)
+(require 'init-ibuffer)
+(require 'init-flycheck)
+
+(require 'init-recentf)
+(require 'init-smex)
+;; If you really prefer ido to ivy, change the comments below. I will
+;; likely remove the ido config in due course, though.
+;; (require 'init-ido)
+(require 'init-ivy)
+(require 'init-hippie-expand)
+(require 'init-company)
+(require 'init-windows)
+(require 'init-sessions)
+(require 'init-fonts)
+(require 'init-mmm)
+
+(require 'init-editing-utils)
+(require 'init-whitespace)
+(require 'init-fci)
+
+(require 'init-vc)
+(require 'init-darcs)
+(require 'init-git)
+
+(require 'init-projectile)
+
+(require 'init-compile)
+(require 'init-crontab)
+(require 'init-textile)
+(require 'init-markdown)
+(require 'init-csv)
+(require 'init-erlang)
+(require 'init-javascript)
+(require 'init-php)
+(require 'init-org)
+(require 'init-nxml)
+(require 'init-html)
+(require 'init-css)
+(require 'init-haml)
+(require 'init-python-mode)
+(unless (version<= emacs-version "24.3")
+  (require 'init-haskell))
+(require 'init-elm)
+(require 'init-ruby-mode)
+(require 'init-rails)
+(require 'init-sql)
+
+(require 'init-paredit)
+(require 'init-lisp)
+(require 'init-slime)
+(unless (version<= emacs-version "24.2")
+  (require 'init-clojure)
+  (require 'init-clojure-cider))
+(require 'init-common-lisp)
+
+(when *spell-check-support-enabled*
+  (require 'init-spelling))
+
+(require 'init-misc)
+
+(require 'init-folding)
+(require 'init-dash)
+(require 'init-ledger)
+;; Extra packages which don't require any configuration
+
+(require-package 'gnuplot)
+(require-package 'lua-mode)
+(require-package 'htmlize)
+(require-package 'dsvn)
+(require-package 'regex-tool)
+
+;;----------------------------------------------------------------------------
+;; Allow access from emacsclient
+;;----------------------------------------------------------------------------
+(require 'server)
+(unless (server-running-p)
+  (server-start))
+
+
+;;----------------------------------------------------------------------------
+;; Variables configured via the interactive 'customize' interface
+;;----------------------------------------------------------------------------
+(when (file-exists-p custom-file)
+  (load custom-file))
+
+
+;;----------------------------------------------------------------------------
+;; Allow users to provide an optional "init-local" containing personal settings
+;;----------------------------------------------------------------------------
+(require 'init-local nil t)
+
+
+;;----------------------------------------------------------------------------
+;; Locales (setting them earlier in this file doesn't work in X)
+;;----------------------------------------------------------------------------
+(require 'init-locales)
+
 
 (provide 'init)
-;;; init.el ends here
+
+;; Local Variables:
+;; coding: utf-8
+;; no-byte-compile: t
+;; End:
