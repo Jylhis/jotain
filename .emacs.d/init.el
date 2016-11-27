@@ -109,9 +109,6 @@
 
 (global-hl-line-mode t)
 
-(add-hook 'c++-mode-hook (lambda () (setq flycheck-clang-language-standard "c++14")))
-(add-hook 'c++-mode-hook (lambda () (setq flycheck-gcc-language-standard "c++14")))
-
 ;; end My
 
 (require 'init-paredit)
