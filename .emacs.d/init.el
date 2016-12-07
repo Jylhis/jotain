@@ -22,8 +22,7 @@
 (setq gc-cons-threshold (* 128 1024 1024))
 (add-hook 'after-init-hook
           (lambda () (setq gc-cons-threshold sanityinc/initial-gc-cons-threshold)))
- (setq c-default-style "bsd"
-          c-basic-offset 4)
+
 ;;----------------------------------------------------------------------------
 ;; Bootstrap config
 ;;----------------------------------------------------------------------------
@@ -103,12 +102,19 @@
 ;; TODO: if package does not require configuration just use require-package
 (require 'init-yasnippet)
 (require 'init-gdb)
-(require 'init-cpp)
+(require 'init-c)
 (require 'init-company)
 (require 'init-ecb)
 (require 'init-irony)
 
 (global-hl-line-mode t)
+
+
+(when (display-graphic-p)
+  term-theme())
+
+(setq c-default-style "bsd"
+      c-basic-offset 4)
 
 ;; end My
 

@@ -2,7 +2,7 @@
 (require-package 'color-theme-sanityinc-tomorrow)
 
 ;; If you don't customize it, this is the theme you get.
-(setq-default custom-enabled-themes '(sanityinc-solarized-light))
+(setq-default custom-enabled-themes '(sanityinc-solarized-dark))
 
 ;; Ensure that themes will be applied even if they have not been customized
 (defun reapply-themes ()
@@ -18,15 +18,24 @@
 ;;------------------------------------------------------------------------------
 ;; Toggle between light and dark
 ;;------------------------------------------------------------------------------
-(defun light ()
+(defun light-theme ()
   "Activate a light color theme."
   (interactive)
   (color-theme-sanityinc-solarized-light))
 
-(defun dark ()
+(defun dark-theme ()
   "Activate a dark color theme."
   (interactive)
   (color-theme-sanityinc-solarized-dark))
 
+
+;; TERMINAL
+
+(defun term-theme ()
+  "Term theme."
+  (interactive)
+  (color-theme-sanityinc-tomorrow-night))
+
+;; END TERMINAL
 
 (provide 'init-themes)
