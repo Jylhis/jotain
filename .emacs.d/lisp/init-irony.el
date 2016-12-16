@@ -10,6 +10,10 @@
   (add-hook 'c-mode-hook 'irony-mode)
   (add-hook 'objc-mode-hook 'irony-mode)
 
+  (custom-set-variables
+   '(irony-additional-clang-options (quote ("-std=c++14")))
+   )
+
   (defun my-irony-mode-hook ()
     (define-key irony-mode-map [remap completion-at-point]
       'irony-completion-at-point-async)

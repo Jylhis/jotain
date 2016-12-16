@@ -98,7 +98,7 @@
 (require 'init-ruby-mode)
 (require 'init-sql)
 
-;; My
+;; My TODO: Siirrä omalle paikalle tavara
 ;; TODO: if package does not require configuration just use require-package
 (require 'init-yasnippet)
 (require 'init-gdb)
@@ -109,12 +109,18 @@
 
 (global-hl-line-mode t)
 
-
-(when (display-graphic-p)
-  term-theme())
+;;(when (display-graphic-p)
+;;  term-theme())
 
 (setq c-default-style "bsd"
       c-basic-offset 4)
+
+(setq menu-bar-mode 0)
+
+(global-set-key (kbd "S-C-<left>") 'shrink-window-horizontally)
+(global-set-key (kbd "S-C-<right>") 'enlarge-window-horizontally)
+(global-set-key (kbd "S-C-<down>") 'shrink-window)
+(global-set-key (kbd "S-C-<up>") 'enlarge-window)
 
 ;; end My
 

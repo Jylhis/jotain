@@ -22,6 +22,10 @@
   ;;(global-semantic-show-unmatched-syntax-mode t)
   (semantic-add-system-include "/usr/include/boost" 'c++-mode)
   (semantic-add-system-include "/usr/include/gtkmm-3.0/" 'c++-mode)
-  (semantic-mode t)
+  ;;  (semantic-mode t)
   )
+
+;;'(flycheck-clang-args (quote ("-std=c++14")))
+;;'(flycheck-display-errors-function (quote flycheck-display-error-messages-unless-error-list))
+;;'(flycheck-gcc-args (quote ("-std=c++14")))
 (provide 'init-c)
