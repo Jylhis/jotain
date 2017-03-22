@@ -2,6 +2,7 @@
 ;;; This file bootstraps the configuration, which is divided into
 ;;; a number of other files.
 
+;;; Code:
 (let ((minver "23.3"))
   (when (version<= emacs-version minver)
     (error "Your Emacs is too old -- this config requires v%s or higher" minver)))
@@ -12,6 +13,7 @@
 
 (defconst *spell-check-support-enabled* nil) ;; Enable with t if you prefer
 
+(eval-when-compile (require 'cl))
 ;;----------------------------------------------------------------------------
 ;; Temporarily reduce garbage collection during startup
 ;;----------------------------------------------------------------------------
@@ -33,12 +35,8 @@
 ;;----------------------------------------------------------------------------
 ;; Load configs for specific features and modes
 ;;----------------------------------------------------------------------------
-
-;;(require-package 'wgrep)
-;;(require-package 'project-local-variables)
 (require-package 'diminish)
 (require-package 'scratch)
-;;(require-package 'mwe-log-commands)
 
 (require 'init-frame-hooks)
 (require 'init-xterm)
@@ -156,5 +154,5 @@
 
 ;; Local Variables:
 ;; coding: utf-8
-;; no-byte-compile: t
+;; no-byte-compile: f
 ;; End:
