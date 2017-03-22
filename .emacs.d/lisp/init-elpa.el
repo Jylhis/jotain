@@ -1,17 +1,17 @@
 ;;; Find and load the correct package.el
 
 ;; When switching between Emacs 23 and 24, we always use the bundled package.el in Emacs 24
-(let ((package-el-site-lisp-dir
-       (expand-file-name "site-lisp/package" user-emacs-directory)))
-  (when (and (file-directory-p package-el-site-lisp-dir)
-             (> emacs-major-version 23))
-    (message "Removing local package.el from load-path to avoid shadowing bundled version")
-    (setq load-path (remove package-el-site-lisp-dir load-path))))
+;; NOTE: if emacs doesn't install packages uncomment this
+;;(let ((package-el-site-lisp-dir
+;;       (expand-file-name "site-lisp/package" user-emacs-directory)))
+;;  (when (and (file-directory-p package-el-site-lisp-dir)
+;;             (> emacs-major-version 23))
+;;    (message "Removing local package.el from load-path to avoid shadowing bundled version")
+;;    (setq load-path (remove package-el-site-lisp-dir load-path))))
 
 (require 'package)
 
 
-
 ;;; Standard package repositories
 
 (when (< emacs-major-version 24)
@@ -35,7 +35,7 @@
 
 
 
-
+
 ;;; On-demand installation of packages
 
 (defun require-package (package &optional min-version no-refresh)
@@ -66,18 +66,15 @@ locate PACKAGE."
      (message "Couldn't install optional package `%s': %S" package err)
      nil)))
 
-
 ;;; Fire up package.el
 
 (setq package-enable-at-startup nil)
 (package-initialize)
 
 
-
 (require-package 'fullframe)
 (fullframe list-packages quit-window)
 
-
 (require-package 'cl-lib)
 (require 'cl-lib)
 
