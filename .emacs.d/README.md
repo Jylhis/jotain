@@ -58,3 +58,13 @@ You should usually restart Emacs after pulling changes or updating
 packages so that they can take effect. Emacs should usually restore
 your working buffers when you restart due to this configuration's use
 of the `desktop` and `session` packages.
+
+# TODO
+- Yasnippets snippets
+- Clean
+  - init-fonts
+  - init-c
+  - init-common-lisp
+  - init-company
+  - init-compile
+  - init-dired

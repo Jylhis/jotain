@@ -32,16 +32,6 @@
 (global-set-key (kbd "C-x v f") 'vc-git-grep)
 
 
-;;; git-svn support
-
-;; (when (maybe-require-package 'magit-svn)
-;;   (require-package 'magit-svn)
-;;   (autoload 'magit-svn-enabled "magit-svn")
-;;   (defun sanityinc/maybe-enable-magit-svn-mode ()
-;;     (when (magit-svn-enabled)
-;;       (magit-svn-mode)))
-;;   (add-hook 'magit-status-mode-hook #'sanityinc/maybe-enable-magit-svn-mode))
-
 (after-load 'compile
   (dolist (defn (list '(git-svn-updated "^\t[A-Z]\t\\(.*\\)$" 1 nil nil 0 1)
                       '(git-svn-needs-update "^\\(.*\\): needs update$" 1 nil nil 2 1)))
@@ -64,7 +54,6 @@
          (compilation-buffer-name-function (lambda (major-mode-name) "*git-svn*")))
     (compile (concat "git svn " command))))
 
-
 (require-package 'git-messenger)
 (global-set-key (kbd "C-x v p") #'git-messenger:popup-message)
 

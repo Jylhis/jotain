@@ -34,7 +34,7 @@
 (transient-mark-mode t)
 
 
- ;;; A simple visible bell which works in all terminal types
+;;; A simple visible bell which works in all terminal types
 
 (defun sanityinc/flash-mode-line ()
   (invert-face 'mode-line)
@@ -44,7 +44,6 @@
  ring-bell-function 'sanityinc/flash-mode-line)
 
 
-
 ;;; Newline behaviour
 
 (global-set-key (kbd "RET") 'newline-and-indent)
@@ -56,39 +55,33 @@
 
 (global-set-key (kbd "S-<return>") 'sanityinc/newline-at-end-of-line)
 
-
 
 (when (eval-when-compile (string< "24.3.1" emacs-version))
   ;; https://github.com/purcell/emacs.d/issues/138
   (after-load 'subword
     (diminish 'subword-mode)))
 
-
 
 (when (maybe-require-package 'indent-guide)
   (add-hook 'prog-mode-hook 'indent-guide-mode)
   (after-load 'indent-guide
     (diminish 'indent-guide-mode)))
 
-
 
 (require-package 'nlinum)
 
-
+
 (when (require-package 'rainbow-delimiters)
   (add-hook 'prog-mode-hook 'rainbow-delimiters-mode))
 
-
 
 (when (fboundp 'global-prettify-symbols-mode)
   (global-prettify-symbols-mode))
 
-
 (require-package 'undo-tree)
 (global-undo-tree-mode)
 (diminish 'undo-tree-mode)
 
-
 (require-package 'highlight-symbol)
 (dolist (hook '(prog-mode-hook html-mode-hook css-mode-hook))
   (add-hook hook 'highlight-symbol-mode)
@@ -109,7 +102,6 @@
 (global-set-key (kbd "M-Z") 'zap-up-to-char)
 
 
-
 (require-package 'browse-kill-ring)
 (setq browse-kill-ring-separator "\f")
 (global-set-key (kbd "M-Y") 'browse-kill-ring)
@@ -262,8 +254,6 @@
 (suspend-mode-during-cua-rect-selection 'whole-line-or-region-mode)
 
 
-
-
 (defun sanityinc/open-line-with-reindent (n)
   "A version of `open-line' which reindents the start and end positions.
 If there is a fill prefix and/or a `left-margin', insert them
@@ -293,12 +283,10 @@ With arg N, insert N newlines."
 
 (global-set-key (kbd "C-o") 'sanityinc/open-line-with-reindent)
 
-
 
 (require-package 'highlight-escape-sequences)
 (hes-mode)
 
-
 (require-package 'guide-key)
 (setq guide-key/guide-key-sequence '("C-x" "C-c" "C-x 4" "C-x 5" "C-c ;" "C-c ; f" "C-c ' f" "C-x n" "C-x C-r" "C-x r" "M-s" "C-h"))
 (add-hook 'after-init-hook

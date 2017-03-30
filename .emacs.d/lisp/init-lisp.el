@@ -9,7 +9,7 @@
               (concat ";; Happy hacking, " user-login-name " - Emacs ♥ you!\n\n"))
 
 
-
+
 ;; Make C-x C-e run 'eval-region if the region is active
 
 (defun sanityinc/eval-last-sexp-or-region (prefix)
@@ -34,7 +34,7 @@
     (with-current-buffer out-buffer-name
       (view-mode 1))))
 
-
+
 
 (defun sanityinc/maybe-set-bundled-elisp-readonly ()
   "If this elisp appears to be part of Emacs, then disallow editing."
@@ -45,7 +45,7 @@
 
 (add-hook 'emacs-lisp-mode-hook 'sanityinc/maybe-set-bundled-elisp-readonly)
 
-
+
 ;; Use C-c C-z to toggle between elisp files and an ielm session
 ;; I might generalise this to ruby etc., or even just adopt the repl-toggle package.
 
@@ -115,7 +115,7 @@
 (require-package 'immortal-scratch)
 (add-hook 'after-init-hook 'immortal-scratch-mode)
 
-
+
 ;;; Support byte-compilation in a sub-process, as
 ;;; required by highlight-cl
 
