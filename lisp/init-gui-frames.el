@@ -44,5 +44,4 @@
 
 (require-package 'disable-mouse)
 
-
 (provide 'init-gui-frames)

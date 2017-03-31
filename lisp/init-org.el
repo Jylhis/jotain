@@ -46,6 +46,7 @@
       (unless (file-exists-p org-ditaa-jar-path)
         (sanityinc/grab-ditaa url jar-name)))))
 
+
 
 (define-minor-mode prose-mode
   "Set up a buffer for prose editing.
@@ -81,7 +82,7 @@ typical word processor."
 
 
 (setq org-support-shift-select t)
-
+
 ;;; Capturing
 
 (global-set-key (kbd "C-c c") 'org-capture)
@@ -112,10 +113,16 @@ typical word processor."
 (setq org-refile-target-verify-function 'sanityinc/verify-refile-target)
 
 (defun sanityinc/org-refile-anywhere (&optional goto default-buffer rfloc msg)
-  "A version of `org-refile' which suppresses `org-refile-target-verify-function'."
+  "A version of `org-refile' which allows refiling to any subtree."
   (interactive "P")
   (let ((org-refile-target-verify-function))
     (org-refile goto default-buffer rfloc msg)))
+
+(defun sanityinc/org-agenda-refile-anywhere (&optional goto rfloc no-update)
+  "A version of `org-agenda-refile' which allows refiling to any subtree."
+  (interactive "P")
+  (let ((org-refile-target-verify-function))
+    (org-agenda-refile goto rfloc no-update)))
 
 ;; Targets start with the file name - allows creating level 1 tasks
 ;;(setq org-refile-use-outline-path (quote file))
@@ -263,6 +270,8 @@ typical word processor."
   (define-key org-clock-mode-line-map [header-line mouse-2] 'org-clock-goto)
   (define-key org-clock-mode-line-map [header-line mouse-1] 'org-clock-menu))
 
+
+
 ;; Remove empty LOGBOOK drawers on clock out
 (defun sanityinc/remove-empty-drawer-on-clock-out ()
   (interactive)
@@ -279,6 +288,7 @@ typical word processor."
 ;; TODO: nested projects!
 
 
+
 ;;; Archiving
 
 (setq org-archive-mark-done nil)
@@ -286,12 +296,16 @@ typical word processor."
 
 
 
+
 
 (require-package 'org-pomodoro)
 (setq org-pomodoro-keep-killed-pomodoro-time t)
 (after-load 'org-agenda
   (define-key org-agenda-mode-map (kbd "P") 'org-pomodoro))
 
+
+(after-load 'org
+  (define-key org-mode-map (kbd "C-M-<up>") 'org-up-element))
 
 (after-load 'org
   (org-babel-do-load-languages

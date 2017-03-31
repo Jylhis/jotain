@@ -3,7 +3,7 @@
   (dolist (hook '(css-mode-hook html-mode-hook sass-mode-hook))
     (add-hook hook 'rainbow-mode)))
 
-
+
 ;;; Embedding in html
 (require-package 'mmm-mode)
 (after-load 'mmm-vars
@@ -32,10 +32,27 @@
     (mmm-add-mode-ext-class mode "\\.r?html\\(\\.erb\\)?\\'" 'html-css)))
 
 
+
+
+;;; SASS and SCSS
+(require-package 'sass-mode)
+(require-package 'scss-mode)
+(setq-default scss-compile-at-save nil)
+
+
+
+;;; LESS
+(require-package 'less-css-mode)
+(when (maybe-require-package 'skewer-less)
+  (add-hook 'less-css-mode-hook 'skewer-less-mode))
+
+
+
 ;; Skewer CSS
 (when (maybe-require-package 'skewer-mode)
   (add-hook 'css-mode-hook 'skewer-css-mode))
 
+
 ;;; Use eldoc for syntax hints
 (require-package 'css-eldoc)
 (autoload 'turn-on-css-eldoc "css-eldoc")

@@ -1,5 +1,6 @@
 (maybe-require-package 'json-mode)
 (maybe-require-package 'js2-mode)
+(maybe-require-package 'coffee-mode)
 
 (defcustom preferred-javascript-mode
   (first (remove-if-not #'fboundp '(js2-mode js-mode)))
@@ -47,7 +48,7 @@
 
 (add-to-list 'interpreter-mode-alist (cons "node" preferred-javascript-mode))
 
-
+
 ;; Javascript nests {} and () a lot, so I find this helpful
 
 (when (and (executable-find "ag")
@@ -58,7 +59,15 @@
               (lambda () (add-hook 'xref-backend-functions #'xref-js2-xref-backend nil t)))))
 
 
+
+;;; Coffeescript
 
+(after-load 'coffee-mode
+  (setq coffee-js-mode preferred-javascript-mode
+        coffee-tab-width preferred-javascript-indent-level))
+
+(when (fboundp 'coffee-mode)
+  (add-to-list 'auto-mode-alist '("\\.coffee\\.erb\\'" . coffee-mode)))
 
 ;; ---------------------------------------------------------------------------
 ;; Run and interact with an inferior JS via js-comint.el

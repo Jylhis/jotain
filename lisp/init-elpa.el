@@ -1,17 +1,30 @@
 ;;; Find and load the correct package.el
 
 ;; When switching between Emacs 23 and 24, we always use the bundled package.el in Emacs 24
-;; NOTE: if emacs doesn't install packages uncomment this
-;;(let ((package-el-site-lisp-dir
-;;       (expand-file-name "site-lisp/package" user-emacs-directory)))
-;;  (when (and (file-directory-p package-el-site-lisp-dir)
-;;             (> emacs-major-version 23))
-;;    (message "Removing local package.el from load-path to avoid shadowing bundled version")
-;;    (setq load-path (remove package-el-site-lisp-dir load-path))))
+(let ((package-el-site-lisp-dir
+       (expand-file-name "site-lisp/package" user-emacs-directory)))
+  (when (and (file-directory-p package-el-site-lisp-dir)
+             (> emacs-major-version 23))
+    (message "Removing local package.el from load-path to avoid shadowing bundled version")
+    (setq load-path (remove package-el-site-lisp-dir load-path))))
 
 (require 'package)
 
 
+
+;;; Install into separate package dirs for each Emacs version, to prevent bytecode incompatibility
+(let ((versioned-package-dir
+       (expand-file-name (format "elpa-%s.%s" emacs-major-version emacs-minor-version)
+                         user-emacs-directory)))
+  (when (file-directory-p package-user-dir)
+    (message "Default package locations have changed in this config: renaming old package dir %s to %s."
+             package-user-dir
+             versioned-package-dir)
+    (rename-file package-user-dir versioned-package-dir))
+  (setq package-user-dir versioned-package-dir))
+
+
+
 ;;; Standard package repositories
 
 (when (< emacs-major-version 24)
@@ -25,17 +38,23 @@
 (when (< emacs-major-version 24)
   (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/")))
 
+
+(defconst sanityinc/no-ssl (or (< emacs-major-version 24)
+                               (and (memq system-type '(windows-nt ms-dos))
+                                    (not (gnutls-available-p)))))
+
 ;;; Also use Melpa for most packages
-(add-to-list 'package-archives `("melpa" . ,(if (< emacs-major-version 24)
-                                                "http://melpa.org/packages/"
-                                              "https://melpa.org/packages/")))
+(add-to-list 'package-archives
+             `("melpa" . ,(if sanityinc/no-ssl
+                              "http://melpa.org/packages/"
+                            "https://melpa.org/packages/")))
 
 ;; NOTE: In case of MELPA problems, the official mirror URL is
 ;; https://www.mirrorservice.org/sites/stable.melpa.org/packages/
 
 
 
-
+
 ;;; On-demand installation of packages
 
 (defun require-package (package &optional min-version no-refresh)
@@ -66,15 +85,18 @@ locate PACKAGE."
      (message "Couldn't install optional package `%s': %S" package err)
      nil)))
 
+
 ;;; Fire up package.el
 
 (setq package-enable-at-startup nil)
 (package-initialize)
 
 
+
 (require-package 'fullframe)
 (fullframe list-packages quit-window)
 
+
 (require-package 'cl-lib)
 (require 'cl-lib)
 

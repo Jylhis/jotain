@@ -51,3 +51,4 @@
 (add-hook 'c++-mode-hook #'company-c-head)
 
 (provide 'init-irony)
+

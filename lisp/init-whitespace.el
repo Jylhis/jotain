@@ -1,6 +1,6 @@
 (setq-default show-trailing-whitespace t)
 
-
+
 ;;; Whitespace
 
 (defun sanityinc/no-trailing-whitespace ()

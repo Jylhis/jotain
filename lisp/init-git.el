@@ -3,7 +3,6 @@
 (require-package 'git-blamed)
 (require-package 'gitignore-mode)
 (require-package 'gitconfig-mode)
-(require-package 'git-messenger) ;; Though see also vc-annotate's "n" & "p" bindings
 (maybe-require-package 'git-timemachine)
 
 
@@ -28,9 +27,22 @@
   (add-hook 'git-commit-mode-hook 'goto-address-mode))
 
 
+
+
 ;; Convenient binding for vc-git-grep
 (global-set-key (kbd "C-x v f") 'vc-git-grep)
 
+
+
+;;; git-svn support
+
+;; (when (maybe-require-package 'magit-svn)
+;;   (require-package 'magit-svn)
+;;   (autoload 'magit-svn-enabled "magit-svn")
+;;   (defun sanityinc/maybe-enable-magit-svn-mode ()
+;;     (when (magit-svn-enabled)
+;;       (magit-svn-mode)))
+;;   (add-hook 'magit-status-mode-hook #'sanityinc/maybe-enable-magit-svn-mode))
 
 (after-load 'compile
   (dolist (defn (list '(git-svn-updated "^\t[A-Z]\t\\(.*\\)$" 1 nil nil 0 1)
@@ -54,7 +66,9 @@
          (compilation-buffer-name-function (lambda (major-mode-name) "*git-svn*")))
     (compile (concat "git svn " command))))
 
-(require-package 'git-messenger)
+
+(maybe-require-package 'git-messenger)
+;; Though see also vc-annotate's "n" & "p" bindings
 (global-set-key (kbd "C-x v p") #'git-messenger:popup-message)
 
 

@@ -1,7 +1,7 @@
 # A reasonable Emacs config
 
 This started as fork of [Purcell's emacs config](https://github.com/purcell/emacs.d)
-that I have continued to tweak since 2016. I have removed much of the
+that I have continued to tweak since 2017. I have removed much of the
 OS X specific stuff and some useless features/languages. This config is mainly
 used on Linux and more mostly on Fedora and openSUSE.
 
