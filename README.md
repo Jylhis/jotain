@@ -31,7 +31,9 @@ config, further programs will likely be required, particularly those
 that [flycheck](https://github.com/flycheck/flycheck) uses to provide
 on-the-fly syntax checking.
 
-Font: inconsolata
+#### Font
+Name: inconsolata
+Size: 13
 
 ## FIXME: Installation
 
