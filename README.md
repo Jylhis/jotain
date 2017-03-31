@@ -35,13 +35,13 @@ on-the-fly syntax checking.
 Name: inconsolata
 Size: 13
 
-## FIXME: Installation
+## Installation
 
 To install, clone this repo to `~/.emacs.d`, i.e. ensure that the
 `init.el` contained in this repo ends up at `~/.emacs.d/init.el`:
 
 ```
-git clone https://gitlab.com/Jylhis/dotfiles ~/.dotfiles
+git clone https://gitlab.com/Jylhis/Emacs ~/.emacs.d
 ```
 
 Upon starting up Emacs for the first time, further third-party
@@ -60,13 +60,3 @@ You should usually restart Emacs after pulling changes or updating
 packages so that they can take effect. Emacs should usually restore
 your working buffers when you restart due to this configuration's use
 of the `desktop` and `session` packages.
-
-# TODO
-- Yasnippets snippets
-- Clean
-  - init-fonts
-  - init-c
-  - init-common-lisp
-  - init-company
-  - init-compile
-  - init-dired
