@@ -1,62 +1,53 @@
-# A reasonable Emacs config
+# OUT OF DATE
 
-This started as fork of [Purcell's emacs config](https://github.com/purcell/emacs.d)
-that I have continued to tweak since 2017. I have removed much of the
-OS X specific stuff and some useless features/languages. This config is mainly
-used on Linux and more mostly on Fedora and openSUSE.
-
-This config support atleast these languages
-* C
-* C++
-* CSS
-* Common Lisp (with Slime)
-* Erlang
-* GO
-* HTML
-* Javascript
-* Markdown
-* PHP
-* Python
-
-
-In particular, there's a nice config for *autocompletion* with
-[company](https://company-mode.github.io/), and
-[flycheck](http://www.flycheck.org) is used to immediately highlight
-syntax errors in number of languages.
-
-## Other requirements
-
-To make the most of the programming language-specific support in this
-config, further programs will likely be required, particularly those
-that [flycheck](https://github.com/flycheck/flycheck) uses to provide
-on-the-fly syntax checking.
-
-#### Font
-Name: inconsolata
-Size: 13
-
-## Installation
-
-To install, clone this repo to `~/.emacs.d`, i.e. ensure that the
-`init.el` contained in this repo ends up at `~/.emacs.d/init.el`:
-
-```
-git clone https://gitlab.com/Jylhis/Emacs ~/.emacs.d
+# Installation
+Install dependencies:
+```bash
+sudo dnf install emacs clang clang-devel global stow cmake gcc-c++ clang-devel&&
+sudo python3 -m pip install Pygments jedi pylint
 ```
 
-Upon starting up Emacs for the first time, further third-party
-packages will be automatically downloaded and installed. If you
-encounter any errors at that stage, try restarting Emacs, and possibly
-running `M-x package-refresh-contents` before doing so.
+Clone configs
+```bash
+git clone https://github.com/Jylhis/dotfiles ~/dotfiles
+cd ~/dotfiles
+stow emacs
+```
 
-## Updates
+In emacs: M-x
+`irony-install-server`
+`jedi:install-server`
 
-Update the config with `git pull`. You'll probably also want/need to update
-the third-party packages regularly too:
+# Bytecompile config directory
+`M-x byte-recompile-directory`
 
-<kbd>M-x package-list-packages</kbd>, then <kbd>U</kbd> followed by <kbd>x</kbd>.
+# Windows
+Copy dotfiles to %appdata%/.emacs.d
 
-You should usually restart Emacs after pulling changes or updating
-packages so that they can take effect. Emacs should usually restore
-your working buffers when you restart due to this configuration's use
-of the `desktop` and `session` packages.
+# TODO
+- remove line numbers from org-mode
+- fix irony-c-header thing
+- [emacs doom](https://www.reddit.com/r/emacs/comments/51jvai/making_modern_emacs_themes/)
+- [CEDET](http://alexott.net/en/writings/emacs-devenv/EmacsCedet.html)
+- [alexott config](https://github.com/alexott/emacs-configs)
+- [Using emacs as ide](http://stackoverflow.com/questions/63421/using-emacs-as-an-ide?noredirect=1&lq=1)
+- [Learn emacs windows and frames](https://blasphemousbits.wordpress.com/2007/05/04/learning-emacs-part-4-buffers-windows-and-frames/)
+- https://github.com/tuhdo/emacs-c-ide-demo
+- [Using generated database from GNU Global](https://tuhdo.github.io/c-ide.html#sec-2)
+- [refactor](https://github.com/tuhdo/semantic-refactor)
+- [Read otsikko deft -> alaspäin](http://aaronbedra.com/emacs.d/)
+- helm find function from project
+- switch between .hpp -> .cpp
+- find declaration
+- find usages
+- clang format 
+- project file support (sublime-project, .pro, cmake etc.)
+- .h, .hpp -> .c, .cpp, cxx
+- git show changed lines
+- git conflict solve
+- find all todos etc. in git repo and show them in helm
+- keybind decrease increase size of splitted windowA
+- http://spacemacs.org/layers/+lang/c-c++/README.html
+- http://spacemacs.org/layers/+lang/html/README.html
+- [git](http://spacemacs.org/layers/+source-control/git/README.html)
+- [hydra](http://oremacs.com/2015/01/20/introducing-hydra/)

@@ -1,194 +1,136 @@
+;; - editorconfig
+;; - yasnippets
+;; - whitespace-cleanup-mode???
+;;
+;; plugins to find
+;; - buffers to tabs
 
-;;; This file bootstraps the configuration, which is divided into
-;;; a number of other files.
 
-(let ((minver "23.3"))
-  (when (version<= emacs-version minver)
-    (error "Your Emacs is too old -- this config requires v%s or higher" minver)))
+;; Added by Package.el.  This must come before configurations of
+;; installed packages.  Don't delete this line.  If you don't want it,
+;; just comment it out by adding a semicolon to the start of the line.
+;; You may delete these explanatory comments.
+(package-initialize)
+
 (when (version<= emacs-version "24")
-  (message "Your Emacs is old, and some functionality in this config will be disabled. Please upgrade if possible."))
+	(message "Emacs is old"))
 
-(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
-(require 'init-benchmarking) ;; Measure startup time
+;; Please don't load outdated byte code
+(setq load-prefer-newer t)
+(setq gc-cons-threshold 50000000)
 
-(defconst *spell-check-support-enabled* nil) ;; Enable with t if you prefer
-
-(let ((file-name-handler-alist nil))
-
-;;----------------------------------------------------------------------------
-;; Temporarily reduce garbage collection during startup
-;;----------------------------------------------------------------------------
-(defconst sanityinc/initial-gc-cons-threshold gc-cons-threshold
-  "Initial value of `gc-cons-threshold' at start-up time.")
-(setq gc-cons-threshold (* 128 1024 1024))
-(add-hook 'after-init-hook
-          (lambda () (setq gc-cons-threshold sanityinc/initial-gc-cons-threshold)))
-
-;;----------------------------------------------------------------------------
-;; Bootstrap config
-;;----------------------------------------------------------------------------
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
-(require 'init-compat)
-(require 'init-utils)
-;; Calls (package-initialize)
-(require 'init-elpa)      ;; Machinery for installing required packages
-(require 'init-exec-path) ;; Set up $PATH
-
-;;----------------------------------------------------------------------------
-;; Allow users to provide an optional "init-preload-local.el"
-;;----------------------------------------------------------------------------
-(require 'init-preload-local nil t)
-
-;;----------------------------------------------------------------------------
-;; Load configs for specific features and modes
-;;----------------------------------------------------------------------------
-
-(require-package 'wgrep)
-(require-package 'project-local-variables)
-(require-package 'diminish)
-(require-package 'scratch)
-(require-package 'mwe-log-commands)
-
-(require 'init-frame-hooks)
-(require 'init-xterm)
-(require 'init-themes)
-(require 'init-gui-frames)
-(require 'init-dired)
-(require 'init-isearch)
-(require 'init-grep)
-(require 'init-uniquify)
-(require 'init-ibuffer)
-(require 'init-flycheck)
-
-(require 'init-recentf)
-(require 'init-smex)
-;; If you really prefer ido to ivy, change the comments below. I will
-;; likely remove the ido config in due course, though.
-;; (require 'init-ido)
-(require 'init-ivy)
-(require 'init-hippie-expand)
-(require 'init-company)
-(require 'init-windows)
-(require 'init-sessions)
-(require 'init-fonts)
-(require 'init-mmm)
-(require 'init-irony)
-
-(require 'init-editing-utils)
-(require 'init-whitespace)
-(require 'init-fci)
-
-(require 'init-vc)
-(require 'init-darcs)
-(require 'init-git)
-
-(require 'init-projectile)
-
-(require 'init-compile)
-(require 'init-crontab)
-(require 'init-textile)
-(require 'init-markdown)
-(require 'init-csv)
-(require 'init-erlang)
-(require 'init-javascript)
-(require 'init-php)
-(require 'init-org)
-(require 'init-nxml)
-(require 'init-html)
-(require 'init-css)
-(require 'init-haml)
-(require 'init-python-mode)
-(require 'init-c)
-(require 'init-go)
-
-(unless (version<= emacs-version "24.3")
-  (require 'init-haskell))
-(require 'init-elm)
-(require 'init-ruby-mode)
-(require 'init-rails)
-(require 'init-sql)
-
-(require 'init-paredit)
-(require 'init-lisp)
-(require 'init-slime)
-(unless (version<= emacs-version "24.2")
-  (require 'init-clojure)
-  (require 'init-clojure-cider))
-(require 'init-common-lisp)
-
-(when *spell-check-support-enabled*
-  (require 'init-spelling))
-
-(require 'init-misc)
-
-(require 'init-dash)
-
-;; Extra packages which don't require any configuration
-
-(require-package 'lua-mode)
-(require-package 'htmlize)
-(require-package 'dsvn)
-(require-package 'regex-tool)
-
-;;----------------------------------------------------------------------------
-;; Allow access from emacsclient
-;;----------------------------------------------------------------------------
-(require 'server)
-(unless (server-running-p)
-  (server-start))
-
-
-;;----------------------------------------------------------------------------
-;; Variables configured via the interactive 'customize' interface
-;;----------------------------------------------------------------------------
 (when (file-exists-p custom-file)
   (load custom-file))
 
+(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 
-;;----------------------------------------------------------------------------
-;; Allow users to provide an optional "init-local" containing personal settings
-;;----------------------------------------------------------------------------
-(require 'init-local nil t)
+;;;;;;;;;;;;;;;;;
+;; PLUGINS
+;;;;;;;;;;;;;;;;;
+
+(require 'prelude-packages)
+(require 'jylhis-debugger)
+;;(require 'init-yasnippet)
+;; Editgorconfig
+;; autocopmlete??company??
 
 
-;;----------------------------------------------------------------------------
-;; Locales (setting them earlier in this file doesn't work in X)
-;;----------------------------------------------------------------------------
-(require 'init-locales)
+;;;;;;;;;;;;;;;;;
+;; SETTINGS
+;;;;;;;;;;;;;;;;;
 
-;;---------------------------
-;; Omat jutu FIXME
-;;---------------------------
+;; Poista toolbar
+(tool-bar-mode -1)
 
-(require 'init-yasnippet)
-;;(require 'init-gdb)
-;;(require 'init-c)
-;;(require 'init-company)
-(require 'init-ecb)
-;;(require 'init-irony)
+;; Brackets pair homma
+(electric-pair-mode 1)
 
-(global-hl-line-mode t)
+;; Kelpaa pelkkä y ja n
+(fset 'yes-or-no-p 'y-or-n-p)
 
-;;(when (display-graphic-p)
-;;  term-theme())
+;; Rivi highlight
+(global-hl-line-mode 0)
+
+;; Näyttää brackets parin
+(show-paren-mode 1)
+
+;; auto brackets
+;(autopair-global-mode)
+
+;; Line numbers
+;(global-linum-mode 1)
+
+;; Marking text
+(delete-selection-mode t)
+(transient-mark-mode t)
+(setq select-enable-clipboard t)
+
+;; Startup
+(setq inhibit-startup-screen t
+ inhibit-startup-echo-area-message t
+ indicate-empty-lines t)
+
+(setq visible-bell 1)
+
+(setq large-file-warning-threshold 100000000)
 
 (setq c-default-style "bsd"
-      c-basic-offset 4)
+      c-basic-offset 4
+      blink-cursor-interval 0.4
+      column-number-mode t
+      tooltip-delay 1.5
+      make-backup-files nil)
 
-(setq menu-bar-mode 0)
+(transient-mark-mode t)
 
-(global-set-key (kbd "S-C-<left>") 'shrink-window-horizontally)
-(global-set-key (kbd "S-C-<right>") 'enlarge-window-horizontally)
-(global-set-key (kbd "S-C-<down>") 'shrink-window)
-(global-set-key (kbd "S-C-<up>") 'enlarge-window)
+;; newline behavior
+(global-set-key (kbd "RET") 'newline-and-indent)
 
-(when (maybe-require-package 'uptimes)
-  (add-hook 'after-init-hook (lambda () (require 'uptimes))))
-)
 
-(provide 'init)
 
-;; Local Variables:
-;; coding: utf-8
-;; no-byte-compile: t
-;; End:
+;;(message "works")
+
+
+;;;;;;;;;;;;;;;;;;;
+;; Functions
+;;;;;;;;;;;;;;;;;;
+
+;; Delete the current file
+(defun delete-this-file ()
+  "Delete the current file, and kill the buffer."
+  (interactive)
+  (or (buffer-file-name) (error "No file is currently being edited"))
+  (when (yes-or-no-p (format "Really delete '%s'?"
+                             (file-name-nondirectory buffer-file-name)))
+    (delete-file (buffer-file-name))
+    (kill-this-buffer)))
+
+
+;; Rename the current file
+(defun rename-this-file-and-buffer (new-name)
+  "Renames both current buffer and file it's visiting to NEW-NAME."
+  (interactive "sNew name: ")
+  (let ((name (buffer-name))
+        (filename (buffer-file-name)))
+    (unless filename
+      (error "Buffer '%s' is not visiting a file!" name))
+    (progn
+      (when (file-exists-p filename)
+        (rename-file filename new-name 1))
+      (set-visited-file-name new-name)
+      (rename-buffer new-name))))
+
+
+;; Themes
+(setq-default custom-enabled-themes '(tango-dark))
+(defun light ()
+  "Activate a light color theme."
+  (interactive)
+  (tango-dark))
+
+
+(defun dark ()
+  "Activate a light color theme."
+  (interactive)
+  (tango))
