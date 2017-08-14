@@ -1,7 +1,11 @@
+;; TODO
 ;; - editorconfig
 ;; - yasnippets
 ;; - whitespace-cleanup-mode???
 ;;
+;; - Paste and indent pasted content
+;; - Move line (visual studio)
+;; - functio: save-current-location -> select-all -> indent-region -> return current location
 ;; plugins to find
 ;; - buffers to tabs
 
@@ -31,6 +35,10 @@
 
 (require 'prelude-packages)
 (require 'jylhis-debugger)
+;; undo-tree
+(prelude-require-package 'undo-tree)
+(require 'undo-tree)
+(global-undo-tree-mode)
 ;;(require 'init-yasnippet)
 ;; Editgorconfig
 ;; autocopmlete??company??
@@ -77,6 +85,8 @@
 
 (setq c-default-style "bsd"
       c-basic-offset 4
+      indent-tabs-mode nil
+      tab-width 4
       blink-cursor-interval 0.4
       column-number-mode t
       tooltip-delay 1.5

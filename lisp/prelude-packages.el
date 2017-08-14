@@ -118,6 +118,7 @@ PACKAGE is installed only if not already present.  The file is opened in MODE."
     ("\\.elixir\\'" elixir-mode elixir-mode)
     ("\\.erl\\'" erlang erlang-mode)
     ("\\.feature\\'" feature-mode feature-mode)
+    ("\\.glsl\\'" glsl-mode glsl-mode)
     ("\\.go\\'" go-mode go-mode)
     ("\\.groovy\\'" groovy-mode groovy-mode)
     ("\\.haml\\'" haml-mode haml-mode)
