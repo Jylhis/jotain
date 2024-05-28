@@ -1,146 +1,241 @@
-;; TODO
-;; - editorconfig
-;; - yasnippets
-;; - whitespace-cleanup-mode???
-;;
-;; - Paste and indent pasted content
-;; - Move line (visual studio)
-;; - functio: save-current-location -> select-all -> indent-region -> return current location
-;; plugins to find
-;; - buffers to tabs
+;;; package -- Init  -*- lexical-binding: t; -*-
+;;; Commentary:
 
+;; Bootstrap config
 
-;; Added by Package.el.  This must come before configurations of
-;; installed packages.  Don't delete this line.  If you don't want it,
-;; just comment it out by adding a semicolon to the start of the line.
-;; You may delete these explanatory comments.
-(package-initialize)
+;;; Code:
 
-(when (version<= emacs-version "24")
-	(message "Emacs is old"))
-
-;; Please don't load outdated byte code
-(setq load-prefer-newer t)
-(setq gc-cons-threshold 50000000)
-
-(setq custom-file (expand-file-name "custom.el" user-emacs-directory))
-(when (file-exists-p custom-file)
-  (load custom-file))
-
+;; Produce backtraces when errors occur: can be helpful to diagnose startup issues
+;;(setq debug-on-error t)
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
-
-;;;;;;;;;;;;;;;;;
-;; PLUGINS
-;;;;;;;;;;;;;;;;;
-
-(require 'prelude-packages)
-(require 'jylhis-debugger)
-;; undo-tree
-(prelude-require-package 'undo-tree)
-(require 'undo-tree)
-(global-undo-tree-mode)
-;;(require 'init-yasnippet)
-;; Editgorconfig
-;; autocopmlete??company??
+(add-to-list 'load-path (expand-file-name "themes" user-emacs-directory))
+(add-to-list 'load-path (expand-file-name "personal" user-emacs-directory))
 
 
-;;;;;;;;;;;;;;;;;
-;; SETTINGS
-;;;;;;;;;;;;;;;;;
+(defconst *spell-check-support-enabled* nil) ;; Enable with t if you prefer
+(defconst *is-a-mac* (eq system-type 'darwin))
 
-;; Poista toolbar
-(tool-bar-mode -1)
+;; Adjust garbage collection threshold for early startup (see use of gcmh below)
+(setq gc-cons-threshold (* 128 1024 1024))
 
-;; Brackets pair homma
-(electric-pair-mode 1)
+;; Process performance tuning
 
-;; Kelpaa pelkkä y ja n
-(fset 'yes-or-no-p 'y-or-n-p)
+(setq read-process-output-max (* 4 1024 1024))
+(setq process-adaptive-read-buffering nil)
 
-;; Rivi highlight
-(global-hl-line-mode 0)
+;; Store automatic customisation options elsewhere
+(setq custom-file (locate-user-emacs-file "custom.el"))
+ (when (file-exists-p custom-file)
+   (load custom-file 'noerror))
 
-;; Näyttää brackets parin
-(show-paren-mode 1)
+(load "setup-straight")
+(load "setup-exec-path")
 
-;; auto brackets
-;(autopair-global-mode)
+;; General performance tuning
+(when (require 'gcmh)
+  (setq gcmh-high-cons-threshold (* 128 1024 1024))
+  (add-hook 'after-init-hook (lambda ()
+                               (gcmh-mode)
+                               (diminish 'gcmh-mode))))
 
-;; Line numbers
-;(global-linum-mode 1)
-
-;; Marking text
-(delete-selection-mode t)
-(transient-mark-mode t)
-(setq select-enable-clipboard t)
-
-;; Startup
-(setq inhibit-startup-screen t
- inhibit-startup-echo-area-message t
- indicate-empty-lines t)
-
-(setq visible-bell 1)
-
-(setq large-file-warning-threshold 100000000)
-
-(setq c-default-style "bsd"
-      c-basic-offset 4
-      indent-tabs-mode nil
-      tab-width 4
-      blink-cursor-interval 0.4
-      column-number-mode t
-      tooltip-delay 1.5
-      make-backup-files nil)
-
-(transient-mark-mode t)
-
-;; newline behavior
-(global-set-key (kbd "RET") 'newline-and-indent)
+(setq jit-lock-defer-time 0)
 
 
+;; TODO: diminish here
 
-;;(message "works")
+(use-package which-key
+  :straight t
+  :config
+  (which-key-mode))
 
+(load "setup-defaults")
+;;==================
+;; Sane defaults
+;;==================
 
-;;;;;;;;;;;;;;;;;;;
-;; Functions
-;;;;;;;;;;;;;;;;;;
-
-;; Delete the current file
-(defun delete-this-file ()
-  "Delete the current file, and kill the buffer."
-  (interactive)
-  (or (buffer-file-name) (error "No file is currently being edited"))
-  (when (yes-or-no-p (format "Really delete '%s'?"
-                             (file-name-nondirectory buffer-file-name)))
-    (delete-file (buffer-file-name))
-    (kill-this-buffer)))
+;; Delete trailing spaces and add new line in the end of a file on save.
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
 
 
-;; Rename the current file
-(defun rename-this-file-and-buffer (new-name)
-  "Renames both current buffer and file it's visiting to NEW-NAME."
-  (interactive "sNew name: ")
-  (let ((name (buffer-name))
-        (filename (buffer-file-name)))
-    (unless filename
-      (error "Buffer '%s' is not visiting a file!" name))
-    (progn
-      (when (file-exists-p filename)
-        (rename-file filename new-name 1))
-      (set-visited-file-name new-name)
-      (rename-buffer new-name))))
+;; use human-readable sizes in dired
 
 
-;; Themes
-(setq-default custom-enabled-themes '(tango-dark))
-(defun light ()
-  "Activate a light color theme."
-  (interactive)
-  (tango-dark))
+(load "setup-keybindings")
 
 
-(defun dark ()
-  "Activate a light color theme."
-  (interactive)
-  (tango))
+;;(setq max-lisp-eval-depth 10000)
+
+;; Minibuffer completion is essential to your Emacs workflow and
+;; Vertico is currently one of the best out there. There's a lot to
+;; dive in here so I recommend checking out the documentation for more
+;; details: https://elpa.gnu.org/packages/vertico.html. The short and
+;; sweet of it is that you search for commands with "M-x do-thing" and
+;; the minibuffer will show you a filterable list of matches.
+(use-package vertico
+  :straight t
+  :custom
+  (vertico-cycle t)
+  (read-buffer-completion-ignore-case t)
+  (read-file-name-completion-ignore-case t)
+  (completion-styles '(basic substring partial-completion flex))
+  :init
+  (vertico-mode))
+
+;; Improve the accessibility of Emacs documentation by placing
+;; descriptions directly in your minibuffer. Give it a try:
+;; "M-x find-file".
+(use-package marginalia
+  :after vertico
+  :straight t
+  :init
+  (marginalia-mode))
+
+;; Adds intellisense-style code completion at point that works great
+;; Add extra context to Emacs documentation to help make it easier to
+;; search and understand. This configuration uses the keybindings
+;; recommended by the package author.
+(use-package helpful
+  :straight t
+  :bind (("C-h f" . #'helpful-callable)
+         ("C-h v" . #'helpful-variable)
+         ("C-h k" . #'helpful-key)
+         ("C-c C-d" . #'helpful-at-point)
+         ("C-h F" . #'helpful-function)
+         ("C-h C" . #'helpful-command)))
+
+(load "setup-projectile")
+
+(load "setup-dashboard")
+
+;; Extended completion utilities
+(use-package consult
+  :straight t
+  :config
+  (global-set-key [rebind switch-to-buffer] #'consult-buffer)
+  (global-set-key (kbd "C-c j") #'consult-line)
+  (global-set-key (kbd "C-c i") #'consult-imenu)
+  (setq read-buffer-completion-ignore-case t
+        read-file-name-completion-ignore-case t
+        completion-ignore-case t)
+
+  )
+
+
+
+
+;; Miscellaneous options
+(setq-default major-mode8
+              (lambda ()             ; guess major mode from file name
+                (unless buffer-file-name
+                  (let ((buffer-file-name (buffer-name)))
+                    (set-auto-mode)))))
+
+;;(setq window-resize-pixelwise t)
+;;(setq frame-resize-pixelwise t)
+
+
+
+;;===============
+;; KeyBindings
+;;===============
+
+;; TODO: Map lsp-find-* to something useful
+
+;; Move-text lines around with meta-up/down.
+(use-package move-text
+  :straight t
+  :config
+  (move-text-default-bindings))
+
+;;===============
+;; UI
+;;===============
+
+(load "extern-theme")
+(load "setup-treemacs")
+
+;;================
+;; Programming
+;;================
+
+
+;; Automatically guess indent offsets, tab, spaces settings, etc.
+(use-package dtrt-indent
+  :straight t)
+
+;; ;; Enable autocompletion by default in programming buffers
+;;(add-hook 'prog-mode-hook #'corfu-mode)
+
+(use-package jsonrpc
+  :straight t)
+
+(use-package copilot
+  :straight (:host github :repo "copilot-emacs/copilot.el" :files ("*.el"))
+  :ensure t
+  :config
+  (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
+(define-key copilot-completion-map (kbd "TAB") 'copilot-accept-completion)
+  )
+
+;;; Indication of local VCS changes
+(use-package diff-hl
+  :straight t
+  :config
+  (add-hook 'prog-mode-hook #'diff-hl-mode)
+  )
+
+;; Remove trailing whitespace in files
+(autoload 'nuke-trailing-whitespace "whitespace" nil t)
+
+(use-package diff-mode
+  :straight t
+  :mode
+  "\\.patch[0-9]*\\'"
+  )
+
+()
+
+
+(load "setup-c")
+
+(load "setup-git")
+
+
+(use-package dash
+  :straight t)
+
+(load "setup-markdown")
+
+(use-package yaml-mode
+  :straight t)
+
+
+(use-package highlight-indentation
+  :straight t)
+
+(use-package sphinx-mode
+  :straight t
+ )
+(use-package sphinx-doc
+  :straight t)
+
+(load "setup-lsp-dap")
+(load "setup-company")
+(load "setup-flycheck")
+
+(load "setup-docker")
+(load "setup-editorconfig")
+(load "setup-gitlab-ci")
+(load "setup-go")
+(load "setup-json")
+(load "setup-jupyter")
+(load "setup-nix")
+(load "setup-powershell")
+(load "setup-python")
+(load "setup-rust")
+(load "setup-yasnippet")
+(load "setup-tree-sitter")
+
+
+(provide 'init)
+;;; init.el ends here

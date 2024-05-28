@@ -1,53 +1,74 @@
-# OUT OF DATE
+# Install dependencies
 
-# Installation
-Install dependencies:
-```bash
-sudo dnf install emacs clang clang-devel global stow cmake gcc-c++ clang-devel&&
-sudo python3 -m pip install Pygments jedi pylint
+<!--toc:start-->
+- [Install dependencies](#install-dependencies)
+<!--toc:end-->
+
+Install tree-sitter grammars:
+`M-x tree-sitter-langs-install-grammars`
+
+```shell
+go install golang.org/x/tools/gopls@latest
+go install github.com/rogpeppe/godef@latest
+go install github.com/go-delve/delve/cmd/dlv@latest
+curl -L https://github.com/hbin/top-programming-fonts/raw/master/install.sh | bash
+apt install clangd
+
+# Nix profile
+nix profile install github:nixos/nixpkgs#nixd nixpkgs#gopls nixpkgs#godef nixpkgs#delve \
+nixpkgs#source-code-pro nixpkgs#clang nixpkgs#asm-lsp
+
+
+# Haskell
+ghcup install hls
+
+haskell-language-server-
+
+# ansible
+npm i -g @ansible/ansible-language-server
+
+
+pip install "debugpy"
+
+# rust
+rustup component add rust-analyzer
+
+
 ```
 
-Clone configs
-```bash
-git clone https://github.com/Jylhis/dotfiles ~/dotfiles
-cd ~/dotfiles
-stow emacs
+In emacs remember to run
+```
+M-x all-the-icons-install-fonts
 ```
 
-In emacs: M-x
-`irony-install-server`
-`jedi:install-server`
+# Daemon
+`~/.config/systemd/user/emacs.service`
+```
+[Unit]
+Description=Emacs Daemon
 
-# Bytecompile config directory
-`M-x byte-recompile-directory`
+[Service]
+Type=notify
+Type=notify
+ExecStart=/snap/emacs/current/usr/bin/emacs --fg-daemon
+ExecStop=/snap/emacs/current/usr/bin/emacsclient --eval "(kill-emacs)"
+Restart=on-failure
 
-# Windows
-Copy dotfiles to %appdata%/.emacs.d
+[Install]
+WantedBy=default.target
+```
 
-# TODO
-- remove line numbers from org-mode
-- fix irony-c-header thing
-- [emacs doom](https://www.reddit.com/r/emacs/comments/51jvai/making_modern_emacs_themes/)
-- [CEDET](http://alexott.net/en/writings/emacs-devenv/EmacsCedet.html)
-- [alexott config](https://github.com/alexott/emacs-configs)
-- [Using emacs as ide](http://stackoverflow.com/questions/63421/using-emacs-as-an-ide?noredirect=1&lq=1)
-- [Learn emacs windows and frames](https://blasphemousbits.wordpress.com/2007/05/04/learning-emacs-part-4-buffers-windows-and-frames/)
-- https://github.com/tuhdo/emacs-c-ide-demo
-- [Using generated database from GNU Global](https://tuhdo.github.io/c-ide.html#sec-2)
-- [refactor](https://github.com/tuhdo/semantic-refactor)
-- [Read otsikko deft -> alaspäin](http://aaronbedra.com/emacs.d/)
-- helm find function from project
-- switch between .hpp -> .cpp
-- find declaration
-- find usages
-- clang format 
-- project file support (sublime-project, .pro, cmake etc.)
-- .h, .hpp -> .c, .cpp, cxx
-- git show changed lines
-- git conflict solve
-- find all todos etc. in git repo and show them in helm
-- keybind decrease increase size of splitted windowA
-- http://spacemacs.org/layers/+lang/c-c++/README.html
-- http://spacemacs.org/layers/+lang/html/README.html
-- [git](http://spacemacs.org/layers/+source-control/git/README.html)
-- [hydra](http://oremacs.com/2015/01/20/introducing-hydra/)
+Enable server
+```
+systemctl --user enable emacs.service
+```
+
+Launch emacsclient GUI
+```
+emacsclient -c
+```
+
+launch emacsclient terminal
+```
+emacsclient -t
+```
