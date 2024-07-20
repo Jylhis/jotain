@@ -219,6 +219,9 @@
 (use-package sphinx-doc
   :straight t)
 
+(use-package terraform-mode
+  :straight t)
+
 (load "setup-lsp-dap")
 (load "setup-company")
 (load "setup-flycheck")
@@ -228,7 +231,7 @@
 (load "setup-gitlab-ci")
 (load "setup-go")
 (load "setup-json")
-(load "setup-jupyter")
+;;(load "setup-jupyter")
 (load "setup-nix")
 (load "setup-powershell")
 (load "setup-python")

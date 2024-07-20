@@ -74,7 +74,7 @@
 ;; Remove extra UI clutter by hiding the scrollbar, menubar, and toolbar.
 (menu-bar-mode -1)
 (tool-bar-mode -1)
-;;(scroll-bar-mode -1)
+(scroll-bar-mode -1)
 
 ;; Automatically insert closing parens
 (electric-pair-mode t)

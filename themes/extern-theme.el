@@ -25,12 +25,13 @@
 
   (setq doom-themes-treemacs-theme "doom-colors")
   (doom-themes-treemacs-config)
+  (enable-theme 'doom-solarized-light)
   )
 
-(if (display-graphic-p)
+;;(if (display-graphic-p)
     ;;(enable-theme 'doom-solarized-light)
-    (enable-theme 'doom-solarized-light)
-  (enable-theme 'doom-solarized-dark))
+;;    (enable-theme 'doom-solarized-light)
+;;  (enable-theme 'doom-solarized-dark))
 
 
 (use-package solaire-mode
