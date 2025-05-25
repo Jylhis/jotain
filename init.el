@@ -1193,6 +1193,8 @@ active region is added to the search string."
   :custom
   (eglot-report-progress nil "Prevent Eglot minibuffer spam")
   (eglot-extend-to-xref t "Activate Eglot in cross-referenced non-project files")
+  (eglot-autoshutdown t "shutdown language server after closing last file")
+  (eglot-confirm-server-initiated-edits nil "allow edits without confirmation")
   :init
   (setq read-process-output-max (* 1024 1024)) ; 1MB
   (setq eglot-autoshutdown t
