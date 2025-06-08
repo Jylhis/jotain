@@ -313,6 +313,8 @@
   (org-image-actual-width '(300))
   (org-directory "~/Documents")
   (org-default-notes-file (concat org-directory "/notes.org"))
+  (org-agenda-files "~/Documents")
+  (org-agenda-files (mapcar 'file-truename (file-expand-wildcards "~/Documents/**/*.org")) "All files from Documents")
   :config
    (custom-theme-set-faces
    'user
