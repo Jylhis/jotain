@@ -302,14 +302,17 @@
     (org-modern-checkbox nil)
     (org-modern-table nil))
 
+;; TODO: Define org-agenda-files
 (use-package org
   :custom
   (org-hide-emphasis-markers t "Hide / around italics")
   (org-startup-indented t)
-  ( org-pretty-entities t)
+  (org-pretty-entities t)
   (org-use-sub-superscripts "{}")
   (org-startup-with-inline-images t)
   (org-image-actual-width '(300))
+  (org-directory "~/Documents")
+  (org-default-notes-file (concat org-directory "/notes.org"))
   :config
    (custom-theme-set-faces
    'user
