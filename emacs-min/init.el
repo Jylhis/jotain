@@ -389,69 +389,6 @@
                  #'completion--in-region)
                args)))
 
-(use-package orderless
-  :ensure
-  :custom
-  (  completion-styles '(substring orderless basic))
-  ;;(  completion-category-defaults nil)
-  (  completion-category-overrides
-	 '((file (styles partial-completion)) ;; partial-completion is tried first
-       ;; enable initialism by default for symbols
-       (command (styles +orderless-with-initialism))
-       (variable (styles +orderless-with-initialism))
-       (symbol (styles +orderless-with-initialism))
-       (eglot (styles orderless))
-       (eglot-capf (styles orderless))))
-  (  orderless-component-separator #'orderless-escapable-split-on-space "allow escaping space with backslash!")
-  (  orderless-style-dispatchers (list #'+orderless-consult-dispatch #'orderless-affix-dispatch))
-  :config
-  (defun +orderless--consult-suffix ()
-	"Regexp which matches the end of string with Consult tofu support."
-	(if (and (boundp 'consult--tofu-char)
-             (boundp 'consult--tofu-range))
-		(format "[%c-%c]*$"
-				consult--tofu-char
-				(+ consult--tofu-char consult--tofu-range -1))
-      "$"))
-
-
-  ;; Recognizes the following patterns:
-  ;; * .ext (file extension)
-  ;; * regexp$ (regexp matching at end)
-  (defun +orderless-consult-dispatch (word _index _total)
-	(cond
-     ;; Ensure that $ works with Consult commands, which add disambiguation suffixes
-     ((string-suffix-p "$" word)
-      `(orderless-regexp
-		.
-		,(concat (substring word 0 -1) (+orderless--consult-suffix))))
-     ;; File extensions
-     ((and (or minibuffer-completing-file-name
-               (derived-mode-p 'eshell-mode))
-           (string-match-p "\\`\\.." word))
-      `(orderless-regexp
-		.
-		,(concat
-          "\\." (substring word 1) (+orderless--consult-suffix))))))
-
-  ;;FIXME
-
-  ;; Define orderless style with initialism by default
-  (orderless-define-completion-style
-	  +orderless-with-initialism
-	(orderless-matching-styles
-	 '(orderless-initialism orderless-literal orderless-regexp))))
-
-
-
-(defun consult--orderless-regexp-compiler (input type &rest _config)
-  (setq input (cdr (orderless-compile input)))
-  (cons
-   (mapcar (lambda (r) (consult--convert-regexp r type)) input)
-   (lambda (str) (orderless--highlight input t str))))
-
-(setq consult--regexp-compiler #'consult--orderless-regexp-compiler)
-
 ;; Adds intellisense-style code completion at point that works great
 ;; Add extra context to Emacs documentation to help make it easier to
 ;; search and understand. This configuration uses the keybindings
