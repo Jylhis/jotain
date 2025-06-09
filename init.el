@@ -313,9 +313,10 @@
   (org-image-actual-width '(300))
   (org-directory "~/Documents")
   (org-default-notes-file (concat org-directory "/notes.org"))
-  (org-agenda-files "~/Documents")
-  (org-agenda-files (mapcar 'file-truename (file-expand-wildcards "~/Documents/**/*.org")) "All files from Documents")
   :config
+  (setq org-agenda-files (mapcar 'file-truename (file-expand-wildcards (concat org-directory "/**/*.org"))))
+  (setq org-clock-persist 'history)
+(org-clock-persistence-insinuate)
    (custom-theme-set-faces
    'user
    '(org-block ((t (:inherit fixed-pitch))))
@@ -1508,6 +1509,19 @@ Install the doc if it's not installed."
   :hook (protobuf-mode . (lambda ()
                            (setq imenu-generic-expression
                                  '((nil "^[[:space:]]*\\(message\\|service\\|enum\\)[[:space:]]+\\([[:alnum:]]+\\)" 2))))))
+
+
+;; TODO: use-package calendar
+(copy-face font-lock-constant-face 'calendar-iso-week-face)
+(set-face-attribute 'calendar-iso-week-face nil
+                    :height 0.7)
+(setq calendar-intermonth-text
+      '(propertize
+        (format "%2d"
+                (car
+                 (calendar-iso-from-absolute
+                  (calendar-absolute-from-gregorian (list month day year)))))
+        'font-lock-face 'calendar-iso-week-face))
 
 ;; Local Variables:
 ;; byte-compile-warnings: (not free-vars)
