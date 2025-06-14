@@ -101,7 +101,7 @@
   (scroll-preserve-screen-position 1 "keep the cursor in the same position while scrolling"))
 
 (use-package super-save
-  :ensure t
+  :ensure
   :custom
   (super-save-remote-files nil)
   (super-save-silent t)
@@ -112,8 +112,6 @@
 ;; Persist history over Emacs restarts. Vertico sorts by history position.
 (use-package savehist
   :hook (after-init . savehist-mode))
-
-(setopt comment-multi-line t)
 
 (use-package newcomment
   :custom
@@ -444,7 +442,7 @@
 ;;;;; Web
 (use-package
   web-mode
-  :ensure t
+  :ensure
   :custom
   (web-mode-enable-auto-closing t)
   (web-mode-enable-auto-opening t)
@@ -465,7 +463,7 @@
    ("\\.js\\'" . web-mode)
    ("\\.html\\'" . web-mode)))
 
-(use-package adoc-mode :ensure) ; AsciiDoc
+(use-package adoc-mode :ensure)
 
 (use-package vterm :ensure) ; Terminal inside emacs
 
@@ -753,8 +751,7 @@ point reaches the beginning or end of the buffer, stop there."
   :bind (([remap kill-ring-save] . easy-kill)
          ([remap mark-sexp] . easy-mark)))
 
-(use-package
-  direnv
+(use-package direnv
   :ensure
   :config
   (direnv-mode)
