@@ -406,21 +406,17 @@
   :after leuven-theme
   :custom
   (auto-dark-themes '((leuven-dark) (leuven)))
-  :init (auto-dark-mode))
 
-;; Ugly hack for emacs server FIXME: implement this
-(defun id/server-auto-dark (frame)
-  (use-package auto-dark
-    :ensure
-    :config (auto-dark-mode t)
-    :diminish auto-dark-mode
-    :custom
-    (auto-dark-dark-theme 'leuven-dark)
-    (auto-dark-light-theme 'leuven)
-    )
-  (remove-hook 'after-make-frame-functions #'id/server-auto-dark)
-  )
-(add-hook 'after-make-frame-functions #'id/server-auto-dark)
+  :config
+  (auto-dark-mode 1)
+  (add-hook 'after-make-frame-functions
+            (lambda (frame)
+              (when (display-graphic-p frame)
+                (with-selected-frame frame (auto-dark-mode 1))))))
+
+
+
+
 
 
 ;; GUI Specific configs
