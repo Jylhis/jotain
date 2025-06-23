@@ -813,11 +813,11 @@ Show week numbers
     :init (setq markdown-command "multimarkdown")
     :hook (markdown-mode . visual-line-mode)
     :bind (:map markdown-mode-map
-  			  ("C-c C-e" . markdown-do)))
+    			  ("C-c C-e" . markdown-do)))
 
-(use-package dtrt-indent
-  :ensure
-  :hook (prog-mode . dtrt-indent-mode))
+  (use-package dtrt-indent
+    :ensure
+    :hook (prog-mode . dtrt-indent-mode))
 
 
   (use-package prog-mode
@@ -847,6 +847,10 @@ Show week numbers
     )
 
 
+  (use-package terraform-mode
+    :ensure)
+
+
   (use-package dockerfile-mode :ensure)
   (use-package docker-compose-mode :ensure)
 
@@ -865,7 +869,7 @@ Show week numbers
 
 
 
-  ;;;;; Web
+    ;;;;; Web
   (use-package
     web-mode
     :ensure
@@ -938,26 +942,31 @@ Show week numbers
     ;; builtin alternative: fido-vertical-mode icomplete-vertical
     :ensure
     :bind (:map vertico-map
-   			  ("RET" . vertico-directory-enter)
-   			  ("DEL" . vertico-directory-delete-char)
-   			  ("M-DEL" . vertico-directory-delete-word))
+  			  ("RET" . vertico-directory-enter)
+  			  ("DEL" . vertico-directory-delete-char)
+  			  ("M-DEL" . vertico-directory-delete-word))
     :custom
     (vertico-count 15)
     (vertico-cycle t)
     (read-buffer-completion-ignore-case t)
     (read-file-name-completion-ignore-case t)
-    :init (vertico-mode 1))
+    :init (vertico-mode))
 
+  ;; ;; Use `consult-completion-in-region' if Vertico is enabled.
+  ;; ;; Otherwise use the default `completion--in-region' function.
+  (setq completion-in-region-function
+        (lambda (&rest args)
+          (apply (if vertico-mode
+                     #'consult-completion-in-region
+                   #'completion--in-region)
+                 args)))
 
   (use-package orderless
     :ensure
-    :commands
-    orderless--highlight
-    orderless-compile
     :custom
     (  completion-styles '(substring orderless basic))
     (  completion-category-overrides
-   	 '((file (styles partial-completion)) ;; partial-completion is tried first
+  	 '((file (styles partial-completion)) ;; partial-completion is tried first
          ;; enable initialism by default for symbols
          (command (styles +orderless-with-initialism))
          (variable (styles +orderless-with-initialism))
@@ -966,14 +975,14 @@ Show week numbers
          (eglot-capf (styles orderless))))
     (  orderless-component-separator #'orderless-escapable-split-on-space "allow escaping space with backslash!")
     (  orderless-style-dispatchers (list #'+orderless-consult-dispatch #'orderless-affix-dispatch))
-    :preface
+    :config
     (defun +orderless--consult-suffix ()
-   	"Regexp which matches the end of string with Consult tofu support."
-   	(if (and (boundp 'consult--tofu-char)
+  	"Regexp which matches the end of string with Consult tofu support."
+  	(if (and (boundp 'consult--tofu-char)
                (boundp 'consult--tofu-range))
-   		(format "[%c-%c]*$"
-   				consult--tofu-char
-   				(+ consult--tofu-char consult--tofu-range -1))
+  		(format "[%c-%c]*$"
+  				consult--tofu-char
+  				(+ consult--tofu-char consult--tofu-range -1))
         "$"))
 
 
@@ -981,39 +990,49 @@ Show week numbers
     ;; * .ext (file extension)
     ;; * regexp$ (regexp matching at end)
     (defun +orderless-consult-dispatch (word _index _total)
-   	(cond
+  	(cond
        ;; Ensure that $ works with Consult commands, which add disambiguation suffixes
        ((string-suffix-p "$" word)
         `(orderless-regexp
-   		.
-   		,(concat (substring word 0 -1) (+orderless--consult-suffix))))
+  		.
+  		,(concat (substring word 0 -1) (+orderless--consult-suffix))))
        ;; File extensions
        ((and (or minibuffer-completing-file-name
                  (derived-mode-p 'eshell-mode))
              (string-match-p "\\`\\.." word))
         `(orderless-regexp
-   		.
-   		,(concat
+  		.
+  		,(concat
             "\\." (substring word 1) (+orderless--consult-suffix))))))
 
-    :config
+    ;;FIXME
 
     ;; Define orderless style with initialism by default
     (orderless-define-completion-style
-   	  +orderless-with-initialism
-   	(orderless-matching-styles
-   	 '(orderless-initialism orderless-literal orderless-regexp))))
+  	  +orderless-with-initialism
+  	(orderless-matching-styles
+  	 '(orderless-initialism orderless-literal orderless-regexp))))
+
+
+
+  (defun consult--orderless-regexp-compiler (input type &rest _config)
+    (setq input (cdr (orderless-compile input)))
+    (cons
+     (mapcar (lambda (r) (consult--convert-regexp r type)) input)
+     (lambda (str) (orderless--highlight input t str))))
+
+  (setq consult--regexp-compiler #'consult--orderless-regexp-compiler)
 
 
   (use-package avy ; Jump to things in Emacs tree-style
     :ensure
     :bind (
-   		 ("C-:"   . avy-goto-char)
-   		 ("C-'"   . avy-goto-char-2)
-   		 ("M-g l" . avy-goto-line)
-   		 ("M-g w" . avy-goto-word-1)
+     		 ("C-:"   . avy-goto-char)
+     		 ("C-'"   . avy-goto-char-2)
+     		 ("M-g l" . avy-goto-line)
+     		 ("M-g w" . avy-goto-word-1)
            ("M-g e" . avy-goto-word-0)
-   		 )
+     		 )
     :custom (avy-all-windows 'all-frames)
     )
 
@@ -1201,7 +1220,7 @@ Show week numbers
     :after (embark consult)
     :hook (embark-collect-mode . consult-preview-at-point-mode)
     :bind (:map minibuffer-mode-map
-      		  ("C-c C-o" . embark-export)))
+        		  ("C-c C-o" . embark-export)))
 
   (use-package consult-eglot
     :ensure
@@ -1220,32 +1239,32 @@ Show week numbers
     :disabled
     :config
     (cheatsheet-add-group 'Common
-      					'(:key "C-x C-c" :description "leave Emacs")
-      					'(:key "C-x C-f" :description "find file"))
+        					'(:key "C-x C-c" :description "leave Emacs")
+        					'(:key "C-x C-f" :description "find file"))
     (cheatsheet-add-group 'Editing
-      					'(:key "M-w" :description "Easy kill")
-      					'(:key "C-=" :description "Expand region")
-      					'(:key "C-x C-;" :description "Comment line")
-      					'(:key "C-j" :description "New line and maybe indent")
-      					'(:key "M-j" :description "Default newline (supports multiline comments)")
+        					'(:key "M-w" :description "Easy kill")
+        					'(:key "C-=" :description "Expand region")
+        					'(:key "C-x C-;" :description "Comment line")
+        					'(:key "C-j" :description "New line and maybe indent")
+        					'(:key "M-j" :description "Default newline (supports multiline comments)")
 
-      					)
+        					)
     (cheatsheet-add-group 'Groups
-      					'(:key "M-g" :description "Goto")
-      					'(:key "M-s" :description "Search")
-      					'(:key "C-x p" :description "Project stuff")
-      					'(:key "C-x v" :description "Version control")
-      					'(:key "C-x w" :description "Window")
-      					'(:key "C-x x" :description "buffer")
-      					)
+        					'(:key "M-g" :description "Goto")
+        					'(:key "M-s" :description "Search")
+        					'(:key "C-x p" :description "Project stuff")
+        					'(:key "C-x v" :description "Version control")
+        					'(:key "C-x w" :description "Window")
+        					'(:key "C-x x" :description "buffer")
+        					)
     (cheatsheet-add-group 'Modifiers
-      					'(:key "C-x 4" :description "For other window")
-      					'(:key "C-x 5" :description "For other frame")
-      					)
+        					'(:key "C-x 4" :description "For other window")
+        					'(:key "C-x 5" :description "For other frame")
+        					)
     )
 
 
-  ;;; Pop-up completion
+    ;;; Pop-up completion
   (use-package corfu
     :ensure
     :custom
