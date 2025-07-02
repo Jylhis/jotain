@@ -447,10 +447,7 @@
 
 (use-package nix-ts-mode
     :ensure
-    :mode "\\.nix\\'"
-    :init
-    (add-to-list
-     'eglot-server-programs '((nix-ts-mode nix-mode) "nixd")))
+    :mode "\\.nix\\'")
 
 ;; (use-package csv-mode :ensure)
 (use-package cmake-mode :ensure
@@ -558,33 +555,6 @@
 
 ;; REVIEW: FIDO, winner-mode, Icomplete
 
-
-(defun consult-line-symbol-at-point ()
-  (interactive)
-  (consult-line (thing-at-point 'symbol)))
-
-(defun my/consult-line-forward ()
-  "Search for a matching line forward."
-  (interactive)
-  (consult-line))
-
-(defun my/consult-line-backward ()
-  "Search for a matching line backward."
-  (interactive)
-  (advice-add 'consult--line-candidates :filter-return 'reverse)
-  (vertico-reverse-mode +1)
-  (unwind-protect (consult-line)
-    (vertico-reverse-mode -1)
-    (advice-remove 'consult--line-candidates 'reverse)))
-
-(with-eval-after-load 'consult
-  (consult-customize my/consult-line-backward
-                     :prompt "Go to line backward: ")
-  (consult-customize my/consult-line-forward
-                     :prompt "Go to line forward: "))
-
-                                        ;(global-set-key (kbd "C-s") 'my/consult-line-forward)
-                                        ;(global-set-key (kbd "C-r") 'my/consult-line-backward)
 
 (use-package consult
   :ensure
@@ -694,6 +664,7 @@
   (vertico-mode))
 
 (use-package orderless
+  :ensure
   :custom
   ;; Configure a custom style dispatcher (see the Consult wiki)
   ;; (orderless-style-dispatchers '(+orderless-consult-dispatch orderless-affix-dispatch))
@@ -789,6 +760,4 @@
 ;;   (show-paren-when-point-in-periphery t)
 ;;   (show-paren-when-point-inside-paren t)
 ;;   )
-
-
 
