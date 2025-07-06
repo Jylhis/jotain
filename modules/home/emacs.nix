@@ -2,7 +2,7 @@
 {
   home = {
     file = {
-      ".config/emacs/init.el".source = config.lib.file.mkOutOfStoreSymlink ../../configs/init.el;
+      ".config/emacs/init.el".source = config.lib.file.mkOutOfStoreSymlink ../../sources/emacs.d/init.el;
     };
     shellAliases = {
       emc = "emacsclient -t";
