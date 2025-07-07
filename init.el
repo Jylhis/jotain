@@ -226,6 +226,16 @@
 
 ;; QOL stuff
 
+(use-package avy 
+  :ensure
+  :bind (
+   	 ("M-g c"   . avy-goto-char) ;; Orig: goto-char; other options -2 and -timer
+   	 ("M-g l" . avy-goto-line)
+   	 ("M-g w" . avy-goto-word-1) ;; Other options -1 nad -0
+   		 )
+  :custom (avy-all-windows 'all-frames)
+  )
+
 (use-package breadcrumb
   :ensure
   :init
@@ -710,21 +720,21 @@
 
 
 
-;; (use-package dired
+ (use-package dired
 ;;   ;; REVIEW(package): diredfl, peep-dired, dired-narrow
 ;;   :bind (:map dired-mode-map
 ;;   			  ("C-c C-p" . wdired-change-to-wdired-mode))
-;;   :custom
-;;   (dired-auto-revert-buffer #'dired-buffer-stale-p "Revert the Dired buffer without prompting.")
-;;   (dired-clean-confirm-killing-deleted-buffers nil "Disable the prompt about killing the Dired buffer for a deleted directory.")
-;;   (dired-create-destination-dirs 'ask)
-;;   (dired-dwim-target t "Propose a target for intelligent moving or copying.")
-;;   (dired-filter-verbose nil)
-;;   (dired-free-space nil)
-;;   (dired-listing-switches "-alh --group-directories-first" "In dired, show hidden files and human readable sizes")
-;;   (dired-omit-verbose nil)
-;;   (dired-recursive-copies 'always)
-;;   (dired-recursive-deletes 'top)
+   :custom
+   (dired-auto-revert-buffer #'dired-buffer-stale-p "Revert the Dired buffer without prompting.")
+   (dired-clean-confirm-killing-deleted-buffers nil "Disable the prompt about killing the Dired buffer for a deleted directory.")
+   (dired-create-destination-dirs 'ask)
+   (dired-dwim-target t "Propose a target for intelligent moving or copying.")
+   (dired-filter-verbose nil)
+   (dired-free-space nil)
+   (dired-listing-switches "-alh --group-directories-first" "In dired, show hidden files and human readable sizes")
+   (dired-omit-verbose nil)
+   (dired-recursive-copies 'always)
+   (dired-recursive-deletes 'top)
 ;;   (dired-vc-rename-file t)
 ;;   (image-dired-thumb-size 150)
 ;;   (dired-omit-files
@@ -739,7 +749,7 @@
 ;;     "\\|^\\.project\\(?:ile\\)?\\'"
 ;;     "\\|^flycheck_.*"
 ;;     "\\|^flymake_.*"))
-;;   )
+   )
 
 ;; (use-package dired-x
 ;;   :after dired
