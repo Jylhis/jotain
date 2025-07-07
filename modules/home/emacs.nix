@@ -1,8 +1,8 @@
-{ config, lib, ... }:
+{ lib, ... }:
 {
   home = {
     file = {
-      ".config/emacs/init.el".source = config.lib.file.mkOutOfStoreSymlink ../../sources/emacs.d/init.el;
+      ".config/emacs/init.el".source = ../../sources/emacs/init.el;
     };
     shellAliases = {
       emc = "emacsclient -t";
@@ -11,7 +11,10 @@
       emq = "emacs -Q";
     };
   };
-  programs.emacs.enable = true;
+  programs.emacs = {
+    enable = true;
+
+  };
   services = {
     emacs = {
       enable = lib.mkDefault true;
