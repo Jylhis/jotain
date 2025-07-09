@@ -8,6 +8,7 @@ emacs.pkgs.withPackages (
     treesit-auto
     pretty-sha-path
     gcmh
+    avy
     diminish
     all-the-icons
     all-the-icons-completion
