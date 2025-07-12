@@ -3,63 +3,72 @@
 }:
 emacs.pkgs.withPackages (
   epkgs: with epkgs; [
-    tree-sitter-langs
-    treesit-grammars.with-all-grammars
-    treesit-auto
-    pretty-sha-path
-    gcmh
-    avy
-    diminish
+    adoc-mode
+    awk-ts-mode
     all-the-icons
     all-the-icons-completion
     all-the-icons-dired
-    wgrep
-    breadcrumb
-    rainbow-delimiters
-    auto-dark
-    super-save
-    org-appear
-    mermaid-mode
-    org-modern
-    gnuplot
-    markdown-mode
-    dtrt-indent
-    haskell-mode
-    terraform-mode
-    dockerfile-mode
-    docker-compose-mode
-    adoc-mode
-    go-mode
-    nix-ts-mode
-    csv-mode
-    cmake-mode
-    gitlab-ci-mode
     ansible
-    ssh-config-mode
-    helpful
-    marginalia
-    vertico
-    orderless
-    direnv
+    auto-dark
+    avy
+    breadcrumb
+    devicetree-ts-mode
+    git-commit-ts-mode
+    bitbake-ts-mode
+    cape
+    cmake-mode
     consult
-    embark
-    embark-consult
     consult-eglot
     consult-eglot-embark
-    corfu
-    cape
-    multiple-cursors
-    expand-region
-    vundo
-    drag-stuff
-    diff-hl
-    hl-todo
-    magit-delta
-    magit
-    treesit-fold
-    dape
     consult-flyspell
-    vterm
+    corfu
+    csv-mode
+    dape
+    diff-hl
+    diminish
+    direnv
+    docker-compose-mode
+    dockerfile-mode
+    drag-stuff
+    dtrt-indent
+    embark
+    embark-consult
+    expand-region
+    gcmh
+    gitlab-ci-mode
+    gnuplot
+    go-mode
+    haskell-mode
+    haskell-ts-mode
+    helpful
+    hl-todo
+    just-ts-mode
+    magit
+    jq-ts-mode
+    magit-delta
+    marginalia
+    markdown-mode
+    mermaid-mode
+    mermaid-ts-mode
+    multiple-cursors
+    nix-mode
+    nix-ts-mode
+    orderless
+    org-appear
+    org-modern
+    pretty-sha-path
+    rainbow-delimiters
     sr-speedbar
+    ssh-config-mode
+    super-save
+    terraform-mode
+    tree-sitter-langs
+    treesit-auto
+    treesit-fold
+    treesit-grammars.with-all-grammars
+    vertico
+    vterm
+    vundo
+    wgrep
   ]
 )
