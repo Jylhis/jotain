@@ -37,19 +37,6 @@
   (ffap-machine-p-known 'reject)) ; Don’t attempt to ping unknown hostnames
 
 
-;; Garbage Collector Magic Hack
-(use-package gcmh
-  :ensure
-  :diminish
-  :init
-  (gcmh-mode t)
-  (setq gcmh-idle-delay 'auto
-        gcmh-auto-idle-delay-factor 10
-        gcmh-high-cons-threshold #x1000000)) ; 16MB
-
-
-
-
 (use-package emacs
   :custom
   ;;   (scroll-margin 15 "Keep 15 line margin from top and bottom")
@@ -288,8 +275,7 @@
                 (with-selected-frame frame (auto-dark-mode 1))))))
 
 (use-package all-the-icons
-  :ensure
-  :if (display-graphic-p))
+  :ensure)
 
 (use-package all-the-icons-completion
   :ensure
@@ -381,7 +367,7 @@
   :ensure
   :diminish
   :autoload drag-stuff-define-keys
-  :hook (after-init . drag-stuff-global-mode)
+  :hook ((text-mode prog-mode) . drag-stuff-mode)
   :config
   (add-to-list 'drag-stuff-except-modes 'org-mode)
   (drag-stuff-define-keys))
@@ -492,10 +478,10 @@
 (use-package magit
   :ensure
   :bind (("C-c g" . magit-status))
-  ;;  :custom
-  ;; (magit-diff-refine-hunk t "Show word-granularity differences within diff hunks")
-  ;; (magit-diff-refine-ignore-whitespace t "Ignore whitespace changes in word-granularity differences")
-  ;; (magit-diff-hide-trailing-cr-characters t "Hide trailing ^M")
+   :custom
+   (magit-diff-refine-hunk t "Show word-granularity differences within diff hunks")
+   (magit-diff-refine-ignore-whitespace t "Ignore whitespace changes in word-granularity differences")
+   (magit-diff-hide-trailing-cr-characters t "Hide trailing ^M")
   )
 
 (use-package magit-delta
