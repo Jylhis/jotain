@@ -735,25 +735,23 @@
    (dired-omit-verbose nil)
    (dired-recursive-copies 'always)
    (dired-recursive-deletes 'top)
-;;   (dired-vc-rename-file t)
+   (dired-vc-rename-file t)
 ;;   (image-dired-thumb-size 150)
-;;   (dired-omit-files
-;;    (concat
-;;     "\\`[.]?#\\|\\`[.][.]?\\'"
-;;     "\\|\\(?:\\.js\\)?\\.meta\\'"
-;;     "\\|\\.\\(?:elc|a\\|o\\|pyc\\|pyo\\|swp\\|class\\)\\'"
-;;     "\\|^\\.DS_Store\\'"
-;;     "\\|^\\.\\(?:svn\\|git\\)\\'"
-;;     "\\|^\\.ccls-cache\\'"
-;;     "\\|^__pycache__\\'"
-;;     "\\|^\\.project\\(?:ile\\)?\\'"
-;;     "\\|^flycheck_.*"
-;;     "\\|^flymake_.*"))
+    (dired-omit-files
+     (concat
+      "\\`[.]?#\\|\\`[.][.]?\\'"
+      ;; Syncthing
+      "\\|^[a-zA-Z0-9]\\.syncthing-enc\\'"
+      "\\|^\\.stfolder\\'"
+      "\\|^\\.stversions\\'"
+      ;; Python
+      "\\|^__pycache__\\'"
+      ))
    )
 
-;; (use-package dired-x
-;;   :after dired
-;;   :hook (dired-mode . dired-omit-mode))
+(use-package dired-x
+  :after dired
+  :hook (dired-mode . dired-omit-mode))
 
 ;; (use-package dired-hacks-utils
 ;;   :ensure
