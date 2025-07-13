@@ -68,6 +68,8 @@
    ("C-z" . nil)
    ("C-x C-z" . nil)
    ("M-o" . other-window)
+   ("M-p" . scroll-down-line)
+   ("M-n" . scroll-up-line)
    )
   :init
   (load-theme 'leuven t t)
