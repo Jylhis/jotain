@@ -758,3 +758,9 @@
 ;;   (show-paren-when-point-inside-paren t)
 ;;   )
 
+(use-package zoxide
+  :ensure
+  :bind
+  ("M-g z" . zoxide-find-file)
+  ("M-g M-z" . zoxide-find-file)
+  )

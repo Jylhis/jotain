@@ -3,18 +3,15 @@
 }:
 emacs.pkgs.withPackages (
   epkgs: with epkgs; [
-    adoc-mode
-    awk-ts-mode
     all-the-icons
     all-the-icons-completion
     all-the-icons-dired
     ansible
     auto-dark
     avy
-    breadcrumb
-    devicetree-ts-mode
-    git-commit-ts-mode
+    awk-ts-mode
     bitbake-ts-mode
+    breadcrumb
     cape
     cmake-mode
     consult
@@ -24,6 +21,7 @@ emacs.pkgs.withPackages (
     corfu
     csv-mode
     dape
+    devicetree-ts-mode
     diff-hl
     diminish
     direnv
@@ -34,6 +32,7 @@ emacs.pkgs.withPackages (
     embark
     embark-consult
     expand-region
+    git-commit-ts-mode
     gitlab-ci-mode
     gnuplot
     go-mode
@@ -41,9 +40,9 @@ emacs.pkgs.withPackages (
     haskell-ts-mode
     helpful
     hl-todo
+    jq-ts-mode
     just-ts-mode
     magit
-    jq-ts-mode
     magit-delta
     marginalia
     markdown-mode
@@ -69,5 +68,7 @@ emacs.pkgs.withPackages (
     vterm
     vundo
     wgrep
+    zoxide
+    adoc-mode
   ]
 )
