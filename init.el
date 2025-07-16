@@ -309,6 +309,7 @@
   (super-save-auto-save-when-idle t)
   (super-save-remote-files nil)
   (super-save-silent t)
+  (save-delete-trailing-whitespace 'except-current-line)
   :config
   (super-save-mode 1))
 
