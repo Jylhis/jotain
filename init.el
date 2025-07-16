@@ -486,9 +486,10 @@
    (magit-diff-hide-trailing-cr-characters t "Hide trailing ^M")
   )
 
-(use-package magit-delta
-  :ensure
-  :hook (magit-mode . magit-delta-mode))
+;; Disable due to: https://github.com/dandavison/magit-delta/issues/9
+;; (use-package magit-delta
+;;   :ensure
+;;   :hook (magit-mode . magit-delta-mode))
 
 (use-package treesit-auto
   :ensure
