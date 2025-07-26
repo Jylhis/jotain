@@ -72,8 +72,8 @@
    ("M-n" . scroll-up-line)
    )
   :init
-  (load-theme 'leuven t t)
-;;  (load-theme 'leuven-dark t)
+  (load-theme 'leuven t)
+  (load-theme 'leuven-dark t t)
   (tool-bar-mode -1)
   (scroll-bar-mode -1)  
   )
