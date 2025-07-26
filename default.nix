@@ -1,5 +1,6 @@
 {
   emacs,
+  pkgs,
 }:
 emacs.pkgs.withPackages (
   epkgs: with epkgs; [
@@ -20,6 +21,8 @@ emacs.pkgs.withPackages (
     consult-flyspell
     corfu
     csv-mode
+    dash-docs
+    consult-dash
     dape
     devicetree-ts-mode
     diff-hl
