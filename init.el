@@ -555,6 +555,12 @@
 
 ;; REVIEW: FIDO, winner-mode, Icomplete
 
+(use-package flyspell
+  :hook
+  (prog-mode . flyspell-prog-mode)
+  (text-mode . flyspell-mode)
+  )
+
 
 (use-package consult
   :ensure
@@ -764,4 +770,6 @@
   :bind
   ("M-g z" . zoxide-find-file)
   ("M-g M-z" . zoxide-find-file)
+  :hook
+  (find-file . zoxide-add)
   )
