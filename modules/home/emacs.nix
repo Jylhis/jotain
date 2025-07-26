@@ -11,10 +11,7 @@
       emq = "emacs -Q";
     };
   };
-  programs.emacs = {
-    enable = true;
-
-  };
+  programs.emacs.enable = true;
   services = {
     emacs = {
       enable = lib.mkDefault true;
