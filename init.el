@@ -78,6 +78,11 @@
   (scroll-bar-mode -1)  
   )
 
+(use-package window
+  :custom
+  ;; Prefer side by side splitting
+  (split-width-threshold 170)
+  (split-height-threshold nil))
 
 (use-package which-key
   :diminish
