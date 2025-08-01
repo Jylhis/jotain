@@ -302,22 +302,53 @@
 ;;               (when (display-graphic-p frame)
 ;;                 (with-selected-frame frame (auto-dark-mode 1))))))
 
-(use-package all-the-icons
-  :ensure)
+(use-package nerd-icons
+  :ensure
+  ;; :custom
+  ;; The Nerd Font you want to use in GUI
+  ;; "Symbols Nerd Font Mono" is the default and is recommended
+  ;; but you can use any other Nerd Font if you want
+  ;; (nerd-icons-font-family "Symbols Nerd Font Mono")
+  )
 
-(use-package all-the-icons-completion
+(use-package nerd-icons-corfu
   :ensure
-  :after all-the-icons
-  :init
-  (all-the-icons-completion-mode)
-  :hook (marginalia-mode . all-the-icons-completion-marginalia-setup)
+  :after nerd-icons corfu
+  :config
+  (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter)
+
   )
-(use-package all-the-icons-dired
+
+(use-package nerd-icons-ibuffer
   :ensure
-  :after all-the-icons dired
-  :hook (dired-mode . all-the-icons-dired-mode)
-  :custom (all-the-icons-dired-monochrome nil)
-  )
+  :after nerd-icons
+  :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
+
+(use-package nerd-icons-dired
+  :ensure
+  :after nerd-icons
+  :hook
+  (dired-mode . nerd-icons-dired-mode))
+
+(use-package nerd-icons-completion
+  :after marginalia nerd-icons
+  :config
+  (nerd-icons-completion-mode)
+  (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
+
+;; (use-package all-the-icons-completion
+;;   :ensure
+;;   :after all-the-icons
+;;   :init
+;;   (all-the-icons-completion-mode)
+;;   :hook (marginalia-mode . all-the-icons-completion-marginalia-setup)
+;;   )
+;; (use-package all-the-icons-dired
+;;   :ensure
+;;   :after all-the-icons dired
+;;   :hook (dired-mode . all-the-icons-dired-mode)
+;;   :custom (all-the-icons-dired-monochrome nil)
+;;   )
 
 (use-package wgrep
   :ensure
@@ -488,6 +519,9 @@
   :hook (protobuf-mode . (lambda ()
                            (setq imenu-generic-expression
                                  '((nil "^[[:space:]]*\\(message\\|service\\|enum\\)[[:space:]]+\\([[:alnum:]]+\\)" 2))))))
+
+(use-package modern-cpp-font-lock
+  :ensure t)
 
 
 ;; Tooling

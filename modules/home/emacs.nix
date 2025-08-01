@@ -1,4 +1,9 @@
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 {
   config = lib.mkIf config.programs.emacs.enable {
     home = {
@@ -11,6 +16,18 @@
         emqg = "emacs -nw -Q";
         emq = "emacs -Q";
       };
+      packages = with pkgs.nerd-fonts; [
+        dejavu-sans-mono
+        envy-code-r
+        fira-code
+        fira-mono
+        go-mono
+        hack
+        hasklug
+        im-writing
+        monaspace
+        symbols-only
+      ];
     };
 
     services = {
