@@ -75,5 +75,6 @@ emacs.pkgs.withPackages (
     wgrep
     zoxide
     adoc-mode
+    aidermacs
   ]
 )
