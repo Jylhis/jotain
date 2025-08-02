@@ -272,7 +272,7 @@
 (use-package marginalia
   :ensure
   :init
-  (marginalia-mode)
+  (marginalia-mode))
 
 (use-package hl-todo
   :ensure
