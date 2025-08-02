@@ -342,19 +342,7 @@
   (nerd-icons-completion-mode)
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
-;; (use-package all-the-icons-completion
-;;   :ensure
-;;   :after all-the-icons
-;;   :init
-;;   (all-the-icons-completion-mode)
-;;   :hook (marginalia-mode . all-the-icons-completion-marginalia-setup)
-;;   )
-;; (use-package all-the-icons-dired
-;;   :ensure
-;;   :after all-the-icons dired
-;;   :hook (dired-mode . all-the-icons-dired-mode)
-;;   :custom (all-the-icons-dired-monochrome nil)
-;;   )
+;; Removed unused packages: all-the-icons
 
 (use-package wgrep
   :ensure
