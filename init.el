@@ -840,20 +840,7 @@
 ;;   :after dired)
 
 (use-package aidermacs
-  ;; TODO: https://github.com/MatthewZMD/aidermacs
-  ;; :bind (("C-c M-a" . aidermacs-transient-menu)) ;; Updated keybinding
-  ;; :config
-                                        ; Set API_KEY in .bashrc, that will automatically picked up by aider or in elisp
-  ;; (setenv "ANTHROPIC_API_KEY" "sk-...")
-  ;; defun my-get-openrouter-api-key yourself elsewhere for security reasons
-  ;; TODO: Consider using auth-source for securely managing API keys in the future
-  ;; (setenv "OPENROUTER_API_KEY" (my-get-openrouter-api-key))
-  ;; :custom
-                                        ; See the Configuration section below
-  ;; (aidermacs-default-chat-mode 'architect)
-  ;; (aidermacs-default-model "sonnet")
-
-  )
+  :ensure)
 
 ;; (use-package paren
 ;;   :custom
@@ -871,8 +858,7 @@
   ("M-g z" . zoxide-find-file)
   ("M-g M-z" . zoxide-find-file)
   :hook
-  (find-file . zoxide-add)
-  )
+  (find-file . zoxide-add))
 
 (use-package copilot
   :ensure
