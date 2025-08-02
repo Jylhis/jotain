@@ -164,7 +164,7 @@
 
 (use-package autorevert
   :custom
-  (global-auto-revert-mode t "Automatically refrech buffer if changed on disk")
+  (global-auto-revert-mode t "Automatically refresh buffer if changed on disk")
   (global-auto-revert-non-file-buffers t "Revert also non-file buffers"))
 
 
@@ -205,11 +205,8 @@
 (use-package org
   :custom
   (org-directory "~/Documents")
-  (org-default-notes-file (concat org-directory "/notes.org"))
-  (org-startup-with-inline-images t)
-  (org-html-html5-fancy t)
-  (org-hide-emphasis-markers t)
-  (org-pretty-entities t)
+  ;; Other customizations...
+  (org-pretty-entities t))
   :config
   (setq org-agenda-files (mapcar 'file-truename (file-expand-wildcards (concat org-directory "/**/*.org"))))
   ;; REVIEW: (setq org-agenda-files (directory-files-recursively "~/Documents/org" "\\.org$"))
@@ -232,18 +229,15 @@
   :ensure
   :after org
   :hook
-  (org-mode . global-org-modern-mode)
-  )
+  (org-mode . global-org-modern-mode))
 
 
 (use-package treesit
   :custom
-  (treesit-font-lock-level 4)
-  )
+  (treesit-font-lock-level 4))
 
 (use-package elisp-mode
-  :dash "Emacs_Lisp"
-  )
+  :dash "Emacs_Lisp")
 
 
 ;; QOL stuff
