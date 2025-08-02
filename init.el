@@ -1,6 +1,17 @@
-;; -*- lexical-binding: t; -*-
-(require 'package)
+;;; init.el --- Emacs configuration file -*- lexical-binding: t; -*-
 
+;; Author: Your Name <your.email@example.com>
+;; URL: https://github.com/your-repo/emacs-config
+;; Version: 1.0
+;; Package-Requires: ((emacs "29.1"))
+
+;;; Commentary:
+;; This is the main configuration file for Emacs. It sets up packages,
+;; customizations, and keybindings for an enhanced development experience.
+
+;;; Code:
+
+(require 'package)
 
 ;; Ensure Emacs version is 29.1 or higher
 (when (version< emacs-version "29.1")
@@ -9,42 +20,41 @@
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 (package-initialize)
 
-;; https://github.com/svaante/dape?tab=readme-ov-file#performance
-;; Optimize garbage collection during startup
+;;; https://github.com/svaante/dape?tab=readme-ov-file#performance
+;;; Optimize garbage collection during startup
 (setq gc-cons-threshold most-positive-fixnum)
 (add-hook 'emacs-startup-hook
           (lambda ()
-            (setq gc-cons-threshold (* 50 1024 1024)))) ;; Reset to 50MB after startup
+            (setq gc-cons-threshold (* 50 1024 1024))))  ;; Reset to 50MB after startup
 (setq read-process-output-max (* 1024 1024)) ; 1MB
 
-;; Ideas:
-;; https://github.com/mohkale/compile-multi
-;; https://github.com/dash-docs-el/dash-docs OR https://github.com/astoff/devdocs.el
-;; https://github.com/mclear-tools/consult-notes
-;; https://github.com/org-roam/org-roam
-;; https://github.com/Qkessler/consult-project-extra/
-;; https://github.com/emacs-citar/citar
+;;; Ideas:
+;;; https://github.com/mohkale/compile-multi
+;;; https://github.com/dash-docs-el/dash-docs OR https://github.com/astoff/devdocs.el
+;;; https://github.com/mclear-tools/consult-notes
+;;; https://github.com/org-roam/org-roam
+;;; https://github.com/Qkessler/consult-project-extra/
+;;; https://github.com/emacs-citar/citar
 
-;; DEBUGGING:
-;; Start debugger on specific message
-;; (setq debug-on-message "standard-indent adjusted")
+;;; DEBUGGING:
+;;; Start debugger on specific message
+;;; (setq debug-on-message "standard-indent adjusted")
 
-;; Explicitly set the prefered coding systems to avoid annoying prompt
-;; from emacs (especially on Microsoft Windows)
+;;; Explicitly set the preferred coding systems to avoid annoying prompt
+;;; from Emacs (especially on Microsoft Windows)
 (prefer-coding-system 'utf-8)
 
-;; Always load the newest version of a file
+;;; Always load the newest version of a file
 (setq load-prefer-newer t)
 
-;; Store automatic customization options elsewhere
+;;; Store automatic customization options elsewhere
 (setq custom-file (locate-user-emacs-file "custom.el"))
-(when (file-exists-p custom-file)
-  (load custom-file))
+(when (file-exists-p custom-file) (load custom-file))
 
-;; Hide minor modes from modeline
+;;; Hide minor modes from modeline
 (use-package diminish :ensure)
 
-;; Builtin stuff
+;;; Builtin stuff
 (use-package ffap
   :custom
   (ffap-machine-p-known 'reject)) ; Don’t attempt to ping unknown hostnames
@@ -116,7 +126,7 @@
   :custom
   (xterm-mouse-mode 1 "Enable mouse in terminal"))
 
-;; Persist history over Emacs restarts. Vertico sorts by history position.
+;;; Persist history over Emacs restarts. Vertico sorts by history position.
 (use-package savehist
   :init
   (savehist-mode))
@@ -346,7 +356,7 @@
   (nerd-icons-completion-mode)
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
-;; Removed unused packages: all-the-icons
+;;; Removed unused packages: all-the-icons
 
 (use-package wgrep
   :ensure
@@ -355,7 +365,7 @@
    wgrep-auto-save-buffer t
    wgrep-change-readonly-file t))
 
-;; auto save based on event
+;;; Auto save based on event
 ;; For built-in timer based alternative: (auto-save-visited-mode t)
 (use-package super-save
   :diminish
@@ -430,7 +440,7 @@
   (add-to-list 'drag-stuff-except-modes 'org-mode)
   (drag-stuff-define-keys))
 
-;; Major mode stuff
+;;; Major mode stuff
 
 
 (use-package prog-mode
@@ -460,18 +470,8 @@
   (("/.dockerignore\\'" . conf-unix-mode)
    ("/.gitignore\\'" . conf-unix-mode)
    ))
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(package-selected-packages nil))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
+(custom-set-variables '(package-selected-packages nil))
+(custom-set-faces)
 
 (use-package haskell-mode
   :dash "Haskell"
@@ -511,13 +511,13 @@
   :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
 (use-package mermaid-mode :ensure)
 (use-package yaml-mode :ensure)
-;; Removed unused package: protobuf-mode
+;;; Removed unused package: protobuf-mode
 
 (use-package modern-cpp-font-lock
   :ensure t)
 
 
-;; Tooling
+;;; Tooling
 
 (use-package compile-multi
   :ensure
@@ -595,7 +595,7 @@
   (gdb-debuginfod-enable-setting t)
   )
 
-;; REVIEW: https://github.com/seagle0128/.emacs.d/blob/master/lisp/init-dap.el#L36
+;;; REVIEW: https://github.com/seagle0128/.emacs.d/blob/master/lisp/init-dap.el#L36
 (use-package dape
   :ensure
   :config
@@ -632,8 +632,8 @@
               (flymake-mode 1))))
 
 
-;; Custom stuff
-;; Display ansi colors in buffer
+;;; Custom stuff
+;;; Display ANSI colors in buffer
 (require 'ansi-color)
 (defun display-ansi-colors ()
   (interactive)
@@ -642,9 +642,9 @@
 (use-package vterm
   :ensure)
 
-;; TODO: eglot, flymake, flyspell, cape
+;;; TODO: eglot, flymake, flyspell, cape
 
-;; REVIEW: FIDO, winner-mode, Icomplete
+;;; REVIEW: FIDO, winner-mode, Icomplete
 
 (use-package flyspell
   :hook
@@ -773,7 +773,7 @@
 
 
 
-;; todo: Use consult-ripgrep instead of project-find-regexp in project.el
+;;; TODO: Use consult-ripgrep instead of project-find-regexp in project.el
 ;; (require 'keymap) ;; keymap-substitute requires emacs version 29.1?
 ;; (require 'cl-seq)
 
@@ -783,7 +783,7 @@
 ;;   (pcase-lambda (`(,cmd _)) (eq cmd #'project-find-regexp))
 ;;   project-switch-commands)
 
-;; NOTE: M-x describe-keymap corfu-map
+;;; NOTE: M-x describe-keymap corfu-map
 (use-package corfu
   :ensure
   :init
@@ -824,16 +824,12 @@
   (dired-recursive-deletes 'top)
   (dired-vc-rename-file t)
   ;;   (image-dired-thumb-size 150)
-  (dired-omit-files
-   (concat
-    "\\`[.]?#\\|\\`[.][.]?\\'"
-    ;; Syncthing
-    "\\|^[a-zA-Z0-9]\\.syncthing-enc\\'"
-    "\\|^\\.stfolder\\'"
-    "\\|^\\.stversions\\'"
-    ;; Python
-    "\\|^__pycache__\\'"
-    ))
+  (dired-omit-files (concat
+                     "\\`[.]?#\\|\\`[.][.]?\\'"
+                     "\\|^[a-zA-Z0-9]\\.syncthing-enc\\'"
+                     "\\|^\\.stfolder\\'"
+                     "\\|^\\.stversions\\'"
+                     "\\|^__pycache__\\'"))
   )
 
 (use-package dired-x
