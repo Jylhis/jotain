@@ -1,6 +1,11 @@
 ;; -*- lexical-binding: t; -*-
 (require 'package)
 
+
+;; Ensure Emacs version is 29.1 or higher
+(when (version< emacs-version "29.1")
+  (error "This configuration requires Emacs 29.1 or higher"))
+
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 (package-initialize)
 
@@ -83,7 +88,7 @@
   (load-theme 'leuven t)
   (load-theme 'leuven-dark t t)
   (tool-bar-mode -1)
-  (scroll-bar-mode -1)  
+  (scroll-bar-mode -1)
   )
 
 (use-package window
@@ -202,8 +207,8 @@
   (org-clock-persistence-insinuate)
   :hook (org-mode . visual-line-mode)
   :bind (
-    	 ("C-c a" . org-agenda)
-    	 ("C-c c" . org-capture))
+         ("C-c a" . org-agenda)
+         ("C-c c" . org-capture))
   )
 
 (use-package org-appear
@@ -246,13 +251,13 @@
   ;; Use the symbol at point as initial search term
   (consult-customize consult-dash :initial (thing-at-point 'symbol)))
 
-(use-package avy 
+(use-package avy
   :ensure
   :bind (
-   	 ("M-g c"   . avy-goto-char) ;; Orig: goto-char; other options -2 and -timer
-   	 ("M-g l" . avy-goto-line)
-   	 ("M-g w" . avy-goto-word-1) ;; Other options -1 nad -0
-   	 )
+         ("M-g c"   . avy-goto-char) ;; Orig: goto-char; other options -2 and -timer
+         ("M-g l" . avy-goto-line)
+         ("M-g w" . avy-goto-word-1) ;; Other options -1 nad -0
+         )
   :custom (avy-all-windows 'all-frames)
   )
 
@@ -394,8 +399,8 @@
   :hook ((after-init . global-diff-hl-mode)
          (after-init . global-diff-hl-show-hunk-mouse-mode)
          (dired-mode . diff-hl-dired-mode)
-    	 (magit-post-refresh . diff-hl-magit-post-refresh)
-    	 )
+         (magit-post-refresh . diff-hl-magit-post-refresh)
+         )
   :after magit
   :config
   ;; Highlight on-the-fly
@@ -447,7 +452,7 @@
   :init (setq markdown-command "multimarkdown")
   :hook (markdown-mode . visual-line-mode)
   :bind (:map markdown-mode-map
-    	      ("C-c C-e" . markdown-do)))
+              ("C-c C-e" . markdown-do)))
 
 
 (use-package conf-mode
@@ -674,7 +679,7 @@
          ("M-y" . consult-yank-pop)                ;; orig. yank-pop
          ;; M-g bindings in `goto-map'
          ("M-g e" . consult-compile-error)
-         ("M-g f" . consult-flymake)             
+         ("M-g f" . consult-flymake)
          ("M-g g" . consult-goto-line)             ;; orig. goto-line
          ("M-g M-g" . consult-goto-line)           ;; orig. goto-line
          ("M-g o" . consult-outline)               ;; Alternative: consult-org-heading
@@ -684,7 +689,7 @@
          ("M-g I" . consult-imenu-multi)
          ;; M-s bindings in `search-map'
          ("M-s d" . consult-fd)
-         ("M-s f" . consult-find)               
+         ("M-s f" . consult-find)
          ("M-s c" . consult-locate)
          ("M-s g" . consult-grep)
          ("M-s G" . consult-git-grep)
@@ -721,8 +726,8 @@
 (use-package embark
   :ensure
   :bind
-  (("C-." . embark-act)         
-   ("C-;" . embark-dwim)        
+  (("C-." . embark-act)
+   ("C-;" . embark-dwim)
    ("C-h B" . embark-bindings))
   :init
   (setq prefix-help-command #'embark-prefix-help-command)
@@ -740,7 +745,7 @@
   :after (embark consult)
   :hook (embark-collect-mode . consult-preview-at-point-mode)
   :bind (:map minibuffer-mode-map
-      	      ("C-c C-o" . embark-export)))
+              ("C-c C-o" . embark-export)))
 
 (use-package consult-eglot-embark
   :ensure
@@ -784,7 +789,7 @@
   :init
   (global-corfu-mode)
   (corfu-history-mode)
-  
+
   )
 
 
@@ -805,7 +810,7 @@
 (use-package dired
   ;;   ;; REVIEW(package): diredfl, peep-dired, dired-narrow
   ;;   :bind (:map dired-mode-map
-  ;;   			  ("C-c C-p" . wdired-change-to-wdired-mode))
+  ;;                      ("C-c C-p" . wdired-change-to-wdired-mode))
   :custom
   (dired-auto-revert-buffer #'dired-buffer-stale-p "Revert the Dired buffer without prompting.")
   (dired-clean-confirm-killing-deleted-buffers nil "Disable the prompt about killing the Dired buffer for a deleted directory.")
