@@ -515,6 +515,26 @@
 
 ;; Tooling
 
+(use-package compile-multi
+  :ensure
+  :bind (("C-c C-m" . compile-multi)) ;; Bind to `C-c C-m` for easy access
+  :custom
+  ;; Use the project root as the default directory for compilation
+  (compile-multi-default-directory-function #'project-root)
+
+  ;; Set the default compile command
+  (compile-multi-default-command "make")
+
+  ;; Automatically save all buffers before running a compile command
+  (compile-multi-save-buffers t)
+
+  ;; Customize the compile-multi buffer name
+  (compile-multi-buffer-name "*Compile-Multi*")
+
+  ;; Enable verbose output for debugging
+  (compile-multi-verbose t)
+  )
+
 
 
 (use-package subword

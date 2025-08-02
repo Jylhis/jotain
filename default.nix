@@ -77,5 +77,6 @@ emacs.pkgs.withPackages (
     zoxide
     adoc-mode
     aidermacs
+    compile-multi
   ]
 )
