@@ -247,7 +247,7 @@
    	 ("M-g c"   . avy-goto-char) ;; Orig: goto-char; other options -2 and -timer
    	 ("M-g l" . avy-goto-line)
    	 ("M-g w" . avy-goto-word-1) ;; Other options -1 nad -0
-   		 )
+   	 )
   :custom (avy-all-windows 'all-frames)
   )
 
@@ -504,8 +504,8 @@
 
 
 (use-package nix-ts-mode
-    :ensure
-    :mode "\\.nix\\'")
+  :ensure
+  :mode "\\.nix\\'")
 
 ;; (use-package csv-mode :ensure)
 (use-package cmake-mode :ensure
@@ -544,10 +544,10 @@
 (use-package magit
   :ensure
   :bind (("C-c g" . magit-status))
-   :custom
-   (magit-diff-refine-hunk t "Show word-granularity differences within diff hunks")
-   (magit-diff-refine-ignore-whitespace t "Ignore whitespace changes in word-granularity differences")
-   (magit-diff-hide-trailing-cr-characters t "Hide trailing ^M")
+  :custom
+  (magit-diff-refine-hunk t "Show word-granularity differences within diff hunks")
+  (magit-diff-refine-ignore-whitespace t "Ignore whitespace changes in word-granularity differences")
+  (magit-diff-hide-trailing-cr-characters t "Hide trailing ^M")
   )
 
 ;; Disable due to: https://github.com/dandavison/magit-delta/issues/9
@@ -789,34 +789,34 @@
 
 
 
- (use-package dired
-;;   ;; REVIEW(package): diredfl, peep-dired, dired-narrow
-;;   :bind (:map dired-mode-map
-;;   			  ("C-c C-p" . wdired-change-to-wdired-mode))
-   :custom
-   (dired-auto-revert-buffer #'dired-buffer-stale-p "Revert the Dired buffer without prompting.")
-   (dired-clean-confirm-killing-deleted-buffers nil "Disable the prompt about killing the Dired buffer for a deleted directory.")
-   (dired-create-destination-dirs 'ask)
-   (dired-dwim-target t "Propose a target for intelligent moving or copying.")
-   (dired-filter-verbose nil)
-   (dired-free-space nil)
-   (dired-listing-switches "-alh --group-directories-first" "In dired, show hidden files and human readable sizes")
-   (dired-omit-verbose nil)
-   (dired-recursive-copies 'always)
-   (dired-recursive-deletes 'top)
-   (dired-vc-rename-file t)
-;;   (image-dired-thumb-size 150)
-    (dired-omit-files
-     (concat
-      "\\`[.]?#\\|\\`[.][.]?\\'"
-      ;; Syncthing
-      "\\|^[a-zA-Z0-9]\\.syncthing-enc\\'"
-      "\\|^\\.stfolder\\'"
-      "\\|^\\.stversions\\'"
-      ;; Python
-      "\\|^__pycache__\\'"
-      ))
-   )
+(use-package dired
+  ;;   ;; REVIEW(package): diredfl, peep-dired, dired-narrow
+  ;;   :bind (:map dired-mode-map
+  ;;   			  ("C-c C-p" . wdired-change-to-wdired-mode))
+  :custom
+  (dired-auto-revert-buffer #'dired-buffer-stale-p "Revert the Dired buffer without prompting.")
+  (dired-clean-confirm-killing-deleted-buffers nil "Disable the prompt about killing the Dired buffer for a deleted directory.")
+  (dired-create-destination-dirs 'ask)
+  (dired-dwim-target t "Propose a target for intelligent moving or copying.")
+  (dired-filter-verbose nil)
+  (dired-free-space nil)
+  (dired-listing-switches "-alh --group-directories-first" "In dired, show hidden files and human readable sizes")
+  (dired-omit-verbose nil)
+  (dired-recursive-copies 'always)
+  (dired-recursive-deletes 'top)
+  (dired-vc-rename-file t)
+  ;;   (image-dired-thumb-size 150)
+  (dired-omit-files
+   (concat
+    "\\`[.]?#\\|\\`[.][.]?\\'"
+    ;; Syncthing
+    "\\|^[a-zA-Z0-9]\\.syncthing-enc\\'"
+    "\\|^\\.stfolder\\'"
+    "\\|^\\.stversions\\'"
+    ;; Python
+    "\\|^__pycache__\\'"
+    ))
+  )
 
 (use-package dired-x
   :after dired
@@ -830,12 +830,12 @@
   ;; TODO: https://github.com/MatthewZMD/aidermacs
   :bind (("C-c a" . aidermacs-transient-menu))
   :config
-  ; Set API_KEY in .bashrc, that will automatically picked up by aider or in elisp
+                                        ; Set API_KEY in .bashrc, that will automatically picked up by aider or in elisp
   ;; (setenv "ANTHROPIC_API_KEY" "sk-...")
-  ; defun my-get-openrouter-api-key yourself elsewhere for security reasons
+                                        ; defun my-get-openrouter-api-key yourself elsewhere for security reasons
   ;; (setenv "OPENROUTER_API_KEY" (my-get-openrouter-api-key))
   :custom
-  ; See the Configuration section below
+                                        ; See the Configuration section below
   ;; (aidermacs-default-chat-mode 'architect)
   ;; (aidermacs-default-model "sonnet")
 
