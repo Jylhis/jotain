@@ -31,7 +31,6 @@
 ;; Always load the newest version of a file
 (setq load-prefer-newer t)
 
-;; Store automatic customisation options elsewhere
 ;; Store automatic customization options elsewhere
 (setq custom-file (locate-user-emacs-file "custom.el"))
 (when (file-exists-p custom-file)
