@@ -859,3 +859,5 @@
   :hook
   (find-file . zoxide-add)
   )
+
+;; Add github copilot package AI!
