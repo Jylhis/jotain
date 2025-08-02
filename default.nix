@@ -78,5 +78,8 @@ emacs.pkgs.withPackages (
     adoc-mode
     aidermacs
     compile-multi
+    compile-multi-nerd-icons
+    consult-compile-multi
+    compile-multi-embark
   ]
 )

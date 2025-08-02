@@ -1,7 +1,7 @@
 ;;; init.el --- Emacs configuration file -*- lexical-binding: t; -*-
 
-;; Author: Your Name <your.email@example.com>
-;; URL: https://github.com/your-repo/emacs-config
+;; Author: Markus Jylhänkangas <markus@jylhis.com>
+;; URL: https://github.com/jylhis/nixos
 ;; Version: 1.0
 ;; Package-Requires: ((emacs "29.1"))
 
@@ -92,14 +92,12 @@
    ("C-x C-z" . nil)
    ("M-o" . other-window)
    ("M-p" . scroll-down-line)
-   ("M-n" . scroll-up-line)
-   )
+   ("M-n" . scroll-up-line))
   :init
   (load-theme 'leuven t)
   (load-theme 'leuven-dark t t)
   (tool-bar-mode -1)
-  (scroll-bar-mode -1)
-  )
+  (scroll-bar-mode -1))
 
 (use-package window
   :custom
@@ -159,8 +157,7 @@
   (make-backup-files nil "Disable auto backup files")
   (find-file-visit-truename t "Resolve symlinks")
   (confirm-kill-processes nil "when quitting emacs, just kill processes")
-  (enable-local-variables t "ask if local variables are safe once")
-  )
+  (enable-local-variables t "ask if local variables are safe once"))
 
 (use-package autorevert
   :custom
@@ -182,8 +179,7 @@
   :init
   ;; Use faster search tool
   (when (executable-find "rg")
-    (setq xref-search-program 'ripgrep))
-  )
+    (setq xref-search-program 'ripgrep)))
 
 (use-package simple
   :custom
@@ -191,9 +187,7 @@
    #'command-completion-default-include-p "Hide commands in M-x which do not work in the current mode")
   (kill-do-not-save-duplicates t "Remove duplicates from the kill ring to reduce clutter")
   (line-number-mode t "Show line number in modeline")
-  (column-number-mode t "Show column number")
-
-  )
+  (column-number-mode t "Show column number"))
 
 
 ;; (use-package elec-pair
@@ -206,7 +200,7 @@
   :custom
   (org-directory "~/Documents")
   ;; Other customizations...
-  (org-pretty-entities t))
+  (org-pretty-entities t)
   :config
   (setq org-agenda-files (mapcar 'file-truename (file-expand-wildcards (concat org-directory "/**/*.org"))))
   ;; REVIEW: (setq org-agenda-files (directory-files-recursively "~/Documents/org" "\\.org$"))
@@ -215,8 +209,7 @@
   :hook (org-mode . visual-line-mode)
   :bind (
          ("C-c a" . org-agenda)
-         ("C-c c" . org-capture))
-  )
+         ("C-c c" . org-capture)))
 
 (use-package org-appear
   :ensure
@@ -244,9 +237,9 @@
 
 (use-package dash-docs
   :ensure
+  :defines dash-docs-docsets-path
   :custom
-  (dash-docs-docsets-path "~/.local/share/Zeal/Zeal/docsets/")
-  )
+  (dash-docs-docsets-path "~/.local/share/Zeal/Zeal/docsets/"))
 
 (use-package consult-dash
   :bind (("M-s d" . consult-dash))
@@ -260,10 +253,8 @@
   :bind (
          ("M-g c"   . avy-goto-char) ;; Orig: goto-char; other options -2 and -timer
          ("M-g l" . avy-goto-line)
-         ("M-g w" . avy-goto-word-1) ;; Other options -1 nad -0
-         )
-  :custom (avy-all-windows 'all-frames)
-  )
+         ("M-g w" . avy-goto-word-1)) ;; Other options -1 nad -0
+  :custom (avy-all-windows 'all-frames))
 
 (use-package breadcrumb
   :ensure
@@ -282,7 +273,6 @@
   :ensure
   :init
   (marginalia-mode)
-  )
 
 (use-package hl-todo
   :ensure
@@ -317,21 +307,13 @@
 ;;                 (with-selected-frame frame (auto-dark-mode 1))))))
 
 (use-package nerd-icons
-  :ensure
-  ;; :custom
-  ;; The Nerd Font you want to use in GUI
-  ;; "Symbols Nerd Font Mono" is the default and is recommended
-  ;; but you can use any other Nerd Font if you want
-  ;; (nerd-icons-font-family "Symbols Nerd Font Mono")
-  )
+  :ensure)
 
 (use-package nerd-icons-corfu
   :ensure
   :after nerd-icons corfu
   :config
-  (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter)
-
-  )
+  (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
 
 (use-package nerd-icons-ibuffer
   :ensure
@@ -391,8 +373,7 @@
 
 (use-package help-at-pt
   :custom
-  (help-at-pt-display-when-idle t) ; Display messages when idle, without prompting
-  )
+  (help-at-pt-display-when-idle t)) ; Display messages when idle, without prompting
 
 ;;; Indication of local VCS changes
 (use-package diff-hl
@@ -403,8 +384,7 @@
   :hook ((after-init . global-diff-hl-mode)
          (after-init . global-diff-hl-show-hunk-mouse-mode)
          (dired-mode . diff-hl-dired-mode)
-         (magit-post-refresh . diff-hl-magit-post-refresh)
-         )
+         (magit-post-refresh . diff-hl-magit-post-refresh))
   :after magit
   :config
   ;; Highlight on-the-fly
@@ -416,7 +396,7 @@
   :ensure
   :bind
   (("C->" . mc/mark-next-like-this)
-   ("C-<" . mc/mark-previous-like-this)       ))
+   ("C-<" . mc/mark-previous-like-this)))
 
 
 (use-package expand-region
@@ -439,13 +419,12 @@
 
 (use-package prog-mode
   :hook
-  (prog-mode . display-line-numbers-mode) ; Display line numbers only when in programming modes
-  )
+  (prog-mode . display-line-numbers-mode)) ; Display line numbers only when in programming modes
+  
 
 (use-package gnuplot
   :ensure
-  :mode ("\\.plt\\'" . gnuplot-mode)
-  )
+  :mode ("\\.plt\\'" . gnuplot-mode))
 
 
 (use-package markdown-mode
@@ -462,17 +441,13 @@
 (use-package conf-mode
   :mode
   (("/.dockerignore\\'" . conf-unix-mode)
-   ("/.gitignore\\'" . conf-unix-mode)
-   ))
+   ("/.gitignore\\'" . conf-unix-mode)))
 (custom-set-variables '(package-selected-packages nil))
 (custom-set-faces)
 
-;;; init.el ends here
-
 (use-package haskell-mode
   :dash "Haskell"
-  :ensure
-  )
+  :ensure)
 
 (use-package diff-mode :mode "\\.patch[0-9]*\\'")
 
@@ -490,11 +465,10 @@
 
 (use-package ssh-config-mode :ensure)
 (use-package adoc-mode
-  :ensure
-  )
+  :ensure)
 (use-package go-mode
   :dash (go-ts-mode "Go")
-  :ensure  )
+  :ensure)
 
 
 (use-package nix-ts-mode
@@ -516,26 +490,26 @@
 ;;; Tooling
 
 (use-package compile-multi
-  :ensure
-  :bind (("C-c C-m" . compile-multi)) ;; Bind to `C-c C-m` for easy access
-  :custom
-  ;; Use the project root as the default directory for compilation
-  (compile-multi-default-directory-function #'project-root)
+  :ensure)
 
-  ;; Set the default compile command
-  (compile-multi-default-command "make")
+(use-package consult-compile-multi
+  :ensure t
+  :after compile-multi
+  :demand t
+  :config (consult-compile-multi-mode))
 
-  ;; Automatically save all buffers before running a compile command
-  (compile-multi-save-buffers t)
+(use-package compile-multi-nerd-icons
+  :ensure t
+  :after nerd-icons-completion
+  :after compile-multi
+  :demand t)
 
-  ;; Customize the compile-multi buffer name
-  (compile-multi-buffer-name "*Compile-Multi*")
-
-  ;; Enable verbose output for debugging
-  (compile-multi-verbose t)
-  )
-
-
+(use-package compile-multi-embark
+  :ensure t
+  :after embark
+  :after compile-multi
+  :demand t
+  :config (compile-multi-embark-mode +1))
 
 (use-package subword
   :diminish
@@ -547,8 +521,7 @@
   :ensure
   :config
   (direnv-mode)
-  (add-to-list 'warning-suppress-types '(direnv))
-  )
+  (add-to-list 'warning-suppress-types '(direnv)))
 
 (use-package magit
   :ensure
@@ -556,8 +529,7 @@
   :custom
   (magit-diff-refine-hunk t "Show word-granularity differences within diff hunks")
   (magit-diff-refine-ignore-whitespace t "Ignore whitespace changes in word-granularity differences")
-  (magit-diff-hide-trailing-cr-characters t "Hide trailing ^M")
-  )
+  (magit-diff-hide-trailing-cr-characters t "Hide trailing ^M"))
 
 ;; Disable due to: https://github.com/dandavison/magit-delta/issues/9
 ;; (use-package magit-delta
@@ -580,16 +552,14 @@
 (use-package flymake
   :custom
   (flymake-fringe-indicator-position 'right-fringe)
-  (flymake-suppress-zero-counters t "Suppress the display of Flymake error counters when there are no errors.")
-  )
+  (flymake-suppress-zero-counters t "Suppress the display of Flymake error counters when there are no errors."))
 
 (use-package gdb-mi
   :custom
   (gdb-many-windows t)
   (gdb-show-main t)
   (gdb-debuginfod-en)
-  (gdb-debuginfod-enable-setting t)
-  )
+  (gdb-debuginfod-enable-setting t))
 
 ;;; REVIEW: https://github.com/seagle0128/.emacs.d/blob/master/lisp/init-dap.el#L36
 (use-package dape
@@ -600,10 +570,8 @@
   :custom
   ;; Info buffers like gud (gdb-mi)
   (dape-buffer-window-arrangement 'gud)
-  ( dape-info-hide-mode-line nil)
-
-  ( dape-inlay-hints t "Showing inlay hints")
-  )
+  (dape-info-hide-mode-line nil)
+  (Dape-inlay-hints t "Showing inlay hints"))
 
 
 (use-package eglot
@@ -645,8 +613,7 @@
 (use-package flyspell
   :hook
   (prog-mode . flyspell-prog-mode)
-  (text-mode . flyspell-mode)
-  )
+  (text-mode . flyspell-mode))
 
 
 (use-package consult
@@ -710,8 +677,7 @@
   ;;  (setq completion-in-region-function #'consult-completion-in-region)
   ;; Use Consult to select xref locations with preview
   (setq xref-show-xrefs-function #'consult-xref
-        xref-show-definitions-function #'consult-xref)
-  )
+        xref-show-definitions-function #'consult-xref))
 
 (use-package consult-eglot
   :ensure
@@ -784,9 +750,7 @@
   :ensure
   :init
   (global-corfu-mode)
-  (corfu-history-mode)
-
-  )
+  (corfu-history-mode))
 
 
 ;; TODO: https://github.com/minad/consult/wiki#org-clock
@@ -825,8 +789,7 @@
                      "\\|^[a-zA-Z0-9]\\.syncthing-enc\\'"
                      "\\|^\\.stfolder\\'"
                      "\\|^\\.stversions\\'"
-                     "\\|^__pycache__\\'"))
-  )
+                     "\\|^__pycache__\\'")))
 
 (use-package dired-x
   :after dired
@@ -866,3 +829,6 @@
   ;;             ("M-f" . 'copilot-accept-completion-by-word)
   ;;             ("M-<return>" . 'copilot-accept-completion-by-line))
   )
+
+(provide 'init)
+;;; init.el ends here
