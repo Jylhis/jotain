@@ -612,15 +612,20 @@
                           (eglot-ensure))))
          ((markdown-mode yaml-mode yaml-ts-mode) . eglot-ensure))
   :init
-
-  (setq eglot-autoshutdown t
-        eglot-send-changes-idle-time 0.5)
+  ;; Reduce idle time before sending changes to the language server
+  (setq eglot-send-changes-idle-time 0.5)
+  ;; Automatically shutdown the language server when the last file is closed
+  (setq eglot-autoshutdown t)
   :custom
-  (eglot-report-progress nil "Prevent Eglot minibuffer spam")
-  (eglot-extend-to-xref t "Activate Eglot in cross-referenced non-project files")
-  (eglot-autoshutdown t "shutdown language server after closing last file")
-  ;;  (eglot-confirm-server-initiated-edits nil "allow edits without confirmation")
-  )
+  ;; Prevent Eglot from spamming the minibuffer with progress messages
+  (eglot-report-progress nil)
+  ;; Extend Eglot functionality to cross-referenced files
+  (eglot-extend-to-xref t)
+  :config
+  ;; Integrate with Flymake for diagnostics
+  (add-hook 'eglot-managed-mode-hook
+            (lambda ()
+              (flymake-mode 1))))
 
 
 ;; Custom stuff
