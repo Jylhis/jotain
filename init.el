@@ -467,6 +467,8 @@
 (custom-set-variables '(package-selected-packages nil))
 (custom-set-faces)
 
+;;; init.el ends here
+
 (use-package haskell-mode
   :dash "Haskell"
   :ensure
