@@ -860,4 +860,12 @@
   (find-file . zoxide-add)
   )
 
-;; Add github copilot package AI!
+(use-package copilot
+  :ensure
+  ;; :hook (prog-mode . copilot-mode)
+  ;; :bind (:map copilot-completion-map
+  ;;             ("C-TAB" . 'copilot-accept-completion)
+  ;;             ("C-<tab>" . 'copilot-accept-completion)
+  ;;             ("M-f" . 'copilot-accept-completion-by-word)
+  ;;             ("M-<return>" . 'copilot-accept-completion-by-line))
+  )

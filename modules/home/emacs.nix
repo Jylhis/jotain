@@ -16,7 +16,7 @@
         #     cp ${../../sources/emacs}/*.el* $out/
         #     cp ${../../sources/emacs}/config-lib/*.el* $out/config-lib/
         #   '';
-        };
+        #};
       };
       shellAliases = {
         emc = "emacsclient -t -a emacs";

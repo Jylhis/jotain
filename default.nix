@@ -28,6 +28,7 @@ emacs.pkgs.withPackages (
     dape
     devicetree-ts-mode
     diff-hl
+    copilot
     diminish
     direnv
     docker-compose-mode
