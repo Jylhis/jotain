@@ -599,8 +599,14 @@
 ;;; Custom stuff
 ;;; Display ANSI colors in buffer
 (require 'ansi-color)
+
 (defun display-ansi-colors ()
-  ;; write documentation for this function AI!
+  "Apply ANSI color codes to the current buffer.
+This function processes the entire buffer and interprets any ANSI
+escape sequences, rendering the corresponding colors in the buffer.
+
+Useful for viewing logs or other text files that include ANSI
+color codes."
   (interactive)
   (ansi-color-apply-on-region (point-min) (point-max)))
 
