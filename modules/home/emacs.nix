@@ -9,6 +9,14 @@
     home = {
       file = {
         ".config/emacs/init.el".source = ../../sources/emacs/init.el;
+        # Install compiled elisp files
+        # ".config/emacs" = {
+        #   source = pkgs.runCommand "emacs-config" {} ''
+        #     mkdir -p $out/config-lib
+        #     cp ${../../sources/emacs}/*.el* $out/
+        #     cp ${../../sources/emacs}/config-lib/*.el* $out/config-lib/
+        #   '';
+        };
       };
       shellAliases = {
         emc = "emacsclient -t -a emacs";
