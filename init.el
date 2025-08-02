@@ -5,7 +5,11 @@
 (package-initialize)
 
 ;; https://github.com/svaante/dape?tab=readme-ov-file#performance
+;; Optimize garbage collection during startup
 (setq gc-cons-threshold most-positive-fixnum)
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (setq gc-cons-threshold (* 50 1024 1024)))) ;; Reset to 50MB after startup
 (setq read-process-output-max (* 1024 1024)) ; 1MB
 
 ;; Ideas:
@@ -24,9 +28,11 @@
 ;; from emacs (especially on Microsoft Windows)
 (prefer-coding-system 'utf-8)
 
+;; Always load the newest version of a file
 (setq load-prefer-newer t)
 
 ;; Store automatic customisation options elsewhere
+;; Store automatic customization options elsewhere
 (setq custom-file (locate-user-emacs-file "custom.el"))
 (when (file-exists-p custom-file)
   (load custom-file))
@@ -513,12 +519,7 @@
   :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
 (use-package mermaid-mode :ensure)
 (use-package yaml-mode :ensure)
-(use-package protobuf-mode
-  :disabled
-  :ensure
-  :hook (protobuf-mode . (lambda ()
-                           (setq imenu-generic-expression
-                                 '((nil "^[[:space:]]*\\(message\\|service\\|enum\\)[[:space:]]+\\([[:alnum:]]+\\)" 2))))))
+;; Removed unused package: protobuf-mode
 
 (use-package modern-cpp-font-lock
   :ensure t)
@@ -828,11 +829,12 @@
 
 (use-package aidermacs
   ;; TODO: https://github.com/MatthewZMD/aidermacs
-  :bind (("C-c a" . aidermacs-transient-menu))
+  :bind (("C-c M-a" . aidermacs-transient-menu)) ;; Updated keybinding
   :config
                                         ; Set API_KEY in .bashrc, that will automatically picked up by aider or in elisp
   ;; (setenv "ANTHROPIC_API_KEY" "sk-...")
-                                        ; defun my-get-openrouter-api-key yourself elsewhere for security reasons
+  ;; defun my-get-openrouter-api-key yourself elsewhere for security reasons
+  ;; TODO: Consider using auth-source for securely managing API keys in the future
   ;; (setenv "OPENROUTER_API_KEY" (my-get-openrouter-api-key))
   :custom
                                         ; See the Configuration section below
