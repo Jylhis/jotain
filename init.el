@@ -600,6 +600,7 @@
 ;;; Display ANSI colors in buffer
 (require 'ansi-color)
 (defun display-ansi-colors ()
+  ;; write documentation for this function AI!
   (interactive)
   (ansi-color-apply-on-region (point-min) (point-max)))
 
