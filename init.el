@@ -201,10 +201,9 @@
   (org-directory "~/Documents")
   ;; Other customizations...
   (org-pretty-entities t)
+  (org-clock-persist 'history) ;; Properly declare and set the variable
   :config
   (setq org-agenda-files (mapcar 'file-truename (file-expand-wildcards (concat org-directory "/**/*.org"))))
-  ;; REVIEW: (setq org-agenda-files (directory-files-recursively "~/Documents/org" "\\.org$"))
-  (setq org-clock-persist 'history) ;; How to fix init.el:207:9: Warning: assignment to free variable ‘org-clock-persist’ AI?
   (org-clock-persistence-insinuate)
   :hook (org-mode . visual-line-mode)
   :bind (
