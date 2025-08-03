@@ -6,7 +6,7 @@
 ;; Package-Requires: ((emacs "29.1"))
 
 ;;; Commentary:
-;; This is the main configuration file for Emacs. It sets up packages,
+;; This is the main configuration file for Emacs.  It sets up packages,
 ;; customizations, and keybindings for an enhanced development experience.
 
 ;;; Code:
@@ -209,6 +209,11 @@
   :bind (
          ("C-c a" . org-agenda)
          ("C-c c" . org-capture)))
+
+(use-package elisp-lint
+  :ensure)
+(use-package package-lint
+  :ensure)
 
 (use-package org-appear
   :ensure
@@ -448,7 +453,7 @@
 (use-package prog-mode
   :hook
   (prog-mode . display-line-numbers-mode)) ; Display line numbers only when in programming modes
-  
+
 
 (use-package gnuplot
   :ensure
