@@ -293,18 +293,18 @@
   :ensure
   :hook((lisp-mode emacs-lisp-mode) . rainbow-delimiters-mode))
 
-;; (use-package auto-dark
-;;   :diminish
-;;   :ensure
-;;   :after leuven-theme
-;;   :custom
-;;   (auto-dark-themes '((leuven-dark) (leuven)))
-;;   :config
-;;   (auto-dark-mode 1)
-;;   (add-hook 'after-make-frame-functions
-;;             (lambda (frame)
-;;               (when (display-graphic-p frame)
-;;                 (with-selected-frame frame (auto-dark-mode 1))))))
+(use-package auto-dark
+  :diminish
+  :ensure
+  :after leuven-theme
+  :custom
+  (auto-dark-themes '((leuven-dark) (leuven)))
+  :config
+  (auto-dark-mode 1)
+  (add-hook 'after-make-frame-functions
+            (lambda (frame)
+              (when (display-graphic-p frame)
+                (with-selected-frame frame (auto-dark-mode 1))))))
 
 (use-package nerd-icons
   :ensure)
