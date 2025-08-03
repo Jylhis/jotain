@@ -228,10 +228,6 @@
   :custom
   (treesit-font-lock-level 4))
 
-(use-package elisp-mode
-  :dash "Emacs_Lisp")
-
-
 ;; QOL stuff
 
 (use-package dash-docs
@@ -445,7 +441,6 @@
 (custom-set-faces)
 
 (use-package haskell-mode
-  :dash "Haskell"
   :ensure)
 
 (use-package diff-mode :mode "\\.patch[0-9]*\\'")
@@ -466,7 +461,6 @@
 (use-package adoc-mode
   :ensure)
 (use-package go-mode
-  :dash (go-ts-mode "Go")
   :ensure)
 
 
@@ -476,7 +470,6 @@
 
 ;; (use-package csv-mode :ensure)
 (use-package cmake-mode :ensure
-  :dash "CMake"
   :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
 (use-package mermaid-mode :ensure)
 (use-package yaml-mode :ensure)
