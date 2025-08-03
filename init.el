@@ -232,9 +232,42 @@
 
 (use-package dash-docs
   :ensure
-  :defines dash-docs-docsets-path
+  :defines (dash-docs-docsets dash-docs-docsets-path)
   :custom
-  (dash-docs-docsets-path "~/.local/share/Zeal/Zeal/docsets/"))
+  (dash-docs-docsets-path "~/.local/share/Zeal/Zeal/docsets/")
+  :config
+  (defun setup-dash-docs-for-emacs-lisp ()
+    (setq-local dash-docs-docsets '("Emacs Lisp")))
+
+  (defun setup-dash-docs-for-python ()
+    (setq-local dash-docs-docsets '("Python 3")))
+
+  (defun setup-dash-docs-for-javascript ()
+    (setq-local dash-docs-docsets '("JavaScript" "NodeJS")))
+
+  (defun setup-dash-docs-for-go ()
+    (setq-local dash-docs-docsets '("Go")))
+
+  (defun setup-dash-docs-for-cpp ()
+    (setq-local dash-docs-docsets '("C++")))
+
+  (defun setup-dash-docs-for-java ()
+    (setq-local dash-docs-docsets '("Java SE")))
+
+  (defun setup-dash-docs-for-ruby ()
+    (setq-local dash-docs-docsets '("Ruby")))
+
+  (defun setup-dash-docs-for-haskell ()
+    (setq-local dash-docs-docsets '("Haskell")))
+  :hook
+  ((emacs-lisp-mode . setup-dash-docs-for-emacs-lisp)
+   (python-mode . setup-dash-docs-for-python)
+   (js-mode . setup-dash-docs-for-javascript)
+   (go-mode . setup-dash-docs-for-go)
+   (c++-mode . setup-dash-docs-for-cpp)
+   (java-mode . setup-dash-docs-for-java)
+   (ruby-mode . setup-dash-docs-for-ruby)
+   (haskell-mode . setup-dash-docs-for-haskell)))
 
 (use-package consult-dash
   :bind (("M-s d" . consult-dash))
