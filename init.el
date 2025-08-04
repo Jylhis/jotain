@@ -275,7 +275,8 @@
    (haskell-mode . setup-dash-docs-for-haskell)))
 
 (use-package consult-dash
-  :bind (("M-s d" . consult-dash))
+  :ensure
+  ;; :bind (("M-s d" . consult-dash))
   :after dash-docs
   :config
   ;; Use the symbol at point as initial search term
@@ -361,6 +362,7 @@
 
 (use-package nerd-icons-completion
   :after marginalia nerd-icons
+  :ensure
   :config
   (nerd-icons-completion-mode)
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
