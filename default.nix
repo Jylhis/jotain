@@ -51,13 +51,13 @@ emacs.pkgs.withPackages (
     jq-ts-mode
     just-ts-mode
     magit
-    magit-delta
     marginalia
     markdown-mode
     mermaid-mode
     mermaid-ts-mode
     modern-cpp-font-lock
     multiple-cursors
+    nerd-icons
     nerd-icons-completion
     nerd-icons-corfu
     nerd-icons-dired
@@ -82,6 +82,7 @@ emacs.pkgs.withPackages (
     vterm
     vundo
     wgrep
+    yaml-mode
     zoxide
   ]
 )
