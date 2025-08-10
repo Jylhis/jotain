@@ -54,23 +54,13 @@
 (setq custom-file (locate-user-emacs-file "custom.el"))
 (when (file-exists-p custom-file) (load custom-file))
 
-;;; Hide minor modes from modeline
-(use-package diminish :ensure)
-
-;;; Builtin stuff
-(use-package ffap
-  :custom
-  (ffap-machine-p-known 'reject)) ; Don’t attempt to ping unknown hostnames
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Core Emacs enhancements
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (use-package emacs
   :custom
-  ;;   (scroll-margin 15 "Keep 15 line margin from top and bottom")
-  ;; (scroll-conservatively 10000)
-  ;; (scroll-preserve-screen-position 1 "keep the cursor in the same position while scrolling")
-  ;; (blink-matching-paren-highlight-offscreen t) ;; ORGANIZE
   (text-mode-ispell-word-completion nil "Emacs 30 and newer: Disable Ispell completion function.")
   (context-menu-mode t "Enable context menu for vertico")
   (inhibit-startup-screen t)
@@ -109,42 +99,8 @@
   ;; Prefer side by side splitting
   (split-width-threshold 170)
   (split-height-threshold nil))
-
-(use-package which-key
-  :diminish
-  :hook (after-init . which-key-mode))
-
-(use-package apropos
-  :custom
-  (apropos-do-all t))
-
-(use-package hl-line
-  :custom
-  (global-hl-line-sticky-flag t)
-  :hook ((after-init . global-hl-line-mode)
-         ((dashboard-mode eshell-mode shell-mode term-mode vterm-mode org-mode) .
-          (lambda () (setq-local global-hl-line-mode nil)))))
-
-(use-package xt-mouse
-  :custom
-  (xterm-mouse-mode 1 "Enable mouse in terminal"))
-
-;;; Persist history over Emacs restarts. Vertico sorts by history position.
-(use-package savehist
-  :init
-  (savehist-mode))
-
-
-(use-package calendar
-  :config
-  (copy-face 'font-lock-constant-face 'calendar-iso-week-face)
-  (set-face-attribute 'calendar-iso-week-face nil :height 0.7)
-  (setq calendar-week-start-day 1)
-  (setq calendar-intermonth-text
-        '(propertize (format "%2d" (car (calendar-iso-from-absolute
-                                         (calendar-absolute-from-gregorian (list month day year)))))
-                     'font-lock-face 'calendar-iso-week-face)))
-
+  ;;:config
+  ;;TODO: (winner-mode 1)
 
 (use-package files
   :hook
@@ -162,18 +118,14 @@
   (global-auto-revert-mode t "Automatically refresh buffer if changed on disk")
   (global-auto-revert-non-file-buffers t "Revert also non-file buffers"))
 
-
 (use-package recentf
   :custom
   (recentf-max-saved-items 50 "Increase the default a bit")
   (recentf-mode t "Keep track of open files"))
 
-
-(use-package xref
+(use-package savehist
   :init
-  ;; Use faster search tool
-  (when (executable-find "rg")
-    (setq xref-search-program 'ripgrep)))
+  (savehist-mode))
 
 (use-package simple
   :custom
@@ -196,9 +148,6 @@
   :hook (after-init . delete-selection-mode))
 
 (use-package dired
-  ;;   ;; REVIEW(package): diredfl, peep-dired, dired-narrow
-  ;;   :bind (:map dired-mode-map
-  ;;                      ("C-c C-p" . wdired-change-to-wdired-mode))
   :custom
   (dired-auto-revert-buffer #'dired-buffer-stale-p "Revert the Dired buffer without prompting.")
   (dired-clean-confirm-killing-deleted-buffers nil "Disable the prompt about killing the Dired buffer for a deleted directory.")
@@ -211,7 +160,6 @@
   (dired-recursive-copies 'always)
   (dired-recursive-deletes 'top)
   (dired-vc-rename-file t)
-  ;;   (image-dired-thumb-size 150)
   (dired-omit-files (concat
                      "\\`[.]?#\\|\\`[.][.]?\\'"
                      "\\|^[a-zA-Z0-9]\\.syncthing-enc\\'"
@@ -227,11 +175,13 @@
   :bind
   (([remap list-buffers] . ibuffer)))
 
-;;; Auto save based on event
-;; For built-in timer based alternative: (auto-save-visited-mode t)
+(use-package ffap
+  :custom
+  (ffap-machine-p-known 'reject)) ; Don’t attempt to ping unknown hostnames
+
 (use-package super-save
-  :diminish
   :ensure
+  :diminish
   :custom
   (super-save-auto-save-when-idle t)
   (super-save-remote-files nil)
@@ -240,141 +190,67 @@
   :config
   (super-save-mode 1))
 
-;; (use-package elec-pair
-;;   ;; REVIEW(alternative): paren
-;;   :diminish
-;;   :hook (after-init . electric-pair-mode))
-
-
-(use-package org
-  :custom
-  (org-directory "~/Documents")
-  ;; Other customizations...
-  (org-pretty-entities t)
-  (org-clock-persist 'history) ;; Properly declare and set the variable
-  :config
-  (setq org-agenda-files (mapcar 'file-truename (file-expand-wildcards (concat org-directory "/**/*.org"))))
-  (org-clock-persistence-insinuate)
-  :hook (org-mode . visual-line-mode)
-  :bind (
-         ("C-c a" . org-agenda)
-         ("C-c c" . org-capture)))
-
-(use-package elisp-lint
-  :ensure)
-(use-package package-lint
-  :ensure)
-
-(use-package org-appear
-  :ensure
-  :hook
-  (org-mode . org-appear-mode)
-  :after org)
-
-
-(use-package org-modern
-  :ensure
-  :after org
-  :hook
-  (org-mode . global-org-modern-mode))
-
-
-(use-package treesit
-  :custom
-  (treesit-font-lock-level 4))
-
-;; QOL stuff
-
-(use-package dash-docs
-  :ensure
-  :defines (dash-docs-docsets dash-docs-docsets-path)
-  :custom
-  (dash-docs-docsets-path "~/.local/share/Zeal/Zeal/docsets/")
-  :config
-  (defun setup-dash-docs-for-emacs-lisp ()
-    (setq-local dash-docs-docsets '("Emacs Lisp")))
-
-  (defun setup-dash-docs-for-python ()
-    (setq-local dash-docs-docsets '("Python 3")))
-
-  (defun setup-dash-docs-for-javascript ()
-    (setq-local dash-docs-docsets '("JavaScript" "NodeJS")))
-
-  (defun setup-dash-docs-for-go ()
-    (setq-local dash-docs-docsets '("Go")))
-
-  (defun setup-dash-docs-for-cpp ()
-    (setq-local dash-docs-docsets '("C++")))
-
-  (defun setup-dash-docs-for-java ()
-    (setq-local dash-docs-docsets '("Java SE")))
-
-  (defun setup-dash-docs-for-ruby ()
-    (setq-local dash-docs-docsets '("Ruby")))
-
-  (defun setup-dash-docs-for-haskell ()
-    (setq-local dash-docs-docsets '("Haskell")))
-  :hook
-  ((emacs-lisp-mode . setup-dash-docs-for-emacs-lisp)
-   (python-mode . setup-dash-docs-for-python)
-   (js-mode . setup-dash-docs-for-javascript)
-   (go-mode . setup-dash-docs-for-go)
-   (c++-mode . setup-dash-docs-for-cpp)
-   (java-mode . setup-dash-docs-for-java)
-   (ruby-mode . setup-dash-docs-for-ruby)
-   (haskell-mode . setup-dash-docs-for-haskell)))
-
-(use-package consult-dash
-  :ensure
-  ;; :bind (("M-s d" . consult-dash))
-  :after dash-docs
-  :config
-  ;; Use the symbol at point as initial search term
-  (consult-customize consult-dash :initial (thing-at-point 'symbol)))
-
-(use-package avy
-  :ensure
-  :bind (
-         ("M-g c"   . avy-goto-char) ;; Orig: goto-char; other options -2 and -timer
-         ("M-g l" . avy-goto-line)
-         ("M-g w" . avy-goto-word-1)) ;; Other options -1 nad -0
-  :custom (avy-all-windows 'all-frames))
-
-(use-package breadcrumb
-  :ensure
-  :init
-  (breadcrumb-mode))
-
-(use-package sr-speedbar
-  :ensure)
-
 (use-package vundo
   :ensure
   :bind ("C-x u" . vundo)
   :config (setq vundo-glyph-alist vundo-unicode-symbols))
 
-(use-package hl-todo
+(use-package expand-region
   :ensure
-  ;; Highlight comments
-  :hook (prog-mode . hl-todo-mode)
+  :bind ("C-=" . er/expand-region))
+
+(use-package multiple-cursors
+  :ensure
+  :bind
+  (("C->" . mc/mark-next-like-this)
+   ("C-<" . mc/mark-previous-like-this)))
+
+(use-package drag-stuff
+  :ensure
+  :diminish
+  :autoload drag-stuff-define-keys
+  :hook ((text-mode prog-mode) . drag-stuff-mode)
   :config
-  (setq
-   hl-todo-highlight-punctuation ":"
-   hl-todo-keyword-faces
-   `(("TODO" warning bold)
-     ("FIXME" error bold)
-     ("HACK" font-lock-constant-face bold)
-     ("REVIEW" font-lock-keyword-face bold)
-     ("NOTE" success bold)
-     ("DEPRECATED" font-lock-doc-face bold))))
+  (add-to-list 'drag-stuff-except-modes 'org-mode)
+  (drag-stuff-define-keys))
+
+;; For using security keys with Emacs.
+;; (use-package fido-mode)
+
+;; For appointment notifications.
+;; (use-package appt
+;;   :config
+;;   (appt-activate t))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; UI enhancements
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; `adaptive-fill-mode' is a minor mode that makes `fill-paragraph` behave more
+;;; intelligently, especially with prefixed text like comments or lists.
+;; (use-package adaptive-fill-mode
+;;   :hook (text-mode . adaptive-fill-mode))
+
+(use-package diminish :ensure)
+
+(use-package which-key
+  :diminish
+  :hook (after-init . which-key-mode))
+
+(use-package hl-line
+  :custom
+  (global-hl-line-sticky-flag t)
+  :hook ((after-init . global-hl-line-mode)
+         ((dashboard-mode eshell-mode shell-mode term-mode vterm-mode org-mode) .
+          (lambda () (setq-local global-hl-line-mode nil)))))
 
 (use-package rainbow-delimiters
   :ensure
   :hook((lisp-mode emacs-lisp-mode) . rainbow-delimiters-mode))
 
 (use-package auto-dark
-  :diminish
   :ensure
+  :diminish
   :after leuven-theme
   :custom
   (auto-dark-themes '((leuven-dark) (leuven)))
@@ -385,8 +261,23 @@
               (when (display-graphic-p frame)
                 (with-selected-frame frame (auto-dark-mode 1))))))
 
-(use-package nerd-icons
-  :ensure)
+(use-package calendar
+  :config
+  (copy-face 'font-lock-constant-face 'calendar-iso-week-face)
+  (set-face-attribute 'calendar-iso-week-face nil :height 0.7)
+  (setq calendar-week-start-day 1)
+  (setq calendar-intermonth-text
+        '(propertize (format "%2d" (car (calendar-iso-from-absolute
+                                         (calendar-absolute-from-gregorian (list month day year)))))
+                     'font-lock-face 'calendar-iso-week-face)))
+
+
+(use-package breadcrumb
+  :ensure
+  :init
+  (breadcrumb-mode))
+
+(use-package nerd-icons :ensure)
 
 (use-package nerd-icons-corfu
   :ensure
@@ -406,321 +297,27 @@
   (dired-mode . nerd-icons-dired-mode))
 
 (use-package nerd-icons-completion
-  :after marginalia nerd-icons
   :ensure
+  :after marginalia nerd-icons
   :config
   (nerd-icons-completion-mode)
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
-(use-package wgrep
+(use-package hl-todo
   :ensure
-  :init
+  :hook (prog-mode . hl-todo-mode)
+  :config
   (setq
-   wgrep-auto-save-buffer t
-   wgrep-change-readonly-file t))
-
-(use-package dtrt-indent
-  :ensure
-  :hook (prog-mode . dtrt-indent-mode))
-
-(use-package helpful
-  :diminish
-  :ensure
-  :init (require 'bind-key)
-  :bind
-  (("C-h f" . #'helpful-callable)
-   ("C-h v" . #'helpful-variable)
-   ("C-h k" . #'helpful-key)
-   ("C-c C-d" . #'helpful-at-point)
-   ("C-h F" . #'helpful-function)
-   ([remap describe-symbol]   . helpful-symbol)
-   ("C-h C" . #'helpful-command)))
-
-(use-package help-at-pt
-  :custom
-  (help-at-pt-display-when-idle t)) ; Display messages when idle, without prompting
-
-;;; Indication of local VCS changes
-(use-package diff-hl
-  :ensure
-  :custom
-  (diff-hl-draw-borders nil)
-  (fringes-outside-margins t)
-  :hook ((after-init . global-diff-hl-mode)
-         (after-init . global-diff-hl-show-hunk-mouse-mode)
-         (dired-mode . diff-hl-dired-mode)
-         (magit-post-refresh . diff-hl-magit-post-refresh))
-  :after magit
-  :config
-  ;; Highlight on-the-fly
-  (diff-hl-flydiff-mode 1))
-
-
-
-(use-package multiple-cursors
-  :ensure
-  :bind
-  (("C->" . mc/mark-next-like-this)
-   ("C-<" . mc/mark-previous-like-this)))
-
-
-(use-package expand-region
-  ;; Expand selection according to scope
-  :ensure
-  :bind ("C-=" . er/expand-region))
-
-
-(use-package drag-stuff
-  :ensure
-  :diminish
-  :autoload drag-stuff-define-keys
-  :hook ((text-mode prog-mode) . drag-stuff-mode)
-  :config
-  (add-to-list 'drag-stuff-except-modes 'org-mode)
-  (drag-stuff-define-keys))
-
-;;; Major mode stuff
-
-
-(use-package prog-mode
-  :hook
-  (prog-mode . display-line-numbers-mode)) ; Display line numbers only when in programming modes
-
-
-(use-package gnuplot
-  :ensure
-  :mode ("\\.plt\\'" . gnuplot-mode))
-
-
-(use-package markdown-mode
-  :ensure
-  :after dash
-  :mode (("README\\.md\\'" . gfm-mode)
-         ("\\.md\\'" . markdown-mode))
-  :init (setq markdown-command "multimarkdown")
-  :hook (markdown-mode . visual-line-mode)
-  :bind (:map markdown-mode-map
-              ("C-c C-e" . markdown-do)))
-
-
-(use-package conf-mode
-  :mode
-  (("/.dockerignore\\'" . conf-unix-mode)
-   ("/.gitignore\\'" . conf-unix-mode)))
-(custom-set-variables '(package-selected-packages nil))
-(custom-set-faces)
-
-(use-package haskell-mode
-  :ensure)
-
-(use-package diff-mode :mode "\\.patch[0-9]*\\'")
-
-(use-package terraform-mode
-  :ensure)
-
-
-
-(use-package dockerfile-mode :ensure)
-(use-package docker-compose-mode :ensure)
-
-(use-package gitlab-ci-mode :ensure)
-
-(use-package ansible :ensure)
-
-(use-package ssh-config-mode :ensure)
-(use-package adoc-mode
-  :ensure)
-(use-package go-mode
-  :ensure)
-
-
-(use-package nix-ts-mode
-  :ensure
-  :mode "\\.nix\\'")
-
-;; (use-package csv-mode :ensure)
-(use-package cmake-mode :ensure
-  :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
-(use-package mermaid-mode :ensure)
-(use-package yaml-mode :ensure)
-;;; Removed unused package: protobuf-mode
-
-(use-package modern-cpp-font-lock
-  :ensure t)
-
-
-;;; Tooling
-
-(use-package compile-multi
-  :ensure)
-
-(use-package consult-compile-multi
-  :ensure t
-  :after compile-multi
-  :demand t
-  :config (consult-compile-multi-mode))
-
-(use-package compile-multi-nerd-icons
-  :ensure t
-  :after nerd-icons-completion
-  :after compile-multi
-  :demand t)
-
-(use-package compile-multi-embark
-  :ensure t
-  :after embark
-  :after compile-multi
-  :demand t
-  :config (compile-multi-embark-mode +1))
-
-
-(use-package direnv
-  :ensure
-  :config
-  (direnv-mode)
-  (add-to-list 'warning-suppress-types '(direnv)))
-
-(use-package magit
-  :ensure
-  :bind (("C-c g" . magit-status))
-  :custom
-  (magit-diff-refine-hunk t "Show word-granularity differences within diff hunks")
-  (magit-diff-refine-ignore-whitespace t "Ignore whitespace changes in word-granularity differences")
-  (magit-diff-hide-trailing-cr-characters t "Hide trailing ^M"))
-
-;; Disable due to: https://github.com/dandavison/magit-delta/issues/9
-;; (use-package magit-delta
-;;   :ensure
-;;   :hook (magit-mode . magit-delta-mode))
-
-(use-package treesit-auto
-  :ensure
-  :custom
-  (treesit-auto-install nil)
-  :config
-  (treesit-auto-add-to-auto-mode-alist 'all)
-  (global-treesit-auto-mode))
-
-(use-package treesit-fold
-  :ensure
-  :hook (after-init . global-treesit-fold-indicators-mode)
-  :init (setq treesit-fold-indicators-priority -1))
-
-(use-package flymake
-  :custom
-  (flymake-fringe-indicator-position 'right-fringe)
-  (flymake-suppress-zero-counters t "Suppress the display of Flymake error counters when there are no errors."))
-
-(use-package gdb-mi
-  :custom
-  (gdb-many-windows t)
-  (gdb-show-main t)
-  (gdb-debuginfod-en)
-  (gdb-debuginfod-enable-setting t))
-
-;;; REVIEW: https://github.com/seagle0128/.emacs.d/blob/master/lisp/init-dap.el#L36
-(use-package dape
-  :ensure
-  :config
-  (dape-breakpoint-global-mode)
-  (add-hook 'dape-compile-hook 'kill-buffer)
-  :custom
-  ;; Info buffers like gud (gdb-mi)
-  (dape-buffer-window-arrangement 'gud)
-  (dape-info-hide-mode-line nil)
-  (Dape-inlay-hints t "Showing inlay hints"))
-
-
-(use-package eglot
-  :hook ((prog-mode . (lambda ()
-                        (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
-                          (eglot-ensure))))
-         ((markdown-mode yaml-mode yaml-ts-mode) . eglot-ensure))
-  :init
-  ;; Reduce idle time before sending changes to the language server
-  (setq eglot-send-changes-idle-time 0.5)
-  ;; Automatically shutdown the language server when the last file is closed
-  (setq eglot-autoshutdown t)
-  :custom
-  ;; Prevent Eglot from spamming the minibuffer with progress messages
-  (eglot-report-progress nil)
-  ;; Extend Eglot functionality to cross-referenced files
-  (eglot-extend-to-xref t)
-  :config
-  ;; Integrate with Flymake for diagnostics
-  (add-hook 'eglot-managed-mode-hook
-            (lambda ()
-              (flymake-mode 1))))
-
-
-;;; Custom stuff
-;;; Display ANSI colors in buffer
-(require 'ansi-color)
-
-(defun display-ansi-colors ()
-  "Apply ANSI color codes to the current buffer.
-This function processes the entire buffer and interprets any ANSI
-escape sequences, rendering the corresponding colors in the buffer.
-
-Useful for viewing logs or other text files that include ANSI
-color codes."
-  (interactive)
-  (ansi-color-apply-on-region (point-min) (point-max)))
-
-(use-package vterm
-  :ensure
-  :custom
-  (vterm-always-compile-module t))
-
-;;; TODO: eglot, flymake, flyspell, cape
-
-;;; REVIEW: FIDO, winner-mode, Icomplete
-
-(use-package flyspell
-  :hook
-  (prog-mode . flyspell-prog-mode)
-  (text-mode . flyspell-mode))
-
-
-
-
-(use-package consult-eglot
-  :ensure
-  :after (consult eglot)
-  :bind (:map eglot-mode-map
-              ("C-M-." . consult-eglot-symbols)))
-;; TODO: https://github.com/oantolin/embark/wiki/Additional-Configuration
-(use-package embark
-  :ensure
-  :bind
-  (("C-." . embark-act)
-   ("C-;" . embark-dwim)
-   ("C-h B" . embark-bindings))
-  :init
-  (setq prefix-help-command #'embark-prefix-help-command)
-  :config
-
-  ;; Hide the mode line of the Embark live/completions buffers
-  (add-to-list 'display-buffer-alist
-               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
-                 nil
-                 (window-parameters (mode-line-format . none)))))
-
-;; Consult users will also want the embark-consult package.
-(use-package embark-consult
-  :ensure ; only need to install it, embark loads it after consult if found
-  :after (embark consult)
-  :hook (embark-collect-mode . consult-preview-at-point-mode)
-  :bind (:map minibuffer-mode-map
-              ("C-c C-o" . embark-export)))
-
-(use-package consult-eglot-embark
-  :ensure
-  :after (consult eglot embark))
-
-(use-package consult-flyspell
-  :ensure
-  :after (consult flyspell))
+   hl-todo-highlight-punctuation ":"
+   hl-todo-keyword-faces
+   `(("TODO" warning bold)
+     ("FIXME" error bold)
+     ("HACK" font-lock-constant-face bold)
+     ("REVIEW" font-lock-keyword-face bold)
+     ("NOTE" success bold)
+     ("DEPRECATED" font-lock-doc-face bold))))
+
+(use-package sr-speedbar :ensure)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Completion
@@ -728,12 +325,12 @@ color codes."
 
 ;;; This configuration uses `vertico` as the completion UI. It is a modern
 ;;; alternative to the built-in `icomplete-mode`.
+
 (use-package vertico
   :ensure
   :init
   (vertico-mode))
 
-;;; NOTE: M-x describe-keymap corfu-map
 (use-package corfu
   :ensure
   :init
@@ -741,6 +338,7 @@ color codes."
   (corfu-history-mode))
 
 (use-package cape
+  :ensure
   :init
   ;; Add `completion-at-point` to the list of completion functions
   (add-to-list 'completion-at-point-functions #'cape-file)
@@ -805,7 +403,6 @@ color codes."
          ("M-s" . consult-history)                 ;; orig. next-matching-history-element
          ("M-r" . consult-history))                ;; orig. previous-matching-history-element
   :init
-  ;;  (setq completion-in-region-function #'consult-completion-in-region)
   ;; Use Consult to select xref locations with preview
   (setq xref-show-xrefs-function #'consult-xref
         xref-show-definitions-function #'consult-xref))
@@ -813,64 +410,221 @@ color codes."
 (use-package orderless
   :ensure
   :custom
-  ;; Configure a custom style dispatcher (see the Consult wiki)
-  ;; (orderless-style-dispatchers '(+orderless-consult-dispatch orderless-affix-dispatch))
-  ;; (orderless-component-separator #'orderless-escapable-split-on-space)
-  ;; REVIEW: completion styles: substring, partial, initials
-  (completion-styles '(orderless basic))
+  ;; Old
+  ;;  (completion-styles '(orderless basic))
+  ;; (completion-category-defaults nil)
+  ;; (completion-category-overrides '((file (styles partial-completion)))))
+  (completion-styles '(orderless partial-completion flex))
   (completion-category-defaults nil)
-  (completion-category-overrides '((file (styles partial-completion)))))
+  (completion-category-overrides '((file (styles partial-completion))))
+  (orderless-style-dispatchers '(+orderless-consult-dispatch orderless-affix-dispatch))
+  (orderless-component-separator #'orderless-escapable-split-on-space))
 
 (use-package marginalia
   :ensure
   :init
   (marginalia-mode))
 
-;;; TODO: Use consult-ripgrep instead of project-find-regexp in project.el
-;; (require 'keymap) ;; keymap-substitute requires emacs version 29.1?
-;; (require 'cl-seq)
+(use-package embark
+  :ensure
+  :bind
+  (("C-." . embark-act)
+   ("C-;" . embark-dwim)
+   ("C-h B" . embark-bindings))
+  :init
+  (setq prefix-help-command #'embark-prefix-help-command)
+  :config
+  ;; Hide the mode line of the Embark live/completions buffers
+  (add-to-list 'display-buffer-alist
+               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
+                 nil
+                 (window-parameters (mode-line-format . none)))))
 
-;; (keymap-substitute project-prefix-map #'project-find-regexp #'consult-ripgrep)
-;; (cl-nsubstitute-if
-;;   '(consult-ripgrep "Find regexp")
-;;   (pcase-lambda (`(,cmd _)) (eq cmd #'project-find-regexp))
-;;   project-switch-commands)
+(use-package embark-consult
+  :ensure
+  :after (embark consult)
+  :hook (embark-collect-mode . consult-preview-at-point-mode)
+  :bind (:map minibuffer-mode-map
+              ("C-c C-o" . embark-export)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Help and Documentation
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; This configuration uses `helpful` and `consult-info` to enhance the help
+;;; and documentation experience. Use `C-h f` for `helpful-callable`, `C-h v`
+;;; for `helpful-variable`, `C-h k` for `helpful-key`, and `C-c i` for
+;;; `consult-info`.
+
+(use-package help-at-pt
+  :custom
+  (help-at-pt-display-when-idle t)) ; Display messages when idle, without prompting
+
+(use-package helpful
+  :ensure
+  :diminish
+  :bind
+  (("C-h f" . #'helpful-callable)
+   ("C-h v" . #'helpful-variable)
+   ("C-h k" . #'helpful-key)
+   ("C-c C-d" . #'helpful-at-point)
+   ("C-h F" . #'helpful-function)
+   ([remap describe-symbol]   . helpful-symbol)
+   ("C-h C" . #'helpful-command)))
 
 
+(use-package apropos
+  :custom
+  (apropos-do-all t))
+
+(use-package dash-docs
+  :ensure
+  :defines (dash-docs-docsets dash-docs-docsets-path)
+  :custom
+  (dash-docs-docsets-path "~/.local/share/Zeal/Zeal/docsets/")
+  :config
+  (dolist (spec '((emacs-lisp-mode . ("Emacs Lisp"))
+                  (python-mode . ("Python 3"))
+                  (js-mode . ("JavaScript" "NodeJS"))
+                  (go-mode . ("Go"))
+                  (c++-mode . ("C++"))
+                  (java-mode . ("Java SE"))
+                  (ruby-mode . ("Ruby"))
+                  (haskell-mode . ("Haskell"))))
+    (add-hook (intern (concat (symbol-name (car spec)) "-hook"))
+              (let ((docsets (cdr spec)))
+                (lambda () (setq-local dash-docs-docsets docsets))))))
+
+(use-package consult-dash
+  :after dash-docs
+  :config
+  (consult-customize consult-dash :initial (thing-at-point 'symbol)))
 
 
-;; TODO: https://github.com/minad/consult/wiki#org-clock
-;; (defun consult-clock-in ()
-;;   "Clock into an Org agenda heading."
-;;   (interactive)
-;;   (save-window-excursion
-;;     (consult-org-agenda)
-;;     (org-clock-in)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Org Mode
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; (consult-customize consult-clock-in
-;;                    :prompt "Clock in: "
-;;                    :preview-key "M-.")
+(use-package org
+  :custom
+  (org-directory "~/Documents")
+  (org-pretty-entities t)
+  (org-clock-persist 'history)
+  :config
+  (setq org-agenda-files (mapcar 'file-truename (file-expand-wildcards (concat org-directory "/**/*.org"))))
+  (org-clock-persistence-insinuate)
+  :hook (org-mode . visual-line-mode)
+  :bind (
+         ("C-c a" . org-agenda)
+         ("C-c c" . org-capture)))
 
+(use-package org-appear
+  :ensure
+  :hook
+  (org-mode . org-appear-mode)
+  :after org)
 
+(use-package org-modern
+  :ensure
+  :after org
+  :hook
+  (org-mode . global-org-modern-mode))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Programming Languages & Tools
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; For efficient navigation, this configuration provides `avy` (`M-g c`, `M-g l`,
+;;; `M-g w`), `zoxide` (`M-g z`), and `consult` for searching and jumping to
+;;; files and buffers.
 
-;; (use-package dired-hacks-utils
-;;   :ensure
-;;   :after dired)
+(use-package prog-mode
+  :hook
+  (prog-mode . display-line-numbers-mode))
 
-(use-package aidermacs
-  :ensure)
+(use-package treesit
+  :custom
+  (treesit-font-lock-level 4))
 
-;; (use-package paren
-;;   :custom
-;;   (show-paren-mode t "Visualize matching parens")
-;;   (show-paren-context-when-offscreen t)
-;;   (show-paren-delay 0.1)
-;;   (show-paren-highlight-openparen t)
-;;   (show-paren-when-point-in-periphery t)
-;;   (show-paren-when-point-inside-paren t)
-;;   )
+(use-package treesit-auto
+  :ensure
+  :custom
+  (treesit-auto-install nil)
+  :config
+  (treesit-auto-add-to-auto-mode-alist 'all)
+  (global-treesit-auto-mode))
+
+(use-package treesit-fold
+  :ensure
+  :hook (after-init . global-treesit-fold-indicators-mode)
+  :init (setq treesit-fold-indicators-priority -1))
+
+(use-package flymake
+  :custom
+  (flymake-fringe-indicator-position 'right-fringe)
+  (flymake-suppress-zero-counters t "Suppress the display of Flymake error counters when there are no errors."))
+
+(use-package flyspell
+  :hook
+  (prog-mode . flyspell-prog-mode)
+  (text-mode . flyspell-mode))
+
+(use-package consult-flyspell
+  :ensure
+  :after (consult flyspell))
+
+(use-package eglot
+  :hook ((prog-mode . (lambda ()
+                        (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
+                          (eglot-ensure))))
+         ((markdown-mode yaml-mode yaml-ts-mode) . eglot-ensure))
+  :init
+  (setq eglot-send-changes-idle-time 0.5)
+  (setq eglot-autoshutdown t)
+  :custom
+  (eglot-report-progress nil)
+  (eglot-extend-to-xref t)
+  :config
+  (add-hook 'eglot-managed-mode-hook
+            (lambda ()
+              (flymake-mode 1)))
+  (add-hook 'eglot-managed-mode-hook #'eldoc-mode))
+
+(use-package consult-eglot
+  :ensure
+  :after (consult eglot)
+  :bind (:map eglot-mode-map
+              ("C-M-." . consult-eglot-symbols)))
+
+(use-package consult-eglot-embark
+  :ensure
+  :after (consult eglot embark))
+
+(use-package xref
+  :init
+  (when (executable-find "rg")
+    (setq xref-search-program 'ripgrep)))
+
+(use-package elisp-lint :ensure)
+(use-package package-lint :ensure)
+
+(use-package dtrt-indent
+  :ensure
+  :hook (prog-mode . dtrt-indent-mode))
+
+(use-package direnv
+  :ensure
+  :config
+  (direnv-mode)
+  (add-to-list 'warning-suppress-types '(direnv)))
+
+(use-package avy
+  :ensure
+  :bind (
+         ("M-g c"   . avy-goto-char)
+         ("M-g l" . avy-goto-line)
+         ("M-g w" . avy-goto-word-1))
+  :custom (avy-all-windows 'all-frames))
 
 (use-package zoxide
   :ensure
@@ -880,15 +634,151 @@ color codes."
   :hook
   (find-file . zoxide-add))
 
-(use-package copilot
+(use-package xt-mouse
+  :custom
+  (xterm-mouse-mode 1 "Enable mouse in terminal"))
+
+(use-package vterm
   :ensure
-  ;; :hook (prog-mode . copilot-mode)
-  ;; :bind (:map copilot-completion-map
-  ;;             ("C-TAB" . 'copilot-accept-completion)
-  ;;             ("C-<tab>" . 'copilot-accept-completion)
-  ;;             ("M-f" . 'copilot-accept-completion-by-word)
-  ;;             ("M-<return>" . 'copilot-accept-completion-by-line))
-  )
+  :custom
+  (vterm-always-compile-module t))
+
+;; Major modes
+(use-package gnuplot
+  :ensure
+  :mode ("\\.plt\\'" . gnuplot-mode))
+
+(use-package markdown-mode
+  :after dash
+  :ensure
+  :mode (("README\\.md\\'" . gfm-mode)
+         ("\\.md\\'" . markdown-mode))
+  :init (setq markdown-command "multimarkdown")
+  :hook (markdown-mode . visual-line-mode)
+  :bind (:map markdown-mode-map
+              ("C-c C-e" . markdown-do)))
+
+(use-package conf-mode
+  :ensure
+  :mode
+  (("/.dockerignore\\'" . conf-unix-mode)
+   ("/.gitignore\\'" . conf-unix-mode)))
+
+(use-package haskell-mode :ensure)
+(use-package diff-mode :ensure :mode "\\.patch[0-9]*\\'")
+(use-package terraform-mode :ensure)
+(use-package dockerfile-mode :ensure)
+(use-package docker-compose-mode :ensure)
+(use-package gitlab-ci-mode :ensure)
+(use-package ansible :ensure)
+(use-package ssh-config-mode :ensure)
+(use-package adoc-mode :ensure)
+(use-package go-mode :ensure)
+(use-package nix-ts-mode :ensure :mode "\\.nix\\'")
+(use-package cmake-mode :ensure :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
+(use-package mermaid-mode :ensure)
+(use-package yaml-mode :ensure)
+(use-package modern-cpp-font-lock :ensure)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Version Control
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(use-package magit
+  :bind (("C-c g" . magit-status))
+  :custom
+  (magit-diff-refine-hunk t "Show word-granularity differences within diff hunks")
+  (magit-diff-refine-ignore-whitespace t "Ignore whitespace changes in word-granularity differences")
+  (magit-diff-hide-trailing-cr-characters t "Hide trailing ^M"))
+
+(use-package diff-hl
+  :ensure
+  :custom
+  (diff-hl-draw-borders nil)
+  (fringes-outside-margins t)
+  :hook ((after-init . global-diff-hl-mode)
+         (after-init . global-diff-hl-show-hunk-mouse-mode)
+         (dired-mode . diff-hl-dired-mode)
+         (magit-post-refresh . diff-hl-magit-post-refresh))
+  :after magit
+  :config
+  (diff-hl-flydiff-mode 1))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Debugging
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(use-package gdb-mi
+  :custom
+  (gdb-many-windows t)
+  (gdb-show-main t)
+  (gdb-debuginfod-en)
+  (gdb-debuginfod-enable-setting t))
+
+(use-package dape
+  :ensure
+  :config
+  (dape-breakpoint-global-mode)
+  (add-hook 'dape-compile-hook 'kill-buffer)
+  :custom
+  (dape-buffer-window-arrangement 'gud)
+  (dape-info-hide-mode-line nil)
+  (Dape-inlay-hints t "Showing inlay hints"))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Compilation
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(use-package compile-multi :ensure)
+
+(use-package consult-compile-multi
+  :ensure
+  :after compile-multi
+  :demand t
+  :config (consult-compile-multi-mode))
+
+(use-package compile-multi-nerd-icons
+  :ensure
+  :after nerd-icons-completion
+  :after compile-multi
+  :demand t)
+
+(use-package compile-multi-embark
+  :after embark
+  :after compile-multi
+  :demand t
+  :config (compile-multi-embark-mode +1))
+
+(use-package wgrep
+  :ensure
+  :init
+  (setq
+   wgrep-auto-save-buffer t
+   wgrep-change-readonly-file t))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;.
+;;; AI
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;.
+
+(use-package aidermacs :ensure)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Custom functions and settings
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(custom-set-variables '(package-selected-packages nil))
+(custom-set-faces)
+
+(require 'ansi-color)
+(defun display-ansi-colors ()
+  "Apply ANSI color codes to the current buffer.
+This function processes the entire buffer and interprets any ANSI
+escape sequences, rendering the corresponding colors in the buffer.
+
+Useful for viewing logs or other text files that include ANSI
+color codes."
+  (interactive)
+  (ansi-color-apply-on-region (point-min) (point-max)))
 
 (provide 'init)
 ;;; init.el ends here
