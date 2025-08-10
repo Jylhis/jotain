@@ -1,3 +1,15 @@
+# Custom Emacs package configuration.
+#
+# This package provides a customized Emacs distribution with a curated
+# set of packages and configurations optimized for software development.
+# The configuration uses a modular structure with separate files for
+# different concerns (core, UI, completion, programming, etc.).
+#
+# Features:
+# - Modern IDE-like features with LSP support
+# - Comprehensive package collection for development
+# - Modular configuration for maintainability
+# - Optimized for performance and usability
 {
   emacs,
   pkgs,
