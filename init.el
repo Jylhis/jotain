@@ -410,15 +410,9 @@
 (use-package orderless
   :ensure
   :custom
-  ;; Old
-  ;;  (completion-styles '(orderless basic))
-  ;; (completion-category-defaults nil)
-  ;; (completion-category-overrides '((file (styles partial-completion)))))
-  (completion-styles '(orderless partial-completion flex))
+  (completion-styles '(orderless partial-completion flex basic)) 
   (completion-category-defaults nil)
-  (completion-category-overrides '((file (styles partial-completion))))
-  (orderless-style-dispatchers '(+orderless-consult-dispatch orderless-affix-dispatch))
-  (orderless-component-separator #'orderless-escapable-split-on-space))
+  (completion-category-overrides '((file (styles partial-completion)))))
 
 (use-package marginalia
   :ensure
@@ -757,7 +751,7 @@
    wgrep-change-readonly-file t))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;.
-;;; AI
+;;; LLM
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;.
 
 (use-package aidermacs :ensure)
