@@ -49,6 +49,7 @@ emacs.pkgs.withPackages (
     helpful
     hl-todo
     jq-ts-mode
+    just-mode
     just-ts-mode
     magit
     marginalia
@@ -70,6 +71,8 @@ emacs.pkgs.withPackages (
     package-lint
     pretty-sha-path
     rainbow-delimiters
+    sideline
+    sql-indent
     sr-speedbar
     ssh-config-mode
     super-save

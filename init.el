@@ -558,6 +558,12 @@
   (flymake-fringe-indicator-position 'right-fringe)
   (flymake-suppress-zero-counters t "Suppress the display of Flymake error counters when there are no errors."))
 
+(use-package sideline
+  :ensure
+  :hook (prog-mode . sideline-mode)
+  :custom
+  (sideline-backends-left '(sideline-flymake)))
+
 (use-package flyspell
   :hook
   (prog-mode . flyspell-prog-mode)
@@ -673,6 +679,8 @@
 (use-package mermaid-mode :ensure)
 (use-package yaml-mode :ensure)
 (use-package modern-cpp-font-lock :ensure)
+(use-package just-mode :ensure)
+(use-package sql-indent :ensure)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Version Control
@@ -697,6 +705,16 @@
   :after magit
   :config
   (diff-hl-flydiff-mode 1))
+
+(use-package smerge-mode
+  :hook (prog-mode . (lambda ()
+                      (when (and buffer-file-name (vc-backend buffer-file-name))
+                        (smerge-mode 1))))
+  :bind (:map smerge-mode-map
+              ("C-c ^ u" . smerge-keep-upper)
+              ("C-c ^ l" . smerge-keep-lower)
+              ("C-c ^ n" . smerge-next)
+              ("C-c ^ p" . smerge-prev)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Debugging
@@ -723,7 +741,33 @@
 ;;; Compilation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(use-package compile-multi :ensure)
+(use-package compile-multi
+  :ensure
+  :config
+  (setq compile-multi-config
+        '((go-mode . (("go test" . "go test ./...")
+                      ("go test current" . "go test .")
+                      ("go build" . "go build .")
+                      ("just check" . "just check")
+                      ("just format" . "just format")))
+          (python-mode . (("pytest" . "pytest")
+                         ("pytest file" . "pytest %file-name%")
+                         ("just check" . "just check")
+                         ("just format" . "just format")))
+          (haskell-mode . (("stack test" . "stack test")
+                          ("cabal test" . "cabal test")
+                          ("just check" . "just check")
+                          ("just format" . "just format")))
+          (nix-ts-mode . (("nix flake check" . "nix flake check")
+                         ("nix fmt" . "nix fmt")
+                         ("just check" . "just check")
+                         ("just format" . "just format")))
+          (c++-mode . (("cmake build" . "cmake --build build")
+                      ("make" . "make")
+                      ("just check" . "just check")
+                      ("just format" . "just format")))
+          (emacs-lisp-mode . (("elisp-lint" . "just elisp-lint %file-name%")
+                             ("just format" . "just format"))))))
 
 (use-package consult-compile-multi
   :ensure
