@@ -760,9 +760,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Custom functions and settings
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(custom-set-variables '(package-selected-packages nil))
-(custom-set-faces)
-
 (require 'ansi-color)
 (defun display-ansi-colors ()
   "Apply ANSI color codes to the current buffer.
