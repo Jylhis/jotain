@@ -25,14 +25,13 @@
   (completion-ignore-case t "Don't consider case significant in completion")
   (read-buffer-completion-ignore-case t "Ignore case when reading buffer name")
   (read-file-name-completion-ignore-case t "Ignore case for file completion")
+  (load-prefer-newer t "Always load newer compiled files")
   :bind
   (("C-z" . nil)
    ("C-x C-z" . nil)
    ("M-o" . other-window)
    ("M-p" . scroll-down-line)
-   ("M-n" . scroll-up-line))
-  :config
-  (load-prefer-newer t))
+   ("M-n" . scroll-up-line)))
 
 (use-package window
   :custom
@@ -152,6 +151,17 @@
   :config
   (add-to-list 'drag-stuff-except-modes 'org-mode)
   (drag-stuff-define-keys))
+
+(use-package pretty-sha-path
+  :ensure
+  :hook ((shell-mode dired-mode) . pretty-sha-path-mode))
+
+;; Startup performance monitoring
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (message "Emacs loaded in %.2f seconds with %d garbage collections."
+                     (float-time (time-subtract after-init-time before-init-time))
+                     gcs-done)))
 
 (provide 'core)
 ;;; core.el ends here

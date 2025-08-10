@@ -84,6 +84,8 @@ emacs.pkgs.withPackages (
     pretty-sha-path
     rainbow-delimiters
     sideline
+    sideline-eglot
+    sideline-flymake
     sql-indent
     sr-speedbar
     ssh-config-mode
@@ -96,6 +98,8 @@ emacs.pkgs.withPackages (
     vertico
     vterm
     vundo
+    web-server # For claude-code-ide
+    websocket # For claude-code-ide
     wgrep
     yaml-mode
     zoxide

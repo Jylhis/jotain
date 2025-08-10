@@ -10,8 +10,17 @@
 (use-package claude-code-ide
   :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
   :bind ("C-c C-'" . claude-code-ide-menu)
+  :defer t
+  :custom
+  ;; Suppress warnings and improve performance
+  (claude-code-ide-terminal-initialization-delay 0.5)
+  :init
+  ;; Lazy load on first use
+  (autoload 'claude-code-ide-menu "claude-code-ide" "Open Claude Code IDE menu" t)
   :config
-  (claude-code-ide-emacs-tools-setup))
+  ;; Suppress byte-compilation warnings
+  (with-no-warnings
+    (claude-code-ide-emacs-tools-setup)))
 
 (provide 'ai)
 ;;; ai.el ends here

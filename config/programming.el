@@ -33,9 +33,15 @@
 
 (use-package sideline
   :ensure
-  :hook (prog-mode . sideline-mode)
-  :custom
-  (sideline-backends-left '(sideline-flymake)))
+  :hook (prog-mode . sideline-mode))
+
+(use-package sideline-flymake
+  :ensure
+  :hook (flymake-mode . sideline-flymake-setup))
+
+(use-package sideline-eglot
+  :ensure
+  :hook (eglot-managed-mode . sideline-eglot-setup))
 
 (use-package flyspell
   :hook
@@ -150,6 +156,7 @@
   :demand t)
 
 (use-package compile-multi-embark
+  :ensure
   :after embark
   :after compile-multi
   :demand t
@@ -178,7 +185,6 @@
               ("C-c C-e" . markdown-do)))
 
 (use-package conf-mode
-  :ensure
   :mode
   (("/.dockerignore\\'" . conf-unix-mode)
    ("/.gitignore\\'" . conf-unix-mode)))
