@@ -410,7 +410,7 @@
 (use-package orderless
   :ensure
   :custom
-  (completion-styles '(orderless partial-completion flex basic)) 
+  (completion-styles '(orderless partial-completion flex basic))
   (completion-category-defaults nil)
   (completion-category-overrides '((file (styles partial-completion)))))
 
@@ -756,6 +756,11 @@
 
 (use-package aidermacs :ensure)
 
+(use-package claude-code-ide
+  :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
+  :bind ("C-c C-'" . claude-code-ide-menu) ; Set your favorite keybinding
+  :config
+  (claude-code-ide-emacs-tools-setup)) ; Optionally enable Emacs MCP tools
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Custom functions and settings
