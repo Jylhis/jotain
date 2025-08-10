@@ -99,8 +99,8 @@
   ;; Prefer side by side splitting
   (split-width-threshold 170)
   (split-height-threshold nil))
-  ;;:config
-  ;;TODO: (winner-mode 1)
+;;:config
+;;TODO: (winner-mode 1)
 
 (use-package files
   :hook
