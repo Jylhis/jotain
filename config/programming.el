@@ -2,8 +2,6 @@
 
 ;;; Commentary:
 ;; Programming tools including LSP, tree-sitter, debugging, and language modes.
-;; TODO: in HTML mode, Alt+o doesn't work for switching windows
-;; TODO: use web-mode
 ;;; Code:
 
 (use-package prog-mode
@@ -209,6 +207,25 @@
 (use-package modern-cpp-font-lock :ensure)
 (use-package just-mode :ensure)
 (use-package sql-indent :ensure)
+
+(use-package web-mode
+  :ensure
+  :mode (("\\.html?\\'" . web-mode)
+         ("\\.phtml\\'" . web-mode)
+         ("\\.tpl\\.php\\'" . web-mode)
+         ("\\.[agj]sp\\'" . web-mode)
+         ("\\.as[cp]x\\'" . web-mode)
+         ("\\.erb\\'" . web-mode)
+         ("\\.mustache\\'" . web-mode)
+         ("\\.djhtml\\'" . web-mode))
+  :bind (:map web-mode-map
+              ("M-o" . other-window))  ; Fix Alt+o window switching
+  :custom
+  (web-mode-markup-indent-offset 2)
+  (web-mode-css-indent-offset 2)
+  (web-mode-code-indent-offset 2)
+  (web-mode-enable-auto-pairing t)
+  (web-mode-enable-css-colorization t))
 
 (use-package xt-mouse
   :custom

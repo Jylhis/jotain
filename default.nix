@@ -100,6 +100,7 @@ emacs.pkgs.withPackages (
     vertico
     vterm
     vundo
+    web-mode
     web-server # For claude-code-ide
     websocket # For claude-code-ide
     wgrep
