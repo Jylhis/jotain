@@ -19,6 +19,34 @@ jobs:
           name: jylhis-nixos
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - run: nix build .#emacsJ
+  deploy:
+    needs: nix-package
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout Source Repository
+        uses: actions/checkout@v5
+      - name: Configure Git
+        run: |
+          git config --global user.name "${GITHUB_ACTOR}"
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+      - name: Clone Target Repository
+        run: |
+          git clone https://${{ secrets.TARGET_REPO_TOKEN }}@github.com/Jylhis/.emacs.d.git target-repo
+          git -C target-repo checkout main || git -C target-repo checkout -b main
+      - name: Copy Emacs Files
+        run: |
+          rsync -av --delete sources/emacs/ target-repo/
+      - name: Commit and Push Changes
+        run: |
+          cd "${GITHUB_WORKSPACE}/target-repo"
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git add .
+            git commit -m "Sync Emacs configuration from source repository"
+            git push https://${{ secrets.TARGET_REPO_TOKEN }}@github.com/Jylhis/.emacs.d.git main
+          else
+            echo "No changes to commit."
+          fi
   # tests:
   #   runs-on: ubuntu-latest
   #   timeout-minutes: 15
