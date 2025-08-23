@@ -93,3 +93,5 @@ nix develop         # Enter development shell
 ---
 
 _Delegate all Emacs tasks to emacs-expert agent_
+
+- When installing new packages, check with nixos MCP or nix search, if the package exists
