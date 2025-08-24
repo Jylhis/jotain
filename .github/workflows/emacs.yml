@@ -28,22 +28,28 @@ jobs:
       contents: read
     steps:
       - name: Generate GitHub App token
-        id: generate_token
+        id: app-token
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          repositories: ".emacs.d"
+          owner: ${{ github.repository_owner }}
       - name: Checkout Source Repository
         uses: actions/checkout@v5
+      - name: Get GitHub App User ID
+        id: get-user-id
+        run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
       - name: Configure Git
         run: |
-          git config --global user.name "${GITHUB_ACTOR}"
-          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config --global user.email '${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
       - name: Clone Target Repository
         run: |
-          git clone https://x-access-token:${{ steps.generate_token.outputs.token }}@github.com/Jylhis/.emacs.d.git target-repo
-          git -C target-repo checkout main
+          gh repo clone Jylhis/.emacs.d target-repo
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
       - name: Copy Emacs Files
         run: |
           rsync -av --delete sources/emacs/ target-repo/
@@ -53,10 +59,12 @@ jobs:
           if [[ -n "$(git status --porcelain)" ]]; then
             git add .
             git commit -m "Sync Emacs configuration from source repository"
-            git push https://x-access-token:${{ steps.generate_token.outputs.token }}@github.com/Jylhis/.emacs.d.git main
+            git push
           else
             echo "No changes to commit."
           fi
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
   # tests:
   #   runs-on: ubuntu-latest
   #   timeout-minutes: 15
