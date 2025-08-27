@@ -36,5 +36,31 @@
   :hook
   (org-mode . global-org-modern-mode))
 
+;; Org exporters
+(use-package ox-slack
+  :ensure
+  :after org
+  :defer t)
+
+(use-package ox-jira
+  :ensure
+  :after org
+  :defer t)
+
+(use-package ox-hugo
+  :ensure
+  :after org
+  :defer t)
+
+(use-package ox-gfm
+  :ensure
+  :after org
+  :defer t)
+
+(use-package org-asciidoc
+  :ensure
+  :after org
+  :defer t)
+
 (provide 'writing)
 ;;; writing.el ends here
