@@ -79,9 +79,13 @@ emacs.pkgs.withPackages (
     nix-ts-mode
     orderless
     org-appear
+    org-asciidoc
     org-jira
     org-modern
+    ox-gfm
+    ox-hugo
     ox-jira
+    ox-slack
     package-lint
     pretty-sha-path
     rainbow-delimiters
