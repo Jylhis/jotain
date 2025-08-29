@@ -99,5 +99,29 @@
 
 (use-package sr-speedbar :ensure)
 
+(use-package emojify
+  :ensure
+  :custom
+   (emojify-inhibit-major-modes '(dired-mode
+                                 doc-view-mode
+                                 debugger-mode
+                                 pdf-view-mode
+                                 image-mode
+                                 help-mode
+                                 ibuffer-mode
+                                 magit-popup-mode
+                                 magit-diff-mode
+                                 nix-mode
+                                 ert-results-mode
+                                 compilation-mode
+                                 proced-mode
+                                 mu4e-headers-mode
+                                 deft-mode
+                                 yaml-mode
+                                 prog-mode))
+   
+  ;; :hook (after-init . global-emojify-mode)
+  )
+
 (provide 'ui)
 ;;; ui.el ends here

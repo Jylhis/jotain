@@ -16,9 +16,12 @@
 }:
 emacs.pkgs.withPackages (
   epkgs: with epkgs; [
+
+    # TOOD: Package: https://github.com/flymake/flymake-elsa
     adoc-mode
     aidermacs
     ansible
+    auth-source-1password
     auto-dark
     avy
     awk-ts-mode
@@ -38,8 +41,10 @@ emacs.pkgs.withPackages (
     copilot
     corfu
     csv-mode
+    cuda-mode
     dape
     dash-docs
+    demangle-mode
     devicetree-ts-mode
     diff-hl
     diminish
@@ -48,9 +53,12 @@ emacs.pkgs.withPackages (
     dockerfile-mode
     drag-stuff
     dtrt-indent
+    editorconfig
     elisp-lint
+    elsa
     embark
     embark-consult
+    emojify
     expand-region
     git-commit-ts-mode
     gitlab-ci-mode
@@ -63,6 +71,7 @@ emacs.pkgs.withPackages (
     jq-ts-mode
     just-mode
     just-ts-mode
+    logview
     magit
     marginalia
     markdown-mode
@@ -87,11 +96,13 @@ emacs.pkgs.withPackages (
     ox-jira
     ox-slack
     package-lint
+    pkgs.sqlite3 # consult-dash
     pretty-sha-path
     rainbow-delimiters
     sideline
     sideline-eglot
     sideline-flymake
+    sops
     sql-indent
     sr-speedbar
     ssh-config-mode

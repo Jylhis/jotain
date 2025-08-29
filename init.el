@@ -33,6 +33,7 @@
 (require 'git)         ; Git and version control
 (require 'help)        ; Enhanced help system
 (require 'ai)          ; AI integrations
+(require 'systems)          ; AI integrations
 
 (provide 'init)
 ;;; init.el ends here

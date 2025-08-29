@@ -89,10 +89,10 @@
 
 (use-package dtrt-indent
   :diminish
-  :ensure
-  :hook (prog-mode . dtrt-indent-mode))
+  :ensure)
 
 (use-package direnv
+  :if (executable-find "direnv")
   :ensure
   :config
   (direnv-mode)
@@ -114,6 +114,8 @@
   (dape-buffer-window-arrangement 'gud)
   (dape-info-hide-mode-line nil)
   (dape-inlay-hints t "Showing inlay hints"))
+
+;; TODO: better python stuff, flymake, treesitter, eglot, pdb (I think most of these already work but check)
 
 ;; Compilation
 (use-package compile-multi
@@ -184,12 +186,34 @@
   :hook (markdown-mode . visual-line-mode)
   :bind (:map markdown-mode-map
               ("C-c C-e" . markdown-do)))
+(use-package cc-mode
+  :straight nil
+  :custom
+  (c-basic-indent 5)
+  (c-basic-offset 5)
+  (c-default-style '((c-mode . "stroustrup")
+                     (c++-mode . "stroustrup")
+                     (java-mode . "java")
+                     (awk-mode . "awk")
+                     (other . "gnu")))
+  :mode
+  (
+   ("\\.h$" . c++-mode)
+   ("\\.hpp$" . c++-mode)
+   ("\\.hxx$" . c++-mode)
+   ("\\.cc$" . c++-mode)
+   ("\\.cpp$" . c++-mode)
+   ("\\.cxx$" . c++-mode)
+   ("\\.tpp$" . c++-mode)
+   ("\\.txx$" . c++-mode))
+  )
 
 (use-package conf-mode
   :mode
   (("/.dockerignore\\'" . conf-unix-mode)
    ("/.gitignore\\'" . conf-unix-mode)))
 
+(use-package cuda-mode :ensure)
 (use-package haskell-mode :ensure)
 (use-package diff-mode :ensure :mode "\\.patch[0-9]*\\'")
 (use-package terraform-mode :ensure)
@@ -200,12 +224,17 @@
 (use-package ssh-config-mode :ensure)
 (use-package adoc-mode :ensure)
 (use-package go-mode :ensure)
+(use-package nix-mode :ensure)
 (use-package nix-ts-mode :ensure :mode "\\.nix\\'")
 (use-package cmake-mode :ensure :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
 (use-package mermaid-mode :ensure)
 (use-package yaml-mode :ensure)
-(use-package modern-cpp-font-lock :ensure)
+(use-package modern-cpp-font-lock :ensure
+   :hook (c++-mode . modern-c++-font-lock-mode))
 (use-package just-mode :ensure)
+(use-package demangle-mode
+  :straight t
+  :hook asm-mode)
 (use-package sql-indent :ensure)
 
 (use-package web-mode
@@ -235,6 +264,11 @@
   :ensure
   :custom
   (vterm-always-compile-module t))
+
+(use-package editorconfig
+  :ensure t
+  :config
+  (editorconfig-mode 1))
 
 (provide 'programming)
 ;;; programming.el ends here
