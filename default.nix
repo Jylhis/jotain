@@ -88,7 +88,6 @@ emacs.pkgs.withPackages (
     nix-ts-mode
     orderless
     org-appear
-    org-asciidoc
     org-jira
     org-modern
     ox-gfm
@@ -96,7 +95,7 @@ emacs.pkgs.withPackages (
     ox-jira
     ox-slack
     package-lint
-    pkgs.sqlite3 # consult-dash dependency
+    pkgs.sqlite # consult-dash dependency
     pretty-sha-path
     rainbow-delimiters
     sops
