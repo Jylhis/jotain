@@ -7,10 +7,22 @@
 
 (use-package emacs
   :init
-  (load-theme 'leuven t)
-  (load-theme 'leuven-dark t t)
+  ;; (load-theme 'leuven t)
+  ;; (load-theme 'leuven-dark t t)
   (tool-bar-mode -1)
   (scroll-bar-mode -1))
+
+(use-package modus-themes
+  :ensure nil  ; Built-in package
+  :custom
+  (modus-themes-italic-constructs t)
+  (modus-themes-bold-constructs nil)
+  (modus-themes-mixed-fonts t)
+  (modus-themes-variable-pitch-ui nil)
+  :bind ("C-c t" . modus-themes-toggle)
+  :config
+  (setq modus-themes-to-toggle '(modus-operandi modus-vivendi))
+  (load-theme 'modus-vivendi t))
 
 (use-package diminish :ensure)
 
@@ -29,18 +41,18 @@
   :ensure
   :hook((lisp-mode emacs-lisp-mode) . rainbow-delimiters-mode))
 
-(use-package auto-dark
-  :ensure
-  :diminish
-  :after leuven-theme
-  :custom
-  (auto-dark-themes '((leuven-dark) (leuven)))
-  :config
-  (auto-dark-mode 1)
-  (add-hook 'after-make-frame-functions
-            (lambda (frame)
-              (when (display-graphic-p frame)
-                (with-selected-frame frame (auto-dark-mode 1))))))
+;; (use-package auto-dark
+;;   :ensure
+;;   :diminish
+;;   :after leuven-theme
+;;   :custom
+;;   (auto-dark-themes '((leuven-dark) (leuven)))
+;;   :config
+;;   (auto-dark-mode 1)
+;;   (add-hook 'after-make-frame-functions
+;;             (lambda (frame)
+;;               (when (display-graphic-p frame)
+;;                 (with-selected-frame frame (auto-dark-mode 1))))))
 
 (use-package calendar
   :config
@@ -97,7 +109,28 @@
      ("NOTE" success bold)
      ("DEPRECATED" font-lock-doc-face bold))))
 
-(use-package sr-speedbar :ensure)
+;; Essential built-in enhancements
+(use-package winner
+  :ensure nil  ; Built-in package
+  :bind (("C-c u" . winner-undo)
+         ("C-c r" . winner-redo))
+  :config
+  (winner-mode 1))
+
+;; (use-package pixel-scroll
+;;   :ensure nil  ; Built-in package
+;;   :when (display-graphic-p)
+;;   :config
+;;   (pixel-scroll-precision-mode 1))
+
+;; (use-package display-line-numbers
+;;   :ensure nil  ; Built-in package
+;;   :hook ((prog-mode text-mode conf-mode) . display-line-numbers-mode)
+;;   :custom
+;;   (display-line-numbers-width 3)
+;;   (display-line-numbers-widen t)
+;;   (display-line-numbers-type 'relative))
+
 
 (use-package emojify
   :ensure

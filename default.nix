@@ -96,15 +96,11 @@ emacs.pkgs.withPackages (
     ox-jira
     ox-slack
     package-lint
-    pkgs.sqlite3 # consult-dash
+    pkgs.sqlite3 # consult-dash dependency
     pretty-sha-path
     rainbow-delimiters
-    sideline
-    sideline-eglot
-    sideline-flymake
     sops
     sql-indent
-    sr-speedbar
     ssh-config-mode
     super-save
     terraform-mode
