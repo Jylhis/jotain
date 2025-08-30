@@ -9,11 +9,12 @@
   :init
   ;; (load-theme 'leuven t)
   ;; (load-theme 'leuven-dark t t)
+  (load-theme 'modus-vivendi-tinted t)
   (tool-bar-mode -1)
   (scroll-bar-mode -1))
 
 (use-package modus-themes
-  :ensure nil  ; Built-in package
+  :ensure
   :custom
   (modus-themes-italic-constructs t)
   (modus-themes-bold-constructs nil)
@@ -21,8 +22,21 @@
   (modus-themes-variable-pitch-ui nil)
   :bind ("C-c t" . modus-themes-toggle)
   :config
-  (setq modus-themes-to-toggle '(modus-operandi modus-vivendi))
-  (load-theme 'modus-vivendi t))
+  (setq modus-themes-to-toggle '(modus-operandi-tinted modus-vivendi-tinted))
+  )
+
+(use-package auto-dark
+  :ensure
+  :diminish
+  :after modus-themes
+  :custom
+  (auto-dark-themes '((modus-vivendi-tinted) (modus-operandi-tinted)))
+  :config
+  (auto-dark-mode 1)
+  (add-hook 'after-make-frame-functions
+            (lambda (frame)
+              (when (display-graphic-p frame)
+                (with-selected-frame frame (auto-dark-mode 1))))))
 
 (use-package diminish :ensure)
 
@@ -40,19 +54,6 @@
 (use-package rainbow-delimiters
   :ensure
   :hook((lisp-mode emacs-lisp-mode) . rainbow-delimiters-mode))
-
-;; (use-package auto-dark
-;;   :ensure
-;;   :diminish
-;;   :after leuven-theme
-;;   :custom
-;;   (auto-dark-themes '((leuven-dark) (leuven)))
-;;   :config
-;;   (auto-dark-mode 1)
-;;   (add-hook 'after-make-frame-functions
-;;             (lambda (frame)
-;;               (when (display-graphic-p frame)
-;;                 (with-selected-frame frame (auto-dark-mode 1))))))
 
 (use-package calendar
   :config
@@ -110,26 +111,15 @@
 
 ;; Essential built-in enhancements
 (use-package winner
-  :ensure nil  ; Built-in package
   :bind (("C-c u" . winner-undo)
          ("C-c r" . winner-redo))
   :config
   (winner-mode 1))
 
-;; (use-package pixel-scroll
-;;   :ensure nil  ; Built-in package
-;;   :when (display-graphic-p)
-;;   :config
-;;   (pixel-scroll-precision-mode 1))
-
-;; (use-package display-line-numbers
-;;   :ensure nil  ; Built-in package
-;;   :hook ((prog-mode text-mode conf-mode) . display-line-numbers-mode)
-;;   :custom
-;;   (display-line-numbers-width 3)
-;;   (display-line-numbers-widen t)
-;;   (display-line-numbers-type 'relative))
-
+ (use-package pixel-scroll
+   :when (display-graphic-p)
+   :config
+   (pixel-scroll-precision-mode 1)) ;; TODO: Does this work with server-client. Check auto-dark config
 
 (use-package emojify
   :ensure

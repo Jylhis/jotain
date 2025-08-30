@@ -44,6 +44,8 @@
 ;;   :hook (eglot-managed-mode . sideline-eglot-setup))
 
 (use-package flyspell
+  :config
+  (setq flyspell-mode-map (make-sparse-keymap))
   :hook
   (prog-mode . flyspell-prog-mode)
   (text-mode . flyspell-mode))
@@ -63,9 +65,11 @@
   :init
   (setq eglot-send-changes-idle-time 0.5)
   (setq eglot-autoshutdown t)
+  (setq eglot-events-buffer-size 0) ; Disable event logging for performance
   :custom
   (eglot-report-progress nil)
   (eglot-extend-to-xref t)
+  (eglot-confirm-server-initiated-edits nil) ; Auto-accept server edits
   :config
   (add-hook 'eglot-managed-mode-hook
             (lambda ()
@@ -198,7 +202,6 @@
                      (java-mode . "java")
                      (awk-mode . "awk")
                      (other . "gnu")))
-  :mode
   :mode (("\\.h\\'" . c++-mode)
          ("\\.hpp\\'" . c++-mode)
          ("\\.hxx\\'" . c++-mode)
@@ -206,7 +209,7 @@
          ("\\.cpp\\'" . c++-mode)
          ("\\.cxx\\'" . c++-mode)
          ("\\.tpp\\'" . c++-mode)
-         ("\\.txx\\'" . c++-mode))
+         ("\\.txx\\'" . c++-mode)))
 
 (use-package conf-mode
   :mode
