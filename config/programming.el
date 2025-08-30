@@ -52,6 +52,9 @@
   :ensure
   :after (consult flyspell))
 
+;; ??
+;; (when (eglot--server-capable :inlayHintProvider)
+;;                   (eglot-inlay-hints-mode 1))
 (use-package eglot
   :hook ((prog-mode . (lambda ()
                         (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
@@ -196,16 +199,14 @@
                      (awk-mode . "awk")
                      (other . "gnu")))
   :mode
-  (
-   ("\\.h$" . c++-mode)
-   ("\\.hpp$" . c++-mode)
-   ("\\.hxx$" . c++-mode)
-   ("\\.cc$" . c++-mode)
-   ("\\.cpp$" . c++-mode)
-   ("\\.cxx$" . c++-mode)
-   ("\\.tpp$" . c++-mode)
-   ("\\.txx$" . c++-mode))
-  )
+  :mode (("\\.h\\'" . c++-mode)
+         ("\\.hpp\\'" . c++-mode)
+         ("\\.hxx\\'" . c++-mode)
+         ("\\.cc\\'" . c++-mode)
+         ("\\.cpp\\'" . c++-mode)
+         ("\\.cxx\\'" . c++-mode)
+         ("\\.tpp\\'" . c++-mode)
+         ("\\.txx\\'" . c++-mode))
 
 (use-package conf-mode
   :mode

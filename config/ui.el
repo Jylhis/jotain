@@ -66,8 +66,7 @@
 
 (use-package breadcrumb
   :ensure
-  :init
-  (breadcrumb-mode))
+  :hook (prog-mode . breadcrumb-mode))
 
 (use-package nerd-icons :ensure)
 
@@ -152,7 +151,7 @@
                                  deft-mode
                                  yaml-mode
                                  prog-mode))
-   
+
   ;; :hook (after-init . global-emojify-mode)
   )
 
