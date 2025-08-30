@@ -118,6 +118,19 @@
   `(when (platform-package-enabled-p ',name)
      (use-package ,name ,@args)))
 
+;;; Font fallback system
+(defun platform-set-font-with-fallback (font-list height)
+  "Set font from FONT-LIST with HEIGHT, using first available font."
+  (let ((available-font (seq-find (lambda (font)
+                                    (find-font (font-spec :name font)))
+                                  font-list)))
+    (when available-font
+      (set-face-attribute 'default nil
+                          :font available-font
+                          :height height)
+      (message "Platform: Using font %s at height %d" available-font height)
+      available-font)))
+
 (defun platform-configure-ui ()
   "Apply platform-specific UI configurations."
   (platform-cond
@@ -129,21 +142,53 @@
     (when (fboundp 'scroll-bar-mode) (scroll-bar-mode -1)))
    
    (platform-macos-p
-    ;; macOS-appropriate fonts and sizes
-    (when (member "SF Mono" (font-family-list))
-      (set-face-attribute 'default nil :family "SF Mono" :height 130))
+    ;; macOS-appropriate fonts with fallbacks
+    (platform-set-font-with-fallback 
+     '("SF Mono" "Monaco" "Menlo" "DejaVu Sans Mono") 130)
     ;; Native fullscreen
     (setq ns-use-native-fullscreen t))
    
    (platform-linux-p
-    ;; Linux font configuration
-    (when (member "Source Code Pro" (font-family-list))
-      (set-face-attribute 'default nil :family "Source Code Pro" :height 110)))
+    ;; Linux font configuration with fallbacks
+    (platform-set-font-with-fallback 
+     '("JetBrains Mono" "Source Code Pro" "Fira Code" "DejaVu Sans Mono") 110))
    
    (platform-windows-p
-    ;; Windows font configuration  
-    (when (member "Consolas" (font-family-list))
-      (set-face-attribute 'default nil :family "Consolas" :height 110)))))
+    ;; Windows font configuration with fallbacks
+    (platform-set-font-with-fallback 
+     '("Consolas" "Courier New" "Lucida Console") 110))))
+
+;;; Platform information utilities
+(defun platform-show-info ()
+  "Display comprehensive platform information."
+  (interactive)
+  (let ((info (platform-get-info)))
+    (with-output-to-temp-buffer "*Platform Info*"
+      (princ "=== Platform Information ===\n\n")
+      (dolist (item info)
+        (princ (format "%-25s: %s\n" (car item) (cdr item))))
+      (princ "\n=== Screen Information ===\n")
+      (when (display-graphic-p)
+        (princ (format "Screen size: %dx%d pixels\n" 
+                       (display-pixel-width) (display-pixel-height)))
+        (princ (format "Character size: %dx%d\n"
+                       (frame-char-width) (frame-char-height))))
+      (princ "\n=== Font Information ===\n")
+      (let ((font (face-attribute 'default :font)))
+        (if font
+            (princ (format "Current font: %s\n" font))
+          (princ "Font: (default)\n")))
+      (when (display-graphic-p)
+        (princ (format "Available fonts: %d\n" (length (font-family-list)))))
+      (princ "\n=== Environment ===\n")
+      (when platform-android-p
+        (princ (format "EXTERNAL_STORAGE: %s\n" (or (getenv "EXTERNAL_STORAGE") "not set")))
+        (princ (format "TERMUX_VERSION: %s\n" (or (getenv "TERMUX_VERSION") "not set"))))
+      (when (boundp 'org-directory)
+        (princ (format "org-directory: %s\n" org-directory))))))
+
+;; Global keybinding for platform info
+;; (global-set-key (kbd "C-c p i") #'platform-show-info)
 
 ;; Apply platform-specific UI configuration
 (when (display-graphic-p)

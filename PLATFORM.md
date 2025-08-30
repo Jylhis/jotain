@@ -7,7 +7,7 @@ This document describes the platform support system for Emacs configuration, whi
 The platform support system consists of:
 
 - **Platform Detection** (`lisp/platform.el`): Core detection and utilities
-- **Platform Configurations** (`config/platforms.el`): General platform adaptations  
+- **Platform Configurations** (`config/platforms.el`): General platform adaptations
 - **Specialized Configs** (`config/android.el`): Platform-specific enhancements
 - **Examples** (`config/platform-examples.el`): Usage patterns and examples
 
@@ -18,7 +18,7 @@ The platform support system consists of:
 ```elisp
 platform-android-p     ; Non-nil on Android/Termux
 platform-macos-p       ; Non-nil on macOS
-platform-linux-p       ; Non-nil on Linux (excluding Android)  
+platform-linux-p       ; Non-nil on Linux (excluding Android)
 platform-windows-p     ; Non-nil on Windows
 platform-gui-p         ; Non-nil in GUI mode
 platform-terminal-p    ; Non-nil in terminal mode
@@ -78,11 +78,11 @@ platform-terminal-p    ; Non-nil in terminal mode
   :config
   ;; Base configuration for all platforms
   (setq magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1)
-  
+
   ;; Platform-specific optimizations
   (platform-when platform-android-p
     (setq magit-diff-refine-hunk nil)) ; Performance optimization
-  
+
   (platform-when platform-macos-p
     (setq magit-git-executable "/usr/local/bin/git"))) ; macOS path
 ```
@@ -124,8 +124,9 @@ The Android configuration (`config/android.el`) provides:
 ### Disabled Packages
 
 Packages automatically disabled on Android:
+
 - `vterm` (terminal issues)
-- `pdf-tools` (rendering problems)  
+- `pdf-tools` (rendering problems)
 - `exwm` (X11 window manager)
 - `magit-delta` (performance)
 - `all-the-icons-dired` (rendering issues)
@@ -184,7 +185,7 @@ Packages automatically disabled on Android:
   (platform-android-p
    (setq gc-cons-threshold (* 20 1024 1024))
    (setq auto-save-default nil))
-  
+
   ;; Desktop: Balanced settings
   (t
    (setq gc-cons-threshold (* 2 1024 1024))))
@@ -242,7 +243,7 @@ The platform system is automatically loaded in `init.el`:
 (require 'ui)
 ;; ...
 
-;; Load platform-specific configurations  
+;; Load platform-specific configurations
 (require 'platforms)
 (when platform-android-p (require 'android))
 ```

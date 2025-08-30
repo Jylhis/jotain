@@ -57,10 +57,5 @@
   :after org
   :defer t)
 
-(use-package org-asciidoc
-  :ensure
-  :after org
-  :defer t)
-
 (provide 'writing)
 ;;; writing.el ends here

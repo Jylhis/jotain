@@ -60,6 +60,8 @@ emacs.pkgs.withPackages (
     embark-consult
     emojify
     expand-region
+    flycheck
+    flycheck-inline
     git-commit-ts-mode
     gitlab-ci-mode
     gnuplot
@@ -98,6 +100,7 @@ emacs.pkgs.withPackages (
     pkgs.sqlite # consult-dash dependency
     pretty-sha-path
     rainbow-delimiters
+    smartparens
     sops
     sql-indent
     ssh-config-mode

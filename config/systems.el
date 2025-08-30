@@ -13,7 +13,6 @@
   )
 
 (use-package sops
-  :straight t
   :ensure t
   :bind (("C-c C-c" . sops-save-file)
          ("C-c C-k" . sops-cancel)
@@ -28,4 +27,6 @@
   ;; Customize auth-source-1password-vault to select default vault
   (auth-source-1password-enable)
   )
+
+(provide 'systems)
 ;;; systems.el ends here

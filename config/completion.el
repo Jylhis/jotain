@@ -43,7 +43,6 @@
 
 (use-package vertico-buffer
   :after vertico
-  :straight nil
   :ensure nil
   :custom
   (vertico-buffer-hide-prompt nil)

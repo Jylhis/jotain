@@ -187,7 +187,6 @@
   :bind (:map markdown-mode-map
               ("C-c C-e" . markdown-do)))
 (use-package cc-mode
-  :straight nil
   :custom
   (c-basic-indent 5)
   (c-basic-offset 5)
@@ -233,7 +232,7 @@
    :hook (c++-mode . modern-c++-font-lock-mode))
 (use-package just-mode :ensure)
 (use-package demangle-mode
-  :straight t
+  :ensure
   :hook asm-mode)
 (use-package sql-indent :ensure)
 
