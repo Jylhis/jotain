@@ -32,6 +32,7 @@
 (require 'ui)          ; UI and appearance
 (require 'completion)  ; Modern completion framework
 (require 'programming) ; Programming and development tools
+(require 'per-project) ; Thing to help with project specific setups
 (require 'writing)     ; Org-mode and documentation
 (require 'git)         ; Git and version control
 (require 'help)        ; Enhanced help system

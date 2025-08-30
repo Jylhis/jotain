@@ -64,6 +64,10 @@ emacs.pkgs.withPackages (
     embark-consult
     emojify
     expand-region
+    projection
+    projection-multi-embark
+    projection-multi
+    projection-dape
     git-commit-ts-mode
     gitlab-ci-mode
     gnuplot

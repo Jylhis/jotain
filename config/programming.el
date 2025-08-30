@@ -193,53 +193,7 @@
 
 ;; TODO: better python stuff, flymake, treesitter, eglot, pdb (I think most of these already work but check)
 
-;; Compilation
-(use-package compile-multi
-  :ensure
-  :config
-  (setq compile-multi-config
-        '((go-mode . (("go test" . "go test ./...")
-                      ("go test current" . "go test .")
-                      ("go build" . "go build .")
-                      ("just check" . "just check")
-                      ("just format" . "just format")))
-          (python-mode . (("pytest" . "pytest")
-                         ("pytest file" . "pytest %file-name%")
-                         ("just check" . "just check")
-                         ("just format" . "just format")))
-          (haskell-mode . (("stack test" . "stack test")
-                          ("cabal test" . "cabal test")
-                          ("just check" . "just check")
-                          ("just format" . "just format")))
-          (nix-ts-mode . (("nix flake check" . "nix flake check")
-                         ("nix fmt" . "nix fmt")
-                         ("just check" . "just check")
-                         ("just format" . "just format")))
-          (c++-mode . (("cmake build" . "cmake --build build")
-                      ("make" . "make")
-                      ("just check" . "just check")
-                      ("just format" . "just format")))
-          (emacs-lisp-mode . (("elisp-lint" . "just elisp-lint %file-name%")
-                             ("just format" . "just format"))))))
 
-(use-package consult-compile-multi
-  :ensure
-  :after compile-multi
-  :demand t
-  :config (consult-compile-multi-mode))
-
-(use-package compile-multi-nerd-icons
-  :ensure
-  :after nerd-icons-completion
-  :after compile-multi
-  :demand t)
-
-(use-package compile-multi-embark
-  :ensure
-  :after embark
-  :after compile-multi
-  :demand t
-  :config (compile-multi-embark-mode +1))
 
 (use-package wgrep
   :ensure
