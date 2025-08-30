@@ -11,6 +11,22 @@
 
 ---
 
+## Agent Behavior Patterns
+
+**DEFAULT: Implementation-first** - emacs-expert MUST use tools to implement changes by default
+
+**EXCEPTION: Explicit advice requests** - Only provide advice without implementation when user explicitly asks:
+
+- "How should I configure..." or "What's the best approach..." → Advice acceptable
+- "Advise me on..." or "What would you do..." → Advice acceptable
+
+**IMPLEMENTATION REQUIRED for:**
+
+- "Fix this config..." → MUST implement using tools
+- "Add package..." → MUST implement using tools
+- "Update my setup..." → MUST implement using tools
+- Any direct Emacs task → MUST implement using tools
+
 ## Agent Work Verification
 
 **ALWAYS verify delegated work** - When agents report completion:

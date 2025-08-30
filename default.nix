@@ -64,8 +64,6 @@ emacs.pkgs.withPackages (
     embark-consult
     emojify
     expand-region
-    flycheck
-    flycheck-inline
     git-commit-ts-mode
     gitlab-ci-mode
     gnuplot
