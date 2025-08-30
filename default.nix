@@ -20,6 +20,9 @@ emacs.pkgs.withPackages (
     # TOOD: Package: https://github.com/flymake/flymake-elsa
     adoc-mode
     modus-themes
+    sideline
+    sideline-flymake
+    sideline-eglot
     aidermacs
     ansible
     auth-source-1password

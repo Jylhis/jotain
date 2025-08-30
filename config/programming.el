@@ -21,6 +21,7 @@
   (global-treesit-auto-mode))
 
 (use-package treesit-fold
+  :disabled
   :diminish
   :ensure
   :hook (after-init . global-treesit-fold-indicators-mode)
@@ -28,20 +29,67 @@
 
 (use-package flymake
   :custom
-  (flymake-fringe-indicator-position 'right-fringe)
-  (flymake-suppress-zero-counters t "Suppress the display of Flymake error counters when there are no errors."))
+  (flymake-fringe-indicator-position 'left-fringe)
+  (flymake-suppress-zero-counters t)
+  (flymake-show-diagnostics-at-end-of-line t)
+  (flymake-margin-indicators-string '((error "!" compilation-error)
+                                      (warning "?" compilation-warning)
+                                      (note "·" compilation-info)))
+  :bind (:map flymake-mode-map
+         ("M-n" . flymake-goto-next-error)
+         ("M-p" . flymake-goto-prev-error)
+         ("C-c ! l" . flymake-show-buffer-diagnostics)
+         ("C-c ! p" . flymake-show-project-diagnostics))
+  :config
+  ;; Show diagnostics in echo area when cursor is on an error
+  (defun jylhis/flymake-show-diagnostic-at-point ()
+    "Display flymake diagnostic at point in echo area."
+    (when (and flymake-mode (not (minibufferp)))
+      (let ((diagnostics (flymake-diagnostics (point))))
+        (when diagnostics
+          (let ((diagnostic (car diagnostics)))
+            (message "%s: %s"
+                     (propertize (upcase (symbol-name (flymake-diagnostic-type diagnostic)))
+                                 'face (pcase (flymake-diagnostic-type diagnostic)
+                                         (:error 'error)
+                                         (:warning 'warning)
+                                         (_ 'default)))
+                     (flymake-diagnostic-text diagnostic)))))))
 
-;; (use-package sideline
-;;   :ensure
-;;   :hook (prog-mode . sideline-mode))
+  ;; Show diagnostic after a short delay
+  (defvar-local jylhis/flymake-diagnostic-timer nil)
+  (defun jylhis/flymake-show-diagnostic-delayed ()
+    "Show diagnostic after a delay."
+    (when flymake-mode
+      (when jylhis/flymake-diagnostic-timer
+        (cancel-timer jylhis/flymake-diagnostic-timer))
+      (setq jylhis/flymake-diagnostic-timer
+            (run-with-timer 0.5 nil #'jylhis/flymake-show-diagnostic-at-point))))
 
-;; (use-package sideline-flymake
-;;  :ensure
-;;   :hook (flymake-mode . sideline-flymake-setup))
+  (add-hook 'flymake-mode-hook
+            (lambda ()
+              (if flymake-mode
+                  (add-hook 'post-command-hook #'jylhis/flymake-show-diagnostic-delayed nil t)
+                (remove-hook 'post-command-hook #'jylhis/flymake-show-diagnostic-delayed t))))
 
-;; (use-package sideline-eglot
-;;   :ensure
-;;   :hook (eglot-managed-mode . sideline-eglot-setup))
+  ;; Configure elisp-flymake-byte-compile to trust local configuration files
+  (with-eval-after-load 'elisp-mode
+    ;; Trust files in the user-emacs-directory for byte-compilation checks
+    (setq elisp-flymake-byte-compile-load-path
+          (append elisp-flymake-byte-compile-load-path (list user-emacs-directory)))
+
+    ;; Add hook to trust local config files
+    (defun jylhis/trust-local-elisp-files ()
+      "Trust elisp files in the current Emacs configuration directory."
+      (when (and buffer-file-name
+                 (string-prefix-p (expand-file-name user-emacs-directory)
+                                  (expand-file-name buffer-file-name)))
+        ;; Mark buffer as safe for byte-compilation
+        (setq-local safe-local-variable-values
+                    (append safe-local-variable-values
+                            '((elisp-flymake-byte-compile . t))))))
+
+    (add-hook 'emacs-lisp-mode-hook #'jylhis/trust-local-elisp-files)))
 
 (use-package flyspell
   :config
@@ -54,14 +102,13 @@
   :ensure
   :after (consult flyspell))
 
-;; ??
-;; (when (eglot--server-capable :inlayHintProvider)
-;;                   (eglot-inlay-hints-mode 1))
 (use-package eglot
   :hook ((prog-mode . (lambda ()
                         (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
                           (eglot-ensure))))
-         ((markdown-mode yaml-mode yaml-ts-mode) . eglot-ensure))
+         ((markdown-mode yaml-mode yaml-ts-mode) . eglot-ensure)
+	 ;; (eglot-mode . sideline-mode)
+	 )
   :init
   (setq eglot-send-changes-idle-time 0.5)
   (setq eglot-autoshutdown t)
@@ -70,11 +117,33 @@
   (eglot-report-progress nil)
   (eglot-extend-to-xref t)
   (eglot-confirm-server-initiated-edits nil) ; Auto-accept server edits
+  :bind (:map eglot-mode-map
+         ("C-c r r" . eglot-rename)
+         ("C-c r f" . eglot-format)
+         ("C-c r a" . eglot-code-actions)
+         ("C-c r o" . eglot-code-action-organize-imports)
+         ("C-c r q" . eglot-code-action-quickfix)
+         ("C-h ." . eldoc-doc-buffer))
   :config
-  (add-hook 'eglot-managed-mode-hook
-            (lambda ()
-              (flymake-mode 1)))
-  (add-hook 'eglot-managed-mode-hook #'eldoc-mode))
+  ;; Remove redundant flymake activation - Eglot does this automatically
+  (add-hook 'eglot-managed-mode-hook #'eldoc-mode)
+
+  ;; Enable inlay hints for supported languages (Emacs 29+)
+  (when (fboundp 'eglot-inlay-hints-mode)
+    (add-hook 'eglot-managed-mode-hook
+              (lambda ()
+                (when (member major-mode '(go-mode go-ts-mode
+                                           rust-mode rust-ts-mode
+                                           typescript-mode typescript-ts-mode
+                                           python-mode python-ts-mode))
+                  (eglot-inlay-hints-mode 1)))))
+
+  ;; Configure server-specific settings
+  (add-to-list 'eglot-server-programs
+               '((go-mode go-ts-mode) . ("gopls")))
+
+  ;; Optimize for better performance
+  (fset #'jsonrpc--log-event #'ignore)) ; Disable JSON-RPC event logging
 
 (use-package consult-eglot
   :ensure
@@ -272,6 +341,25 @@
   :ensure t
   :config
   (editorconfig-mode 1))
+
+;; Enhanced error display using built-in features
+(use-package eldoc
+  :custom
+  (eldoc-idle-delay 0.5)
+  (eldoc-print-after-edit t)
+  (eldoc-echo-area-display-truncation-message nil))
+
+;; Enhanced tooltip support for better diagnostic display
+(when (display-graphic-p)
+  (tooltip-mode 1)
+  (setq tooltip-delay 0.5
+        tooltip-short-delay 0.1
+        tooltip-recent-seconds 1
+        tooltip-hide-delay 10))
+
+;; Future enhancement options (commented out - packages not in nixpkgs):
+;; For even better diagnostic display, consider these packages via straight.el or melpa:
+;; - flymake-diagnostic-at-point: Shows diagnostics in minibuffer/tooltip
 
 (provide 'programming)
 ;;; programming.el ends here
