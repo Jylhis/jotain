@@ -15,6 +15,9 @@
 (add-to-list 'load-path (expand-file-name "config" user-emacs-directory))
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 
+;; Load platform detection first
+(require 'platform)
+
 ;; Ensure package system is available
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
@@ -33,7 +36,11 @@
 (require 'git)         ; Git and version control
 (require 'help)        ; Enhanced help system
 (require 'ai)          ; AI integrations
-(require 'systems)          ; AI integrations
+(require 'systems)     ; System administration tools
+
+;; Load platform-specific configurations
+(require 'platforms)   ; General platform adaptations
+(when platform-android-p (require 'android)) ; Enhanced Android support
 
 (provide 'init)
 ;;; init.el ends here
