@@ -143,7 +143,13 @@
                                  prog-mode))
 
   ;; :hook (after-init . global-emojify-mode)
-  )
+   )
+
+
+;; FONTS
+
+
+
 
 (provide 'ui)
 ;;; ui.el ends here
