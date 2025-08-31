@@ -29,6 +29,7 @@
 
 ;; Load configuration modules
 (require 'core)        ; Core Emacs settings and built-ins
+(require 'fonts)       ; Font configuration and management
 (require 'ui)          ; UI and appearance
 (require 'completion)  ; Modern completion framework
 (require 'programming) ; Programming and development tools

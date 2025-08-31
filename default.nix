@@ -79,6 +79,7 @@ emacs.pkgs.withPackages (
     jq-ts-mode
     just-mode
     just-ts-mode
+    ligature
     logview
     magit
     marginalia
