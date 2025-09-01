@@ -215,7 +215,7 @@ This ensures consistent fonts across daemon and client sessions."
 
 ;;; Global Keybindings
 
-(global-set-key (kbd "C-=") #'jylhis-fonts-increase-size)
+(global-set-key (kbd "C-+") #'jylhis-fonts-increase-size)
 (global-set-key (kbd "C--") #'jylhis-fonts-decrease-size)
 (global-set-key (kbd "C-0") #'jylhis-fonts-reset-size)
 (global-set-key (kbd "C-c f i") #'jylhis-fonts-info)
