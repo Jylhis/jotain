@@ -156,7 +156,6 @@ Packages automatically disabled on Android:
 ```elisp
 ;; Clipboard integration
 (setq select-enable-clipboard t)
-(setq select-enable-primary t)
 
 ;; Browser integration
 (setq browse-url-browser-function 'browse-url-xdg-open)

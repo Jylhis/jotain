@@ -25,16 +25,16 @@
   (setq create-lockfiles nil)
   (setq make-backup-files nil)
   (setq auto-save-default nil)
-  
+
   ;; Optimize for touch input and smaller screens
   (setq mouse-wheel-scroll-amount '(3 ((shift) . 1)))
   (setq scroll-margin 2)
   (setq scroll-conservatively 10000)
-  
+
   ;; Termux-specific paths - use environment variables when available
   (when (getenv "EXTERNAL_STORAGE")
     (setq org-directory (expand-file-name "Documents/org" (getenv "EXTERNAL_STORAGE"))))
-  
+
   ;; Simpler modeline for performance
   (setq-default mode-line-format
                 '("%e" mode-line-front-space
@@ -42,28 +42,28 @@
                   mode-line-position " "
                   (:eval (propertize "%m" 'face 'mode-line-buffer-id))
                   mode-line-end-spaces))
-  
+
   ;; Android-specific keybindings
   (global-set-key (kbd "C-<tab>") 'other-window)
   (global-set-key (kbd "C-S-<tab>") (lambda () (interactive) (other-window -1)))
-  
+
   ;; Hardware key bindings for common Android keyboards
   (when (getenv "TERMUX_VERSION")
     (global-set-key (kbd "<volume-up>") 'scroll-down-command)
     (global-set-key (kbd "<volume-down>") 'scroll-up-command)))
 
-;;; macOS-specific configuration  
+;;; macOS-specific configuration
 (platform-when platform-macos-p
   ;; macOS-specific packages
   (defvar platform-preferred-packages
     '(osx-dictionary osx-trash reveal-in-osx-finder)
     "List of packages preferred on macOS.")
-  
+
   ;; Proper macOS key handling
   (setq mac-command-modifier 'meta)
   (setq mac-option-modifier 'super)
   (setq mac-right-option-modifier 'none) ; Allow typing special characters
-  
+
   ;; macOS-specific keybindings
   (global-set-key (kbd "s-c") 'kill-ring-save)
   (global-set-key (kbd "s-v") 'yank)
@@ -72,7 +72,7 @@
   (global-set-key (kbd "s-s") 'save-buffer)
   (global-set-key (kbd "s-w") 'delete-window)
   (global-set-key (kbd "s-q") 'save-buffers-kill-emacs)
-  
+
   ;; Use macOS trash
   (setq delete-by-moving-to-trash t)
   (setq trash-directory "~/.Trash"))
@@ -83,11 +83,10 @@
   (defvar platform-preferred-packages
     '(exwm pinentry mu4e)
     "List of packages preferred on Linux.")
-  
+
   ;; X11 clipboard integration
-  (setq select-enable-clipboard t)
-  (setq select-enable-primary t)
-  
+  ;; (setq select-enable-clipboard t) ; NOTE: `t` should be the default
+
   ;; Linux-specific settings
   (setq browse-url-browser-function 'browse-url-xdg-open))
 
