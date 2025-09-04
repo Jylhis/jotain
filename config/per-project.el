@@ -11,8 +11,8 @@
 				   "go.mod"
 				   "package.json"
 				   "justfile"
-				   "default.nix"
 				   "shell.nix"
+				   "package.xml"
 				   ))
   )
 
