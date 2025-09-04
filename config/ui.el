@@ -7,6 +7,8 @@
 
 (use-package emacs
   :init
+  ;; Trust all themes by default without prompting
+  (setq custom-safe-themes t)
   ;; (load-theme 'leuven t)
   ;; (load-theme 'leuven-dark t t)
   (load-theme 'modus-vivendi-tinted t)
