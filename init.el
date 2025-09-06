@@ -44,5 +44,7 @@
 (require 'platforms)   ; General platform adaptations
 (when platform-android-p (require 'android)) ; Enhanced Android support
 
+(require 'app-launchers)
+
 (provide 'init)
 ;;; init.el ends here
