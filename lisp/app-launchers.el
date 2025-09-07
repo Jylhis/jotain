@@ -49,7 +49,9 @@
                   (width . 80)
                   (height . 11)))
                   (unwind-protect
-                    (app-launcher-run-app)
+                    (let ((vertico-resize t)
+                          (vertico-count 20))
+                      (app-launcher-run-app))
                     (delete-frame))))
 
 
