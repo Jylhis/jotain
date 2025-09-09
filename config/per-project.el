@@ -7,12 +7,12 @@
 (use-package project
   :custom
   (project-buffers-viewer 'project-list-buffers-ibuffer)
-  (project-vc-extra-root-markers '(
-				   "go.mod"
-				   "package.json"
-				   "justfile"
-				   "package.xml"
-				   ))
+  ;; (project-vc-extra-root-markers '(
+  ;; 				   "go.mod"
+  ;; 				   "package.json"
+  ;; 				   "justfile"
+  ;; 				   "package.xml"
+  ;; 				   ))
   )
 
 ;; TODO: Add more types: https://github.com/mohkale/projection/tree/master?tab=readme-ov-file#projection-commands
