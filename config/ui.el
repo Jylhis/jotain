@@ -32,7 +32,7 @@
   :diminish
   :after modus-themes
   :custom
-  (auto-dark-themes '((modus-vivendi-tinted) (modus-operandi-tinted)))
+  (auto-dark-themes '((modus-operandi-tinted) (modus-vivendi-tinted)))
   :config
   (auto-dark-mode 1)
   (add-hook 'after-make-frame-functions
