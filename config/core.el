@@ -21,6 +21,7 @@
   (enable-recursive-minibuffers t "Support opening new minibuffers from inside existing minibuffers")
   (minibuffer-prompt-properties
    '(read-only t cursor-intangible t face minibuffer-prompt) "Do not allow the cursor in the minibuffer prompt")
+  (mouse-yank-at-point t "Make middle mouse paste at cursor position instead of click location")
   ;; Ignore case
   (completion-ignore-case t "Don't consider case significant in completion")
   (read-buffer-completion-ignore-case t "Ignore case when reading buffer name")
