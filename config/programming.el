@@ -114,8 +114,8 @@
   (setq eglot-autoshutdown t)
   (setq eglot-events-buffer-size 0) ; Disable event logging for performance
   :custom
-  (eglot-report-progress nil)
-  (eglot-extend-to-xref t)
+  (eglot-report-progress nil "Prevent Eglot minibuffer spam")
+  (eglot-extend-to-xref t "Activate Eglot in cross-referenced non-project files")
   (eglot-confirm-server-initiated-edits nil) ; Auto-accept server edits
   :bind (:map eglot-mode-map
          ("C-c r r" . eglot-rename)

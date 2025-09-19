@@ -74,7 +74,6 @@
   (global-set-key (kbd "s-q") 'save-buffers-kill-emacs)
 
   ;; Use macOS trash
-  (setq delete-by-moving-to-trash t)
   (setq trash-directory "~/.Trash"))
 
 ;;; Linux-specific configuration

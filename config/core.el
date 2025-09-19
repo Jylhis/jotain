@@ -6,6 +6,8 @@
 ;;; Code:
 
 (use-package emacs
+  :init
+  (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode) ; TODO: What does this do?
   :custom
   (text-mode-ispell-word-completion nil "Emacs 30 and newer: Disable Ispell completion function.")
   (context-menu-mode t "Enable context menu for vertico")
@@ -47,7 +49,7 @@
   ;; Disable autosave and backups
   (auto-save-default nil "Disable separate autosave files")
   (make-backup-files nil "Disable auto backup files")
-  (find-file-visit-truename t "Resolve symlinks")
+  ;; (find-file-visit-truename t "Resolve symlinks")
   (confirm-kill-processes nil "when quitting emacs, just kill processes")
   (enable-local-variables t "ask if local variables are safe once"))
 
