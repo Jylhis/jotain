@@ -31,7 +31,7 @@
   :custom
   (flymake-fringe-indicator-position 'left-fringe)
   (flymake-suppress-zero-counters t)
-  (flymake-show-diagnostics-at-end-of-line t)
+  ;; (flymake-show-diagnostics-at-end-of-line t) ; FIXME
   (flymake-margin-indicators-string '((error "!" compilation-error)
                                       (warning "?" compilation-warning)
                                       (note "·" compilation-info)))
