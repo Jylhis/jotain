@@ -103,6 +103,7 @@
   (dired-omit-files (concat
                      "\\`[.]?#\\|\\`[.][.]?\\'"
                      "\\|^[a-zA-Z0-9]\\.syncthing-enc\\'"
+		     "\\|^\\.git\\'"
                      "\\|^\\.stfolder\\'"
                      "\\|^\\.stversions\\'"
                      "\\|^__pycache__\\'")))
