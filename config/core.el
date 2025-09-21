@@ -7,7 +7,6 @@
 
 (use-package emacs
   :init
-  (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode) ; TODO: What does this do?
   :custom
   (text-mode-ispell-word-completion nil "Emacs 30 and newer: Disable Ispell completion function.")
   (context-menu-mode t "Enable context menu for vertico")
