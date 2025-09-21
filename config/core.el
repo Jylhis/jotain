@@ -20,6 +20,8 @@
   (ring-bell-function #'ignore "No beeping")
   (scroll-preserve-screen-position 1 "keep the cursor in the same position while scrolling")
   (enable-recursive-minibuffers t "Support opening new minibuffers from inside existing minibuffers")
+  (minibuffer-depth-indicate-mode t "Show minibuffer depth to prevent confusion")
+  (minibuffer-follows-selected-frame t "Minibuffer follows the selected frame")
   (minibuffer-prompt-properties
    '(read-only t cursor-intangible t face minibuffer-prompt) "Do not allow the cursor in the minibuffer prompt")
   (mouse-yank-at-point t "Make middle mouse paste at cursor position instead of click location")
