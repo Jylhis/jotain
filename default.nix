@@ -82,6 +82,7 @@ emacs.pkgs.withPackages (
     ligature
     logview
     magit
+    magit-todos
     marginalia
     markdown-mode
     mermaid-mode
