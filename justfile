@@ -25,10 +25,12 @@ test:
     set -euo pipefail
     echo "Running ERT unit tests..."
     emacs -Q --batch \
-        --eval "(progn (add-to-list 'load-path \"{{config_dir}}/lisp\") (add-to-list 'load-path \"{{config_dir}}/tests\"))" \
+        --eval "(progn (add-to-list 'load-path \"{{config_dir}}/lisp\") (add-to-list 'load-path \"{{config_dir}}/tests\") (add-to-list 'load-path \"{{config_dir}}/config\"))" \
         --eval "(require 'ert)" \
         --eval "(require 'cl-lib)" \
         --load "{{config_dir}}/tests/test-utils.el" \
+        --load "{{config_dir}}/tests/test-platform.el" \
+        --load "{{config_dir}}/tests/test-auth-source-1password.el" \
         --eval "(ert-run-tests-batch-and-exit)"
 
 # Run unit tests with verbose output
@@ -38,10 +40,12 @@ test-verbose:
     set -euo pipefail
     echo "Running ERT unit tests (verbose)..."
     emacs -Q --batch \
-        --eval "(progn (add-to-list 'load-path \"{{config_dir}}/lisp\") (add-to-list 'load-path \"{{config_dir}}/tests\"))" \
+        --eval "(progn (add-to-list 'load-path \"{{config_dir}}/lisp\") (add-to-list 'load-path \"{{config_dir}}/tests\") (add-to-list 'load-path \"{{config_dir}}/config\"))" \
         --eval "(require 'ert)" \
         --eval "(require 'cl-lib)" \
         --load "{{config_dir}}/tests/test-utils.el" \
+        --load "{{config_dir}}/tests/test-platform.el" \
+        --load "{{config_dir}}/tests/test-auth-source-1password.el" \
         --eval "(ert-run-tests-batch-and-exit t)"
 
 # Run elisp-lint on all Emacs Lisp files

@@ -21,7 +21,9 @@
   ;;          :user "user@example.com")))
   ;;
   ;; For password, it's recommended to use the Emacs auth-source mechanism.
-  ;; You can create a ~/.authinfo.gpg file with contents like:
+  ;; This configuration supports 1Password integration (configured in systems.el).
+  ;; With 1Password, credentials are automatically retrieved securely.
+  ;; Alternatively, you can create a ~/.authinfo.gpg file with contents like:
   ;; machine my-jira.atlassian.net login user@example.com password <API_TOKEN>
   (require 'org-jira))
 
