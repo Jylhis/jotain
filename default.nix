@@ -96,6 +96,7 @@ emacs.pkgs.withPackages (
     nerd-icons-ibuffer
     nix-mode
     nix-ts-mode
+    obsidian
     orderless
     org-appear
     org-jira

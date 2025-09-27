@@ -60,7 +60,12 @@
   ;; Add `completion-at-point` to the list of completion functions
   (add-to-list 'completion-at-point-functions #'cape-file)
   (add-to-list 'completion-at-point-functions #'cape-dabbrev)
-  (add-to-list 'completion-at-point-functions #'cape-keyword))
+  (add-to-list 'completion-at-point-functions #'cape-keyword)
+  
+  ;; Add Obsidian completion when available
+  (with-eval-after-load 'obsidian
+    (when (fboundp 'obsidian-completion-at-point)
+      (add-to-list 'completion-at-point-functions #'obsidian-completion-at-point))))
 
 (use-package consult
   :ensure
