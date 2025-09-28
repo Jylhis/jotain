@@ -6,35 +6,77 @@
   # Flake inputs
   inputs = {
     flake-schemas.url = "https://flakehub.com/f/DeterminateSystems/flake-schemas/*";
-
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.*";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   # Flake outputs that other flakes can use
-  outputs = { self, flake-schemas, nixpkgs }:
+  outputs =
+    {
+      self,
+      flake-schemas,
+      nixpkgs,
+      treefmt-nix,
+    }:
     let
       # Helpers for producing system-specific outputs
-      supportedSystems = [ "x86_64-linux" "aarch64-darwin" "x86_64-darwin" "aarch64-linux" ];
-      forEachSupportedSystem = f: nixpkgs.lib.genAttrs supportedSystems (system: f {
-        pkgs = import nixpkgs { inherit system; };
-      });
-    in {
+      supportedSystems = [
+        "x86_64-linux"
+        "aarch64-darwin"
+        "x86_64-darwin"
+        "aarch64-linux"
+      ];
+      forEachSupportedSystem =
+        f:
+        nixpkgs.lib.genAttrs supportedSystems (
+          system:
+          f {
+            pkgs = import nixpkgs { inherit system; };
+          }
+        );
+
+      treeconfig = {
+        projectRootFile = "flake.nix";
+        programs = {
+          nixfmt.enable = true;
+        };
+      };
+      treefmtEval = forEachSupportedSystem ({ pkgs }: treefmt-nix.lib.evalModule pkgs treeconfig);
+    in
+    {
       # Schemas tell Nix about the structure of your flake's outputs
       schemas = flake-schemas.schemas;
-      packages = forEachSupportedSystem({pkgs}:{
-	emacs = pkgs.callPackage ./default.nix{};
-      });
+      packages = forEachSupportedSystem (
+        { pkgs }:
+        {
+          emacs = pkgs.callPackage ./default.nix { };
+        }
+      );
+      formatter = forEachSupportedSystem ({ pkgs }: treefmtEval.${pkgs.system}.config.build.wrapper);
 
       homeModules.default = ./module.nix;
 
+      checks = forEachSupportedSystem (
+        { pkgs }:
+        {
+          formatting = treefmtEval.${pkgs.system}.config.build.check self;
+        }
+      );
+
       # Development environments
-      devShells = forEachSupportedSystem ({ pkgs }: {
-        default = pkgs.mkShell {
-          # Pinned packages available in the environment
-          packages = with pkgs; [
-            nixpkgs-fmt
-          ];
-        };
-      });
+      devShells = forEachSupportedSystem (
+        { pkgs }:
+        {
+          default = pkgs.mkShell {
+            # Pinned packages available in the environment
+            packages = with pkgs; [
+              nixpkgs-fmt
+            ];
+          };
+        }
+      );
     };
 }
