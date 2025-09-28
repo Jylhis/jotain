@@ -1,29 +1,15 @@
-# Custom Emacs package configuration.
-#
-# This package provides a customized Emacs distribution with a curated
-# set of packages and configurations optimized for software development.
-# The configuration uses a modular structure with separate files for
-# different concerns (core, UI, completion, programming, etc.).
-#
-# Features:
-# - Modern IDE-like features with LSP support
-# - Comprehensive package collection for development
-# - Modular configuration for maintainability
-# - Optimized for performance and usability
 {
   pkgs ? import <nixpkgs> { config.allowUnfree = true; },
   emacs ? pkgs.emacs,
 }:
 emacs.pkgs.withPackages (
   epkgs: with epkgs; [
-
-    # TOOD: Package: https://github.com/flymake/flymake-elsa
+    # TODO: Package: https://github.com/flymake/flymake-elsa
     adoc-mode
     modus-themes
     sideline
     sideline-flymake
     sideline-eglot
-    aidermacs
     ansible
     auth-source-1password
     auto-dark

@@ -1,8 +1,3 @@
-# Emacs configuration management
-# https://just.systems/
-# Run `just` from this directory to see available commands
-
-# Variables
 config_dir := justfile_directory()
 emacs_config_dir := env_var_or_default('XDG_CONFIG_HOME', env_var('HOME') + '/.config') + '/emacs'
 
