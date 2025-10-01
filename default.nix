@@ -81,7 +81,7 @@ emacs.pkgs.withPackages (
     nerd-icons-ibuffer
     nix-mode
     nix-ts-mode
-    obsidian
+    # obsidian
     orderless
     org-appear
     org-jira
