@@ -52,7 +52,7 @@
       packages = forEachSupportedSystem (
         { pkgs }:
         {
-          emacs = pkgs.callPackage ./default.nix { };
+          default = pkgs.callPackage ./default.nix { };
         }
       );
       formatter = forEachSupportedSystem ({ pkgs }: treefmtEval.${pkgs.system}.config.build.wrapper);
