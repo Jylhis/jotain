@@ -27,7 +27,6 @@
     (require 'projection))
 
   :config
-  ;; Uncomment if you want to disable prompts for compile commands customized in .dir-locals.el
   (put 'projection-commands-configure-project 'safe-local-variable #'stringp)
   (put 'projection-commands-build-project 'safe-local-variable #'stringp)
   (put 'projection-commands-test-project 'safe-local-variable #'stringp)

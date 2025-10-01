@@ -191,10 +191,6 @@
   (dape-info-hide-mode-line nil)
   (dape-inlay-hints t "Showing inlay hints"))
 
-;; TODO: better python stuff, flymake, treesitter, eglot, pdb (I think most of these already work but check)
-
-
-
 (use-package wgrep
   :ensure
   :init
