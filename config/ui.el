@@ -118,6 +118,18 @@
   :config
   (winner-mode 1))
 
+(use-package paren
+  :hook (after-init . show-paren-mode)
+  :custom
+  (show-paren-delay 0.1)
+  (show-paren-highlight-openparen t)
+  (show-paren-when-point-inside-paren t)
+  (show-paren-when-point-in-periphery t))
+
+(use-package mwheel
+  :custom
+  (mouse-wheel-follow-mouse t))
+
  (use-package pixel-scroll
    :when (display-graphic-p)
    :config

@@ -89,7 +89,19 @@
                     (append safe-local-variable-values
                             '((elisp-flymake-byte-compile . t))))))
 
-    (add-hook 'emacs-lisp-mode-hook #'j10s/trust-local-elisp-files)))
+    (add-hook 'emacs-lisp-mode-hook #'j10s/trust-local-elisp-files))
+
+  ;; Disable flymake during smerge mode
+  ;; (add-hook 'smerge-mode-hook
+  ;;           (lambda ()
+  ;;             (when (bound-and-true-p flymake-mode)
+  ;;               (flymake-mode -1))))
+
+  ;; (add-hook 'smerge-mode-exit-hook
+  ;;           (lambda ()
+  ;;             (when (derived-mode-p 'prog-mode)
+  ;;               (flymake-mode 1))))
+  )
 
 (use-package flyspell
   :config
