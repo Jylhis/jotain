@@ -52,7 +52,8 @@
   (make-backup-files nil "Disable auto backup files")
   ;; (find-file-visit-truename t "Resolve symlinks")
   (confirm-kill-processes nil "when quitting emacs, just kill processes")
-  (enable-local-variables t "ask if local variables are safe once"))
+  (enable-local-variables t "ask if local variables are safe once")
+  (require-final-newline t "Ensure files end with newline"))
 
 (use-package autorevert
   :custom
