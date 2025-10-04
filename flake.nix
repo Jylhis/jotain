@@ -11,6 +11,14 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nmt = {
+      url = "sourcehut:~rycee/nmt";
+      flake = false;
+    };
   };
 
   # Flake outputs that other flakes can use
@@ -20,6 +28,8 @@
       flake-schemas,
       nixpkgs,
       treefmt-nix,
+      home-manager,
+      nmt,
     }:
     let
       # Helpers for producing system-specific outputs
@@ -61,10 +71,17 @@
 
       checks = forEachSupportedSystem (
         { pkgs }:
+        let
+          nmtTests = import ./nmt-tests {
+            inherit pkgs home-manager nmt;
+            homeModule = self.homeModules.default;
+          };
+        in
         {
           formatting = treefmtEval.${pkgs.system}.config.build.check self;
           emacs-tests = (pkgs.callPackage ./default.nix { }).passthru.tests;
         }
+        // nmtTests
       );
 
       # Development environments

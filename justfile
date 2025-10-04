@@ -8,32 +8,46 @@ default:
 # Development and Testing
 # =====================
 
-# Check Emacs configuration syntax
+# Check Emacs configuration syntax (runs Nix build dry-run)
 [group('check')]
 check:
-    emacs -Q --batch --eval "(progn (add-to-list 'load-path \"{{config_dir}}/config\") (add-to-list 'load-path \"{{config_dir}}/lisp\") (load-file \"{{config_dir}}/init.el\"))"
+    nix build --dry-run .#default
 
-# Run unit tests
+# Run ERT unit tests via Nix
 [group('check')]
 test:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "Running ERT unit tests..."
-    emacs -Q --batch \
-        --eval "(progn (add-to-list 'load-path \"{{config_dir}}/lisp\") (add-to-list 'load-path \"{{config_dir}}/tests\") (add-to-list 'load-path \"{{config_dir}}/config\"))" \
-        --eval "(require 'ert)" \
-        --eval "(require 'cl-lib)" \
-        --load "{{config_dir}}/tests/test-utils.el" \
-        --load "{{config_dir}}/tests/test-platform.el" \
-        --load "{{config_dir}}/tests/test-auth-source-1password.el" \
-        --eval "(ert-run-tests-batch-and-exit)"
+    @echo "Running ERT unit tests via Nix..."
+    nix build .#checks.x86_64-linux.emacs-tests --print-build-logs
 
-# Run unit tests with verbose output
+# Run all checks including NMT tests
+[group('check')]
+test-all:
+    @echo "Running all tests (ERT + NMT)..."
+    nix flake check --print-build-logs
+
+# Run NMT home-manager module tests
+[group('check')]
+test-nmt:
+    @echo "Running NMT home-manager module tests..."
+    @echo "Running: test-emacs-config-files"
+    nix build .#checks.x86_64-linux.test-emacs-config-files --print-build-logs
+    @echo "Running: test-shell-aliases"
+    nix build .#checks.x86_64-linux.test-shell-aliases --print-build-logs
+    @echo "Running: test-emacs-service"
+    nix build .#checks.x86_64-linux.test-emacs-service --print-build-logs
+    @echo "Running: test-font-packages"
+    nix build .#checks.x86_64-linux.test-font-packages --print-build-logs
+    @echo "Running: test-module-disabled"
+    nix build .#checks.x86_64-linux.test-module-disabled --print-build-logs
+    @echo "Running: test-fileset-source"
+    nix build .#checks.x86_64-linux.test-fileset-source --print-build-logs
+
+# Run unit tests with verbose output (legacy direct execution)
 [group('check')]
 test-verbose:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "Running ERT unit tests (verbose)..."
+    echo "Running ERT unit tests (verbose, direct execution)..."
     emacs -Q --batch \
         --eval "(progn (add-to-list 'load-path \"{{config_dir}}/lisp\") (add-to-list 'load-path \"{{config_dir}}/tests\") (add-to-list 'load-path \"{{config_dir}}/config\"))" \
         --eval "(require 'ert)" \
@@ -68,7 +82,13 @@ package-lint:
         emacs -Q --batch -l package-lint.el -f package-lint-batch-and-exit "$file"
     done
 
-# Byte-compile all Emacs Lisp files
+# Build the Emacs package with Nix
+[group('build')]
+build:
+    @echo "Building Emacs configuration with Nix..."
+    nix build .#default --print-build-logs
+
+# Byte-compile all Emacs Lisp files (direct, for development)
 [group('build')]
 compile:
     #!/usr/bin/env bash
@@ -142,3 +162,47 @@ info:
     @ls -1 "{{config_dir}}/config/"*.el 2>/dev/null | sed 's|.*/||; s|\.el$||' | xargs -I {} echo "    {}"
     @echo "  Utility modules:"
     @ls -1 "{{config_dir}}/lisp/"*.el 2>/dev/null | sed 's|.*/||; s|\.el$||' | xargs -I {} echo "    {}" || echo "    No utility modules found"
+
+# Show available Nix flake outputs
+[group('info')]
+info-nix:
+    @echo "Nix Flake Outputs:"
+    @echo "=================="
+    nix flake show
+
+# Show available Nix checks
+[group('info')]
+info-checks:
+    @echo "Available Nix Checks:"
+    @echo "===================="
+    @echo "ERT Tests:"
+    @echo "  - emacs-tests"
+    @echo ""
+    @echo "NMT Tests:"
+    @echo "  - test-emacs-config-files"
+    @echo "  - test-shell-aliases"
+    @echo "  - test-emacs-service"
+    @echo "  - test-font-packages"
+    @echo "  - test-module-disabled"
+    @echo "  - test-fileset-source"
+    @echo ""
+    @echo "Other Checks:"
+    @echo "  - formatting"
+
+# Update flake inputs
+[group('nix')]
+update:
+    @echo "Updating flake inputs..."
+    nix flake update
+
+# Update specific flake input
+[group('nix')]
+update-input INPUT:
+    @echo "Updating flake input: {{INPUT}}"
+    nix flake lock --update-input {{INPUT}}
+
+# Format Nix files
+[group('nix')]
+format:
+    @echo "Formatting Nix files..."
+    nix fmt
