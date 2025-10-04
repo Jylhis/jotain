@@ -89,6 +89,9 @@
 (use-package delsel
   :hook (after-init . delete-selection-mode))
 
+(use-package elec-pair
+  :hook (after-init . electric-pair-mode))
+
 (use-package dired
   :custom
   (dired-auto-revert-buffer #'dired-buffer-stale-p "Revert the Dired buffer without prompting.")
