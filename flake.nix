@@ -81,7 +81,7 @@
               ];
             in
             pkgs.stdenvNoCC.mkDerivation {
-              pname = "config";
+              pname = "emacs-config";
               version = "1.0.0";
               src = pkgs.lib.fileset.toSource {
                 root = ./.;
