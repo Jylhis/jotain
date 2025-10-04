@@ -6,16 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Build and test Emacs configuration:
 ```bash
-# Check configuration syntax (fast validation)
+# Check configuration syntax (Nix dry-run)
 just check
 
-# Run all unit tests
+# Run ERT unit tests via Nix
 just test
 
-# Run tests with verbose output for debugging
+# Run all tests (ERT + NMT home-manager module tests)
+just test-all
+
+# Run NMT tests only (validates home-manager module)
+just test-nmt
+
+# Run tests with verbose output (direct execution)
 just test-verbose
 
-# Byte-compile all Emacs Lisp files
+# Build Emacs package with Nix
+just build
+
+# Byte-compile all Emacs Lisp files (for development)
 just compile
 
 # Clean compiled files and cache
@@ -27,14 +36,22 @@ just emacs-clean
 
 Development workflow:
 ```bash
-# Enter Nix development shell (required)
+# Enter Nix development shell (recommended)
 nix develop
 
 # Run tests after changes
-just test
+just test              # ERT unit tests
+just test-nmt          # Home-manager module tests
+just test-all          # All tests
 
-# Check specific file syntax
-emacs -Q --batch -l <file.el>
+# Nix operations
+nix build .#default    # Build Emacs package
+nix flake check        # Run all checks
+nix fmt                # Format Nix files
+
+# Update dependencies
+just update            # Update all flake inputs
+just update-input nixpkgs  # Update specific input
 ```
 
 ## Architecture Overview
@@ -63,12 +80,38 @@ The configuration is split into logical modules loaded via `require` in init.el:
 
 ## Testing Approach
 
-Tests use ERT (Emacs Lisp Regression Testing) framework:
+This project uses two testing frameworks:
+
+### ERT (Emacs Lisp Regression Testing)
+Unit tests for Emacs Lisp code:
 - Test files in `tests/` directory
 - Named `test-*.el`
-- Run with `just test` or individual test files with `emacs -Q --batch -l tests/test-file.el -f ert-run-tests-batch-and-exit`
+- Run with `just test` (via Nix) or `just test-verbose` (direct execution)
+- Tests are built into the Nix package and run during `nix flake check`
 
-When adding features:
+When adding ERT tests:
 1. Add tests in tests/test-feature.el
-2. Update justfile test command if new test file created
+2. Update default.nix passthru.tests if new test file created
 3. Ensure tests pass with `just test`
+
+### NMT (Nix Module Tests)
+Integration tests for the home-manager module:
+- Test files in `nmt-tests/` directory
+- Validates module behavior by building actual home-manager configurations
+- Run with `just test-nmt` or individual tests with `nix build .#checks.x86_64-linux.test-<name>`
+- Available tests:
+  - test-emacs-config-files: Validates file linking to ~/.config/emacs
+  - test-shell-aliases: Validates shell alias configuration
+  - test-emacs-service: Validates systemd service setup
+  - test-font-packages: Validates font package installation
+  - test-module-disabled: Validates behavior when disabled
+  - test-fileset-source: Validates directory structure
+
+When adding NMT tests:
+1. Add test definition in nmt-tests/default.nix
+2. Update justfile test-nmt command
+3. Update nmt-tests/README.md with test description
+4. Ensure tests pass with `just test-nmt`
+
+### Running All Tests
+Use `just test-all` or `nix flake check` to run both ERT and NMT tests.
