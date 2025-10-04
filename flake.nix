@@ -60,9 +60,35 @@
       # Schemas tell Nix about the structure of your flake's outputs
       schemas = flake-schemas.schemas;
       packages = forEachSupportedSystem (
-        { pkgs }:
+        { pkgs, ... }:
         {
           default = pkgs.callPackage ./default.nix { };
+          config =
+            let
+              ignore = pkgs.lib.fileset.unions [
+                ./.claude
+                ./.envrc
+                ./.github
+                ./.gitignore
+                ./CLAUDE.md
+                ./default.nix
+                ./flake.lock
+                ./flake.nix
+                ./justfile
+                ./module.nix
+                ./nmt-tests
+                ./tests
+              ];
+            in
+            pkgs.stdenvNoCC.mkDerivation {
+              pname = "config";
+              version = "1.0.0";
+              src = pkgs.lib.fileset.toSource {
+                root = ./.;
+                fileset = pkgs.lib.fileset.difference ./. ignore;
+              };
+              installPhase = "cp -r $src $out";
+            };
         }
       );
       formatter = forEachSupportedSystem ({ pkgs }: treefmtEval.${pkgs.system}.config.build.wrapper);

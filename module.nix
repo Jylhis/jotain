@@ -11,6 +11,7 @@ in
   options = {
     programs.emacs.userConfig = lib.mkOption {
       type = lib.types.path;
+      default = ./.; # TODO: use config package
     };
   };
   config = lib.mkIf config.programs.emacs.enable {
