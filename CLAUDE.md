@@ -1,169 +1,74 @@
-# CLAUDE.md - Emacs Configuration
+# CLAUDE.md
 
-## System Rules
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-1. **USE emacs-expert** for ALL Emacs-related tasks - configuration, packages, elisp
-2. **MODULAR approach** - Keep configs in appropriate `config/*.el` files
-3. **LAZY LOADING** - Use `:defer`, `:hook`, or `:after` for performance
-4. **TEST with `just test`** before committing changes
-5. **UPDATE default.nix** first when adding new packages
-6. **PREFER built-in tools over Bash** - Use Read, Write, Edit, Grep, Glob, LS instead of shell commands
+## Development Commands
 
----
-
-## Agent Behavior Patterns
-
-**DEFAULT: Implementation-first** - emacs-expert MUST use tools to implement changes by default
-
-**EXCEPTION: Explicit advice requests** - Only provide advice without implementation when user explicitly asks:
-
-- "How should I configure..." or "What's the best approach..." → Advice acceptable
-- "Advise me on..." or "What would you do..." → Advice acceptable
-
-**IMPLEMENTATION REQUIRED for:**
-
-- "Fix this config..." → MUST implement using tools
-- "Add package..." → MUST implement using tools
-- "Update my setup..." → MUST implement using tools
-- Any direct Emacs task → MUST implement using tools
-
-## Agent Work Verification
-
-**ALWAYS verify delegated work** - When agents report completion:
-
-- Check that tasks match original instructions
-- Verify outputs/changes are correct (use `git status` to confirm file modifications)
-- Test functionality if applicable
-- Request fixes if work is incomplete
-- **CRITICAL**: If agent only provided instructions without using tools, re-delegate with explicit requirement to USE tools
-
----
-
-## Configuration Structure
-
-**Base**: `sources/emacs/` - Modern Emacs 30.1 configuration
-
-```
-default.nix         # Package definitions (Nix)
-config/
-  core.el          # Base settings, files, backup
-  ui.el            # Theme, modeline, visual
-  completion.el    # Vertico/Consult/Corfu stack
-  programming.el   # LSP, treesitter, languages
-  writing.el       # Org-mode, markdown, prose
-  git.el           # Magit and version control
-  help.el          # Documentation, guides
-  ai.el            # AI assistants, copilot
-lisp/
-  *.el            # Custom utility functions
-```
-
----
-
-## Stack & Patterns
-
-**Core Stack**: Vertico + Consult + Corfu + Embark + Eglot + Magit
-
-### use-package Template
-
-```elisp
-(use-package package-name
-  :ensure              ; Auto-install (if in default.nix)
-  :defer t             ; Lazy load for performance
-  :after (deps)        ; Load dependencies first
-  :hook (mode . func)  ; Mode-specific activation
-  :bind (key . cmd)    ; Keybindings
-  :custom (var val)    ; Variable settings
-  :diminish            ; Clean mode line
-  :config              ; Post-load configuration
-  (setq var value))
-```
-
----
-
-## Performance Guidelines
-
-- **Lazy load everything** - Use `:defer t`, `:hook`, or `:commands`
-- **Minimize startup** - Defer non-essential packages
-- **Clean mode line** - Use `:diminish` for minor modes
-- **Prefer built-ins** - Use Emacs internals when suitable
-- **GC optimization** - Configured in early-init.el
-
----
-
-## Adding Packages
-
-1. **Update default.nix** - Add package to Nix configuration
-2. **Choose module** - Add use-package to appropriate `config/*.el`
-3. **Test locally** - Run `just test` to verify
-4. **Performance check** - Ensure proper lazy loading
-
----
-
-## Testing & Development
-
+Build and test Emacs configuration:
 ```bash
-just test           # Run ERT test suite
-just format         # Format all elisp files
-just check          # Full validation
-nix develop         # Enter development shell
+# Check configuration syntax (fast validation)
+just check
+
+# Run all unit tests
+just test
+
+# Run tests with verbose output for debugging
+just test-verbose
+
+# Byte-compile all Emacs Lisp files
+just compile
+
+# Clean compiled files and cache
+just clean
+
+# Start Emacs with clean config (for testing)
+just emacs-clean
 ```
 
----
+Development workflow:
+```bash
+# Enter Nix development shell (required)
+nix develop
 
-## Common Tasks
+# Run tests after changes
+just test
 
-- **New language support** � `config/programming.el`
-- **UI tweaks** � `config/ui.el`
-- **Completion changes** � `config/completion.el`
-- **Org-mode setup** � `config/writing.el`
-- **Custom functions** � `lisp/*.el`
+# Check specific file syntax
+emacs -Q --batch -l <file.el>
+```
 
----
+## Architecture Overview
 
-# Tool Usage Guidelines
+This is a modular Emacs configuration using Nix for reproducible builds. The configuration follows a feature-based module system where each aspect is isolated in its own file.
 
-**ALWAYS use Claude Code's built-in tools instead of system commands.** Built-in tools provide better reliability, security, and IDE integration.
+### Module System
+The configuration is split into logical modules loaded via `require` in init.el:
+- **Core modules** (config/): Each handles a specific feature domain (completion, git, programming, etc.)
+- **Utility libraries** (lisp/): Shared functionality and platform detection
+- **Platform adaptations**: Automatic OS-specific configurations via platform.el detection
 
-## Command Replacements
+### Key Design Patterns
+1. **Platform Detection**: The `platform.el` library detects the OS/environment and sets flags like `platform-android-p`, `platform-macos-p`, etc. Platform-specific code checks these flags.
 
-| System Command           | Built-in Tool                 | Usage                                |
-| ------------------------ | ----------------------------- | ------------------------------------ |
-| `ls -la`                 | **LS**                        | List directory contents              |
-| `cat <file>`             | **Read**                      | View file contents                   |
-| `grep <pattern> <files>` | **Grep**                      | Search patterns in files             |
-| `find . -name "*.py"`    | **Glob**                      | Find files with `**/*.py` pattern    |
-| `sed -i 's/old/new/g'`   | **Edit/MultiEdit**            | Edit files (single/multiple changes) |
-| `curl <url>`             | **WebFetch**                  | Retrieve web content                 |
-| `touch/mkdir`            | **Write**                     | Create files/directories             |
-| `jupyter notebook`       | **NotebookRead/NotebookEdit** | Read/modify Jupyter notebooks        |
-| Google search in browser | **WebSearch**                 | Perform web searches                 |
+2. **Lazy Loading**: Modules use `with-eval-after-load` and autoloads to defer package loading until needed.
 
-**Preferred built-in tools:**
+3. **Feature Modules**: Each config/*.el file is self-contained and can be loaded independently. They all `(provide 'module-name)` at the end.
 
-- `Read/Write/Edit/MultiEdit` - File operations
-- `Grep/Glob/LS` - Search and navigation
-- `NotebookRead/NotebookEdit` - Jupyter notebook operations
-- `WebFetch/WebSearch` - Web content and searches
-- `TodoWrite/Task` - Task management
+4. **Nix Integration**: The flake.nix and default.nix define the development environment with all required Emacs packages pre-installed.
 
-**Use Bash only for:**
+### Module Dependencies
+- `platform.el` must load first (provides OS detection)
+- `core.el` sets fundamental Emacs defaults
+- Other modules can load in any order but may have soft dependencies (e.g., completion enhances programming)
 
-- System commands (nix, just, deploy)
-- Git operations
-- Build/test commands
+## Testing Approach
 
-## Reference: https://docs.anthropic.com/en/docs/claude-code/settings#tools-available-to-claude
+Tests use ERT (Emacs Lisp Regression Testing) framework:
+- Test files in `tests/` directory
+- Named `test-*.el`
+- Run with `just test` or individual test files with `emacs -Q --batch -l tests/test-file.el -f ert-run-tests-batch-and-exit`
 
----
-
-_Delegate all Emacs tasks to emacs-expert agent_
-
-- When installing new packages, check with nixos MCP or nix search, if the package exists
-
-# important-instruction-reminders
-
-Do what has been asked; nothing more, nothing less.
-NEVER create files unless they're absolutely necessary for achieving your goal.
-ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.
+When adding features:
+1. Add tests in tests/test-feature.el
+2. Update justfile test command if new test file created
+3. Ensure tests pass with `just test`
