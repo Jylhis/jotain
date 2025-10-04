@@ -78,6 +78,15 @@ The configuration is split into logical modules loaded via `require` in init.el:
 - `core.el` sets fundamental Emacs defaults
 - Other modules can load in any order but may have soft dependencies (e.g., completion enhances programming)
 
+### Home Manager Module (module.nix)
+The home-manager module handles deployment of the Emacs configuration:
+- Uses `lib.fileset.toSource` to deploy configuration files to `~/.config/emacs`
+- Configures systemd service for Emacs daemon with socket activation
+- Sets up shell aliases (emc, emcg, emqg, emq)
+- Installs Nerd Fonts and other font packages
+- Controlled via `programs.emacs.enable` option
+- Configuration path specified via `programs.emacs.userConfig` option
+
 ## Testing Approach
 
 This project uses two testing frameworks:
