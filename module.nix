@@ -19,10 +19,7 @@ in
       file = {
         # Dynamically install all Emacs configuration files using filesets
         ".config/emacs" = {
-          source = lib.fileset.toSource {
-            root = cfg.userConfig;
-            fileset = cfg.userConfig;
-          };
+          source = cfg.userConfig;
           recursive = true;
         };
       };
