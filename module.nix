@@ -16,13 +16,12 @@ in
   config = lib.mkIf config.programs.emacs.enable {
     home = {
       file = {
-        # Dynamically install all Emacs configuration files
+        # Dynamically install all Emacs configuration files using filesets
         ".config/emacs" = {
-          source = pkgs.runCommand "emacs-config" { } ''
-            mkdir -p $out
-            # Copy main configuration files
-            cp -r ${cfg.userConfig}/* $out/
-          '';
+          source = lib.fileset.toSource {
+            root = cfg.userConfig;
+            fileset = cfg.userConfig;
+          };
           recursive = true;
         };
       };
