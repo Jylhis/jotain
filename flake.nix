@@ -90,9 +90,26 @@
         {
           default = pkgs.mkShell {
             # Pinned packages available in the environment
-            packages = with pkgs; [
-              nixpkgs-fmt
-            ];
+            packages =
+              with pkgs;
+              [
+                nixpkgs-fmt
+                just
+                (pkgs.callPackage ./default.nix { })
+              ]
+              ++ (with pkgs; [ git ]);
+
+            shellHook = ''
+              echo "Emacs Development Environment"
+              echo "============================"
+              echo "Available commands:"
+              echo "  just         - Show all available commands"
+              echo "  just test    - Run ERT tests"
+              echo "  just test-nmt - Run NMT tests"
+              echo "  just build   - Build Emacs package"
+              echo "  just check   - Quick syntax check"
+              echo "  nix fmt      - Format Nix files"
+            '';
           };
         }
       );
