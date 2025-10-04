@@ -63,6 +63,7 @@
         { pkgs }:
         {
           formatting = treefmtEval.${pkgs.system}.config.build.check self;
+          emacs-tests = (pkgs.callPackage ./default.nix { }).passthru.tests;
         }
       );
 
