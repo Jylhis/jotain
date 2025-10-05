@@ -29,7 +29,7 @@
       nixpkgs,
       treefmt-nix,
       home-manager,
-      nmt,
+      ...
     }:
     let
       # Helpers for producing system-specific outputs
@@ -52,13 +52,17 @@
         projectRootFile = "flake.nix";
         programs = {
           nixfmt.enable = true;
+          yamlfmt.enable = true;
+          actionlint.enable = true;
+          deadnix.enable = true;
+          statix.enable = true;
         };
       };
       treefmtEval = forEachSupportedSystem ({ pkgs }: treefmt-nix.lib.evalModule pkgs treeconfig);
     in
     {
       # Schemas tell Nix about the structure of your flake's outputs
-      schemas = flake-schemas.schemas;
+      inherit (flake-schemas) schemas;
       packages = forEachSupportedSystem (
         { pkgs, ... }:
         {
@@ -99,7 +103,7 @@
         { pkgs }:
         let
           nmtTests = import ./nmt-tests {
-            inherit pkgs home-manager nmt;
+            inherit pkgs home-manager;
             homeModule = self.homeModules.default;
           };
         in
