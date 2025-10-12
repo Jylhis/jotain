@@ -7,7 +7,7 @@
 
 (require 'ansi-color)
 
-(defun display-ansi-colors ()
+(defun my/display-ansi-colors ()
   "Apply ANSI color codes to the current buffer.
 This function processes the entire buffer and interprets any ANSI
 escape sequences, rendering the corresponding colors in the buffer.
