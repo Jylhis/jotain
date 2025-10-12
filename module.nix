@@ -12,6 +12,25 @@ in
     programs.emacs.userConfig = lib.mkOption {
       type = lib.types.path;
       default = ./.; # TODO: use config package
+      description = lib.mdDoc ''
+        Path to the Emacs configuration directory.
+
+        This directory should contain at minimum `init.el` and `early-init.el`,
+        along with any additional configuration files organized in `config/` and
+        `lisp/` subdirectories.
+
+        When using this flake's home-manager module directly, this defaults to
+        the source directory. For external usage, point this to your own
+        configuration or use a pre-built configuration package.
+      '';
+      example = lib.literalExpression ''
+        pkgs.fetchFromGitHub {
+          owner = "username";
+          repo = "emacs-config";
+          rev = "v1.0.0";
+          hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+        }
+      '';
     };
   };
   config = lib.mkIf config.programs.emacs.enable {
