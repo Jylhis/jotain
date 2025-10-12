@@ -57,9 +57,10 @@
 (use-package cape
   :ensure
   :init
-  ;; Add `completion-at-point` to the list of completion functions
-  (add-to-list 'completion-at-point-functions #'cape-file)
+  ;; Add to completion-at-point-functions globally
+  ;; Order matters: more specific completers first
   (add-to-list 'completion-at-point-functions #'cape-dabbrev)
+  (add-to-list 'completion-at-point-functions #'cape-file)
   (add-to-list 'completion-at-point-functions #'cape-keyword)
   
   ;; Add Obsidian completion when available
