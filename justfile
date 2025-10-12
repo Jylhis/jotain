@@ -1,5 +1,6 @@
 config_dir := justfile_directory()
 emacs_config_dir := env_var_or_default('XDG_CONFIG_HOME', env_var('HOME') + '/.config') + '/emacs'
+system := `nix eval --impure --raw --expr 'builtins.currentSystem'`
 
 # Default command - show available commands
 default:
@@ -17,7 +18,7 @@ check:
 [group('check')]
 test:
     @echo "Running ERT unit tests via Nix..."
-    nix build .#checks.x86_64-linux.emacs-tests --print-build-logs
+    nix build .#checks.{{system}}.emacs-tests --print-build-logs
 
 # Run all checks including NMT tests
 [group('check')]
@@ -30,17 +31,17 @@ test-all:
 test-nmt:
     @echo "Running NMT home-manager module tests..."
     @echo "Running: test-emacs-config-files"
-    nix build .#checks.x86_64-linux.test-emacs-config-files --print-build-logs
+    nix build .#checks.{{system}}.test-emacs-config-files --print-build-logs
     @echo "Running: test-shell-aliases"
-    nix build .#checks.x86_64-linux.test-shell-aliases --print-build-logs
+    nix build .#checks.{{system}}.test-shell-aliases --print-build-logs
     @echo "Running: test-emacs-service"
-    nix build .#checks.x86_64-linux.test-emacs-service --print-build-logs
+    nix build .#checks.{{system}}.test-emacs-service --print-build-logs
     @echo "Running: test-font-packages"
-    nix build .#checks.x86_64-linux.test-font-packages --print-build-logs
+    nix build .#checks.{{system}}.test-font-packages --print-build-logs
     @echo "Running: test-module-disabled"
-    nix build .#checks.x86_64-linux.test-module-disabled --print-build-logs
+    nix build .#checks.{{system}}.test-module-disabled --print-build-logs
     @echo "Running: test-fileset-source"
-    nix build .#checks.x86_64-linux.test-fileset-source --print-build-logs
+    nix build .#checks.{{system}}.test-fileset-source --print-build-logs
 
 # Run unit tests with verbose output (legacy direct execution)
 [group('check')]
