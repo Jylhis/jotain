@@ -77,7 +77,7 @@
   :custom
   ;; Improve file path completion behavior
   (cape-file-directory-must-exist t)  ; Only complete existing directories
-  (cape-file-prefix "\\(?:~\\|/\\|\\.\\.?/\\|\\.\\)")  ; Trigger on ~, /, ./, ../
+  (cape-file-prefix '("~" "/" "./" "../"))  ; Trigger on ~, /, ./, ../
   ;; Improve dabbrev completion
   (cape-dabbrev-min-length 3)  ; Require at least 3 chars before suggesting
 
