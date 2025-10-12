@@ -40,7 +40,7 @@
               (when (display-graphic-p frame)
                 (with-selected-frame frame (auto-dark-mode 1))))))
 
-(use-package diminish :ensure)
+(use-package diminish :ensure t)
 
 (use-package which-key
   :diminish
@@ -71,7 +71,7 @@
   :ensure
   :hook (prog-mode . breadcrumb-mode))
 
-(use-package nerd-icons :ensure)
+(use-package nerd-icons :ensure t)
 
 (use-package nerd-icons-corfu
   :ensure
