@@ -62,7 +62,14 @@
   (add-to-list 'completion-at-point-functions #'cape-dabbrev)
   (add-to-list 'completion-at-point-functions #'cape-file)
   (add-to-list 'completion-at-point-functions #'cape-keyword)
-  
+
+  :custom
+  ;; Improve file path completion behavior
+  (cape-file-directory-must-exist t)  ; Only complete existing directories
+  (cape-file-prefix "\\(?:~\\|/\\|\\.\\.?/\\|\\.\\)")  ; Trigger on ~, /, ./, ../
+  ;; Improve dabbrev completion
+  (cape-dabbrev-min-length 3)  ; Require at least 3 chars before suggesting
+
   ;; Add Obsidian completion when available
   ;; (with-eval-after-load 'obsidian
     ;; (when (fboundp 'obsidian-completion-at-point)
@@ -139,7 +146,11 @@
   :custom
   (completion-styles '(orderless partial-completion flex basic))
   (completion-category-defaults nil)
-  (completion-category-overrides '((file (styles partial-completion)))))
+  ;; Use partial-completion for files to support path component matching
+  ;; e.g., /u/s/a matches /usr/share/applications
+  (completion-category-overrides '((file (styles partial-completion orderless))
+                                   (buffer (styles orderless))
+                                   (project-file (styles partial-completion orderless)))))
 
 (use-package marginalia
   :ensure
