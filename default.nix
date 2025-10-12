@@ -65,6 +65,7 @@ let
       jq-ts-mode
       just-mode
       just-ts-mode
+      kind-icon
       ligature
       logview
       magit
