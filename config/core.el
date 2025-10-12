@@ -9,18 +9,15 @@
   :init
   :custom
   (text-mode-ispell-word-completion nil "Emacs 30 and newer: Disable Ispell completion function.")
-  (context-menu-mode t "Enable context menu for vertico")
   (use-short-answers t "life is too short to type yes or no")
   (create-lockfiles nil)
   (delete-by-moving-to-trash t "Delete by moving to trash in interactive mode")
   (sentence-end-double-space nil "Disable the obsolete practice of end-of-line spacing from the typewriter era.")
-  (save-place-mode t "Automatically save your place in files")
   (word-wrap t "Continue wrapped lines at whitespace rather than breaking in the middle of a word.")
   (visible-bell nil "No blinking")
   (ring-bell-function #'ignore "No beeping")
   (scroll-preserve-screen-position 1 "keep the cursor in the same position while scrolling")
   (enable-recursive-minibuffers t "Support opening new minibuffers from inside existing minibuffers")
-  (minibuffer-depth-indicate-mode t "Show minibuffer depth to prevent confusion")
   (minibuffer-follows-selected-frame t "Minibuffer follows the selected frame")
   (minibuffer-prompt-properties
    '(read-only t cursor-intangible t face minibuffer-prompt) "Do not allow the cursor in the minibuffer prompt")
@@ -30,6 +27,11 @@
   (read-buffer-completion-ignore-case t "Ignore case when reading buffer name")
   (read-file-name-completion-ignore-case t "Ignore case for file completion")
   (load-prefer-newer t "Always load newer compiled files")
+  :config
+  ;; Enable modes
+  (context-menu-mode 1)           ; Enable context menu for vertico
+  (save-place-mode 1)             ; Automatically save your place in files
+  (minibuffer-depth-indicate-mode 1) ; Show minibuffer depth to prevent confusion
   :bind
   (("C-z" . nil)
    ("C-x C-z" . nil)
@@ -57,13 +59,15 @@
 
 (use-package autorevert
   :custom
-  (global-auto-revert-mode t "Automatically refresh buffer if changed on disk")
-  (global-auto-revert-non-file-buffers t "Revert also non-file buffers"))
+  (global-auto-revert-non-file-buffers t "Revert also non-file buffers")
+  :config
+  (global-auto-revert-mode 1)) ; Automatically refresh buffer if changed on disk
 
 (use-package recentf
   :custom
   (recentf-max-saved-items 50 "Increase the default a bit")
-  (recentf-mode t "Keep track of open files"))
+  :config
+  (recentf-mode 1)) ; Keep track of open files
 
 (use-package savehist
   :init
@@ -74,8 +78,9 @@
   (read-extended-command-predicate
    #'command-completion-default-include-p "Hide commands in M-x which do not work in the current mode")
   (kill-do-not-save-duplicates t "Remove duplicates from the kill ring to reduce clutter")
-  (line-number-mode t "Show line number in modeline")
-  (column-number-mode t "Show column number"))
+  :config
+  (line-number-mode 1)   ; Show line number in modeline
+  (column-number-mode 1)) ; Show column number
 
 (use-package subword
   :diminish
