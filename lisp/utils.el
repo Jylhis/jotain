@@ -7,6 +7,7 @@
 
 (require 'ansi-color)
 
+;;;###autoload
 (defun my/display-ansi-colors ()
   "Apply ANSI color codes to the current buffer.
 This function processes the entire buffer and interprets any ANSI

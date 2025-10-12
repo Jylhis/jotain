@@ -7,6 +7,7 @@
 
 (require 'app-launcher)
 
+;;;###autoload
 (defun app-launchers-counsel-launcher ()
   "Create and select a frame called emacs-counsel-launcher which consists only of a minibuffer and has specific dimensions. Runs counsel-linux-app on that frame, which is an emacs command that prompts you to select an app and open it in a dmenu like behaviour. Delete the frame after that command has exited"
   (interactive)
@@ -34,6 +35,7 @@
 ;; create a global keyboard shortcut with the following code
 ;; emacsclient -cF "((visibility . nil))" -e "(app-launchers-run-launcher)"
 
+;;;###autoload
 (defun app-launchers-run-launcher ()
   "Create and select a frame called emacs-run-launcher which consists only of a minibuffer and has specific dimensions. Runs app-launcher-run-app on that frame, which is an emacs command that prompts you to select an app and open it in a dmenu like behaviour. Delete the frame after that command has exited"
   (interactive)
