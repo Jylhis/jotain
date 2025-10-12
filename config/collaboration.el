@@ -25,7 +25,7 @@
   ;; With 1Password, credentials are automatically retrieved securely.
   ;; Alternatively, you can create a ~/.authinfo.gpg file with contents like:
   ;; machine my-jira.atlassian.net login user@example.com password <API_TOKEN>
-  (require 'org-jira))
+  )
 
 (provide 'collaboration)
 ;;; collaboration.el ends here
