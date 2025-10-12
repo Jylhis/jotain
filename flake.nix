@@ -125,20 +125,26 @@
               [
                 nixpkgs-fmt
                 just
+                deadnix
+                statix
+                git
                 (pkgs.callPackage ./default.nix { })
-              ]
-              ++ (with pkgs; [ git ]);
+              ];
 
             shellHook = ''
               echo "Emacs Development Environment"
               echo "============================"
               echo "Available commands:"
-              echo "  just         - Show all available commands"
-              echo "  just test    - Run ERT tests"
-              echo "  just test-nmt - Run NMT tests"
-              echo "  just build   - Build Emacs package"
-              echo "  just check   - Quick syntax check"
-              echo "  nix fmt      - Format Nix files"
+              echo "  just           - Show all available commands"
+              echo "  just test      - Run ERT tests"
+              echo "  just test-nmt  - Run NMT tests"
+              echo "  just build     - Build Emacs package"
+              echo "  just check     - Quick syntax check"
+              echo ""
+              echo "Code quality tools:"
+              echo "  nix fmt        - Format and check Nix files"
+              echo "  deadnix .      - Find dead Nix code"
+              echo "  statix check . - Find Nix anti-patterns"
             '';
           };
         }
