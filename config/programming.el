@@ -104,11 +104,11 @@
   )
 
 (use-package flyspell
-  :config
-  (setq flyspell-mode-map (make-sparse-keymap))
   :hook
   (prog-mode . flyspell-prog-mode)
-  (text-mode . flyspell-mode))
+  (text-mode . flyspell-mode)
+  :bind (:map flyspell-mode-map
+              ("C-M-i" . nil)))  ; Unbind to allow completion-at-point
 
 (use-package consult-flyspell
   :ensure
