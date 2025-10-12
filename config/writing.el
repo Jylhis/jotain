@@ -20,7 +20,7 @@
   (my/setup-org-agenda-files)
   
   :hook ((org-mode . visual-line-mode)
-         (org-mode . jylhis-setup-org-fonts))
+         (org-mode . my/setup-org-fonts))
   :bind (
          ("C-c a" . org-agenda)
          ("C-c c" . org-capture)))
@@ -100,7 +100,7 @@
 
 ;;; Variable-pitch font setup for better typography
 
-(defun jylhis-setup-org-fonts ()
+(defun my/setup-org-fonts ()
   "Configure mixed fonts for org-mode - variable pitch for text, fixed for code."
   (interactive)
   ;; Enable variable pitch mode for better prose readability
