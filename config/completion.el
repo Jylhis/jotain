@@ -54,6 +54,17 @@
   (global-corfu-mode)
   (corfu-history-mode))
 
+(use-package kind-icon
+  :ensure
+  :after corfu
+  :custom
+  (kind-icon-default-face 'corfu-default)  ; Match corfu's face
+  (kind-icon-blend-background nil)         ; Use distinct icon colors
+  (kind-icon-blend-frac 0.08)              ; Slight background blending
+  :config
+  ;; Add icon support to corfu
+  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
+
 (use-package cape
   :ensure
   :init
