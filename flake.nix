@@ -120,16 +120,14 @@
         {
           default = pkgs.mkShell {
             # Pinned packages available in the environment
-            packages =
-              with pkgs;
-              [
-                nixpkgs-fmt
-                just
-                deadnix
-                statix
-                git
-                (pkgs.callPackage ./default.nix { })
-              ];
+            packages = with pkgs; [
+              nixpkgs-fmt
+              just
+              deadnix
+              statix
+              git
+              (pkgs.callPackage ./default.nix { })
+            ];
 
             shellHook = ''
               echo "Emacs Development Environment"
