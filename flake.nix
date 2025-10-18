@@ -65,39 +65,21 @@
       inherit (flake-schemas) schemas;
       packages = forEachSupportedSystem (
         { pkgs, ... }:
-        {
-          default = pkgs.callPackage ./default.nix { };
-          config =
-            let
-              ignore = pkgs.lib.fileset.unions [
-                ./.claude
-                ./.envrc
-                ./.github
-                ./.gitignore
-                ./CLAUDE.md
-                ./default.nix
-                ./flake.lock
-                ./flake.nix
-                ./justfile
-                ./module.nix
-                ./nmt-tests
-                ./tests
-              ];
-            in
-            pkgs.stdenvNoCC.mkDerivation {
-              pname = "emacs-config";
-              version = "1.0.0";
-              src = pkgs.lib.fileset.toSource {
-                root = ./.;
-                fileset = pkgs.lib.fileset.difference ./. ignore;
-              };
-              installPhase = "cp -r $src $out";
-            };
+        rec {
+          default = emacs;
+          emacs = pkgs.callPackage ./default.nix { };
+          config = pkgs.callPackage ./config.nix { };
+
         }
       );
       formatter = forEachSupportedSystem ({ pkgs }: treefmtEval.${pkgs.system}.config.build.wrapper);
 
       homeModules.default = ./module.nix;
+
+      overlays.default = final: _prev: {
+        jylhis-emacs = final.callPackage ./default.nix { };
+        jylhis-emacs-config = final.callPackage ./config.nix { };
+      };
 
       checks = forEachSupportedSystem (
         { pkgs }:
