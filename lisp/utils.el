@@ -31,11 +31,24 @@ color codes."
       (nreverse files))))
 
 (defun my/update-org-agenda-files ()
-  "Update org-agenda-files to include all .org files under Documents."
-  (let ((org-files (my/find-org-files-recursively (expand-file-name org-directory))))
+  "Update org-agenda-files to include all .org files from multiple directories."
+  (let* ((directories '("~/Documents/Notes"
+                        "~/Dropbox/Notes"
+                        "~/Dropbox/Documents/Notes"))
+         (org-files '()))
+    ;; Collect org files from all directories that exist
+    (dolist (dir directories)
+      (let ((expanded-dir (expand-file-name dir)))
+        (when (file-exists-p expanded-dir)
+          (setq org-files (append org-files
+                                  (my/find-org-files-recursively expanded-dir))))))
+    ;; Remove duplicates (in case of symlinks or overlapping paths)
+    (setq org-files (delete-dups org-files))
     (when org-files
       (setq org-agenda-files org-files))
-    (message "Updated org-agenda-files: %d files found" (length org-files))))
+    (message "Updated org-agenda-files: %d files found across %d directories"
+             (length org-files)
+             (length (seq-filter (lambda (d) (file-exists-p (expand-file-name d))) directories)))))
 
 (defun my/setup-org-agenda-files ()
   "Set up dynamic org agenda files updating."
