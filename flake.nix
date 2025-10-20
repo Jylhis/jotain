@@ -136,8 +136,22 @@
             ];
 
             shellHook = ''
-              echo "Emacs Development Environment"
-              echo "============================"
+              # Create isolated development environment
+              export DEV_HOME="$PWD/.dev-home"
+              mkdir -p "$DEV_HOME"/{.config,.cache,.local/share}
+
+              # Isolate Emacs from user's home directory
+              export HOME="$DEV_HOME"
+              export XDG_CONFIG_HOME="$DEV_HOME/.config"
+              export XDG_CACHE_HOME="$DEV_HOME/.cache"
+              export XDG_DATA_HOME="$DEV_HOME/.local/share"
+
+              echo "Emacs Development Environment (ISOLATED)"
+              echo "========================================"
+              echo "🔒 Isolated environment active!"
+              echo "   HOME: $HOME"
+              echo "   Your personal Emacs config is protected"
+              echo ""
               echo "Available commands:"
               echo "  just           - Show all available commands"
               echo "  just test      - Run ERT tests"
@@ -149,6 +163,9 @@
               echo "  nix fmt        - Format and check Nix files"
               echo "  deadnix .      - Find dead Nix code"
               echo "  statix check . - Find Nix anti-patterns"
+              echo ""
+              echo "⚠️  Note: This shell uses isolated HOME directory"
+              echo "   Changes won't affect your personal Emacs setup"
             '';
           };
         }

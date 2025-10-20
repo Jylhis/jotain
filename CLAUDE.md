@@ -37,11 +37,13 @@ just build
 # Byte-compile all Emacs Lisp files (for development)
 just compile
 
-# Clean compiled files and cache
+# Clean compiled files and cache (safe, only touches project files)
 just clean
 
-# Start Emacs with clean config (for testing)
-just emacs-clean
+# Interactive development (isolated environment)
+just emacs-dev                 # Recommended: Run Emacs with project config (safe)
+just emacs-test-interactive    # Interactive testing with isolation messages
+just emacs-clean              # Without isolation (not recommended, shows warning)
 ```
 
 Development workflow:
@@ -63,6 +65,79 @@ nix fmt                # Format Nix files
 just update            # Update all flake inputs
 just update-input nixpkgs  # Update specific input
 ```
+
+## Development Environment Isolation
+
+**Your personal Emacs configuration is protected!** This project uses multiple isolation mechanisms to ensure development work never interferes with your personal Emacs setup.
+
+### Nix DevShell Isolation
+
+When you enter the development shell with `nix develop`, your environment is automatically isolated:
+
+```bash
+# Automatically sets:
+HOME=$PWD/.dev-home
+XDG_CONFIG_HOME=$PWD/.dev-home/.config
+XDG_CACHE_HOME=$PWD/.dev-home/.cache
+XDG_DATA_HOME=$PWD/.dev-home/.local/share
+```
+
+This means:
+- ✅ Your personal `~/.config/emacs/` is untouched
+- ✅ Your personal `~/.emacs.d/` is untouched
+- ✅ All development activity happens in `.dev-home/` (git-ignored)
+- ✅ `just clean` only affects project files, never your home directory
+
+### Safe Development Commands
+
+Use these commands for isolated testing:
+
+```bash
+# Recommended: Run Emacs with project config in isolated environment
+just emacs-dev
+
+# For interactive testing with clear isolation messages
+just emacs-test-interactive
+
+# Caution: Runs without isolation (not recommended)
+just emacs-clean  # Shows warning
+```
+
+### Test Isolation
+
+All testing commands are automatically isolated:
+
+- **ERT tests** (`just test`, `just test-tag`): Use `emacs -Q` with `user-emacs-directory` set to project
+- **NMT tests** (`just test-nmt`): Run in Nix sandbox, completely isolated
+- **Runtime tests** (`just test-runtime`): Run in nixosTest VM with fresh testuser
+
+### Clean Commands Are Safe
+
+The `clean` commands only affect project files:
+
+```bash
+just clean      # Cleans project .elc files and .dev-home/
+just clean-all  # Same as clean (no package dirs with Nix)
+```
+
+**Before the fix, these commands would have deleted your personal Emacs config! Now they're safe.**
+
+### How Isolation Works
+
+1. **DevShell**: Environment variables redirect HOME to `.dev-home/`
+2. **Commands**: Use `-Q` flag and explicit `user-emacs-directory` settings
+3. **Tests**: Run in Nix sandbox or VM, completely isolated
+4. **Git**: `.dev-home/` is git-ignored, temporary development artifacts
+
+### When You Need Caution
+
+Only these scenarios bypass isolation (by design):
+
+- Running `emacs` directly without any flags outside the devshell
+- Using `just emacs-clean` (shows warning, prefer `just emacs-dev`)
+- Manually setting paths that point to your home directory
+
+**Best Practice**: Always use `nix develop` to enter the devshell, then all commands are automatically safe.
 
 ## Architecture Overview
 
