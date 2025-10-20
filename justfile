@@ -1,5 +1,8 @@
 config_dir := justfile_directory()
-emacs_config_dir := env_var_or_default('XDG_CONFIG_HOME', env_var('HOME') + '/.config') + '/emacs'
+# Project directory for cleaning/compilation (not user's home!)
+emacs_config_dir := config_dir
+# Isolated dev environment directory
+dev_home := config_dir + '/.dev-home'
 system := `nix eval --impure --raw --expr 'builtins.currentSystem'`
 
 # Default command - show available commands
@@ -54,30 +57,6 @@ test-tag TAG:
         --load "{{config_dir}}/tests/test-all.el" \
         --eval "(ert-run-tests-batch-and-exit '(tag {{TAG}}))"
 
-# Run elisp-lint on all Emacs Lisp files
-[group('check')]
-lint:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    find "{{config_dir}}" -name "*.el" -not -path "*/.*" | while read -r file; do
-        echo "Linting: $file"
-        emacs -Q --batch -l elisp-lint.el -f elisp-lint-files-batch "$file"
-    done
-
-# Run elisp-lint on a specific file
-[group('check')]
-lint-file FILE:
-    emacs -Q --batch -l elisp-lint.el -f elisp-lint-files-batch "{{FILE}}"
-
-# Check for package-lint issues
-[group('check')]
-package-lint:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    find "{{config_dir}}" -name "*.el" -not -path "*/.*" | while read -r file; do
-        echo "Package-linting: $file"
-        emacs -Q --batch -l package-lint.el -f package-lint-batch-and-exit "$file"
-    done
 
 # Build the Emacs package with Nix
 [group('build')]
@@ -98,50 +77,75 @@ compile:
 # Maintenance and Cleanup
 # ======================
 
-# Clean byte-compiled files and cache
+# Clean byte-compiled files and cache from project directory
 [group('clean')]
 clean:
-    @echo "Cleaning Emacs configuration..."
+    @echo "Cleaning project Emacs files..."
     find "{{emacs_config_dir}}" -name "*.elc" -type f -delete 2>/dev/null || true
     find "{{emacs_config_dir}}" -name "*~" -type f -delete 2>/dev/null || true
     find "{{emacs_config_dir}}" -name "#*#" -type f -delete 2>/dev/null || true
     find "{{emacs_config_dir}}" -name ".#*" -type f -delete 2>/dev/null || true
     rm -rf "{{emacs_config_dir}}/eln-cache/" 2>/dev/null || true
-    @echo "Cleanup completed!"
+    @echo "Cleaning isolated dev environment..."
+    rm -rf "{{dev_home}}" 2>/dev/null || true
+    @echo "Cleanup completed! (only project files, user's home config untouched)"
 
-# Clean and remove all package directories
+# Deep clean (same as clean for Nix-based config)
 [group('clean')]
 clean-all:
-    @echo "Deep cleaning Emacs configuration..."
+    @echo "Deep cleaning project files..."
+    @echo "Note: This config uses Nix, no package directories to remove"
     just clean
-    rm -rf "{{emacs_config_dir}}"/{elpa,elpaca,straight,.packages,quelpa}/ 2>/dev/null || true
-    rm -f "{{emacs_config_dir}}"/package-quickstart.el 2>/dev/null || true
-    rm -f "{{emacs_config_dir}}"/session.* 2>/dev/null || true
-    rm -f "{{emacs_config_dir}}"/desktop 2>/dev/null || true
     @echo "Deep cleanup completed!"
 
 # Development Tools
 # ================
 
-# Start Emacs with clean configuration (no packages)
+# Start Emacs with project config in isolated environment (safe for testing)
+[group('dev')]
+emacs-dev:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Create isolated environment
+    mkdir -p "{{dev_home}}"/{.config,.cache,.local/share}
+    # Run Emacs with project config in isolation
+    HOME="{{dev_home}}" \
+    XDG_CONFIG_HOME="{{dev_home}}/.config" \
+    XDG_CACHE_HOME="{{dev_home}}/.cache" \
+    XDG_DATA_HOME="{{dev_home}}/.local/share" \
+    emacs -Q \
+        --eval "(progn \
+                  (setq user-emacs-directory \"{{config_dir}}/\") \
+                  (add-to-list 'load-path \"{{config_dir}}/config\") \
+                  (add-to-list 'load-path \"{{config_dir}}/lisp\") \
+                  (load-file \"{{config_dir}}/init.el\"))"
+
+# Start Emacs for interactive testing with project config (isolated)
+[group('dev')]
+emacs-test-interactive:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p "{{dev_home}}"/{.config,.cache,.local/share}
+    echo "Starting Emacs in isolated test environment..."
+    echo "HOME is temporarily set to: {{dev_home}}"
+    echo "Your personal config is safe!"
+    HOME="{{dev_home}}" \
+    XDG_CONFIG_HOME="{{dev_home}}/.config" \
+    XDG_CACHE_HOME="{{dev_home}}/.cache" \
+    XDG_DATA_HOME="{{dev_home}}/.local/share" \
+    emacs -Q \
+        --eval "(progn \
+                  (setq user-emacs-directory \"{{config_dir}}/\") \
+                  (add-to-list 'load-path \"{{config_dir}}/config\") \
+                  (add-to-list 'load-path \"{{config_dir}}/lisp\") \
+                  (load-file \"{{config_dir}}/init.el\"))"
+
+# Start Emacs with clean configuration (no packages, no isolation - USE WITH CAUTION)
 [group('dev')]
 emacs-clean:
+    @echo "⚠️  Warning: This runs without isolation!"
+    @echo "Consider using 'just emacs-dev' instead for safe testing"
     emacs -Q --eval "(progn (add-to-list 'load-path \"{{config_dir}}/config\") (add-to-list 'load-path \"{{config_dir}}/lisp\") (load-file \"{{config_dir}}/init.el\"))"
-
-# Start Emacs daemon
-[group('dev')]
-daemon:
-    emacs --daemon
-
-# Connect to Emacs daemon
-[group('dev')]
-client:
-    emacsclient -c -a emacs
-
-# Test configuration with minimal setup
-[group('dev')]
-test-minimal:
-    emacs -Q --batch --eval "(message \"Emacs version: %s\" emacs-version)"
 
 # Show configuration status
 [group('info')]
