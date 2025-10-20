@@ -84,16 +84,40 @@
       checks = forEachSupportedSystem (
         { pkgs }:
         let
+          emacsPackage = pkgs.callPackage ./default.nix { };
           nmtTests = import ./nmt-tests {
             inherit pkgs home-manager;
             homeModule = self.homeModules.default;
+            inherit emacsPackage;
+          };
+          runtimeTests = import ./nmt-tests/runtime.nix {
+            inherit pkgs home-manager;
+            homeModule = self.homeModules.default;
+            inherit emacsPackage;
           };
         in
         {
+          # Formatting check
           formatting = treefmtEval.${pkgs.system}.config.build.check self;
-          emacs-tests = (pkgs.callPackage ./default.nix { }).passthru.tests;
+
+          # Fast smoke test - critical validation only
+          smoke-test = pkgs.runCommand "emacs-smoke-test" { } ''
+            # Test 1: Emacs binary exists and is executable
+            test -x ${self.packages.${pkgs.system}.emacs}/bin/emacs
+            echo "PASS: Emacs binary is executable"
+
+            # Test 2: Emacs starts without errors
+            ${self.packages.${pkgs.system}.emacs}/bin/emacs --batch --eval '(message "Smoke test: OK")'
+            echo "PASS: Emacs starts successfully"
+
+            touch $out
+          '';
+
+          # ERT unit tests
+          emacs-tests = emacsPackage.passthru.tests;
         }
         // nmtTests
+        // runtimeTests
       );
 
       # Development environments

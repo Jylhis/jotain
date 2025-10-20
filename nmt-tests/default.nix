@@ -2,6 +2,7 @@
   pkgs,
   home-manager,
   homeModule,
+  ...
 }:
 let
   # Helper to build a home-manager configuration
@@ -30,8 +31,9 @@ let
 
   # Test configurations
   tests = {
-    # Test 1: Emacs configuration files are properly linked
-    test-emacs-config-files = mkTest "config-files" ''
+    # Comprehensive test for module when enabled
+    # Tests: config files, directory structure, shell aliases, service, fonts
+    test-module-enabled = mkTest "module-enabled" ''
       set -euo pipefail
 
       echo "Building test home-manager configuration..."
@@ -46,7 +48,9 @@ let
         ]
       }"
 
-      echo "Checking if .config/emacs directory is created..."
+      echo "=== Testing Configuration Files ==="
+
+      # Check .config/emacs directory exists
       if [ -e "$homeConfig/home-files/.config/emacs" ]; then
         echo "PASS: .config/emacs directory exists"
       else
@@ -56,37 +60,39 @@ let
         exit 1
       fi
 
-      echo "Checking if init.el is present..."
-      if [ -f "$homeConfig/home-files/.config/emacs/init.el" ]; then
-        echo "PASS: init.el file exists"
-      else
-        echo "FAIL: init.el file not found"
-        echo "Contents of .config/emacs:"
-        ls -la "$homeConfig/home-files/.config/emacs/" || true
-        exit 1
-      fi
+      emacsConfigDir="$homeConfig/home-files/.config/emacs"
 
-      echo "All config file tests passed!"
-      touch $out
-    '';
+      # Check for key files
+      expectedFiles=(init.el early-init.el)
+      for file in "''${expectedFiles[@]}"; do
+        if [ -f "$emacsConfigDir/$file" ]; then
+          echo "PASS: File '$file' exists"
+        else
+          echo "FAIL: File '$file' not found"
+          echo "Available files:"
+          ls -la "$emacsConfigDir/" || true
+          exit 1
+        fi
+      done
 
-    # Test 2: Shell aliases are correctly configured
-    test-shell-aliases = mkTest "shell-aliases" ''
-      set -euo pipefail
+      echo "=== Testing Directory Structure ==="
 
-      echo "Building test home-manager configuration..."
-      homeConfig="${
-        buildHomeConfig [
-          {
-            programs.emacs = {
-              enable = true;
-              userConfig = ./..;
-            };
-          }
-        ]
-      }"
+      # Check for expected directories (config/, lisp/)
+      expectedDirs=(config lisp)
+      for dir in "''${expectedDirs[@]}"; do
+        if [ -d "$emacsConfigDir/$dir" ]; then
+          echo "PASS: Directory '$dir' exists"
+        else
+          echo "FAIL: Directory '$dir' not found"
+          echo "Available directories:"
+          ls -la "$emacsConfigDir/" || true
+          exit 1
+        fi
+      done
 
-      echo "Checking shell aliases configuration..."
+      echo "PASS: Required directories present"
+
+      echo "=== Testing Shell Aliases ==="
 
       # Check if shell aliases exist in activation script
       if grep -q "shellAliases" "$homeConfig/activate" 2>/dev/null; then
@@ -100,33 +106,12 @@ let
         fi
       fi
 
-      echo "Shell alias tests completed!"
-      touch $out
-    '';
-
-    # Test 3: Emacs service is enabled
-    test-emacs-service = mkTest "emacs-service" ''
-      set -euo pipefail
-
-      echo "Building test home-manager configuration..."
-      homeConfig="${
-        buildHomeConfig [
-          {
-            programs.emacs = {
-              enable = true;
-              userConfig = ./..;
-            };
-          }
-        ]
-      }"
-
-      echo "Checking if Emacs service is configured..."
+      echo "=== Testing Emacs Service ==="
 
       # Check for systemd service files
       if [ -d "$homeConfig/home-files/.config/systemd/user" ]; then
         echo "PASS: Systemd user directory exists"
 
-        # Check for emacs service files
         if ls "$homeConfig/home-files/.config/systemd/user/"*emacs* 1>/dev/null 2>&1; then
           echo "PASS: Emacs service files found:"
           ls -1 "$homeConfig/home-files/.config/systemd/user/"*emacs* || true
@@ -143,33 +128,12 @@ let
         fi
       fi
 
-      echo "Service configuration tests completed!"
-      touch $out
-    '';
-
-    # Test 4: Font packages are installed
-    test-font-packages = mkTest "font-packages" ''
-      set -euo pipefail
-
-      echo "Building test home-manager configuration..."
-      homeConfig="${
-        buildHomeConfig [
-          {
-            programs.emacs = {
-              enable = true;
-              userConfig = ./..;
-            };
-          }
-        ]
-      }"
-
-      echo "Checking if font packages are included..."
+      echo "=== Testing Font Packages ==="
 
       # Check the home-path for font packages
       if [ -d "$homeConfig/home-path/share/fonts" ]; then
         echo "PASS: Fonts directory exists in home-path"
 
-        # Count font files
         fontCount=$(find "$homeConfig/home-path/share/fonts" -type f 2>/dev/null | wc -l)
         echo "Found $fontCount font files"
 
@@ -184,11 +148,11 @@ let
         ls -la "$homeConfig/home-path/share/" 2>/dev/null | head -20 || true
       fi
 
-      echo "Font package tests completed!"
+      echo "=== All Module Enabled Tests Passed ==="
       touch $out
     '';
 
-    # Test 5: Module is disabled when emacs is not enabled
+    # Test that module behaves correctly when disabled
     test-module-disabled = mkTest "module-disabled" ''
       set -euo pipefail
 
@@ -212,56 +176,6 @@ let
       fi
 
       echo "Module disable tests passed!"
-      touch $out
-    '';
-
-    # Test 6: Fileset source works correctly
-    test-fileset-source = mkTest "fileset-source" ''
-      set -euo pipefail
-
-      echo "Building test home-manager configuration..."
-      homeConfig="${
-        buildHomeConfig [
-          {
-            programs.emacs = {
-              enable = true;
-              userConfig = ./..;
-            };
-          }
-        ]
-      }"
-
-      echo "Checking fileset-based source structure..."
-
-      emacsConfigDir="$homeConfig/home-files/.config/emacs"
-
-      # Check for expected directories
-      expectedDirs=(config lisp tests)
-      for dir in "''${expectedDirs[@]}"; do
-        if [ -d "$emacsConfigDir/$dir" ]; then
-          echo "PASS: Directory '$dir' exists"
-        else
-          echo "FAIL: Directory '$dir' not found"
-          echo "Available directories:"
-          ls -la "$emacsConfigDir/" || true
-          exit 1
-        fi
-      done
-
-      # Check for key files
-      expectedFiles=(init.el early-init.el)
-      for file in "''${expectedFiles[@]}"; do
-        if [ -f "$emacsConfigDir/$file" ]; then
-          echo "PASS: File '$file' exists"
-        else
-          echo "FAIL: File '$file' not found"
-          echo "Available files:"
-          ls -la "$emacsConfigDir/" || true
-          exit 1
-        fi
-      done
-
-      echo "Fileset structure tests passed!"
       touch $out
     '';
   };

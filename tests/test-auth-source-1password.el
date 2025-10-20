@@ -13,18 +13,20 @@
 
   (ert-deftest test-auth-source-1password-package-loaded ()
     "Test that auth-source-1password package is properly loaded."
+    :tags '(unit integration auth fast)
     (should (featurep 'auth-source-1password))
     (should (fboundp 'auth-source-1password-enable))
     (should (fboundp 'auth-source-1password-search)))
 
   (ert-deftest test-auth-source-1password-variables ()
     "Test that auth-source-1password variables are properly configured."
+    :tags '(unit auth fast)
     ;; Test that custom variables are defined
     (should (boundp 'auth-source-1password-vault))
     (should (boundp 'auth-source-1password-op-executable))
     (should (boundp 'auth-source-1password-debug))
     (should (boundp 'auth-source-1password-cache-ttl))
-    
+
     ;; Test default values are reasonable
     (should (stringp auth-source-1password-vault))
     (should (stringp auth-source-1password-op-executable))
@@ -34,6 +36,7 @@
 
   (ert-deftest test-auth-source-1password-cli-check ()
     "Test the 1Password CLI availability check function."
+    :tags '(unit auth fast)
     (should (fboundp 'my/check-1password-cli))
     ;; Test that the function doesn't error when called
     (should (or (executable-find "op")
@@ -41,6 +44,7 @@
 
   (ert-deftest test-auth-source-1password-backend-enabled ()
     "Test that 1Password is properly registered as an auth-source backend."
+    :tags '(integration auth)
     (should (member 'auth-source-1password-search
                     (mapcar (lambda (backend)
                               (when (functionp (plist-get backend :search))
@@ -49,6 +53,7 @@
 
   (ert-deftest test-auth-source-1password-search-fields ()
     "Test that search fields are properly configured."
+    :tags '(unit auth fast)
     (should (boundp 'auth-source-1password-search-fields))
     (should (listp auth-source-1password-search-fields))
     (should (member "title" auth-source-1password-search-fields))
@@ -59,6 +64,7 @@
 (unless (featurep 'auth-source-1password)
   (ert-deftest test-auth-source-1password-not-available ()
     "Test behavior when auth-source-1password is not available."
+    :tags '(unit auth fast)
     (should-not (featurep 'auth-source-1password))
     (should-not (fboundp 'auth-source-1password-enable))))
 

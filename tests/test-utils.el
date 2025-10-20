@@ -55,6 +55,7 @@ Returns the path to the temporary directory."
 ;; Tests for my/find-org-files-recursively
 (ert-deftest test-my/find-org-files-recursively-basic ()
   "Test that my/find-org-files-recursively finds org files and ignores hidden folders."
+  :tags '(unit utils filesystem)
   (let ((temp-dir (test-utils--create-temp-directory-structure)))
     (unwind-protect
         (let ((org-files (my/find-org-files-recursively temp-dir)))
@@ -72,11 +73,13 @@ Returns the path to the temporary directory."
 
 (ert-deftest test-my/find-org-files-recursively-nonexistent-directory ()
   "Test that my/find-org-files-recursively returns nil for nonexistent directory."
+  :tags '(unit utils fast)
   (let ((result (my/find-org-files-recursively "/nonexistent/directory")))
     (should (null result))))
 
 (ert-deftest test-my/find-org-files-recursively-empty-directory ()
   "Test that my/find-org-files-recursively returns nil for empty directory."
+  :tags '(unit utils filesystem fast)
   (let ((temp-dir (make-temp-file "emacs-test-empty-" t)))
     (unwind-protect
         (let ((result (my/find-org-files-recursively temp-dir)))
@@ -85,11 +88,13 @@ Returns the path to the temporary directory."
 
 (ert-deftest test-my/find-org-files-recursively-nil-input ()
   "Test that my/find-org-files-recursively handles nil input gracefully."
+  :tags '(unit utils fast)
   (let ((result (my/find-org-files-recursively nil)))
     (should (null result))))
 
 (ert-deftest test-my/find-org-files-recursively-file-input ()
   "Test that my/find-org-files-recursively returns nil when given a file instead of directory."
+  :tags '(unit utils filesystem fast)
   (let ((temp-file (make-temp-file "emacs-test-file-" nil ".org")))
     (unwind-protect
         (let ((result (my/find-org-files-recursively temp-file)))
@@ -100,6 +105,7 @@ Returns the path to the temporary directory."
 ;; Tests for my/update-org-agenda-files
 (ert-deftest test-my/update-org-agenda-files-with-temp-directory ()
   "Test that my/update-org-agenda-files correctly updates agenda files from custom directories."
+  :tags '(unit utils filesystem)
   (let ((temp-dir (test-utils--create-temp-directory-structure))
         (original-org-agenda-files org-agenda-files))
     (unwind-protect
@@ -124,6 +130,7 @@ Returns the path to the temporary directory."
 
 (ert-deftest test-my/update-org-agenda-files-with-nonexistent-directory ()
   "Test that my/update-org-agenda-files preserves agenda files when directories don't exist."
+  :tags '(unit utils fast)
   (let ((original-org-agenda-files org-agenda-files))
     (unwind-protect
         (progn
@@ -142,7 +149,7 @@ Returns the path to the temporary directory."
 ;; Add a test for error conditions
 (ert-deftest test-my/find-org-files-recursively-symlink-handling ()
   "Test that my/find-org-files-recursively handles symbolic links correctly."
-  :tags '(slow filesystem)
+  :tags '(unit utils filesystem slow)
   (skip-unless (eq system-type 'gnu/linux))  ; Only run on GNU/Linux systems
   (let ((temp-dir (make-temp-file "emacs-test-symlink-" t)))
     (unwind-protect
