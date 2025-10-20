@@ -204,23 +204,74 @@ The home-manager module handles deployment of the Emacs configuration:
 
 ## Testing Approach
 
-This project uses two testing frameworks:
+This project uses tiered testing for fast development feedback and comprehensive validation.
+
+### Test Speed Tiers
+
+Tests are organized by speed for progressive validation:
+
+**Instant Checks (< 10 seconds)**
+```bash
+just check-instant    # Formatting + binary smoke + ERT smoke tests
+just test-smoke       # ERT smoke tests only (< 1 second)
+```
+
+**Fast Validation (< 1 minute)**
+```bash
+just check-fast       # Instant checks + fast unit tests
+just test-fast        # Fast ERT tests only (< 5 seconds, excludes slow filesystem tests)
+```
+
+**Full Local Testing (< 5 minutes, excludes VM)**
+```bash
+just check-full       # All checks except VM runtime tests (same as `nix flake check`)
+just test             # Full ERT suite including slow tests
+just test-all         # ERT + NMT tests (excludes VM)
+```
+
+**Complete Validation (includes VM, ~5-10 minutes)**
+```bash
+just check-all              # Everything including VM runtime tests
+just test-all-plus-runtime  # Same as above (sets CI=1)
+just test-runtime           # VM runtime test only
+```
+
+**Parallel Execution (faster on multi-core)**
+```bash
+just check-parallel  # Run all fast checks in parallel using -j auto
+```
 
 ### ERT (Emacs Lisp Regression Testing)
+
 Unit tests for Emacs Lisp code:
 - Test files in `tests/` directory
 - Named `test-*.el`
-- Run with `just test` (via Nix) or `just test-tag TAG` (by tag: smoke, fast, unit, integration)
+- Tests use tags for speed tiers: `smoke`, `fast`, `unit`, `integration`, `slow`
+- Run specific tags with `just test-tag TAG`
 - Tests are built into the Nix package via `passthru.tests` in default.nix
-- Automatically run during `nix flake check`
+
+**Test Tiers:**
+- `tests/test-smoke.el`: Ultra-fast smoke tests (< 1 second, no I/O)
+- `tests/test-platform.el`, `tests/test-utils.el` (fast tests): Unit tests with minimal I/O
+- `tests/test-init-loads.el`: Integration tests (loads full config, slow)
+- All tests: `just test` or `nix build .#checks.x86_64-linux.emacs-tests`
+
+**Tag Conventions:**
+- `:tags '(smoke critical)` - Must pass, ultra-fast (< 1 second total)
+- `:tags '(fast unit)` - Fast unit tests (no heavy I/O)
+- `:tags '(unit)` - Standard unit tests
+- `:tags '(integration slow)` - Integration tests (loads packages/config)
+- `:tags '(filesystem slow)` - Tests with filesystem operations
 
 When adding ERT tests:
-1. Add tests in tests/test-feature.el
-2. Update default.nix passthru.tests to load new test file (add `--load` statement)
-3. Ensure tests pass with `just test`
-4. Test naming convention: `(ert-deftest test-module-feature () ...)`
+1. Add tests in tests/test-feature.el with appropriate tags
+2. Tests auto-load via tests/test-all.el (no manual registration needed)
+3. Use fast tests for most unit testing, slow tests only when necessary
+4. Run `just test-smoke` for instant feedback during development
+5. Test naming convention: `(ert-deftest test-module/feature () ...)`
 
 ### NMT (Nix Module Tests)
+
 Integration tests for the home-manager module:
 - Test files in `nmt-tests/` directory
 - Uses `home-manager.lib.homeManagerConfiguration` to build actual configurations
@@ -232,20 +283,19 @@ Integration tests for the home-manager module:
 
 When adding NMT tests:
 1. Add test definition in nmt-tests/default.nix using `mkTest` helper
-2. Update justfile test-nmt command to include new test
+2. Tests are automatically included in `nix flake check`
 3. Update nmt-tests/README.md with test description
 4. Ensure tests pass with `just test-nmt`
 5. Tests should use `set -euo pipefail` for strict error handling
 
-### Running All Tests
-Use `just test-all` or `nix flake check` to run both ERT and NMT tests.
-
 ### Runtime Validation
-Optional, comprehensive end-to-end test using nixosTest:
-- Run with `just test-runtime` (starts a VM, slower)
+
+Comprehensive end-to-end test using nixosTest:
+- Run with `just test-runtime` (starts a VM, 2-5 minutes)
 - Validates actual Emacs execution, daemon, and client connectivity
-- Not included in `just test-all` for faster local testing
-- Always runs in CI via `nix flake check`
+- **Excluded from `nix flake check`** by default for faster local development
+- **Automatically runs in CI** when `CI` environment variable is set
+- Run locally with `CI=1 nix flake check` or `just test-all-plus-runtime`
 
 ### Test Boundaries - What to Test Where
 

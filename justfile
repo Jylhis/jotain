@@ -17,17 +17,81 @@ default:
 check:
     nix build --dry-run .#default
 
-# Run ERT unit tests via Nix
+# Run ultra-fast smoke tests (< 1 second)
+[group('check')]
+test-smoke:
+    @echo "Running smoke tests (<  1 second)..."
+    nix build .#checks.{{system}}.smoke-tests --print-build-logs
+
+# Run fast unit tests (< 5 seconds, excludes slow filesystem tests)
+[group('check')]
+test-fast:
+    @echo "Running fast unit tests (< 5 seconds)..."
+    nix build .#checks.{{system}}.fast-tests --print-build-logs
+
+# Run ERT unit tests via Nix (full suite including slow tests)
 [group('check')]
 test:
-    @echo "Running ERT unit tests via Nix..."
+    @echo "Running full ERT test suite..."
     nix build .#checks.{{system}}.emacs-tests --print-build-logs
 
-# Run all checks including NMT tests
+# Run all fast checks (formatting + smoke + fast tests + NMT, excludes VM)
 [group('check')]
 test-all:
-    @echo "Running all tests (ERT + NMT)..."
+    @echo "Running all fast checks (excludes VM runtime tests)..."
     nix flake check --print-build-logs
+
+# Run ALL tests including slow VM runtime validation
+[group('check')]
+test-all-plus-runtime:
+    @echo "Running ALL tests including VM runtime validation..."
+    CI=1 nix flake check --print-build-logs
+
+# Run checks in parallel (faster on multi-core systems)
+[group('check')]
+check-parallel:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Running fast checks in parallel..."
+    nix build \
+      .#checks.{{system}}.formatting \
+      .#checks.{{system}}.binary-smoke-test \
+      .#checks.{{system}}.smoke-tests \
+      .#checks.{{system}}.fast-tests \
+      .#checks.{{system}}.emacs-tests \
+      .#checks.{{system}}.test-module-enabled \
+      .#checks.{{system}}.test-module-disabled \
+      --keep-going \
+      --print-build-logs \
+      -j auto
+    echo "All fast checks passed!"
+
+# Instant feedback checks (< 10 seconds)
+[group('check')]
+check-instant:
+    @echo "Running instant checks (< 10 seconds)..."
+    nix build .#checks.{{system}}.formatting --print-build-logs
+    nix build .#checks.{{system}}.binary-smoke-test --print-build-logs
+    nix build .#checks.{{system}}.smoke-tests --print-build-logs
+
+# Fast validation (< 1 minute)
+[group('check')]
+check-fast:
+    @echo "Running fast validation (< 1 minute)..."
+    @just check-instant
+    nix build .#checks.{{system}}.fast-tests --print-build-logs
+
+# Full local testing (< 5 minutes, excludes VM)
+[group('check')]
+check-full:
+    @echo "Running full local testing..."
+    nix flake check --print-build-logs
+
+# Complete validation (includes VM runtime tests)
+[group('check')]
+check-all:
+    @echo "Running complete validation (includes VM)..."
+    @just test-all-plus-runtime
 
 # Run NMT home-manager module tests
 [group('check')]
@@ -56,6 +120,16 @@ test-tag TAG:
         --load "{{config_dir}}/tests/test-helpers.el" \
         --load "{{config_dir}}/tests/test-all.el" \
         --eval "(ert-run-tests-batch-and-exit '(tag {{TAG}}))"
+
+# Run only unit tests (no integration tests)
+[group('check')]
+test-unit:
+    @just test-tag unit
+
+# Run only integration tests
+[group('check')]
+test-integration:
+    @just test-tag integration
 
 
 # Build the Emacs package with Nix

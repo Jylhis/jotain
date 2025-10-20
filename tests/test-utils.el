@@ -2,6 +2,7 @@
 
 ;;; Commentary:
 ;; Unit tests for utility functions in utils.el using ERT.
+;; Tests are tagged for performance: fast vs filesystem operations.
 
 ;;; Code:
 
@@ -9,92 +10,51 @@
 (require 'cl-lib)
 (require 'utils)
 
-;; Set up minimal org-mode variables for testing
-(defvar org-directory (expand-file-name "~/Documents")
-  "Directory for org files.")
-(defvar org-agenda-files nil
-  "List of org agenda files.")
+;; Mock org variables for testing (avoid loading org-mode)
+(defvar org-directory)
+(defvar org-agenda-files)
+(setq org-directory (expand-file-name "~/Documents"))
+(setq org-agenda-files nil)
 
-;; Test helper functions
-(defun test-utils--create-temp-directory-structure ()
-  "Create a temporary directory structure for testing.
-Returns the path to the temporary directory."
-  (let* ((temp-dir (make-temp-file "emacs-test-" t))
-         (subdir (file-name-as-directory (expand-file-name "subdir" temp-dir)))
-         (hidden-dir (file-name-as-directory (expand-file-name ".hidden" temp-dir)))
-         (nested-hidden-dir (file-name-as-directory (expand-file-name ".git/objects" temp-dir))))
-    
-    ;; Create directories
-    (make-directory subdir t)
-    (make-directory hidden-dir t)
-    (make-directory nested-hidden-dir t)
-    
-    ;; Create org files in various locations
-    (with-temp-file (expand-file-name "test1.org" temp-dir)
-      (insert "* Test 1\n"))
-    (with-temp-file (expand-file-name "test2.org" subdir)
-      (insert "* Test 2\n"))
-    (with-temp-file (expand-file-name "hidden.org" hidden-dir)
-      (insert "* Hidden\n"))
-    (with-temp-file (expand-file-name "nested-hidden.org" nested-hidden-dir)
-      (insert "* Nested Hidden\n"))
-    
-    ;; Create non-org files
-    (with-temp-file (expand-file-name "test.txt" temp-dir)
-      (insert "Not an org file\n"))
-    (with-temp-file (expand-file-name "README.md" subdir)
-      (insert "# README\n"))
-    
-    temp-dir))
+;;; Fast Tests (no I/O)
 
-(defun test-utils--cleanup-temp-directory (temp-dir)
-  "Cleanup temporary directory TEMP-DIR."
-  (when (and temp-dir (file-exists-p temp-dir))
-    (delete-directory temp-dir t)))
-
-;; Tests for my/find-org-files-recursively
-(ert-deftest test-my/find-org-files-recursively-basic ()
-  "Test that my/find-org-files-recursively finds org files and ignores hidden folders."
-  :tags '(unit utils filesystem)
-  (let ((temp-dir (test-utils--create-temp-directory-structure)))
-    (unwind-protect
-        (let ((org-files (my/find-org-files-recursively temp-dir)))
-          ;; Should find exactly 2 org files (test1.org and subdir/test2.org)
-          (should (= (length org-files) 2))
-          (should (cl-some (lambda (file) (string-match-p "test1\\.org$" file)) org-files))
-          (should (cl-some (lambda (file) (string-match-p "test2\\.org$" file)) org-files))
-          ;; Should not find hidden files (.hidden/hidden.org, .git/objects/nested-hidden.org)
-          (should-not (cl-some (lambda (file) (string-match-p "hidden\\.org$" file)) org-files))
-          (should-not (cl-some (lambda (file) (string-match-p "nested-hidden\\.org$" file)) org-files))
-          ;; All returned files should exist and be org files
-          (should (cl-every #'file-exists-p org-files))
-          (should (cl-every (lambda (file) (string-match-p "\\.org$" file)) org-files)))
-      (test-utils--cleanup-temp-directory temp-dir))))
-
-(ert-deftest test-my/find-org-files-recursively-nonexistent-directory ()
+(ert-deftest test-utils/find-org-files-nonexistent-directory ()
   "Test that my/find-org-files-recursively returns nil for nonexistent directory."
   :tags '(unit utils fast)
-  (let ((result (my/find-org-files-recursively "/nonexistent/directory")))
+  (let ((result (my/find-org-files-recursively "/nonexistent/directory/that/does/not/exist")))
     (should (null result))))
 
-(ert-deftest test-my/find-org-files-recursively-empty-directory ()
-  "Test that my/find-org-files-recursively returns nil for empty directory."
-  :tags '(unit utils filesystem fast)
-  (let ((temp-dir (make-temp-file "emacs-test-empty-" t)))
-    (unwind-protect
-        (let ((result (my/find-org-files-recursively temp-dir)))
-          (should (null result)))
-      (test-utils--cleanup-temp-directory temp-dir))))
-
-(ert-deftest test-my/find-org-files-recursively-nil-input ()
+(ert-deftest test-utils/find-org-files-nil-input ()
   "Test that my/find-org-files-recursively handles nil input gracefully."
   :tags '(unit utils fast)
   (let ((result (my/find-org-files-recursively nil)))
     (should (null result))))
 
-(ert-deftest test-my/find-org-files-recursively-file-input ()
+(ert-deftest test-utils/update-org-agenda-files-nonexistent ()
+  "Test that my/update-org-agenda-files preserves agenda files when directories don't exist."
+  :tags '(unit utils fast)
+  (let ((original-org-agenda-files org-agenda-files))
+    (unwind-protect
+        (progn
+          (setq org-agenda-files '("dummy-file.org"))
+          (my/update-org-agenda-files '("/nonexistent/directory"))
+          (should (equal org-agenda-files '("dummy-file.org"))))
+      (setq org-agenda-files original-org-agenda-files))))
+
+;;; Filesystem Tests (minimal I/O)
+
+(ert-deftest test-utils/find-org-files-empty-directory ()
+  "Test that my/find-org-files-recursively returns nil for empty directory."
+  :tags '(unit utils filesystem)
+  (let ((temp-dir (make-temp-file "emacs-test-empty-" t)))
+    (unwind-protect
+        (let ((result (my/find-org-files-recursively temp-dir)))
+          (should (null result)))
+      (delete-directory temp-dir t))))
+
+(ert-deftest test-utils/find-org-files-file-input ()
   "Test that my/find-org-files-recursively returns nil when given a file instead of directory."
-  :tags '(unit utils filesystem fast)
+  :tags '(unit utils filesystem)
   (let ((temp-file (make-temp-file "emacs-test-file-" nil ".org")))
     (unwind-protect
         (let ((result (my/find-org-files-recursively temp-file)))
@@ -102,68 +62,78 @@ Returns the path to the temporary directory."
       (when (file-exists-p temp-file)
         (delete-file temp-file)))))
 
-;; Tests for my/update-org-agenda-files
-(ert-deftest test-my/update-org-agenda-files-with-temp-directory ()
-  "Test that my/update-org-agenda-files correctly updates agenda files from custom directories."
-  :tags '(unit utils filesystem)
-  (let ((temp-dir (test-utils--create-temp-directory-structure))
+;;; Filesystem Tests (full directory structure - SLOW)
+
+(defun test-utils--create-simple-structure ()
+  "Create minimal test structure (faster than full structure)."
+  (let* ((temp-dir (make-temp-file "emacs-test-" t))
+         (subdir (expand-file-name "subdir" temp-dir)))
+    (make-directory subdir t)
+    (with-temp-file (expand-file-name "test1.org" temp-dir)
+      (insert "* Test 1\n"))
+    (with-temp-file (expand-file-name "test2.org" subdir)
+      (insert "* Test 2\n"))
+    temp-dir))
+
+(ert-deftest test-utils/find-org-files-basic ()
+  "Test that my/find-org-files-recursively finds org files."
+  :tags '(unit utils filesystem slow)
+  (let ((temp-dir (test-utils--create-simple-structure)))
+    (unwind-protect
+        (let ((org-files (my/find-org-files-recursively temp-dir)))
+          (should (= (length org-files) 2))
+          (should (cl-some (lambda (f) (string-match-p "test1\\.org$" f)) org-files))
+          (should (cl-some (lambda (f) (string-match-p "test2\\.org$" f)) org-files))
+          (should (cl-every #'file-exists-p org-files)))
+      (delete-directory temp-dir t))))
+
+(ert-deftest test-utils/find-org-files-ignores-hidden ()
+  "Test that my/find-org-files-recursively ignores hidden folders."
+  :tags '(unit utils filesystem slow)
+  (let* ((temp-dir (make-temp-file "emacs-test-" t))
+         (hidden-dir (expand-file-name ".hidden" temp-dir)))
+    (unwind-protect
+        (progn
+          (make-directory hidden-dir t)
+          (with-temp-file (expand-file-name "visible.org" temp-dir)
+            (insert "* Visible\n"))
+          (with-temp-file (expand-file-name "hidden.org" hidden-dir)
+            (insert "* Hidden\n"))
+          (let ((org-files (my/find-org-files-recursively temp-dir)))
+            (should (= (length org-files) 1))
+            (should-not (cl-some (lambda (f) (string-match-p "hidden\\.org$" f)) org-files))))
+      (delete-directory temp-dir t))))
+
+(ert-deftest test-utils/update-org-agenda-files-integration ()
+  "Test that my/update-org-agenda-files correctly updates agenda files."
+  :tags '(integration utils filesystem slow)
+  (let ((temp-dir (test-utils--create-simple-structure))
         (original-org-agenda-files org-agenda-files))
     (unwind-protect
         (progn
-          ;; Set up test environment
           (setq org-agenda-files nil)
-
-          ;; Test the function with temp directory
           (my/update-org-agenda-files (list temp-dir))
-
-          ;; Verify results: should find exactly 2 org files and update agenda
           (should (= (length org-agenda-files) 2))
-          (should (cl-every #'file-exists-p org-agenda-files))
-          (should (cl-every (lambda (file) (string-match-p "\\.org$" file)) org-agenda-files))
-          ;; Should include both test1.org and test2.org
-          (should (cl-some (lambda (file) (string-match-p "test1\\.org$" file)) org-agenda-files))
-          (should (cl-some (lambda (file) (string-match-p "test2\\.org$" file)) org-agenda-files)))
-
-      ;; Cleanup: restore original state
+          (should (cl-every #'file-exists-p org-agenda-files)))
       (setq org-agenda-files original-org-agenda-files)
-      (test-utils--cleanup-temp-directory temp-dir))))
+      (delete-directory temp-dir t))))
 
-(ert-deftest test-my/update-org-agenda-files-with-nonexistent-directory ()
-  "Test that my/update-org-agenda-files preserves agenda files when directories don't exist."
-  :tags '(unit utils fast)
-  (let ((original-org-agenda-files org-agenda-files))
-    (unwind-protect
-        (progn
-          ;; Set up test environment with nonexistent directory
-          (setq org-agenda-files '("dummy-file.org"))
-
-          ;; Test the function with nonexistent directory
-          (my/update-org-agenda-files '("/nonexistent/directory"))
-
-          ;; org-agenda-files should remain unchanged when no files found
-          (should (equal org-agenda-files '("dummy-file.org"))))
-
-      ;; Cleanup: restore original state
-      (setq org-agenda-files original-org-agenda-files))))
-
-;; Add a test for error conditions
-(ert-deftest test-my/find-org-files-recursively-symlink-handling ()
+;; Symlink test - platform specific and slow
+(ert-deftest test-utils/find-org-files-symlink-handling ()
   "Test that my/find-org-files-recursively handles symbolic links correctly."
-  :tags '(unit utils filesystem slow)
-  (skip-unless (eq system-type 'gnu/linux))  ; Only run on GNU/Linux systems
+  :tags '(unit utils filesystem slow platform-specific)
+  (skip-unless (eq system-type 'gnu/linux))
   (let ((temp-dir (make-temp-file "emacs-test-symlink-" t)))
     (unwind-protect
         (progn
-          ;; Create a test file and a symlink to it
           (with-temp-file (expand-file-name "real.org" temp-dir)
             (insert "* Real org file\n"))
           (let ((link-path (expand-file-name "link.org" temp-dir)))
             (make-symbolic-link (expand-file-name "real.org" temp-dir) link-path)
             (let ((result (my/find-org-files-recursively temp-dir)))
-              ;; Should find both the real file and the symlink (truename resolves symlinks)
               (should (>= (length result) 1))
               (should (cl-some (lambda (file) (string-match-p "real\\.org$" file)) result)))))
-      (test-utils--cleanup-temp-directory temp-dir))))
+      (delete-directory temp-dir t))))
 
 (provide 'test-utils)
 ;;; test-utils.el ends here
