@@ -14,10 +14,10 @@
 ;;; Auto-discovery and Loading
 
 ;; Auto-load all test-*.el files in the current directory
-;; (excluding test-all.el and test-helpers.el)
+;; (excluding test-all.el, test-helpers.el, and test-suite-*.el)
 (let ((test-dir (file-name-directory (or load-file-name buffer-file-name))))
   (dolist (file (directory-files test-dir t "^test-.*\\.el$"))
-    (unless (string-match-p "test-\\(all\\|helpers\\)\\.el$" file)
+    (unless (string-match-p "test-\\(all\\|helpers\\|suite-.*\\)\\.el$" file)
       (load file nil t))))
 
 (provide 'test-all)

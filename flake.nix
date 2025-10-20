@@ -97,11 +97,14 @@
           };
         in
         {
+          # Fast checks (run by default)
+          # ===========================
+
           # Formatting check
           formatting = treefmtEval.${pkgs.system}.config.build.check self;
 
-          # Fast smoke test - critical validation only
-          smoke-test = pkgs.runCommand "emacs-smoke-test" { } ''
+          # Fast binary smoke test - just checks binary exists and starts
+          binary-smoke-test = pkgs.runCommand "emacs-binary-smoke-test" { } ''
             # Test 1: Emacs binary exists and is executable
             test -x ${self.packages.${pkgs.system}.emacs}/bin/emacs
             echo "PASS: Emacs binary is executable"
@@ -113,11 +116,16 @@
             touch $out
           '';
 
-          # ERT unit tests
-          emacs-tests = emacsPackage.passthru.tests;
+          # ERT test tiers (from fastest to slowest)
+          smoke-tests = emacsPackage.passthru.smoke-test; # < 1 second
+          inherit (emacsPackage.passthru) fast-tests; # < 5 seconds
+          emacs-tests = emacsPackage.passthru.tests; # Full suite
         }
         // nmtTests
-        // runtimeTests
+        # Runtime tests available separately via:
+        # nix build .#checks.<system>.test-emacs-runtime
+        # CI runs them automatically when CI env var is set
+        // (pkgs.lib.optionalAttrs (builtins.getEnv "CI" != "") runtimeTests)
       );
 
       # Development environments

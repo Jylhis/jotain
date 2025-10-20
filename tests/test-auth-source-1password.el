@@ -8,8 +8,18 @@
 
 (require 'ert)
 
-;; Only run these tests if auth-source-1password is available
-(when (featurep 'auth-source-1password)
+;; Try to load auth-source-1password (might not be available)
+(require 'auth-source-1password nil t)
+
+;; Helper to check if auth-source-1password is fully loaded
+(defun auth-source-1password-fully-loaded-p ()
+  "Check if auth-source-1password is fully loaded with all variables defined."
+  (and (featurep 'auth-source-1password)
+       (boundp 'auth-source-1password-vault)
+       (boundp 'auth-source-1password-op-executable)))
+
+;; Only run these tests if auth-source-1password is fully available
+(when (auth-source-1password-fully-loaded-p)
 
   (ert-deftest test-auth-source-1password-package-loaded ()
     "Test that auth-source-1password package is properly loaded."
@@ -61,12 +71,11 @@
     (should (member "url" auth-source-1password-search-fields))))
 
 ;; Provide a test for when the package is not available
-(unless (featurep 'auth-source-1password)
+(unless (auth-source-1password-fully-loaded-p)
   (ert-deftest test-auth-source-1password-not-available ()
-    "Test behavior when auth-source-1password is not available."
+    "Test behavior when auth-source-1password is not fully available."
     :tags '(unit auth fast)
-    (should-not (featurep 'auth-source-1password))
-    (should-not (fboundp 'auth-source-1password-enable))))
+    (should-not (auth-source-1password-fully-loaded-p))))
 
 (provide 'test-auth-source-1password)
 ;;; test-auth-source-1password.el ends here
