@@ -133,7 +133,13 @@
  (use-package pixel-scroll
    :when (display-graphic-p)
    :config
-   (pixel-scroll-precision-mode 1)) ;; TODO: Does this work with server-client. Check auto-dark config
+   (pixel-scroll-precision-mode 1)
+   ;; Enable for graphical frames when using server-client
+   (add-hook 'after-make-frame-functions
+             (lambda (frame)
+               (when (display-graphic-p frame)
+                 (with-selected-frame frame
+                   (pixel-scroll-precision-mode 1))))))
 
 (use-package emojify
   :ensure
