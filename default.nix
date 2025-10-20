@@ -5,7 +5,6 @@
 let
   emacsWithPackages = emacs.pkgs.withPackages (
     epkgs: with epkgs; [
-      # TODO: Package: https://github.com/flymake/flymake-elsa
       adoc-mode
       modus-themes
       sideline

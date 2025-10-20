@@ -11,7 +11,7 @@ in
   options = {
     programs.emacs.userConfig = lib.mkOption {
       type = lib.types.path;
-      default = ./.; # TODO: use config package
+      default = pkgs.jylhis-emacs-config or ./.;
       description = lib.mdDoc ''
         Path to the Emacs configuration directory.
 
@@ -19,8 +19,8 @@ in
         along with any additional configuration files organized in `config/` and
         `lisp/` subdirectories.
 
-        When using this flake's home-manager module directly, this defaults to
-        the source directory. For external usage, point this to your own
+        Defaults to the filtered configuration package (excluding tests and dev files)
+        when the overlay is applied. For external usage, point this to your own
         configuration or use a pre-built configuration package.
       '';
       example = lib.literalExpression ''
@@ -48,7 +48,6 @@ in
         emqg = "emacs -nw -Q";
         emq = "emacs -Q";
       };
-      # TODO: move to fonts.nix
       packages =
         with pkgs.nerd-fonts;
         [

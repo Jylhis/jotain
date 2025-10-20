@@ -15,7 +15,6 @@
   ;; 				   ))
   )
 
-;; TODO: Add more types: https://github.com/mohkale/projection/tree/master?tab=readme-ov-file#projection-commands
 (use-package projection
   :ensure
   ;; Enable the `projection-hook' feature.
