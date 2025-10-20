@@ -8,11 +8,11 @@
     flake-schemas.url = "https://flakehub.com/f/DeterminateSystems/flake-schemas/*";
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.*";
     treefmt-nix = {
-      url = "github:numtide/treefmt-nix";
+      url = "https://flakehub.com/f/numtide/treefmt-nix/0.1.*";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     home-manager = {
-      url = "github:nix-community/home-manager";
+      url = "https://flakehub.com/f/nix-community/home-manager/0.1.*";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nmt = {
