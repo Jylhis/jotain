@@ -19,6 +19,15 @@ color codes."
   (ansi-color-apply-on-region (point-min) (point-max)))
 
 ;; Org-mode utilities
+(defcustom my/org-agenda-directories
+  '("~/Documents/Notes"
+    "~/Dropbox/Notes"
+    "~/Dropbox/Documents/Notes")
+  "List of directories to search for org agenda files.
+Each directory will be searched recursively for .org files."
+  :type '(repeat directory)
+  :group 'org-agenda)
+
 (defun my/find-org-files-recursively (directory)
   "Find all .org files recursively in DIRECTORY, ignoring hidden folders."
   (when (and directory (file-exists-p directory) (file-directory-p directory))
@@ -30,11 +39,11 @@ color codes."
           (push (file-truename file) files)))
       (nreverse files))))
 
-(defun my/update-org-agenda-files ()
-  "Update org-agenda-files to include all .org files from multiple directories."
-  (let* ((directories '("~/Documents/Notes"
-                        "~/Dropbox/Notes"
-                        "~/Dropbox/Documents/Notes"))
+(defun my/update-org-agenda-files (&optional directories)
+  "Update org-agenda-files to include all .org files from multiple directories.
+If DIRECTORIES is provided, search those directories.
+Otherwise, use `my/org-agenda-directories'."
+  (let* ((directories (or directories my/org-agenda-directories))
          (org-files '()))
     ;; Collect org files from all directories that exist
     (dolist (dir directories)

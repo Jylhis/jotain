@@ -99,19 +99,17 @@ Returns the path to the temporary directory."
 
 ;; Tests for my/update-org-agenda-files
 (ert-deftest test-my/update-org-agenda-files-with-temp-directory ()
-  "Test that my/update-org-agenda-files correctly updates agenda files from org-directory."
+  "Test that my/update-org-agenda-files correctly updates agenda files from custom directories."
   (let ((temp-dir (test-utils--create-temp-directory-structure))
-        (original-org-directory org-directory)
         (original-org-agenda-files org-agenda-files))
     (unwind-protect
         (progn
           ;; Set up test environment
-          (setq org-directory temp-dir)
           (setq org-agenda-files nil)
-          
-          ;; Test the function
-          (my/update-org-agenda-files)
-          
+
+          ;; Test the function with temp directory
+          (my/update-org-agenda-files (list temp-dir))
+
           ;; Verify results: should find exactly 2 org files and update agenda
           (should (= (length org-agenda-files) 2))
           (should (cl-every #'file-exists-p org-agenda-files))
@@ -119,30 +117,26 @@ Returns the path to the temporary directory."
           ;; Should include both test1.org and test2.org
           (should (cl-some (lambda (file) (string-match-p "test1\\.org$" file)) org-agenda-files))
           (should (cl-some (lambda (file) (string-match-p "test2\\.org$" file)) org-agenda-files)))
-      
+
       ;; Cleanup: restore original state
-      (setq org-directory original-org-directory)
       (setq org-agenda-files original-org-agenda-files)
       (test-utils--cleanup-temp-directory temp-dir))))
 
 (ert-deftest test-my/update-org-agenda-files-with-nonexistent-directory ()
-  "Test that my/update-org-agenda-files preserves agenda files when org-directory doesn't exist."
-  (let ((original-org-directory org-directory)
-        (original-org-agenda-files org-agenda-files))
+  "Test that my/update-org-agenda-files preserves agenda files when directories don't exist."
+  (let ((original-org-agenda-files org-agenda-files))
     (unwind-protect
         (progn
           ;; Set up test environment with nonexistent directory
-          (setq org-directory "/nonexistent/directory")
           (setq org-agenda-files '("dummy-file.org"))
-          
-          ;; Test the function
-          (my/update-org-agenda-files)
-          
+
+          ;; Test the function with nonexistent directory
+          (my/update-org-agenda-files '("/nonexistent/directory"))
+
           ;; org-agenda-files should remain unchanged when no files found
           (should (equal org-agenda-files '("dummy-file.org"))))
-      
+
       ;; Cleanup: restore original state
-      (setq org-directory original-org-directory)
       (setq org-agenda-files original-org-agenda-files))))
 
 ;; Add a test for error conditions
