@@ -19,6 +19,15 @@ color codes."
   (ansi-color-apply-on-region (point-min) (point-max)))
 
 ;; Org-mode utilities
+(defcustom my/org-agenda-directories
+  '("~/Documents/Notes"
+    "~/Dropbox/Notes"
+    "~/Dropbox/Documents/Notes")
+  "List of directories to search for org agenda files.
+Each directory will be searched recursively for .org files."
+  :type '(repeat directory)
+  :group 'org-agenda)
+
 (defun my/find-org-files-recursively (directory)
   "Find all .org files recursively in DIRECTORY, ignoring hidden folders."
   (when (and directory (file-exists-p directory) (file-directory-p directory))
@@ -30,12 +39,25 @@ color codes."
           (push (file-truename file) files)))
       (nreverse files))))
 
-(defun my/update-org-agenda-files ()
-  "Update org-agenda-files to include all .org files under Documents."
-  (let ((org-files (my/find-org-files-recursively (expand-file-name org-directory))))
+(defun my/update-org-agenda-files (&optional directories)
+  "Update org-agenda-files to include all .org files from multiple directories.
+If DIRECTORIES is provided, search those directories.
+Otherwise, use `my/org-agenda-directories'."
+  (let* ((directories (or directories my/org-agenda-directories))
+         (org-files '()))
+    ;; Collect org files from all directories that exist
+    (dolist (dir directories)
+      (let ((expanded-dir (expand-file-name dir)))
+        (when (file-exists-p expanded-dir)
+          (setq org-files (append org-files
+                                  (my/find-org-files-recursively expanded-dir))))))
+    ;; Remove duplicates (in case of symlinks or overlapping paths)
+    (setq org-files (delete-dups org-files))
     (when org-files
       (setq org-agenda-files org-files))
-    (message "Updated org-agenda-files: %d files found" (length org-files))))
+    (message "Updated org-agenda-files: %d files found across %d directories"
+             (length org-files)
+             (length (seq-filter (lambda (d) (file-exists-p (expand-file-name d))) directories)))))
 
 (defun my/setup-org-agenda-files ()
   "Set up dynamic org agenda files updating."
