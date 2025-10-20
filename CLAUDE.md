@@ -97,7 +97,7 @@ All Emacs Lisp modules follow the `use-package` macro convention for package con
 The home-manager module handles deployment of the Emacs configuration:
 - Deploys configuration files to `~/.config/emacs` via `programs.emacs.userConfig` option
 - Configures systemd service for Emacs daemon with socket activation
-- Sets up shell aliases: `emc` (terminal client), `emcg` (GUI client), `emqg` (terminal no config), `emq` (GUI no config)
+- Sets up shell aliases: `jot` (terminal client), `emc` (terminal client), `emcg` (GUI client), `emqg` (terminal no config), `emq` (GUI no config)
 - Installs Nerd Fonts and other font packages
 - Controlled via `programs.emacs.enable` option
 - When disabled, no configuration is deployed and no services are started
@@ -106,7 +106,7 @@ The home-manager module handles deployment of the Emacs configuration:
 ### Flake Outputs
 - **packages.emacs**: Emacs with all packages pre-installed (from default.nix)
 - **packages.config**: Configuration files only (from config.nix, filtered via fileset)
-- **overlays.default**: Provides `jylhis-emacs` and `jylhis-emacs-config` to nixpkgs
+- **overlays.default**: Provides `jotain` and `jotain-config` to nixpkgs
 - **homeModules.default**: Home-manager module (from module.nix)
 - **devShells.default**: Development environment with just, nixpkgs-fmt, deadnix, statix
 
