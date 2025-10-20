@@ -66,6 +66,7 @@ let
       just-mode
       just-ts-mode
       kind-icon
+      kkp
       ligature
       logview
       magit
