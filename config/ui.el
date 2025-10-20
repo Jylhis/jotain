@@ -159,5 +159,10 @@
   ;; :hook (after-init . global-emojify-mode)
    )
 
+(use-package kkp
+  :ensure
+  :config
+  (global-kkp-mode +1))
+
 (provide 'ui)
 ;;; ui.el ends here
