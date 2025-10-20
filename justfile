@@ -30,33 +30,29 @@ test-all:
 [group('check')]
 test-nmt:
     @echo "Running NMT home-manager module tests..."
-    @echo "Running: test-emacs-config-files"
-    nix build .#checks.{{system}}.test-emacs-config-files --print-build-logs
-    @echo "Running: test-shell-aliases"
-    nix build .#checks.{{system}}.test-shell-aliases --print-build-logs
-    @echo "Running: test-emacs-service"
-    nix build .#checks.{{system}}.test-emacs-service --print-build-logs
-    @echo "Running: test-font-packages"
-    nix build .#checks.{{system}}.test-font-packages --print-build-logs
+    @echo "Running: test-module-enabled (comprehensive module integration test)"
+    nix build .#checks.{{system}}.test-module-enabled --print-build-logs
     @echo "Running: test-module-disabled"
     nix build .#checks.{{system}}.test-module-disabled --print-build-logs
-    @echo "Running: test-fileset-source"
-    nix build .#checks.{{system}}.test-fileset-source --print-build-logs
 
-# Run unit tests with verbose output (legacy direct execution)
+# Run runtime validation test (nixosTest with VM - slow but comprehensive)
 [group('check')]
-test-verbose:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "Running ERT unit tests (verbose, direct execution)..."
+test-runtime:
+    @echo "Running runtime validation test (starts VM, slower)..."
+    nix build .#checks.{{system}}.test-emacs-runtime --print-build-logs
+
+# Run tests by specific tag (smoke, fast, unit, integration, etc.)
+[group('check')]
+test-tag TAG:
+    @echo "Running tests tagged with: {{TAG}}"
     emacs -Q --batch \
         --eval "(progn (add-to-list 'load-path \"{{config_dir}}/lisp\") (add-to-list 'load-path \"{{config_dir}}/tests\") (add-to-list 'load-path \"{{config_dir}}/config\"))" \
         --eval "(require 'ert)" \
         --eval "(require 'cl-lib)" \
-        --load "{{config_dir}}/tests/test-utils.el" \
-        --load "{{config_dir}}/tests/test-platform.el" \
-        --load "{{config_dir}}/tests/test-auth-source-1password.el" \
-        --eval "(ert-run-tests-batch-and-exit t)"
+        --eval "(setq user-emacs-directory \"{{config_dir}}/\")" \
+        --load "{{config_dir}}/tests/test-helpers.el" \
+        --load "{{config_dir}}/tests/test-all.el" \
+        --eval "(ert-run-tests-batch-and-exit '(tag {{TAG}}))"
 
 # Run elisp-lint on all Emacs Lisp files
 [group('check')]
@@ -176,19 +172,30 @@ info-nix:
 info-checks:
     @echo "Available Nix Checks:"
     @echo "===================="
-    @echo "ERT Tests:"
-    @echo "  - emacs-tests"
     @echo ""
-    @echo "NMT Tests:"
-    @echo "  - test-emacs-config-files"
-    @echo "  - test-shell-aliases"
-    @echo "  - test-emacs-service"
-    @echo "  - test-font-packages"
-    @echo "  - test-module-disabled"
-    @echo "  - test-fileset-source"
+    @echo "Fast Checks:"
+    @echo "  - smoke-test              (< 5 seconds, basic validation)"
     @echo ""
-    @echo "Other Checks:"
-    @echo "  - formatting"
+    @echo "ERT Unit Tests:"
+    @echo "  - emacs-tests             (all ERT tests via Nix)"
+    @echo "  OR use tag-based filtering:"
+    @echo "  • just test-tag smoke     (smoke tests only, < 1 second)"
+    @echo "  • just test-tag fast      (fast unit tests, < 5 seconds)"
+    @echo "  • just test-tag unit      (unit tests only)"
+    @echo "  • just test-tag TAG       (any custom tag)"
+    @echo ""
+    @echo "NMT Integration Tests:"
+    @echo "  - test-module-enabled     (config files, aliases, service, fonts)"
+    @echo "  - test-module-disabled    (module disabled behavior)"
+    @echo ""
+    @echo "Runtime Validation (slow, optional):"
+    @echo "  • just test-runtime       (nixosTest, starts VM with actual Emacs)"
+    @echo ""
+    @echo "Code Quality:"
+    @echo "  - formatting              (nixfmt, yamlfmt, actionlint, deadnix, statix)"
+    @echo ""
+    @echo "Run all checks: just test-all  or  nix flake check"
+    @echo "Note: test-runtime is excluded from test-all for faster local testing"
 
 # Update flake inputs
 [group('nix')]

@@ -8,39 +8,35 @@ NMT tests provide integration testing for the home-manager module by building ac
 
 ## Available Tests
 
-### test-emacs-config-files
-Validates that Emacs configuration files are properly linked to `~/.config/emacs`:
-- Checks for `.config/emacs` directory creation
-- Verifies `init.el` exists
-- Confirms file structure matches source
+### test-module-enabled
+Comprehensive integration test for module when enabled. Validates:
 
-### test-shell-aliases
-Validates shell aliases configuration:
-- Checks for `emc`, `emcg`, `emqg`, `emq` aliases
-- Verifies aliases are included in activation scripts
+**Configuration Files:**
+- `.config/emacs` directory creation
+- `init.el` and `early-init.el` exist
 
-### test-emacs-service
-Validates Emacs systemd service configuration:
-- Checks for systemd user service files
-- Verifies service is configured when `programs.emacs.enable = true`
-- Confirms socket activation is enabled
+**Directory Structure:**
+- Expected directories exist (`config/`, `lisp/`)
+- Development files are filtered out (`tests/` directory absent)
+- Fileset filtering works correctly
 
-### test-font-packages
-Validates font package installation:
-- Checks that font packages are included in home-path
-- Verifies fonts directory exists
-- Counts installed font files
+**Shell Aliases:**
+- Emacs aliases configured (`emc`, `emcg`, `emqg`, `emq`)
+- Aliases included in activation scripts
+
+**Systemd Service:**
+- Service files created in systemd user directory
+- Socket activation enabled
+- Service configured when `programs.emacs.enable = true`
+
+**Font Packages:**
+- Font packages included in home-path
+- Fonts directory exists and contains fonts
 
 ### test-module-disabled
 Validates module behavior when disabled:
 - Confirms no config files are created when `programs.emacs.enable = false`
 - Ensures clean state when module is not active
-
-### test-fileset-source
-Validates fileset-based source handling:
-- Checks all expected directories exist (config, lisp, tests)
-- Verifies key files are present (init.el, early-init.el)
-- Confirms directory structure is preserved
 
 ## Running Tests
 
@@ -51,7 +47,8 @@ just test-nmt
 
 ### Run specific test
 ```bash
-nix build .#checks.x86_64-linux.test-emacs-config-files
+nix build .#checks.x86_64-linux.test-module-enabled
+nix build .#checks.x86_64-linux.test-module-disabled
 ```
 
 ### Run all checks (including NMT)

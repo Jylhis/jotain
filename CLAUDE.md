@@ -28,8 +28,8 @@ just test-all
 # Run NMT tests only (validates home-manager module)
 just test-nmt
 
-# Run tests with verbose output (direct execution)
-just test-verbose
+# Run tests by tag (smoke, fast, unit, integration, etc.)
+just test-tag smoke
 
 # Build Emacs package with Nix
 just build
@@ -76,6 +76,23 @@ The configuration is split into logical modules loaded via `require` in init.el:
 
 All Emacs Lisp modules follow the `use-package` macro convention for package configuration, providing consistent structure with `:init`, `:config`, `:custom`, `:bind`, and `:hook` sections.
 
+**Module loading order in init.el:**
+1. `platform` (must be first for OS detection)
+2. `core` (fundamental Emacs settings)
+3. `fonts` (font configuration)
+4. `ui` (UI and appearance)
+5. `completion` (completion framework)
+6. `programming` (development tools)
+7. `per-project` (project-specific configurations)
+8. `writing` (Org-mode and documentation)
+9. `git` (version control)
+10. `help` (enhanced help system)
+11. `ai` (AI integrations)
+12. `systems` (system administration)
+13. `platforms` (platform adaptations)
+14. `android` (conditional, only on Android)
+15. `app-launchers` (application launcher utilities)
+
 ### Key Design Patterns
 1. **Platform Detection**: The `platform.el` library detects the OS/environment and sets flags like `platform-android-p`, `platform-macos-p`, etc. Platform-specific code checks these flags. It must load first before other modules.
 
@@ -118,7 +135,7 @@ This project uses two testing frameworks:
 Unit tests for Emacs Lisp code:
 - Test files in `tests/` directory
 - Named `test-*.el`
-- Run with `just test` (via Nix) or `just test-verbose` (direct execution)
+- Run with `just test` (via Nix) or `just test-tag TAG` (by tag: smoke, fast, unit, integration)
 - Tests are built into the Nix package via `passthru.tests` in default.nix
 - Automatically run during `nix flake check`
 
@@ -135,12 +152,8 @@ Integration tests for the home-manager module:
 - Tests use `mkTest` helper which wraps `pkgs.runCommand` for test execution
 - Run with `just test-nmt` or individual tests with `nix build .#checks.x86_64-linux.test-<name>`
 - Available tests:
-  - test-emacs-config-files: Validates file linking to ~/.config/emacs
-  - test-shell-aliases: Validates shell alias configuration
-  - test-emacs-service: Validates systemd service setup
-  - test-font-packages: Validates font package installation
+  - test-module-enabled: Comprehensive test (config files, directory structure, shell aliases, systemd service, fonts)
   - test-module-disabled: Validates behavior when disabled
-  - test-fileset-source: Validates directory structure (config/, lisp/, init.el, early-init.el)
 
 When adding NMT tests:
 1. Add test definition in nmt-tests/default.nix using `mkTest` helper
@@ -151,6 +164,39 @@ When adding NMT tests:
 
 ### Running All Tests
 Use `just test-all` or `nix flake check` to run both ERT and NMT tests.
+
+### Runtime Validation
+Optional, comprehensive end-to-end test using nixosTest:
+- Run with `just test-runtime` (starts a VM, slower)
+- Validates actual Emacs execution, daemon, and client connectivity
+- Not included in `just test-all` for faster local testing
+- Always runs in CI via `nix flake check`
+
+### Test Boundaries - What to Test Where
+
+**Use ERT (tests/) for:**
+- Pure Elisp functionality (utils.el, platform.el functions)
+- Configuration loading (init.el, early-init.el, module requires)
+- Unit tests (isolated function behavior, no external dependencies)
+- Smoke tests (fast critical validation, < 1 second with `:tags '(smoke)`)
+- Integration tests (package interactions, with `:tags '(integration)`)
+
+**Use NMT (nmt-tests/) for:**
+- Home-manager module behavior (file deployment, service configuration)
+- Integration with Nix (packages installed, paths correct, fileset filtering)
+- Module options (enable/disable, userConfig override)
+- Cross-module interactions (fonts + emacs, systemd + emacs)
+
+**Use nixosTest (nmt-tests/runtime.nix) for:**
+- Actual execution validation (daemon starts, client connects)
+- End-to-end testing (full configuration loads in real environment)
+- Platform-specific behavior (systemd service actually works)
+- Regression testing (catch breaking changes in real usage)
+
+**Don't test in Nix layer:**
+- Elisp correctness → Use ERT instead
+- UI/UX behavior → Use ERT with temp buffers or manual testing
+- Implementation details → Trust abstractions, test behavior
 
 ## Important Files
 
@@ -165,6 +211,25 @@ Use `just test-all` or `nix flake check` to run both ERT and NMT tests.
 - **justfile**: Development task runner with common commands
 
 ### Fileset Filtering (config.nix)
-The config.nix file filters out development-only files when creating the deployment package:
-- Excludes: .claude/, .github/, tests/, nmt-tests/, *.nix files, CLAUDE.md, justfile, .envrc, .gitignore
-- Includes: init.el, early-init.el, config/, lisp/ directories
+The config.nix file filters out development-only files when creating the deployment package.
+
+**Excluded from deployment:**
+- `.claude/` - Claude Code configuration
+- `.envrc` - direnv configuration
+- `.github/` - GitHub workflows and CI
+- `.gitignore` - Git ignore rules
+- `CLAUDE.md` - This documentation file
+- `default.nix` - Nix package builder
+- `flake.lock` - Nix flake lock file
+- `flake.nix` - Nix flake definition
+- `justfile` - Development task runner
+- `module.nix` - Home-manager module definition
+- `nmt-tests/` - NMT integration tests
+- `tests/` - ERT unit tests
+
+**Included in deployment:**
+- `init.el` - Main configuration entry point
+- `early-init.el` - Pre-initialization settings
+- `config/` - Feature modules (core, ui, completion, programming, etc.)
+- `lisp/` - Utility libraries (platform detection, app launchers, utils)
+- `config.nix` - The package definition itself

@@ -129,9 +129,9 @@ emacsWithPackages.overrideAttrs (oldAttrs: {
                   (add-to-list 'load-path \"${./.}/config\"))" \
         --eval "(require 'ert)" \
         --eval "(require 'cl-lib)" \
-        --load "${./.}/tests/test-utils.el" \
-        --load "${./.}/tests/test-platform.el" \
-        --load "${./.}/tests/test-auth-source-1password.el" \
+        --eval "(setq user-emacs-directory \"${./.}/\")" \
+        --load "${./.}/tests/test-helpers.el" \
+        --load "${./.}/tests/test-all.el" \
         --eval "(ert-run-tests-batch-and-exit)"
       echo "All tests passed!"
       touch $out
