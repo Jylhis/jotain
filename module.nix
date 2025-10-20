@@ -11,7 +11,7 @@ in
   options = {
     programs.emacs.userConfig = lib.mkOption {
       type = lib.types.path;
-      default = pkgs.jylhis-emacs-config or ./.;
+      default = pkgs.jotain-config or ./.;
       description = lib.mdDoc ''
         Path to the Emacs configuration directory.
 
@@ -43,6 +43,7 @@ in
         };
       };
       shellAliases = {
+        jot = "emacsclient -t -a emacs";
         emc = "emacsclient -t -a emacs";
         emcg = "emacsclient -c -a emacs";
         emqg = "emacs -nw -Q";

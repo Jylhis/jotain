@@ -1,6 +1,6 @@
 # NMT Tests for Emacs Home-Manager Module
 
-This directory contains NMT (Nix Module Tests) for validating the home-manager Emacs module defined in `/home/user/Developer/emacsd/module.nix`.
+This directory contains NMT (Nix Module Tests) for validating the home-manager Emacs module defined in `module.nix`.
 
 ## Overview
 

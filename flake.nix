@@ -77,8 +77,8 @@
       homeModules.default = ./module.nix;
 
       overlays.default = final: _prev: {
-        jylhis-emacs = final.callPackage ./default.nix { };
-        jylhis-emacs-config = final.callPackage ./config.nix { };
+        jotain = final.callPackage ./default.nix { };
+        jotain-config = final.callPackage ./config.nix { };
       };
 
       checks = forEachSupportedSystem (

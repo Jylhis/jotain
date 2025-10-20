@@ -1,7 +1,7 @@
 ;;; init.el --- Emacs configuration file -*- lexical-binding: t; -*-
 
 ;; Author: Markus Jylhänkangas <markus@jylhis.com>
-;; URL: https://github.com/jylhis/nixos
+;; URL: https://github.com/Jylhis/jotain
 ;; Version: 2.0
 ;; Package-Requires: ((emacs "29.1"))
 
