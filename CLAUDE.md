@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Package Management
+
+All Emacs packages are defined in default.nix via `emacsWithPackages`. When adding new packages:
+1. Add package to the `epkgs` list in default.nix
+2. Run `nix build` to verify the package builds
+3. Add corresponding `use-package` configuration in appropriate config/*.el file
+4. Run `just test` to ensure no regressions
+
+The configuration uses `package.el` for package metadata but packages are pre-installed by Nix, not downloaded at runtime.
+
 ## Development Commands
 
 Build and test Emacs configuration:
@@ -64,14 +74,19 @@ The configuration is split into logical modules loaded via `require` in init.el:
 - **Utility libraries** (lisp/): Shared functionality and platform detection
 - **Platform adaptations**: Automatic OS-specific configurations via platform.el detection
 
+All Emacs Lisp modules follow the `use-package` macro convention for package configuration, providing consistent structure with `:init`, `:config`, `:custom`, `:bind`, and `:hook` sections.
+
 ### Key Design Patterns
-1. **Platform Detection**: The `platform.el` library detects the OS/environment and sets flags like `platform-android-p`, `platform-macos-p`, etc. Platform-specific code checks these flags.
+1. **Platform Detection**: The `platform.el` library detects the OS/environment and sets flags like `platform-android-p`, `platform-macos-p`, etc. Platform-specific code checks these flags. It must load first before other modules.
 
 2. **Lazy Loading**: Modules use `with-eval-after-load` and autoloads to defer package loading until needed.
 
 3. **Feature Modules**: Each config/*.el file is self-contained and can be loaded independently. They all `(provide 'module-name)` at the end.
 
-4. **Nix Integration**: The flake.nix and default.nix define the development environment with all required Emacs packages pre-installed.
+4. **Nix Integration**:
+   - **default.nix**: Builds Emacs with all required packages via `emacsWithPackages`. Contains ERT test definitions in `passthru.tests`.
+   - **config.nix**: Creates deployment package using `lib.fileset` to filter out development files (tests, nix files, etc.).
+   - **flake.nix**: Defines packages, dev shells, checks, overlays, and home-manager module.
 
 ### Module Dependencies
 - `platform.el` must load first (provides OS detection)
@@ -80,12 +95,20 @@ The configuration is split into logical modules loaded via `require` in init.el:
 
 ### Home Manager Module (module.nix)
 The home-manager module handles deployment of the Emacs configuration:
-- Uses `lib.fileset.toSource` to deploy configuration files to `~/.config/emacs`
+- Deploys configuration files to `~/.config/emacs` via `programs.emacs.userConfig` option
 - Configures systemd service for Emacs daemon with socket activation
-- Sets up shell aliases (emc, emcg, emqg, emq)
+- Sets up shell aliases: `emc` (terminal client), `emcg` (GUI client), `emqg` (terminal no config), `emq` (GUI no config)
 - Installs Nerd Fonts and other font packages
 - Controlled via `programs.emacs.enable` option
-- Configuration path specified via `programs.emacs.userConfig` option
+- When disabled, no configuration is deployed and no services are started
+- Configuration path defaults to this repository's source but can be overridden
+
+### Flake Outputs
+- **packages.emacs**: Emacs with all packages pre-installed (from default.nix)
+- **packages.config**: Configuration files only (from config.nix, filtered via fileset)
+- **overlays.default**: Provides `jylhis-emacs` and `jylhis-emacs-config` to nixpkgs
+- **homeModules.default**: Home-manager module (from module.nix)
+- **devShells.default**: Development environment with just, nixpkgs-fmt, deadnix, statix
 
 ## Testing Approach
 
@@ -96,17 +119,20 @@ Unit tests for Emacs Lisp code:
 - Test files in `tests/` directory
 - Named `test-*.el`
 - Run with `just test` (via Nix) or `just test-verbose` (direct execution)
-- Tests are built into the Nix package and run during `nix flake check`
+- Tests are built into the Nix package via `passthru.tests` in default.nix
+- Automatically run during `nix flake check`
 
 When adding ERT tests:
 1. Add tests in tests/test-feature.el
-2. Update default.nix passthru.tests if new test file created
+2. Update default.nix passthru.tests to load new test file (add `--load` statement)
 3. Ensure tests pass with `just test`
+4. Test naming convention: `(ert-deftest test-module-feature () ...)`
 
 ### NMT (Nix Module Tests)
 Integration tests for the home-manager module:
 - Test files in `nmt-tests/` directory
-- Validates module behavior by building actual home-manager configurations
+- Uses `home-manager.lib.homeManagerConfiguration` to build actual configurations
+- Tests use `mkTest` helper which wraps `pkgs.runCommand` for test execution
 - Run with `just test-nmt` or individual tests with `nix build .#checks.x86_64-linux.test-<name>`
 - Available tests:
   - test-emacs-config-files: Validates file linking to ~/.config/emacs
@@ -114,13 +140,31 @@ Integration tests for the home-manager module:
   - test-emacs-service: Validates systemd service setup
   - test-font-packages: Validates font package installation
   - test-module-disabled: Validates behavior when disabled
-  - test-fileset-source: Validates directory structure
+  - test-fileset-source: Validates directory structure (config/, lisp/, init.el, early-init.el)
 
 When adding NMT tests:
-1. Add test definition in nmt-tests/default.nix
-2. Update justfile test-nmt command
+1. Add test definition in nmt-tests/default.nix using `mkTest` helper
+2. Update justfile test-nmt command to include new test
 3. Update nmt-tests/README.md with test description
 4. Ensure tests pass with `just test-nmt`
+5. Tests should use `set -euo pipefail` for strict error handling
 
 ### Running All Tests
 Use `just test-all` or `nix flake check` to run both ERT and NMT tests.
+
+## Important Files
+
+- **init.el**: Main entry point that loads all configuration modules in order
+- **early-init.el**: Pre-initialization settings (loaded before package system)
+- **lisp/platform.el**: Platform detection library (must load first)
+- **config/core.el**: Fundamental Emacs settings and built-in package configurations
+- **default.nix**: Emacs package builder with all dependencies
+- **config.nix**: Creates filtered configuration package for deployment using lib.fileset
+- **module.nix**: Home-manager module definition
+- **flake.nix**: Main flake entry point with all outputs
+- **justfile**: Development task runner with common commands
+
+### Fileset Filtering (config.nix)
+The config.nix file filters out development-only files when creating the deployment package:
+- Excludes: .claude/, .github/, tests/, nmt-tests/, *.nix files, CLAUDE.md, justfile, .envrc, .gitignore
+- Includes: init.el, early-init.el, config/, lisp/ directories
