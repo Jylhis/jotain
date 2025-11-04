@@ -32,8 +32,15 @@
 (require 'fonts)       ; Font configuration and management
 (require 'ui)          ; UI and appearance
 (require 'completion)  ; Modern completion framework
+(require 'keybindings) ; Mnemonic keybinding system (after completion for which-key)
 (require 'programming) ; Programming and development tools
 (require 'per-project) ; Thing to help with project specific setups
+
+;; Language-specific configurations
+(require 'lang-go)     ; Go language configuration
+(require 'lang-cc)     ; C/C++ language configuration
+(require 'lang-haskell) ; Haskell language configuration
+
 (require 'writing)     ; Org-mode and documentation
 (require 'git)         ; Git and version control
 (require 'help)        ; Enhanced help system
@@ -45,6 +52,16 @@
 (when platform-android-p (require 'android)) ; Enhanced Android support
 
 (require 'app-launchers)
+
+;; Additional GC optimizations from Doom Emacs patterns
+;; Trigger GC when idle for 5 seconds
+(run-with-idle-timer 5 t #'garbage-collect)
+
+;; Prevent GC during minibuffer operations (completion!)
+(add-hook 'minibuffer-setup-hook
+          (lambda () (setq gc-cons-threshold most-positive-fixnum)))
+(add-hook 'minibuffer-exit-hook
+          (lambda () (setq gc-cons-threshold (* 16 1024 1024))))
 
 (provide 'init)
 ;;; init.el ends here

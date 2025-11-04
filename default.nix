@@ -39,6 +39,7 @@ let
       diminish
       direnv
       docker-compose-mode
+      doom-modeline
       dockerfile-mode
       drag-stuff
       dtrt-indent
@@ -49,6 +50,7 @@ let
       embark-consult
       emojify
       expand-region
+      general
       projection
       projection-multi-embark
       projection-multi
@@ -61,6 +63,7 @@ let
       haskell-ts-mode
       helpful
       hl-todo
+      hydra
       jq-ts-mode
       just-mode
       just-ts-mode
@@ -113,6 +116,7 @@ let
       web-server # For claude-code-ide
       websocket # For claude-code-ide
       wgrep
+      ws-butler
       yaml-mode
       zoxide
     ]

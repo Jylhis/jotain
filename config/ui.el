@@ -46,6 +46,27 @@
   :diminish
   :hook (after-init . which-key-mode))
 
+;; Doom modeline for information-rich, compact mode line
+(use-package doom-modeline
+  :ensure
+  :demand t
+  :hook (after-init . doom-modeline-mode)
+  :custom
+  (doom-modeline-height 25)
+  (doom-modeline-bar-width 3)
+  (doom-modeline-icon t)
+  (doom-modeline-major-mode-icon t)
+  (doom-modeline-major-mode-color-icon t)
+  (doom-modeline-buffer-file-name-style 'truncate-upto-project)
+  (doom-modeline-buffer-state-icon t)
+  (doom-modeline-buffer-modification-icon t)
+  (doom-modeline-lsp t)
+  (doom-modeline-github nil)  ; Disable GitHub integration for performance
+  (doom-modeline-env-version t)
+  (doom-modeline-project-detection 'project)
+  (doom-modeline-vcs-max-length 20)
+  (doom-modeline-workspace-name nil))
+
 (use-package hl-line
   :custom
   (global-hl-line-sticky-flag t)
@@ -169,6 +190,28 @@
   :ensure
   :config
   (global-kkp-mode +1))
+
+;; Visual feedback when jumping around
+(use-package pulse
+  :ensure nil  ; built-in
+  :config
+  (defun my/pulse-line (&rest _)
+    "Pulse the current line for visual feedback."
+    (pulse-momentary-highlight-one-line (point)))
+
+  ;; Add pulse feedback to common navigation commands
+  (dolist (cmd '(recenter-top-bottom other-window windmove-left windmove-right
+                 windmove-up windmove-down xref-find-definitions xref-go-back
+                 xref-go-forward consult-line consult-imenu))
+    (advice-add cmd :after #'my/pulse-line)))
+
+;; Smart whitespace trimming
+(use-package ws-butler
+  :ensure
+  :diminish
+  :hook ((prog-mode text-mode) . ws-butler-mode)
+  :custom
+  (ws-butler-keep-whitespace-before-point nil))
 
 (provide 'ui)
 ;;; ui.el ends here
