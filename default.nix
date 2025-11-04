@@ -64,6 +64,7 @@ let
       helpful
       hl-todo
       hydra
+      inf-ruby
       jq-ts-mode
       just-mode
       just-ts-mode
@@ -97,6 +98,7 @@ let
       ox-slack
       package-lint
       pkgs.sqlite # consult-dash dependency
+      pyvenv
       pretty-sha-path
       rainbow-delimiters
       smartparens
@@ -109,6 +111,7 @@ let
       treesit-auto
       treesit-fold
       treesit-grammars.with-all-grammars
+      typescript-mode
       vertico
       vterm
       vundo

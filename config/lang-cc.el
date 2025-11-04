@@ -1,8 +1,8 @@
-;;; lang-cc.el --- C/C++ language configuration -*- lexical-binding: t; -*-
+;;; lang-cc.el --- C/C++/CUDA language configuration -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Enhanced C/C++ development configuration with clangd LSP, modern C++ support,
-;; and comprehensive debugging integration following Doom/Spacemacs patterns.
+;; Enhanced C/C++/CUDA development configuration with clangd LSP, modern C++ support,
+;; CUDA integration, and comprehensive debugging following Doom/Spacemacs patterns.
 
 ;;; Code:
 
@@ -11,7 +11,7 @@
   ;; Configure clangd as the preferred LSP server
   (with-eval-after-load 'eglot
     (add-to-list 'eglot-server-programs
-                 '((c-mode c++-mode c-ts-mode c++-ts-mode) .
+                 '((c-mode c++-mode c-ts-mode c++-ts-mode cuda-mode) .
                    ("clangd"
                     "--background-index"
                     "--clang-tidy"
@@ -62,8 +62,8 @@
   ;; Major-mode keybindings following Doom/Spacemacs patterns
   (with-eval-after-load 'keybindings
     (my/local-leader-def
-      :keymaps '(c-mode-map c++-mode-map c-ts-mode-map c++-ts-mode-map)
-      "" '(:ignore t :which-key "c/c++")
+      :keymaps '(c-mode-map c++-mode-map c-ts-mode-map c++-ts-mode-map cuda-mode-map)
+      "" '(:ignore t :which-key "c/c++/cuda")
 
       ;; Goto operations
       "g" '(:ignore t :which-key "goto")
@@ -100,6 +100,48 @@
       ;; Refactor
       "r" '(:ignore t :which-key "refactor")
       "rr" '(eglot-rename :which-key "rename")
+
+      ;; Actions
+      "a" '(:ignore t :which-key "actions")
+      "aa" '(eglot-code-actions :which-key "code actions")
+      "aq" '(eglot-code-action-quickfix :which-key "quickfix"))))
+
+;; CUDA support
+(use-package cuda-mode
+  :ensure
+  :mode "\\.cu\\'"
+  :hook (cuda-mode . eglot-ensure)
+  :config
+  (with-eval-after-load 'keybindings
+    (my/local-leader-def
+      :keymaps 'cuda-mode-map
+      "" '(:ignore t :which-key "cuda")
+
+      ;; Goto operations
+      "g" '(:ignore t :which-key "goto")
+      "gg" '(xref-find-definitions :which-key "definition")
+      "gG" '(xref-find-definitions-other-window :which-key "definition other")
+      "gr" '(xref-find-references :which-key "references")
+      "ga" '(my/cc-find-alternate-file :which-key "alternate file")
+      "gb" '(xref-go-back :which-key "go back")
+      "gf" '(xref-go-forward :which-key "go forward")
+
+      ;; Help/Documentation
+      "h" '(:ignore t :which-key "help")
+      "hh" '(eldoc-doc-buffer :which-key "doc at point")
+
+      ;; Compile
+      "c" '(:ignore t :which-key "compile")
+      "cc" '(compile :which-key "compile")
+      "cC" '(recompile :which-key "recompile")
+
+      ;; Debug
+      "d" '(:ignore t :which-key "debug")
+      "dd" '(gdb :which-key "start gdb")
+
+      ;; Format
+      "=" '(eglot-format-buffer :which-key "format buffer")
+      "==" '(eglot-format-buffer :which-key "format buffer")
 
       ;; Actions
       "a" '(:ignore t :which-key "actions")

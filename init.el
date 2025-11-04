@@ -37,9 +37,17 @@
 (require 'per-project) ; Thing to help with project specific setups
 
 ;; Language-specific configurations
-(require 'lang-go)     ; Go language configuration
-(require 'lang-cc)     ; C/C++ language configuration
-(require 'lang-haskell) ; Haskell language configuration
+(require 'lang-go)         ; Go language configuration
+(require 'lang-cc)         ; C/C++/CUDA language configuration
+(require 'lang-haskell)    ; Haskell language configuration
+(require 'lang-python)     ; Python language configuration
+(require 'lang-javascript) ; JavaScript/TypeScript language configuration
+(require 'lang-ruby)       ; Ruby language configuration
+(require 'lang-perl)       ; Perl language configuration
+(require 'lang-assembly)   ; Assembly language configuration
+(require 'lang-shell)      ; Bash/PowerShell configuration
+(require 'lang-nix)        ; Nix language configuration
+(require 'lang-build)      ; Build systems (Make/CMake/Autotools/Just)
 
 (require 'writing)     ; Org-mode and documentation
 (require 'git)         ; Git and version control
