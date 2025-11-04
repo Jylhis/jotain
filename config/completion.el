@@ -23,7 +23,7 @@
   :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
 
 (use-package vertico-multiform
-  :requires vertico
+  :after vertico
   :ensure nil
   :custom
   (vertico-multiform-categories
@@ -36,9 +36,8 @@
      (consult-ripgrep buffer)
      (consult-grep buffer)
      (consult-fd grid)
-     (execute-extended-command 'vertical))
-   )
-  :config
+     (execute-extended-command 'vertical)))
+  :init
   (vertico-multiform-mode 1))
 
 (use-package vertico-buffer

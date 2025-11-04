@@ -6,6 +6,12 @@
 
 ;;; Code:
 
+;; Modern C++ font lock for better syntax highlighting
+(use-package modern-cpp-font-lock
+  :ensure
+  :defer t
+  :hook (c++-mode . modern-c++-font-lock-mode))
+
 ;; Enhanced C/C++ configuration building on cc-mode from programming.el
 (with-eval-after-load 'cc-mode
   ;; Configure clangd as the preferred LSP server

@@ -60,13 +60,13 @@
 (use-package autorevert
   :custom
   (global-auto-revert-non-file-buffers t "Revert also non-file buffers")
-  :config
+  :init
   (global-auto-revert-mode 1)) ; Automatically refresh buffer if changed on disk
 
 (use-package recentf
   :custom
   (recentf-max-saved-items 50 "Increase the default a bit")
-  :config
+  :init
   (recentf-mode 1)) ; Keep track of open files
 
 (use-package savehist
@@ -88,7 +88,7 @@
          (minibuffer-setup . subword-mode)))
 
 (use-package repeat
-  :config
+  :init
   (repeat-mode))
 
 (use-package delsel

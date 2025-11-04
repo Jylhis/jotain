@@ -27,6 +27,7 @@
 
 (use-package dash-docs
   :ensure
+  :defer t
   :defines (dash-docs-docsets dash-docs-docsets-path)
   :custom
   (dash-docs-docsets-path "~/.local/share/Zeal/Zeal/docsets/")
@@ -47,8 +48,8 @@
 
 (use-package consult-dash
   :ensure
-  :after consult
-  )
+  :defer t
+  :after consult)
 
 (provide 'help)
 ;;; help.el ends here
