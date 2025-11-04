@@ -9,21 +9,22 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}=== Claude Code Session Setup ===${NC}"
 
-# Function to install Nix
+# Function to detect cloud/ephemeral environment
+is_cloud_environment() {
+    # Check for common cloud environment indicators
+    [ -f /.dockerenv ] || \
+    grep -q docker /proc/1/cgroup 2>/dev/null || \
+    [ "${CLOUD_ENV:-}" = "true" ] || \
+    [ "${CODESPACES:-}" = "true" ] || \
+    [ "${GITPOD_WORKSPACE_ID:-}" != "" ] || \
+    [ "${REPL_ID:-}" != "" ]
+}
+
+# Function to install Nix (only in cloud environments)
 install_nix() {
-    echo -e "${YELLOW}Installing Nix...${NC}"
-
-    # Detect if we're in a container/cloud environment
-    if [ -f /.dockerenv ] || grep -q docker /proc/1/cgroup 2>/dev/null || [ "${CLOUD_ENV:-}" = "true" ]; then
-        echo "Detected container/cloud environment, using single-user installation"
-        curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | \
-            sh -s -- install linux --no-confirm --init none
-    else
-        # Standard multi-user install
-        curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | \
-            sh -s -- install linux --no-confirm
-    fi
-
+    echo -e "${YELLOW}Installing Nix in cloud environment...${NC}"
+    curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | \
+        sh -s -- install linux --no-confirm --init none
     echo -e "${GREEN}✓ Nix installed successfully${NC}"
 }
 
@@ -36,34 +37,58 @@ source_nix() {
     fi
 }
 
-# Check if Nix is installed
-if ! command -v nix &> /dev/null; then
-    install_nix
-    source_nix
+# Check if we're in a cloud environment
+if is_cloud_environment; then
+    echo -e "${BLUE}Detected cloud/ephemeral environment${NC}"
+
+    # Install Nix if not present
+    if ! command -v nix &> /dev/null; then
+        install_nix
+        source_nix
+    else
+        echo -e "${GREEN}✓ Nix is already installed${NC}"
+        source_nix
+    fi
 else
-    echo -e "${GREEN}✓ Nix is already installed${NC}"
-    source_nix
+    echo -e "${BLUE}Detected local environment${NC}"
+
+    # On local machines, assume Nix is already installed
+    if ! command -v nix &> /dev/null; then
+        source_nix
+
+        # If still not available, show error
+        if ! command -v nix &> /dev/null; then
+            echo -e "${YELLOW}⚠ Nix not found in local environment${NC}"
+            echo -e "${YELLOW}Please install Nix: https://nixos.org/download${NC}"
+            echo ""
+        fi
+    else
+        echo -e "${GREEN}✓ Nix is available${NC}"
+        source_nix
+    fi
 fi
 
 # Ensure Nix is in PATH
 if ! command -v nix &> /dev/null; then
-    echo -e "${YELLOW}Warning: Nix not in PATH after installation${NC}"
+    echo -e "${YELLOW}Attempting to add Nix to PATH...${NC}"
     export PATH="/nix/var/nix/profiles/default/bin:$HOME/.nix-profile/bin:$PATH"
 fi
 
 # Configure Nix for flakes (if not already configured)
-NIX_CONF="${HOME}/.config/nix/nix.conf"
-mkdir -p "$(dirname "$NIX_CONF")"
+if command -v nix &> /dev/null; then
+    NIX_CONF="${HOME}/.config/nix/nix.conf"
+    mkdir -p "$(dirname "$NIX_CONF")"
 
-if [ ! -f "$NIX_CONF" ] || ! grep -q "experimental-features" "$NIX_CONF"; then
-    echo -e "${YELLOW}Configuring Nix with flakes support...${NC}"
-    cat >> "$NIX_CONF" << 'EOF'
+    if [ ! -f "$NIX_CONF" ] || ! grep -q "experimental-features" "$NIX_CONF"; then
+        echo -e "${YELLOW}Configuring Nix with flakes support...${NC}"
+        cat >> "$NIX_CONF" << 'EOF'
 experimental-features = nix-command flakes
 max-jobs = auto
 EOF
-    echo -e "${GREEN}✓ Nix configured with flakes support${NC}"
-else
-    echo -e "${GREEN}✓ Nix already configured with flakes${NC}"
+        echo -e "${GREEN}✓ Nix configured with flakes support${NC}"
+    else
+        echo -e "${GREEN}✓ Nix already configured with flakes${NC}"
+    fi
 fi
 
 # Display project information

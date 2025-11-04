@@ -8,21 +8,26 @@ The `session_setup.sh` script runs automatically when Claude Code starts a new s
 
 ### What it does:
 
-1. **Installs Nix** (if not present)
-   - Uses the Determinate Systems installer for reliability
-   - Detects container/cloud environments and adjusts installation method
-   - Single-user install for containers, multi-user for standard systems
+1. **Detects Environment**
+   - Identifies cloud/ephemeral environments (containers, Codespaces, Gitpod, etc.)
+   - Assumes Nix is pre-installed in local environments
 
-2. **Configures Nix**
+2. **Installs Nix** (cloud environments only)
+   - Uses the Determinate Systems installer for reliability
+   - Single-user installation optimized for ephemeral environments
+   - Skipped on local machines (assumes pre-existing installation)
+
+3. **Configures Nix**
    - Enables experimental features: `nix-command` and `flakes`
    - Sets up `~/.config/nix/nix.conf` with optimal settings
    - Idempotent: safe to run multiple times
 
-3. **Sources Nix Environment**
+4. **Sources Nix Environment**
    - Ensures Nix commands are available in PATH
    - Works with both single-user and multi-user installations
+   - Shows helpful error if Nix is missing locally
 
-4. **Displays Project Information**
+5. **Displays Project Information**
    - Shows available `just` commands
    - Lists common development workflows
    - Provides helpful tips for getting started
