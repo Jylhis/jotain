@@ -58,64 +58,59 @@ let
 
   # Development wrapper for emacs that uses local sources
   devEmacsWrapper = pkgs.writeShellScriptBin "emacs-dev" ''
-        #!/usr/bin/env bash
+            #!/usr/bin/env bash
 
-        # Dynamically find project root (look for flake.nix)
-        PROJECT_ROOT="$PWD"
-        while [ ! -f "$PROJECT_ROOT/flake.nix" ] && [ "$PROJECT_ROOT" != "/" ]; do
-          PROJECT_ROOT="$(dirname "$PROJECT_ROOT")"
-        done
+            # Dynamically find project root (look for flake.nix)
+            PROJECT_ROOT="$PWD"
+            while [ ! -f "$PROJECT_ROOT/flake.nix" ] && [ "$PROJECT_ROOT" != "/" ]; do
+              PROJECT_ROOT="$(dirname "$PROJECT_ROOT")"
+            done
 
-        if [ ! -f "$PROJECT_ROOT/flake.nix" ]; then
-          echo "Error: Could not find project root (no flake.nix found)"
-          exit 1
-        fi
+            if [ ! -f "$PROJECT_ROOT/flake.nix" ]; then
+              echo "Error: Could not find project root (no flake.nix found)"
+              exit 1
+            fi
 
-        # Use local sources
-        export JOTAIN_DEV_MODE=1
-        export JOTAIN_ROOT="$PROJECT_ROOT"
-        export JOTAIN_ELISP_DIR="$PROJECT_ROOT/elisp"
+            # Use local sources
+            export JOTAIN_DEV_MODE=1
+            export JOTAIN_ROOT="$PROJECT_ROOT"
+            export JOTAIN_ELISP_DIR="$PROJECT_ROOT/elisp"
 
-        # Isolated user directory
-        export JOTAIN_DEV_HOME="$PROJECT_ROOT/.dev-home"
-        export XDG_CONFIG_HOME="$JOTAIN_DEV_HOME/.config"
-        export XDG_DATA_HOME="$JOTAIN_DEV_HOME/.local/share"
-        export XDG_CACHE_HOME="$JOTAIN_DEV_HOME/.cache"
-        export XDG_STATE_HOME="$JOTAIN_DEV_HOME/.local/state"
+            # Isolated user directory
+            export JOTAIN_DEV_HOME="$PROJECT_ROOT/.dev-home"
+            export XDG_CONFIG_HOME="$JOTAIN_DEV_HOME/.config"
+            export XDG_DATA_HOME="$JOTAIN_DEV_HOME/.local/share"
+            export XDG_CACHE_HOME="$JOTAIN_DEV_HOME/.cache"
+            export XDG_STATE_HOME="$JOTAIN_DEV_HOME/.local/state"
 
-        mkdir -p "$XDG_CONFIG_HOME/emacs"
-        mkdir -p "$XDG_DATA_HOME/emacs"
-        mkdir -p "$XDG_CACHE_HOME/emacs"
-        mkdir -p "$XDG_STATE_HOME/emacs"
+            mkdir -p "$XDG_CONFIG_HOME/emacs"
+            mkdir -p "$XDG_DATA_HOME/emacs"
+            mkdir -p "$XDG_CACHE_HOME/emacs"
+            mkdir -p "$XDG_STATE_HOME/emacs"
 
-        # Create early-init.el if it exists
-        if [ -f "$PROJECT_ROOT/templates/early-init.el" ]; then
-          cp "$PROJECT_ROOT/templates/early-init.el" "$XDG_CONFIG_HOME/emacs/early-init.el"
-        fi
+            # Copy template files
+            if [ -f "$PROJECT_ROOT/templates/early-init.el" ]; then
+              cp "$PROJECT_ROOT/templates/early-init.el" "$XDG_CONFIG_HOME/emacs/early-init.el"
+            fi
 
-        # Create init.el that loads from local sources
-        cat > "$XDG_CONFIG_HOME/emacs/init.el" <<'EOF'
-    ;; Development init.el - loads Jotain from local sources
+            if [ -f "$PROJECT_ROOT/templates/init.el" ]; then
+              cp "$PROJECT_ROOT/templates/init.el" "$XDG_CONFIG_HOME/emacs/init.el"
+            fi
 
-    ;; Add local elisp directory to load path
-    (add-to-list 'load-path (expand-file-name "elisp" (getenv "JOTAIN_ROOT")))
-    (add-to-list 'load-path (expand-file-name "elisp/core" (getenv "JOTAIN_ROOT")))
-    (add-to-list 'load-path (expand-file-name "elisp/ui" (getenv "JOTAIN_ROOT")))
-    (add-to-list 'load-path (expand-file-name "elisp/completion" (getenv "JOTAIN_ROOT")))
-    (add-to-list 'load-path (expand-file-name "elisp/editor" (getenv "JOTAIN_ROOT")))
-    (add-to-list 'load-path (expand-file-name "elisp/programming" (getenv "JOTAIN_ROOT")))
+            # Create symlink for elisp directory so template's user-emacs-directory paths work
+            ln -sf "$PROJECT_ROOT/elisp" "$XDG_CONFIG_HOME/emacs/elisp"
 
-    ;; Load Jotain if it exists
-    (when (file-exists-p (expand-file-name "elisp/jotain.el" (getenv "JOTAIN_ROOT")))
-      (require 'jotain))
+            # Append dev mode indicators to init.el
+            cat >> "$XDG_CONFIG_HOME/emacs/init.el" <<'EOF'
 
-    ;; Development mode indicator
+    ;; Development mode indicators (appended by dev shell)
+    (setq jotain-dev-mode t)
     (setq frame-title-format '("Jotain DEV - %b"))
     (message "Jotain loaded from: %s" (getenv "JOTAIN_ELISP_DIR"))
     EOF
 
-        # Run Emacs
-        exec ${jotainEmacs}/bin/emacs "$@"
+            # Run Emacs with explicit init directory to ensure XDG location is used
+            exec ${jotainEmacs}/bin/emacs --init-directory="$XDG_CONFIG_HOME/emacs" "$@"
   '';
 
   # LSP servers and development tools
@@ -182,6 +177,9 @@ pkgs.mkShell {
     export JOTAIN_ROOT="$PWD"
     export JOTAIN_ELISP_DIR="$PWD/elisp"
     export JOTAIN_CLI_DIR="$PWD/cli"
+
+    # Prepend local CLI to PATH for direct access
+    export PATH="$PWD/cli:$PATH"
 
     # Add .dev-home to .gitignore if not already there
     if [ -f .gitignore ] && ! grep -q "^\.dev-home" .gitignore 2>/dev/null; then

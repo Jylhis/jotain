@@ -10,7 +10,6 @@
 
 ;; Use modus-themes (built-in to Emacs 30)
 (use-package modus-themes
-  :ensure nil
   :config
   ;; Configure modus-themes appearance
   (setq modus-themes-bold-constructs t
@@ -19,16 +18,16 @@
         modus-themes-variable-pitch-ui nil
         modus-themes-custom-auto-reload t
         modus-themes-disable-other-themes t
-        
+
         ;; Org mode specific
         modus-themes-org-blocks 'gray-background
         modus-themes-headings '((1 . (1.3))
                                 (2 . (1.2))
                                 (3 . (1.1))
                                 (t . (1.0))))
-  
+
   ;; Load modus-vivendi (dark) theme by default
-  (load-theme 'modus-vivendi t))
+  (load-theme 'modus-vivendi-tinted t))
 
 ;; Optional: Configure doom-themes if available
 ;; Uncomment to use doom-themes instead
