@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Jotain CLI - Main entry point
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export JOTAIN_CLI_DIR="$SCRIPT_DIR"
+
+source "$SCRIPT_DIR/lib/common.bash"
+
+# Show usage
+usage() {
+    cat <<EOF
+Jotain - NixOS-native Emacs distribution
+
+Usage: jot <command> [arguments]
+
+Commands:
+  run [ARGS]        Launch Emacs with Jotain configuration
+  doctor            Check installation health
+  eval EXPR         Evaluate Emacs Lisp expression
+  help              Show this help message
+
+Environment:
+  JOTAIN_DEV_MODE   Enable development mode
+  JOTAIN_ROOT       Override installation directory
+
+Examples:
+  jot run                    # Launch Emacs
+  jot run file.el            # Open file.el
+  jot doctor                 # Check installation
+  jot eval '(+ 1 2 3)'       # Evaluate expression
+
+EOF
+    exit 0
+}
+
+# Main command dispatcher
+main() {
+    if [ $# -eq 0 ]; then
+        usage
+    fi
+
+    local command="$1"
+    shift
+
+    case "$command" in
+        run)
+            source "$SCRIPT_DIR/commands/run.bash"
+            run_command "$@"
+            ;;
+        doctor)
+            source "$SCRIPT_DIR/commands/doctor.bash"
+            doctor_command "$@"
+            ;;
+        eval)
+            source "$SCRIPT_DIR/commands/eval.bash"
+            eval_command "$@"
+            ;;
+        help|-h|--help)
+            usage
+            ;;
+        *)
+            error "Unknown command: $command"
+            echo
+            usage
+            ;;
+    esac
+}
+
+main "$@"
