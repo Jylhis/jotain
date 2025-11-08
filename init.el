@@ -15,36 +15,36 @@
 (add-to-list 'load-path (expand-file-name "config" user-emacs-directory))
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 
-;; Load platform detection first
-(require 'platform)
+;; ;; Load platform detection first
+;; (require 'platform)
 
-;; Ensure package system is available
-(require 'package)
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-(package-initialize)
+;; ;; Ensure package system is available
+;; (require 'package)
+;; (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+;; (package-initialize)
 
-;; Store automatic customization options elsewhere
-(setq custom-file (locate-user-emacs-file "custom.el"))
-(when (file-exists-p custom-file) (load custom-file))
+;; ;; Store automatic customization options elsewhere
+;; (setq custom-file (locate-user-emacs-file "custom.el"))
+;; (when (file-exists-p custom-file) (load custom-file))
 
-;; Load configuration modules
-(require 'core)        ; Core Emacs settings and built-ins
-(require 'fonts)       ; Font configuration and management
-(require 'ui)          ; UI and appearance
-(require 'completion)  ; Modern completion framework
-(require 'programming) ; Programming and development tools
-(require 'per-project) ; Thing to help with project specific setups
-(require 'writing)     ; Org-mode and documentation
-(require 'git)         ; Git and version control
-(require 'help)        ; Enhanced help system
-(require 'ai)          ; AI integrations
-(require 'systems)     ; System administration tools
+;; ;; Load configuration modules
+;; (require 'core)        ; Core Emacs settings and built-ins
+;; (require 'fonts)       ; Font configuration and management
+;; (require 'ui)          ; UI and appearance
+;; (require 'completion)  ; Modern completion framework
+;; (require 'programming) ; Programming and development tools
+;; (require 'per-project) ; Thing to help with project specific setups
+;; (require 'writing)     ; Org-mode and documentation
+;; (require 'git)         ; Git and version control
+;; (require 'help)        ; Enhanced help system
+;; (require 'ai)          ; AI integrations
+;; (require 'systems)     ; System administration tools
 
-;; Load platform-specific configurations
-(require 'platforms)   ; General platform adaptations
-(when platform-android-p (require 'android)) ; Enhanced Android support
+;; ;; Load platform-specific configurations
+;; (require 'platforms)   ; General platform adaptations
+;; (when platform-android-p (require 'android)) ; Enhanced Android support
 
-(require 'app-launchers)
+;; (require 'app-launchers)
 
 (provide 'init)
 ;;; init.el ends here
