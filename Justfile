@@ -34,6 +34,7 @@ format: fmt
 # Check formatting without modifying files (CI mode)
 fmt-check:
     nix fmt -- --fail-on-change
+
 # Run development Emacs
 emacs *ARGS:
     nix develop --command emacs-dev {{ARGS}}
@@ -67,20 +68,9 @@ clean:
 # Clean and rebuild
 rebuild: clean build
 
-# Show flake info
-info:
-    nix flake show
-    @echo ""
-    @echo "System: $(nix eval --impure --raw --expr 'builtins.currentSystem')"
-
 # Enter development shell with command
 shell COMMAND:
     nix develop --command {{COMMAND}}
-
-# List all packages
-list-packages:
-    @echo "Available packages:"
-    @nix flake show --json | jq -r '.packages."$(nix eval --impure --raw --expr 'builtins.currentSystem')" | keys[]'
 
 # Show package dependencies (requires elisp/ to exist)
 show-deps:
