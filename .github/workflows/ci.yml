@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop, new-structure ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Build and test on Nix
+  nix-build:
+    name: Build with Nix
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v14
+        with:
+          name: jotain
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          skipPush: true
+
+      - name: Show flake info
+        run: nix flake show
+
+      - name: Run flake checks
+        run: nix flake check --print-build-logs
+
+      - name: Build default package
+        run: nix build --print-build-logs
+
+      - name: Build development Emacs
+        run: nix build .#emacs-dev --print-build-logs
+
+  # Run smoke tests
+  smoke-tests:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Run smoke tests
+        run: |
+          nix develop --command emacs --batch \
+            -L elisp -L elisp/core -L tests \
+            --eval "(add-to-list 'load-path \"$(pwd)/elisp\")" \
+            -l tests/test-helper.el \
+            -l tests/test-smoke.el \
+            -f ert-run-tests-batch-and-exit
+
+  # Check code formatting
+  formatting:
+    name: Check Formatting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Check formatting with treefmt
+        run: |
+          nix fmt -- --fail-on-change
+
+      - name: Run formatting check
+        run: |
+          nix build .#checks.$(nix eval --impure --raw --expr 'builtins.currentSystem').formatting
