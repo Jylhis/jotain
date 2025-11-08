@@ -29,8 +29,11 @@
 
 ;; Consult integration with Embark
 (use-package embark-consult
+  :after (embark consult)
   :hook
-  (embark-collect-mode . consult-preview-at-point-mode))
+  (embark-collect-mode . consult-preview-at-point-mode)
+  :bind (:map minibuffer-mode-map
+              ("C-c C-o" . embark-export)))
 
 (provide 'jotain-completion-embark)
 ;;; jotain-completion-embark.el ends here

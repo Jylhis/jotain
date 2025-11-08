@@ -90,11 +90,11 @@ let
 
             # Copy template files
             if [ -f "$PROJECT_ROOT/templates/early-init.el" ]; then
-              cp "$PROJECT_ROOT/templates/early-init.el" "$XDG_CONFIG_HOME/emacs/early-init.el"
+              ln -sf "$PROJECT_ROOT/templates/early-init.el" "$XDG_CONFIG_HOME/emacs/early-init.el"
             fi
 
             if [ -f "$PROJECT_ROOT/templates/init.el" ]; then
-              cp "$PROJECT_ROOT/templates/init.el" "$XDG_CONFIG_HOME/emacs/init.el"
+              ln -sf "$PROJECT_ROOT/templates/init.el" "$XDG_CONFIG_HOME/emacs/init.el"
             fi
 
             # Create symlink for elisp directory so template's user-emacs-directory paths work

@@ -8,29 +8,45 @@
 ;;; Code:
 
 (use-package vertico
-  :demand t
-  :bind (:map vertico-map
-              ("C-j" . vertico-next)
-              ("C-k" . vertico-previous)
-              ("C-f" . vertico-exit)
-              ("<tab>" . minibuffer-complete)
-              ("<escape>" . minibuffer-keyboard-quit))
-  :custom
-  (vertico-cycle t)
-  (vertico-resize t)
-  (vertico-count 15)
-  :config
-  (vertico-mode))
+  :demand t)
 
 ;; Vertico extensions
 (use-package vertico-directory
   :after vertico
   :ensure nil
+  ;; More convenient directory navigation commands
   :bind (:map vertico-map
               ("RET" . vertico-directory-enter)
               ("DEL" . vertico-directory-delete-char)
               ("M-DEL" . vertico-directory-delete-word))
+  ;; Tidy shadowed file names
   :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
+
+;; (use-package vertico-multiform
+;;   :requires vertico
+;;   :ensure nil
+;;   :custom
+;;   (vertico-multiform-categories
+;;    '((file buffer grid)
+;;      (imenu (:not indexed mouse))
+;;      (symbol (vertico-sort-function . vertico-sort-alpha))))
+;;   (vertico-multiform-commands
+;;    '((consult-line buffer)
+;;      (consult-git-grep buffer)
+;;      (consult-ripgrep buffer)
+;;      (consult-grep buffer)
+;;      (consult-fd grid)
+;;      (execute-extended-command 'vertical))
+;;    )
+;;   :config
+;;   (vertico-multiform-mode 1))
+
+(use-package vertico-buffer
+  :after vertico
+  :ensure nil
+  :custom
+  (vertico-buffer-hide-prompt nil)
+  (vertico-buffer-display-action '(display-buffer-reuse-window)))
 
 (provide 'jotain-completion-vertico)
 ;;; jotain-completion-vertico.el ends here

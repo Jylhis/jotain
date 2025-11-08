@@ -10,7 +10,7 @@
 
 (use-package consult
   :demand t
-  :bind (;; C-c bindings (mode-specific)
+  :bind (;; C-c bindings in `mode-specific-map'
          ("C-c h" . consult-history)
          ("C-c m" . consult-mode-command)
          ("C-c k" . consult-kmacro)

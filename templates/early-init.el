@@ -17,6 +17,15 @@
 ;; Disable package.el - we use Nix for package management
 (setq package-enable-at-startup nil)
 
+;; `use-package' is builtin since 29.
+;; It must be set before loading `use-package'.
+(setq use-package-enable-imenu-support t)
+
+;; In noninteractive sessions, prioritize non-byte-compiled source files to
+;; prevent the use of stale byte-code. Otherwise, it saves us a little IO time
+;; to skip the mtime checks on every *.elc file.
+(setq load-prefer-newer noninteractive)
+
 ;; Native compilation settings (Emacs 30+)
 (when (and (fboundp 'native-comp-available-p)
            (native-comp-available-p))
@@ -31,15 +40,21 @@
   (setq native-comp-speed 2))
 
 ;; UI optimizations - disable UI elements before frame creation
+;; Faster to disable these here (before they've been initialized)
 (push '(menu-bar-lines . 0) default-frame-alist)
 (push '(tool-bar-lines . 0) default-frame-alist)
 (push '(vertical-scroll-bars) default-frame-alist)
-(push '(horizontal-scroll-bars) default-frame-alist)
+(when (featurep 'ns)
+  (push '(ns-transparent-titlebar . t) default-frame-alist)
+  (push '(ns-appearance . dark) default-frame-alist))
 
 ;; Disable startup screen
 (setq inhibit-startup-screen t
       inhibit-startup-message t
       inhibit-startup-echo-area-message user-login-name)
+
+;; Prevent flash of unstyled mode line
+(setq mode-line-format nil)
 
 ;; Faster to disable these here before GUI init
 (setq frame-inhibit-implied-resize t
