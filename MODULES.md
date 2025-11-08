@@ -40,32 +40,10 @@ jotain/
 ## Module Loading Order
 
 1. **Core modules** (loaded first):
-   - jotain-lib
-   - jotain-paths
-   - jotain-packages
-   - jotain-gc
-   - jotain-core
-
 2. **UI modules**:
-   - jotain-ui-themes
-   - jotain-ui-fonts
-   - jotain-ui-modeline
-
 3. **Completion stack** (order matters):
-   - jotain-completion-orderless
-   - jotain-completion-vertico
-   - jotain-completion-marginalia
-   - jotain-completion-consult
-   - jotain-completion-corfu
-   - jotain-completion-embark
-
 4. **Editor**:
-   - jotain-editor-core
-
 5. **Programming languages**:
-   - jotain-programming-elisp
-   - jotain-programming-nix
-   - jotain-programming-shell
 
 ## Development Mode
 
@@ -73,34 +51,6 @@ Set `JOTAIN_DEV_MODE=1` to enable:
 - Module loading messages
 - Additional debugging output
 - Module reload capability (`M-x jotain-reload-module`)
-
-## Key Features
-
-### Performance Optimizations
-- Deferred GC during startup (early-init.el)
-- Idle GC collection
-- Minibuffer GC pausing
-- Native compilation support (Emacs 30+)
-
-### XDG Compliance
-- Cache: `$XDG_CACHE_HOME/jotain/`
-- Data: `$XDG_DATA_HOME/jotain/`
-- State: `$XDG_STATE_HOME/jotain/`
-- Config: `$XDG_CONFIG_HOME/jotain/`
-
-### Completion Stack
-Full Vertico ecosystem:
-- **Orderless**: Flexible, order-independent matching
-- **Vertico**: Minimal, fast vertical completion UI
-- **Marginalia**: Rich annotations in minibuffer
-- **Consult**: Enhanced search and navigation commands
-- **Corfu**: Modern in-buffer completion popup
-- **Embark**: Context-sensitive actions on candidates
-
-### Programming Support
-- **Elisp**: Full IDE with helpful, package-lint, macrostep
-- **Nix**: nix-mode with nil LSP server
-- **Shell**: sh-mode with bash-language-server and shellcheck
 
 ## Package Management
 
@@ -133,48 +83,3 @@ ln -s /path/to/jotain/templates/init.el ~/.config/emacs/
 5. Add `(provide 'jotain-category-feature)` at end
 6. Load in `jotain.el` via `jotain-load-module`
 
-## Required Nix Packages
-
-Based on use-package declarations, these packages need to be in default.nix:
-
-### Core & UI
-- doom-modeline
-- nerd-icons
-- diminish
-
-### Completion
-- vertico
-- consult
-- corfu
-- embark
-- embark-consult
-- marginalia
-- orderless
-- cape
-
-### Editor
-- undo-tree
-- multiple-cursors
-- expand-region
-- move-text
-- anzu
-- highlight-symbol
-- rainbow-delimiters
-- smartparens
-- which-key
-
-### Programming
-- helpful
-- package-lint
-- macrostep
-- eros
-- auto-compile
-- nix-mode
-- nix-repl
-- fish-mode
-- shfmt
-- flymake-shellcheck
-
-## License
-
-Copyright (C) 2025 Jotain Contributors

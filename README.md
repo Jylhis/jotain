@@ -131,11 +131,3 @@ just test-dev
 # Run specific test
 emacs --batch -L elisp -L tests -l test-smoke.el -f ert-run-tests-batch-and-exit
 ```
-
-## License
-
-GPL-3.0-or-later
-
-## Contributing
-
-Contributions are welcome! Please open an issue or pull request.
