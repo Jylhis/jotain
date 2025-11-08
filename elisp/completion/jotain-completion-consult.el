@@ -53,19 +53,18 @@
          ("M-s" . consult-history)
          ("M-r" . consult-history))
   :hook (completion-list-mode . consult-preview-at-point-mode)
-  :init
+  :config
   ;; Optionally configure the register formatting
   (setq register-preview-delay 0.5
         register-preview-function #'consult-register-format)
-  
+
   ;; Optionally tweak the register preview window
   (advice-add #'register-preview :override #'consult-register-window)
-  
+
   ;; Use Consult to select xref locations with preview
   (setq xref-show-xrefs-function #'consult-xref
         xref-show-definitions-function #'consult-xref)
-  
-  :config
+
   ;; Optionally configure preview
   (setq consult-preview-key 'any)
   

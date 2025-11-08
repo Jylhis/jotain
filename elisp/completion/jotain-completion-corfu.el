@@ -54,8 +54,8 @@
 
 ;; Cape - additional completion backends
 (use-package cape
-  :defer t
-  :init
+  :after corfu
+  :config
   ;; Add useful completion-at-point functions
   (add-to-list 'completion-at-point-functions #'cape-dabbrev)
   (add-to-list 'completion-at-point-functions #'cape-file)

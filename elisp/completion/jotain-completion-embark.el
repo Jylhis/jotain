@@ -16,11 +16,11 @@
   :init
   ;; Optionally replace the key help with a completing-read interface
   (setq prefix-help-command #'embark-prefix-help-command)
-  
+
+  :config
   ;; Show the Embark target at point via Eldoc
   (add-hook 'eldoc-documentation-functions #'embark-eldoc-first-target)
-  
-  :config
+
   ;; Hide the mode line of the Embark live/completions buffers
   (add-to-list 'display-buffer-alist
                '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
