@@ -7,7 +7,7 @@
 
 ;;; Code:
 
-;; Nix mode
+;; Nix mode with LSP and formatting
 (use-package nix-mode
   :mode "\\.nix\\'"
   :hook (nix-mode . eglot-ensure)
@@ -15,18 +15,9 @@
   ;; Add nil LSP server for Nix
   (with-eval-after-load 'eglot
     (add-to-list 'eglot-server-programs
-                 '(nix-mode . ("nil")))))
-
-;; Nix formatting
-(use-package nix-mode
-  :ensure nil
-  :config
+                 '(nix-mode . ("nil"))))
+  ;; Nix formatting
   (setq nix-nixfmt-bin "nixfmt"))
-
-;; Nix REPL support
-(use-package nix-repl
-  :defer t
-  :commands (nix-repl))
 
 (provide 'jotain-programming-nix)
 ;;; jotain-programming-nix.el ends here
