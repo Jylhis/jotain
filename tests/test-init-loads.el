@@ -39,8 +39,8 @@
   "Test that all configuration modules can be loaded."
   :tags '(integration slow)
   (let ((modules '(platform core fonts ui completion programming
-                   per-project writing git help ai systems platforms
-                   app-launchers))
+			    per-project writing git help ai systems platforms
+			    app-launchers))
         (failed-modules nil))
     (dolist (module modules)
       (unless (require module nil t)

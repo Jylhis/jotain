@@ -36,10 +36,10 @@
                                       (warning "?" compilation-warning)
                                       (note "·" compilation-info)))
   :bind (:map flymake-mode-map
-         ("M-n" . flymake-goto-next-error)
-         ("M-p" . flymake-goto-prev-error)
-         ("C-c ! l" . flymake-show-buffer-diagnostics)
-         ("C-c ! p" . flymake-show-project-diagnostics))
+              ("M-n" . flymake-goto-next-error)
+              ("M-p" . flymake-goto-prev-error)
+              ("C-c ! l" . flymake-show-buffer-diagnostics)
+              ("C-c ! p" . flymake-show-project-diagnostics))
   :config
   ;; Show diagnostics in echo area when cursor is on an error
   (defun j10s/flymake-show-diagnostic-at-point ()
@@ -130,12 +130,12 @@
   (eglot-extend-to-xref t "Activate Eglot in cross-referenced non-project files")
   (eglot-confirm-server-initiated-edits nil) ; Auto-accept server edits
   :bind (:map eglot-mode-map
-         ("C-c r r" . eglot-rename)
-         ("C-c r f" . eglot-format)
-         ("C-c r a" . eglot-code-actions)
-         ("C-c r o" . eglot-code-action-organize-imports)
-         ("C-c r q" . eglot-code-action-quickfix)
-         ("C-h ." . eldoc-doc-buffer))
+              ("C-c r r" . eglot-rename)
+              ("C-c r f" . eglot-format)
+              ("C-c r a" . eglot-code-actions)
+              ("C-c r o" . eglot-code-action-organize-imports)
+              ("C-c r q" . eglot-code-action-quickfix)
+              ("C-h ." . eldoc-doc-buffer))
   :config
   ;; Remove redundant flymake activation - Eglot does this automatically
   (add-hook 'eglot-managed-mode-hook #'eldoc-mode)
@@ -145,9 +145,9 @@
     (add-hook 'eglot-managed-mode-hook
               (lambda ()
                 (when (member major-mode '(go-mode go-ts-mode
-                                           rust-mode rust-ts-mode
-                                           typescript-mode typescript-ts-mode
-                                           python-mode python-ts-mode))
+						   rust-mode rust-ts-mode
+						   typescript-mode typescript-ts-mode
+						   python-mode python-ts-mode))
                   (eglot-inlay-hints-mode 1)))))
 
   ;; Configure server-specific settings
@@ -264,7 +264,7 @@
 (use-package mermaid-mode :ensure t)
 (use-package yaml-mode :ensure t)
 (use-package modern-cpp-font-lock :ensure
-   :hook (c++-mode . modern-c++-font-lock-mode))
+  :hook (c++-mode . modern-c++-font-lock-mode))
 (use-package just-mode :ensure t)
 (use-package demangle-mode
   :ensure

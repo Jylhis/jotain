@@ -62,11 +62,11 @@
                       ("go test current" . "go test .")
                       ("go build" . "go build .")))
           (python-mode . (("pytest" . "pytest")
-                         ("pytest file" . "pytest %file-name%")))
+                          ("pytest file" . "pytest %file-name%")))
           (haskell-mode . (("stack test" . "stack test")
-                          ("cabal test" . "cabal test")))
+                           ("cabal test" . "cabal test")))
           (nix-ts-mode . (("nix flake check" . "nix flake check")
-                         ("nix fmt" . "nix fmt")))
+                          ("nix fmt" . "nix fmt")))
           )))
 
 (use-package consult-compile-multi

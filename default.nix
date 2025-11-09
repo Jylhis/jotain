@@ -1,6 +1,7 @@
-{
-  pkgs ? import <nixpkgs> { config.allowUnfree = true; },
-  emacs ? pkgs.emacs,
+{ pkgs ? import <nixpkgs> { config.allowUnfree = true; }
+, emacs ? pkgs.emacs
+, devMode ? false
+,
 }:
 let
   emacsWithPackages = emacs.pkgs.withPackages (

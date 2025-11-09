@@ -6,7 +6,7 @@
 ;;; Code:
 
 ;; Load custom utilities for org
-(require 'utils (expand-file-name "lisp/utils" user-emacs-directory))
+(require 'utils (expand-file-name "elisp/utils" user-emacs-directory)) ; REMOVE
 
 (use-package org
   :custom

@@ -15,10 +15,10 @@
   )
 
 (use-package
- magit-todos
- :ensure
- :after magit
- :config (magit-todos-mode 1))
+  magit-todos
+  :ensure
+  :after magit
+  :config (magit-todos-mode 1))
 
 
 (use-package diff-hl
@@ -26,7 +26,7 @@
   :custom
   (diff-hl-draw-borders nil)
   (fringes-outside-margins t)
-   (diff-hl-side 'left)
+  (diff-hl-side 'left)
   :hook ((after-init . global-diff-hl-mode)
          (after-init . global-diff-hl-show-hunk-mouse-mode)
          (dired-mode . diff-hl-dired-mode)
@@ -52,18 +52,18 @@
   (ediff-custom-diff-options "-u")
   (ediff-merge-revisions-with-ancestor t)
   :config
-    (setq ediff-control-frame-parameters
-          '((name . "Ediff Control")
-            (width . 60)
-            (height . 14)
-            (left . 200)
-            (top . 200)
-            (minibuffer . nil)
-            (user-position . t)
-            (vertical-scroll-bars . nil)
-            (scrollbar-width . 0)
-            (menu-bar-lines . 0)
-            (tool-bar-lines . 0))))
+  (setq ediff-control-frame-parameters
+        '((name . "Ediff Control")
+          (width . 60)
+          (height . 14)
+          (left . 200)
+          (top . 200)
+          (minibuffer . nil)
+          (user-position . t)
+          (vertical-scroll-bars . nil)
+          (scrollbar-width . 0)
+          (menu-bar-lines . 0)
+          (tool-bar-lines . 0))))
 
 
 

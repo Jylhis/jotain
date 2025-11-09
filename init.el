@@ -13,7 +13,7 @@
 
 ;; Add config directories to load path
 (add-to-list 'load-path (expand-file-name "config" user-emacs-directory))
-(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
+(add-to-list 'load-path (expand-file-name "elisp" user-emacs-directory))
 
 ;; Load platform detection first
 (require 'platform)
