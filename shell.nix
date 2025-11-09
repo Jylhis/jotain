@@ -1,6 +1,6 @@
 # Development shell with XDG isolation
-{ pkgs
-, jotainEmacs
+{ pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-25.05-small.tar.gz"){}
+, jotainEmacs ? pkgs.callPackage ./emacs.nix {inherit pkgs;}
 , ...
 }:
 
@@ -89,25 +89,17 @@ let
             mkdir -p "$XDG_STATE_HOME/emacs"
 
             # Copy template files (don't symlink, as we'll modify init.el)
-            if [ -f "$PROJECT_ROOT/templates/early-init.el" ]; then
-              cp "$PROJECT_ROOT/templates/early-init.el" "$XDG_CONFIG_HOME/emacs/early-init.el"
+            if [ -f "$PROJECT_ROOT/early-init.el" ]; then
+              ln -sfn "$PROJECT_ROOT/early-init.el" "$XDG_CONFIG_HOME/emacs/early-init.el"
             fi
 
-            if [ -f "$PROJECT_ROOT/templates/init.el" ]; then
-              cp "$PROJECT_ROOT/templates/init.el" "$XDG_CONFIG_HOME/emacs/init.el"
+            if [ -f "$PROJECT_ROOT/init.el" ]; then
+              ln -sfn "$PROJECT_ROOT/init.el" "$XDG_CONFIG_HOME/emacs/init.el"
             fi
 
             # Create symlink for elisp directory so template's user-emacs-directory paths work
-            ln -sf "$PROJECT_ROOT/elisp" "$XDG_CONFIG_HOME/emacs/elisp"
+            ln -sfn "$PROJECT_ROOT/elisp" "$XDG_CONFIG_HOME/emacs/elisp"
 
-            # Append dev mode indicators to init.el (safe since we copied it)
-            cat >> "$XDG_CONFIG_HOME/emacs/init.el" <<'EOF'
-
-;; Development mode indicators (appended by dev shell)
-(setq jotain-dev-mode t)
-(setq frame-title-format '("Jotain DEV - %b"))
-(message "Jotain loaded from: %s" (getenv "JOTAIN_ELISP_DIR"))
-EOF
 
             # Run Emacs with explicit init directory to ensure XDG location is used
             exec ${jotainEmacs}/bin/emacs --init-directory="$XDG_CONFIG_HOME/emacs" "$@"

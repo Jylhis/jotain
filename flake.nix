@@ -32,12 +32,10 @@
 
         nixosModules = {
           default = import ./nix/modules/nixos;
-          jotain = import ./nix/modules/nixos;
         };
 
         homeManagerModules = {
           default = import ./nix/modules/home-manager;
-          jotain = import ./nix/modules/home-manager;
         };
       };
 
@@ -54,28 +52,22 @@
           default = self'.packages.jotain;
           jotain = pkgs.callPackage ./nix/packages/jotain { };
 
-          emacs-dev = pkgs.callPackage ./nix/packages/emacs {
+          emacs-dev = pkgs.callPackage ./default.nix {
             devMode = true;
           };
 
-          emacs = pkgs.callPackage ./nix/packages/emacs {
+          emacs = pkgs.callPackage ./default.nix {
             devMode = false;
           };
         };
 
         devShells = {
-          default = pkgs.callPackage ./nix/dev/shell.nix {
+          default = pkgs.callPackage ./shell.nix {
             jotainEmacs = self'.packages.emacs-dev;
           };
         };
 
         checks = {
-          build = self'.packages.jotain;
-
-          smoke-tests = pkgs.callPackage ./nix/checks {
-            jotainEmacs = self'.packages.emacs-dev;
-          };
-
           formatting = config.treefmt.build.check self;
         };
 

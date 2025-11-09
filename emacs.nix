@@ -7,7 +7,7 @@
 
 let
   # Import our lib
-  jotainLib = import ../../lib { inherit lib pkgs; };
+  jotainLib = import ./nix/lib { inherit lib pkgs; };
 
   # Core packages always needed
   corePackages = epkgs: with epkgs; [
@@ -18,7 +18,7 @@ let
   # Get packages from elisp directory if it exists
   autoPackages = epkgs:
     let
-      elispDir = ../../../elisp;
+      elispDir = ./elisp;
     in
     if builtins.pathExists elispDir then
       jotainLib.dependencies.getPackagesForDirectory elispDir epkgs

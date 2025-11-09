@@ -6,7 +6,7 @@
 }:
 
 let
-  jotainEmacs = pkgs.callPackage ../emacs { devMode = false; };
+  jotainEmacs = pkgs.callPackage ./emacs.nix { devMode = false; };
 
   # CLI wrapper
   jotainCLI = pkgs.writeShellScriptBin "jot" ''

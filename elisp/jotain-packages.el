@@ -9,21 +9,22 @@
 
 ;;; Code:
 
+(message "Loading jotain packages")
 (require 'use-package)
 
 ;; Configure use-package
-(setq use-package-always-ensure nil  ; Don't auto-install - Nix manages packages
-      use-package-always-defer nil   ; We'll explicitly defer where needed
-      use-package-expand-minimally nil
-      use-package-compute-statistics nil
-      use-package-verbose nil)
+(setopt use-package-always-ensure nil)  ; Don't auto-install - Nix manages packages
+;; (setopt      use-package-always-defer nil)   ; We'll explicitly defer where needed
+(setopt      use-package-expand-minimally nil)
+(setopt      use-package-compute-statistics nil)
+(setopt      use-package-verbose nil)
 
 ;; Enable :diminish keyword support if diminish is available
-(when (locate-library "diminish")
-  (require 'diminish nil t))
+;; (when (locate-library "diminish")
+  ;; (require 'diminish nil t))
 
 ;; Enable :bind keyword support (built-in to use-package)
-(setq use-package-hook-name-suffix nil)
+;; (setq use-package-hook-name-suffix nil)
 
 (provide 'jotain-packages)
 ;;; jotain-packages.el ends here
