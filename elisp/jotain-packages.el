@@ -21,7 +21,7 @@
 
 ;; Enable :diminish keyword support if diminish is available
 ;; (when (locate-library "diminish")
-  ;; (require 'diminish nil t))
+;; (require 'diminish nil t))
 
 ;; Enable :bind keyword support (built-in to use-package)
 ;; (setq use-package-hook-name-suffix nil)

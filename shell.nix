@@ -1,6 +1,6 @@
 # Development shell with XDG isolation
-{ pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-25.05-small.tar.gz"){}
-, jotainEmacs ? pkgs.callPackage ./emacs.nix {inherit pkgs;}
+{ pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-25.05-small.tar.gz") { }
+, jotainEmacs ? pkgs.callPackage ./emacs.nix { inherit pkgs; }
 , ...
 }:
 
@@ -58,51 +58,51 @@ let
 
   # Development wrapper for emacs that uses local sources
   devEmacsWrapper = pkgs.writeShellScriptBin "emacs-dev" ''
-            #!/usr/bin/env bash
+    #!/usr/bin/env bash
 
-            # Dynamically find project root (look for flake.nix)
-            PROJECT_ROOT="$PWD"
-            while [ ! -f "$PROJECT_ROOT/flake.nix" ] && [ "$PROJECT_ROOT" != "/" ]; do
-              PROJECT_ROOT="$(dirname "$PROJECT_ROOT")"
-            done
+    # Dynamically find project root (look for flake.nix)
+    PROJECT_ROOT="$PWD"
+    while [ ! -f "$PROJECT_ROOT/flake.nix" ] && [ "$PROJECT_ROOT" != "/" ]; do
+      PROJECT_ROOT="$(dirname "$PROJECT_ROOT")"
+    done
 
-            if [ ! -f "$PROJECT_ROOT/flake.nix" ]; then
-              echo "Error: Could not find project root (no flake.nix found)"
-              exit 1
-            fi
+    if [ ! -f "$PROJECT_ROOT/flake.nix" ]; then
+      echo "Error: Could not find project root (no flake.nix found)"
+      exit 1
+    fi
 
-            # Use local sources
-            export JOTAIN_DEV_MODE=1
-            export JOTAIN_ROOT="$PROJECT_ROOT"
-            export JOTAIN_ELISP_DIR="$PROJECT_ROOT/elisp"
+    # Use local sources
+    export JOTAIN_DEV_MODE=1
+    export JOTAIN_ROOT="$PROJECT_ROOT"
+    export JOTAIN_ELISP_DIR="$PROJECT_ROOT/elisp"
 
-            # Isolated user directory
-            export JOTAIN_DEV_HOME="$PROJECT_ROOT/.dev-home"
-            export XDG_CONFIG_HOME="$JOTAIN_DEV_HOME/.config"
-            export XDG_DATA_HOME="$JOTAIN_DEV_HOME/.local/share"
-            export XDG_CACHE_HOME="$JOTAIN_DEV_HOME/.cache"
-            export XDG_STATE_HOME="$JOTAIN_DEV_HOME/.local/state"
+    # Isolated user directory
+    export JOTAIN_DEV_HOME="$PROJECT_ROOT/.dev-home"
+    export XDG_CONFIG_HOME="$JOTAIN_DEV_HOME/.config"
+    export XDG_DATA_HOME="$JOTAIN_DEV_HOME/.local/share"
+    export XDG_CACHE_HOME="$JOTAIN_DEV_HOME/.cache"
+    export XDG_STATE_HOME="$JOTAIN_DEV_HOME/.local/state"
 
-            mkdir -p "$XDG_CONFIG_HOME/emacs"
-            mkdir -p "$XDG_DATA_HOME/emacs"
-            mkdir -p "$XDG_CACHE_HOME/emacs"
-            mkdir -p "$XDG_STATE_HOME/emacs"
+    mkdir -p "$XDG_CONFIG_HOME/emacs"
+    mkdir -p "$XDG_DATA_HOME/emacs"
+    mkdir -p "$XDG_CACHE_HOME/emacs"
+    mkdir -p "$XDG_STATE_HOME/emacs"
 
-            # Copy template files (don't symlink, as we'll modify init.el)
-            if [ -f "$PROJECT_ROOT/early-init.el" ]; then
-              ln -sfn "$PROJECT_ROOT/early-init.el" "$XDG_CONFIG_HOME/emacs/early-init.el"
-            fi
+    # Copy template files (don't symlink, as we'll modify init.el)
+    if [ -f "$PROJECT_ROOT/early-init.el" ]; then
+      ln -sfn "$PROJECT_ROOT/early-init.el" "$XDG_CONFIG_HOME/emacs/early-init.el"
+    fi
 
-            if [ -f "$PROJECT_ROOT/init.el" ]; then
-              ln -sfn "$PROJECT_ROOT/init.el" "$XDG_CONFIG_HOME/emacs/init.el"
-            fi
+    if [ -f "$PROJECT_ROOT/init.el" ]; then
+      ln -sfn "$PROJECT_ROOT/init.el" "$XDG_CONFIG_HOME/emacs/init.el"
+    fi
 
-            # Create symlink for elisp directory so template's user-emacs-directory paths work
-            ln -sfn "$PROJECT_ROOT/elisp" "$XDG_CONFIG_HOME/emacs/elisp"
+    # Create symlink for elisp directory so template's user-emacs-directory paths work
+    ln -sfn "$PROJECT_ROOT/elisp" "$XDG_CONFIG_HOME/emacs/elisp"
 
 
-            # Run Emacs with explicit init directory to ensure XDG location is used
-            exec ${jotainEmacs}/bin/emacs --init-directory="$XDG_CONFIG_HOME/emacs" "$@"
+    # Run Emacs with explicit init directory to ensure XDG location is used
+    exec ${jotainEmacs}/bin/emacs --init-directory="$XDG_CONFIG_HOME/emacs" "$@"
   '';
 
   # LSP servers and development tools

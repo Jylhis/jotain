@@ -35,14 +35,14 @@ Checks the JOTAIN_DEV_MODE environment variable."
 (defun jotain-initialize ()
   "Initialize Jotain distribution"
   (jotain--detect-dev-mode)
-    (when jotain-dev-mode
-      (message "Jotain: Running in development mode"))
+  (when jotain-dev-mode
+    (message "Jotain: Running in development mode"))
 
-    (require 'jotain-core)
-	(require 'jotain-packages)
-	(require 'jotain-editor-core)
-	(require 'jotain-prog-nix)
-	(require 'jotain-tools-git)
+  (require 'jotain-core)
+  (require 'jotain-packages)
+  (require 'jotain-editor-core)
+  (require 'jotain-prog-nix)
+  (require 'jotain-tools-git)
   )
 
 (jotain-initialize)

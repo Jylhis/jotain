@@ -50,13 +50,13 @@
 
         packages = {
           default = self'.packages.jotain;
-          jotain = pkgs.callPackage ./nix/packages/jotain { };
+          jotain = pkgs.callPackage ./default.nix { };
 
-          emacs-dev = pkgs.callPackage ./default.nix {
+          emacs-dev = pkgs.callPackage ./emacs.nix {
             devMode = true;
           };
 
-          emacs = pkgs.callPackage ./default.nix {
+          emacs = pkgs.callPackage ./emacs.nix {
             devMode = false;
           };
         };

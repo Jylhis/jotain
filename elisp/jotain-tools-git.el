@@ -48,18 +48,18 @@
   (ediff-custom-diff-options "-u")
   (ediff-merge-revisions-with-ancestor t)
   :config
-    (setq ediff-control-frame-parameters
-          '((name . "Ediff Control")
-            (width . 60)
-            (height . 14)
-            (left . 200)
-            (top . 200)
-            (minibuffer . nil)
-            (user-position . t)
-            (vertical-scroll-bars . nil)
-            (scrollbar-width . 0)
-            (menu-bar-lines . 0)
-            (tool-bar-lines . 0))))
+  (setq ediff-control-frame-parameters
+        '((name . "Ediff Control")
+          (width . 60)
+          (height . 14)
+          (left . 200)
+          (top . 200)
+          (minibuffer . nil)
+          (user-position . t)
+          (vertical-scroll-bars . nil)
+          (scrollbar-width . 0)
+          (menu-bar-lines . 0)
+          (tool-bar-lines . 0))))
 
 (provide 'jotain-tools-git)
 ;;; jotain-tools-git.el ends here
