@@ -30,12 +30,12 @@
       flake = {
         overlays.default = import ./nix/overlays { inherit inputs; };
 
-        nixosModules = {
-          default = import ./nix/modules/nixos;
-        };
+        # nixosModules = {
+        #   default = import ./nix/modules/nixos;
+        # };
 
-        homeManagerModules = {
-          default = import ./nix/modules/home-manager;
+        homeModules = {
+          default = import ./module.nix;
         };
       };
 
@@ -51,6 +51,7 @@
         packages = {
           default = self'.packages.jotain;
           jotain = pkgs.callPackage ./default.nix { };
+	  jotain-config = pkgs.callPackage ./config.nix { };
 
           emacs-dev = pkgs.callPackage ./. {
             devMode = true;
