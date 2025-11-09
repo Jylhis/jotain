@@ -3,7 +3,8 @@
 
 final: prev: {
   # Add jotain to pkgs
-  jotain = final.callPackage ../default.nix { };
+  jotain = final.callPackage ../../default.nix { };
+  jotain-config = final.callPackage ../../config.nix { };
 
   # Custom Emacs package overrides can go here
   emacsPackagesFor = emacs: (prev.emacsPackagesFor emacs).overrideScope (efinal: esuper: {
