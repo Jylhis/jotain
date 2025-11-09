@@ -1,8 +1,7 @@
-{
-  pkgs,
-  home-manager,
-  homeModule,
-  ...
+{ pkgs
+, home-manager
+, homeModule
+, ...
 }:
 let
   # Helper to build a home-manager configuration
@@ -25,9 +24,11 @@ let
   # Test helper using runCommand
   mkTest =
     name: script:
-    pkgs.runCommand "emacs-module-${name}" {
-      nativeBuildInputs = [ pkgs.bash ];
-    } script;
+    pkgs.runCommand "emacs-module-${name}"
+      {
+        nativeBuildInputs = [ pkgs.bash ];
+      }
+      script;
 
   # Test configurations
   tests = {

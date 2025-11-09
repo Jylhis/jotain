@@ -83,8 +83,8 @@
 
   ;; Add Obsidian completion when available
   ;; (with-eval-after-load 'obsidian
-    ;; (when (fboundp 'obsidian-completion-at-point)
-      ;; (add-to-list 'completion-at-point-functions #'obsidian-completion-at-point)))
+  ;; (when (fboundp 'obsidian-completion-at-point)
+  ;; (add-to-list 'completion-at-point-functions #'obsidian-completion-at-point)))
   )
 
 (use-package consult

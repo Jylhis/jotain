@@ -1,8 +1,8 @@
-{
-  pkgs,
-  home-manager,
-  homeModule,
-  emacsPackage,
+{ pkgs
+, home-manager
+, homeModule
+, emacsPackage
+,
 }:
 
 {
