@@ -63,9 +63,44 @@ Otherwise, use `my/org-agenda-directories'."
   "Set up dynamic org agenda files updating."
   ;; Initial update
   (my/update-org-agenda-files)
-  
+
   ;; Update agenda files periodically instead of on every agenda access
   (run-with-idle-timer 300 t #'my/update-org-agenda-files))
+
+;; Window management utilities
+;;;###autoload
+(defun my/toggle-window-split ()
+  "Toggle between horizontal and vertical window split.
+When there are exactly 2 windows, switch their layout orientation:
+  - Horizontal split (side-by-side) becomes vertical (stacked)
+  - Vertical split (stacked) becomes horizontal (side-by-side)
+
+The current buffers, point positions, and window focus are preserved.
+If there are not exactly 2 windows, display an error message."
+  (interactive)
+  (if (= (count-windows) 2)
+      (let* ((this-win-buffer (window-buffer))
+             (next-win-buffer (window-buffer (next-window)))
+             (this-win-edges (window-edges (selected-window)))
+             (next-win-edges (window-edges (next-window)))
+             (this-win-2nd (not (and (<= (car this-win-edges)
+                                         (car next-win-edges))
+                                     (<= (cadr this-win-edges)
+                                         (cadr next-win-edges)))))
+             (splitter
+              (if (= (car this-win-edges)
+                     (car (window-edges (next-window))))
+                  'split-window-horizontally
+                'split-window-vertically)))
+        (delete-other-windows)
+        (let ((first-win (selected-window)))
+          (funcall splitter)
+          (if this-win-2nd (other-window 1))
+          (set-window-buffer (selected-window) this-win-buffer)
+          (set-window-buffer (next-window) next-win-buffer)
+          (select-window first-win)
+          (if this-win-2nd (other-window 1))))
+    (user-error "Can only toggle split with exactly 2 windows")))
 
 (provide 'utils)
 ;;; utils.el ends here

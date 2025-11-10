@@ -40,6 +40,7 @@
    ("M-n" . scroll-up-line)))
 
 (use-package window
+  :bind ("C-x j" . my/toggle-window-split)
   :custom
   ;; Prefer side by side splitting
   (split-width-threshold 170)
