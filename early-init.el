@@ -19,12 +19,16 @@
 (setq gc-cons-threshold most-positive-fixnum
       gc-cons-percentage 0.8
       read-process-output-max (* 1024 1024)) ; 1MB
+;; Disable file-name-handler-alist during startup for speed
+(defvar default-file-name-handler-alist file-name-handler-alist)
+(setq file-name-handler-alist nil)
 
-;; Reset GC after startup
+;; Reset GC and file handlers after startup
 (add-hook 'emacs-startup-hook
           (lambda ()
-            (setq gc-cons-threshold (* 50 1024 1024) ; 50MB
-                  gc-cons-percentage 0.1)))
+            (setq gc-cons-threshold (* 16 1024 1024) ; 16MB (per Doom recommendation)
+                  gc-cons-percentage 0.1
+                  file-name-handler-alist default-file-name-handler-alist)))
 
 ;; Disable GUI elements early
 (push '(tool-bar-lines . 0) default-frame-alist)

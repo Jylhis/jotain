@@ -14,9 +14,10 @@
 
 (use-package treesit-auto
   :ensure
+  :defer t
   :custom
   (treesit-auto-install nil)
-  :config
+  :init
   (treesit-auto-add-to-auto-mode-alist 'all)
   (global-treesit-auto-mode))
 
@@ -112,6 +113,7 @@
 
 (use-package consult-flyspell
   :ensure
+  :defer t
   :after (consult flyspell))
 
 (use-package eglot
@@ -159,12 +161,14 @@
 
 (use-package consult-eglot
   :ensure
+  :defer t
   :after (consult eglot)
   :bind (:map eglot-mode-map
               ("C-M-." . consult-eglot-symbols)))
 
 (use-package consult-eglot-embark
   :ensure
+  :defer t
   :after (consult eglot embark))
 
 (use-package xref
@@ -172,18 +176,29 @@
   (when (executable-find "rg")
     (setq xref-search-program 'ripgrep)))
 
-(use-package elisp-lint :ensure t)
-(use-package package-lint :ensure t)
+(use-package elisp-lint
+  :ensure t
+  :defer t
+  :commands (elisp-lint-file elisp-lint-buffer))
+(use-package package-lint
+  :ensure t
+  :defer t
+  :commands (package-lint-current-buffer package-lint-buffer))
 
 (use-package dtrt-indent
+  :ensure t
+  :defer t
   :diminish
-  :ensure t)
+  :hook (prog-mode . dtrt-indent-mode)
+  )
 
 (use-package direnv
   :if (executable-find "direnv")
   :ensure
-  :config
+  :defer t
+  :init
   (direnv-mode)
+  :config
   (add-to-list 'warning-suppress-types '(direnv)))
 
 ;; Debugging
@@ -195,20 +210,24 @@
 
 (use-package dape
   :ensure
-  :config
-  (dape-breakpoint-global-mode)
-  (add-hook 'dape-compile-hook 'kill-buffer)
+  :defer t
+  :commands (dape dape-breakpoint-toggle)
   :custom
   (dape-buffer-window-arrangement 'gud)
   (dape-info-hide-mode-line nil)
-  (dape-inlay-hints t "Showing inlay hints"))
+  (dape-inlay-hints t "Showing inlay hints")
+
+  :init
+  (with-eval-after-load 'dape
+    (dape-breakpoint-global-mode)
+    (add-hook 'dape-compile-hook 'kill-buffer)))
 
 (use-package wgrep
   :ensure
-  :init
-  (setq
-   wgrep-auto-save-buffer t
-   wgrep-change-readonly-file t))
+  :defer t
+  :custom
+  (wgrep-auto-save-buffer t)
+  (wgrep-change-readonly-file t))
 
 ;; Major modes
 (use-package gnuplot
@@ -218,12 +237,15 @@
 (use-package markdown-mode
   :after dash
   :ensure
+  :defer t
   :mode (("README\\.md\\'" . gfm-mode)
          ("\\.md\\'" . markdown-mode))
-  :init (setq markdown-command "multimarkdown")
+  :custom
+  (markdown-command "multimarkdown")
   :hook (markdown-mode . visual-line-mode)
   :bind (:map markdown-mode-map
               ("C-c C-e" . markdown-do)))
+
 (use-package cc-mode
   :custom
   (c-basic-indent 5)
@@ -243,26 +265,45 @@
          ("\\.txx\\'" . c++-mode)))
 
 (use-package conf-mode
+  :defer t
   :mode
   (("/.dockerignore\\'" . conf-unix-mode)
    ("/.gitignore\\'" . conf-unix-mode)))
 
 (use-package cuda-mode :ensure t)
 (use-package haskell-mode :ensure t)
-(use-package diff-mode :ensure :mode "\\.patch[0-9]*\\'")
-(use-package terraform-mode :ensure t)
+(use-package diff-mode
+  :ensure
+  :defer t
+  :mode "\\.patch[0-9]*\\'")
+(use-package terraform-mode
+  :ensure t
+  :defer
+  :mode "\\.tf\\'")
+
 (use-package dockerfile-mode :ensure t)
 (use-package docker-compose-mode :ensure t)
 (use-package gitlab-ci-mode :ensure t)
-(use-package ansible :ensure t)
+(use-package ansible
+  :ensure t
+  :defer t)
 (use-package ssh-config-mode :ensure t)
-(use-package adoc-mode :ensure t)
+(use-package adoc-mode
+  :ensure t
+  :defer t
+  :mode "\\.adoc\\'")
 (use-package go-mode :ensure t)
 (use-package nix-mode :ensure t)
 (use-package nix-ts-mode :ensure :mode "\\.nix\\'")
-(use-package cmake-mode :ensure :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
+(use-package cmake-mode
+  :ensure
+  :defer t
+  :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
 (use-package mermaid-mode :ensure t)
-(use-package yaml-mode :ensure t)
+(use-package yaml-mode
+  :ensure t
+  :defer t
+  )
 (use-package modern-cpp-font-lock :ensure
   :hook (c++-mode . modern-c++-font-lock-mode))
 (use-package just-mode :ensure t)
@@ -296,13 +337,16 @@
 
 (use-package vterm
   :ensure
+  :defer t
+  :commands (vterm vterm-other-window)
   :custom
   (vterm-always-compile-module t))
 
 (use-package editorconfig
   :ensure t
-  :config
-  (editorconfig-mode 1))
+  :defer t
+  :diminish
+  :hook (prog-mode . editorconfig-mode))
 
 ;; Enhanced error display using built-in features
 (use-package eldoc
