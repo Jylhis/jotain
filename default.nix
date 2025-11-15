@@ -5,7 +5,7 @@
 }:
 let
   # Custom packages
-  worktree-manager = pkgs.callPackage ./lisp/worktree-manager {
+  work-manager = pkgs.callPackage ./lisp/work-manager {
     inherit (emacs.pkgs) trivialBuild magit org-jira;
   };
 
@@ -123,7 +123,7 @@ let
       zoxide
 
       # Custom packages
-      worktree-manager
+      work-manager
     ]
   );
 in

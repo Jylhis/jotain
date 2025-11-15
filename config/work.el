@@ -3,7 +3,7 @@
 ;;; Commentary:
 
 ;; Generic work management module that integrates various tools and workflows:
-;; - Worktree management with JIRA integration (worktree-manager)
+;; - Worktree management with JIRA integration (work-manager)
 ;; - Worktime tracking (future)
 ;; - Task automation (future)
 ;; - Project-specific workflows (future)
@@ -15,50 +15,50 @@
 
 ;;; Worktree Management
 
-(use-package worktree-manager
-  :commands (worktree-manager-new
-             worktree-manager-new-from-jira
-             worktree-manager-load
-             worktree-manager-remove
-             worktree-manager-list
-             worktree-manager-sync-registry)
+(use-package work-manager
+  :commands (work-manager-new
+             work-manager-new-from-jira
+             work-manager-load
+             work-manager-remove
+             work-manager-list
+             work-manager-sync-registry)
   :custom
   ;; Base directory for all worktrees
-  (worktree-manager-base-directory (expand-file-name "~/worktrees")
+  (work-manager-base-directory (expand-file-name "~/worktrees")
    "Directory where all managed worktrees are created")
 
   ;; Registry file location
-  (worktree-manager-registry-file
+  (work-manager-registry-file
    (expand-file-name "worktree-registry.json" user-emacs-directory)
    "JSON file tracking all managed worktrees")
 
   ;; Branch type options
-  (worktree-manager-branch-types
+  (work-manager-branch-types
    '("feature" "bugfix" "hotfix" "refactor" "docs" "test" "chore")
    "Valid branch type prefixes for worktree branches")
 
   ;; Default branch type
-  (worktree-manager-default-branch-type "feature"
+  (work-manager-default-branch-type "feature"
    "Default branch type when creating new worktrees")
 
   ;; JIRA integration
-  (worktree-manager-jira-enabled t
+  (work-manager-jira-enabled t
    "Enable JIRA integration for issue-based workflow")
 
-  (worktree-manager-auto-fetch-jira t
+  (work-manager-auto-fetch-jira t
    "Automatically fetch JIRA issues when needed")
 
-  :bind (("C-c w n" . worktree-manager-new)
-         ("C-c w j" . worktree-manager-new-from-jira)
-         ("C-c w l" . worktree-manager-load)
-         ("C-c w r" . worktree-manager-remove)
-         ("C-c w L" . worktree-manager-list)
-         ("C-c w s" . worktree-manager-sync-registry))
+  :bind (("C-c w n" . work-manager-new)
+         ("C-c w j" . work-manager-new-from-jira)
+         ("C-c w l" . work-manager-load)
+         ("C-c w r" . work-manager-remove)
+         ("C-c w L" . work-manager-list)
+         ("C-c w s" . work-manager-sync-registry))
 
   :config
   ;; Ensure base directory exists
-  (unless (file-exists-p worktree-manager-base-directory)
-    (make-directory worktree-manager-base-directory t)))
+  (unless (file-exists-p work-manager-base-directory)
+    (make-directory work-manager-base-directory t)))
 
 ;;; Worktime Tracking
 ;; Future: Integration with org-clock, org-pomodoro, or custom time tracking

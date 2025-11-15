@@ -1,4 +1,4 @@
-;;; worktree-manager.el --- Manage git worktrees with JIRA integration -*- lexical-binding: t; -*-
+;;; work-manager.el --- Manage git worktrees with JIRA integration -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2025 Jylhis
 
@@ -18,10 +18,10 @@
 ;; - Designed to be callable from both Emacs and CLI (future enhancement)
 ;;
 ;; Main commands:
-;; - worktree-manager-new: Create new worktree (optionally from JIRA)
-;; - worktree-manager-load: Switch to a worktree
-;; - worktree-manager-remove: Remove a worktree
-;; - worktree-manager-list: List all managed worktrees
+;; - work-manager-new: Create new worktree (optionally from JIRA)
+;; - work-manager-load: Switch to a worktree
+;; - work-manager-remove: Remove a worktree
+;; - work-manager-list: List all managed worktrees
 ;;
 ;; Branch naming scheme: <type>/<jira-issue>-<description>
 ;; Example: feature/PROJ-123-add-user-login
@@ -33,112 +33,112 @@
 
 ;;; Customization
 
-(defgroup worktree-manager nil
+(defgroup work-manager nil
   "Manage git worktrees with JIRA integration."
   :group 'tools
-  :prefix "worktree-manager-")
+  :prefix "work-manager-")
 
-(defcustom worktree-manager-base-directory
+(defcustom work-manager-base-directory
   (expand-file-name "~/worktrees")
   "Base directory where worktrees are created.
 Each worktree will be created as a subdirectory under this path."
   :type 'directory
-  :group 'worktree-manager)
+  :group 'work-manager)
 
-(defcustom worktree-manager-registry-file
+(defcustom work-manager-registry-file
   (expand-file-name "~/.emacs.d/worktree-registry.json")
   "File to store worktree registry metadata.
 This file tracks all managed worktrees with their metadata."
   :type 'file
-  :group 'worktree-manager)
+  :group 'work-manager)
 
-(defcustom worktree-manager-branch-types
+(defcustom work-manager-branch-types
   '("feature" "bugfix" "hotfix" "refactor" "docs" "test" "chore")
   "List of valid branch type prefixes."
   :type '(repeat string)
-  :group 'worktree-manager)
+  :group 'work-manager)
 
-(defcustom worktree-manager-default-branch-type "feature"
+(defcustom work-manager-default-branch-type "feature"
   "Default branch type when creating new worktrees."
   :type 'string
-  :group 'worktree-manager)
+  :group 'work-manager)
 
-(defcustom worktree-manager-jira-enabled t
+(defcustom work-manager-jira-enabled t
   "Whether to enable JIRA integration.
 When enabled, you can create worktrees from JIRA issues."
   :type 'boolean
-  :group 'worktree-manager)
+  :group 'work-manager)
 
-(defcustom worktree-manager-auto-fetch-jira t
+(defcustom work-manager-auto-fetch-jira t
   "Whether to automatically fetch JIRA issues when needed.
 If nil, you must manually run `org-jira-get-issues' first."
   :type 'boolean
-  :group 'worktree-manager)
+  :group 'work-manager)
 
 ;;; Internal Variables
 
-(defvar worktree-manager--registry-cache nil
+(defvar work-manager--registry-cache nil
   "Cached worktree registry data.
 Reloaded from file when nil.")
 
 ;;; Registry Management
 
-(defun worktree-manager--ensure-registry-file ()
+(defun work-manager--ensure-registry-file ()
   "Ensure the registry file exists."
-  (unless (file-exists-p worktree-manager-registry-file)
-    (let ((dir (file-name-directory worktree-manager-registry-file)))
+  (unless (file-exists-p work-manager-registry-file)
+    (let ((dir (file-name-directory work-manager-registry-file)))
       (unless (file-exists-p dir)
         (make-directory dir t)))
-    (with-temp-file worktree-manager-registry-file
+    (with-temp-file work-manager-registry-file
       (insert "[]"))))
 
-(defun worktree-manager--load-registry ()
+(defun work-manager--load-registry ()
   "Load worktree registry from file."
-  (worktree-manager--ensure-registry-file)
+  (work-manager--ensure-registry-file)
   (with-temp-buffer
-    (insert-file-contents worktree-manager-registry-file)
+    (insert-file-contents work-manager-registry-file)
     (if (zerop (buffer-size))
         '()
       (json-parse-buffer :object-type 'alist :array-type 'list))))
 
-(defun worktree-manager--save-registry (registry)
+(defun work-manager--save-registry (registry)
   "Save worktree REGISTRY to file."
-  (worktree-manager--ensure-registry-file)
-  (with-temp-file worktree-manager-registry-file
+  (work-manager--ensure-registry-file)
+  (with-temp-file work-manager-registry-file
     (insert (json-encode registry)))
-  (setq worktree-manager--registry-cache registry))
+  (setq work-manager--registry-cache registry))
 
-(defun worktree-manager--get-registry ()
+(defun work-manager--get-registry ()
   "Get current worktree registry, using cache if available."
-  (or worktree-manager--registry-cache
-      (setq worktree-manager--registry-cache
-            (worktree-manager--load-registry))))
+  (or work-manager--registry-cache
+      (setq work-manager--registry-cache
+            (work-manager--load-registry))))
 
-(defun worktree-manager--add-to-registry (entry)
+(defun work-manager--add-to-registry (entry)
   "Add ENTRY to worktree registry."
-  (let ((registry (worktree-manager--get-registry)))
+  (let ((registry (work-manager--get-registry)))
     (push entry registry)
-    (worktree-manager--save-registry registry)))
+    (work-manager--save-registry registry)))
 
-(defun worktree-manager--remove-from-registry (path)
+(defun work-manager--remove-from-registry (path)
   "Remove worktree at PATH from registry."
-  (let* ((registry (worktree-manager--get-registry))
+  (let* ((registry (work-manager--get-registry))
          (filtered (seq-remove
                     (lambda (entry)
                       (string= (alist-get 'path entry) path))
                     registry)))
-    (worktree-manager--save-registry filtered)))
+    (work-manager--save-registry filtered)))
 
-(defun worktree-manager--find-in-registry (path)
+(defun work-manager--find-in-registry (path)
   "Find worktree entry for PATH in registry."
   (seq-find
    (lambda (entry)
      (string= (alist-get 'path entry) path))
-   (worktree-manager--get-registry)))
+   (work-manager--get-registry)))
 
 ;;; Branch Naming
 
-(defun worktree-manager--sanitize-string (str)
+(defun work-manager--sanitize-string (str)
   "Sanitize STR for use in branch names.
 Converts to lowercase, replaces spaces with hyphens, removes special chars."
   (when str
@@ -148,37 +148,37 @@ Converts to lowercase, replaces spaces with hyphens, removes special chars."
       (replace-regexp-in-string "-+" "-")
       (replace-regexp-in-string "^-\\|-$" ""))))
 
-(defun worktree-manager--branch-name-from-jira (jira-key jira-summary type)
+(defun work-manager--branch-name-from-jira (jira-key jira-summary type)
   "Generate branch name from JIRA-KEY, JIRA-SUMMARY, and TYPE.
 Format: <type>/<jira-key>-<sanitized-summary>
 Example: feature/PROJ-123-add-user-login"
-  (let ((sanitized-summary (worktree-manager--sanitize-string jira-summary)))
+  (let ((sanitized-summary (work-manager--sanitize-string jira-summary)))
     (format "%s/%s-%s" type jira-key sanitized-summary)))
 
-(defun worktree-manager--branch-name-manual (type description)
+(defun work-manager--branch-name-manual (type description)
   "Generate branch name from TYPE and DESCRIPTION.
 Format: <type>/<sanitized-description>
 Example: feature/add-user-login"
-  (let ((sanitized-desc (worktree-manager--sanitize-string description)))
+  (let ((sanitized-desc (work-manager--sanitize-string description)))
     (format "%s/%s" type sanitized-desc)))
 
 ;;; JIRA Integration
 
-(defun worktree-manager--jira-available-p ()
+(defun work-manager--jira-available-p ()
   "Check if JIRA integration is available and configured."
-  (and worktree-manager-jira-enabled
+  (and work-manager-jira-enabled
        (featurep 'org-jira)
        (boundp 'jiralib-url)
        jiralib-url))
 
-(defun worktree-manager--get-jira-issues ()
+(defun work-manager--get-jira-issues ()
   "Get list of JIRA issues.
 Returns list of (key . summary) pairs."
-  (unless (worktree-manager--jira-available-p)
+  (unless (work-manager--jira-available-p)
     (error "JIRA integration not available. Install org-jira and configure jiralib-url"))
 
   ;; Auto-fetch issues if enabled
-  (when worktree-manager-auto-fetch-jira
+  (when work-manager-auto-fetch-jira
     (message "Fetching JIRA issues...")
     (org-jira-get-issues))
 
@@ -198,10 +198,10 @@ Returns list of (key . summary) pairs."
                   (push (cons key title) issues))))))))
     (nreverse issues)))
 
-(defun worktree-manager--select-jira-issue ()
+(defun work-manager--select-jira-issue ()
   "Interactively select a JIRA issue.
 Returns (key . summary) pair."
-  (let* ((issues (worktree-manager--get-jira-issues))
+  (let* ((issues (work-manager--get-jira-issues))
          (issue-alist (mapcar (lambda (issue)
                                 (cons (format "%s - %s" (car issue) (cdr issue))
                                       issue))
@@ -211,14 +211,14 @@ Returns (key . summary) pair."
                                      nil t)))
     (cdr (assoc selection issue-alist))))
 
-(defun worktree-manager--create-jira-issue (project type summary description)
+(defun work-manager--create-jira-issue (project type summary description)
   "Create a new JIRA issue.
 PROJECT: JIRA project key
 TYPE: Issue type (Story, Task, Bug, etc.)
 SUMMARY: Issue summary/title
 DESCRIPTION: Issue description
 Returns the created issue key."
-  (unless (worktree-manager--jira-available-p)
+  (unless (work-manager--jira-available-p)
     (error "JIRA integration not available"))
 
   ;; This is a simplified interface - actual implementation depends on org-jira API
@@ -228,22 +228,22 @@ Returns the created issue key."
 
   ;; In a real implementation, we'd need to get the created issue key
   ;; For now, we'll return a placeholder
-  (error "JIRA issue creation requires manual implementation - use worktree-manager-new-from-jira after creating issue"))
+  (error "JIRA issue creation requires manual implementation - use work-manager-new-from-jira after creating issue"))
 
 ;;; Core Worktree Operations
 
-(defun worktree-manager--ensure-base-directory ()
+(defun work-manager--ensure-base-directory ()
   "Ensure the base worktree directory exists."
-  (unless (file-exists-p worktree-manager-base-directory)
-    (make-directory worktree-manager-base-directory t)))
+  (unless (file-exists-p work-manager-base-directory)
+    (make-directory work-manager-base-directory t)))
 
-(defun worktree-manager--worktree-path (branch-name)
+(defun work-manager--worktree-path (branch-name)
   "Generate worktree path for BRANCH-NAME.
 Converts slashes in branch name to dashes for directory name."
   (let ((dir-name (replace-regexp-in-string "/" "-" branch-name)))
-    (expand-file-name dir-name worktree-manager-base-directory)))
+    (expand-file-name dir-name work-manager-base-directory)))
 
-(defun worktree-manager--git-root ()
+(defun work-manager--git-root ()
   "Get the git repository root directory."
   (let ((root (magit-toplevel)))
     (unless root
@@ -251,7 +251,7 @@ Converts slashes in branch name to dashes for directory name."
     root))
 
 ;;;###autoload
-(defun worktree-manager-new (branch-name &optional jira-key jira-summary base-branch)
+(defun work-manager-new (branch-name &optional jira-key jira-summary base-branch)
   "Create a new worktree for BRANCH-NAME.
 Optional JIRA-KEY and JIRA-SUMMARY for tracking.
 BASE-BRANCH is the starting point (defaults to main/master).
@@ -262,17 +262,17 @@ For CLI integration, call with all parameters specified.
 Returns the worktree path on success."
   (interactive
    (let* ((type (completing-read "Branch type: "
-                                worktree-manager-branch-types
+                                work-manager-branch-types
                                 nil t nil nil
-                                worktree-manager-default-branch-type))
+                                work-manager-default-branch-type))
           (description (read-string "Branch description: "))
-          (branch-name (worktree-manager--branch-name-manual type description)))
+          (branch-name (work-manager--branch-name-manual type description)))
      (list branch-name nil nil nil)))
 
-  (worktree-manager--ensure-base-directory)
+  (work-manager--ensure-base-directory)
 
-  (let* ((git-root (worktree-manager--git-root))
-         (worktree-path (worktree-manager--worktree-path branch-name))
+  (let* ((git-root (work-manager--git-root))
+         (worktree-path (work-manager--worktree-path branch-name))
          (base (or base-branch
                    (if (magit-branch-p "main") "main" "master"))))
 
@@ -285,7 +285,7 @@ Returns the worktree path on success."
     (magit-worktree-branch worktree-path branch-name base)
 
     ;; Add to registry
-    (worktree-manager--add-to-registry
+    (work-manager--add-to-registry
      `((path . ,worktree-path)
        (branch . ,branch-name)
        (jira-key . ,jira-key)
@@ -298,31 +298,31 @@ Returns the worktree path on success."
     worktree-path))
 
 ;;;###autoload
-(defun worktree-manager-new-from-jira ()
+(defun work-manager-new-from-jira ()
   "Create a new worktree from a JIRA issue.
 Interactively select a JIRA issue and create a worktree with appropriate branch name."
   (interactive)
 
-  (let* ((issue (worktree-manager--select-jira-issue))
+  (let* ((issue (work-manager--select-jira-issue))
          (jira-key (car issue))
          (jira-summary (cdr issue))
          (type (completing-read "Branch type: "
-                               worktree-manager-branch-types
+                               work-manager-branch-types
                                nil t nil nil
-                               worktree-manager-default-branch-type))
-         (branch-name (worktree-manager--branch-name-from-jira
+                               work-manager-default-branch-type))
+         (branch-name (work-manager--branch-name-from-jira
                        jira-key jira-summary type)))
 
-    (worktree-manager-new branch-name jira-key jira-summary)))
+    (work-manager-new branch-name jira-key jira-summary)))
 
 ;;;###autoload
-(defun worktree-manager-load (worktree-path)
+(defun work-manager-load (worktree-path)
   "Load (switch to) worktree at WORKTREE-PATH.
 Changes the current directory and opens magit status.
 
 Returns the worktree path."
   (interactive
-   (let* ((registry (worktree-manager--get-registry))
+   (let* ((registry (work-manager--get-registry))
           (worktrees (mapcar (lambda (entry)
                               (let ((path (alist-get 'path entry))
                                     (branch (alist-get 'branch entry)))
@@ -346,13 +346,13 @@ Returns the worktree path."
   worktree-path)
 
 ;;;###autoload
-(defun worktree-manager-remove (worktree-path &optional force)
+(defun work-manager-remove (worktree-path &optional force)
   "Remove worktree at WORKTREE-PATH.
 If FORCE is non-nil, force removal even with uncommitted changes.
 
 Returns t on success."
   (interactive
-   (let* ((registry (worktree-manager--get-registry))
+   (let* ((registry (work-manager--get-registry))
           (worktrees (mapcar (lambda (entry)
                               (let ((path (alist-get 'path entry))
                                     (branch (alist-get 'branch entry)))
@@ -373,26 +373,26 @@ Returns t on success."
     (user-error "Aborted"))
 
   ;; Remove using magit (this handles git worktree remove)
-  (let ((default-directory (worktree-manager--git-root)))
+  (let ((default-directory (work-manager--git-root)))
     (if force
         (magit-run-git "worktree" "remove" "--force" worktree-path)
       (magit-run-git "worktree" "remove" worktree-path)))
 
   ;; Remove from registry
-  (worktree-manager--remove-from-registry worktree-path)
+  (work-manager--remove-from-registry worktree-path)
 
   (message "Worktree removed: %s" worktree-path)
   t)
 
 ;;;###autoload
-(defun worktree-manager-list ()
+(defun work-manager-list ()
   "List all managed worktrees.
 Displays worktrees in a buffer with their metadata.
 
 Returns the registry list."
   (interactive)
 
-  (let ((registry (worktree-manager--get-registry)))
+  (let ((registry (work-manager--get-registry)))
     (if (null registry)
         (message "No managed worktrees found")
 
@@ -427,14 +427,14 @@ Returns the registry list."
     registry))
 
 ;;;###autoload
-(defun worktree-manager-sync-registry ()
+(defun work-manager-sync-registry ()
   "Synchronize registry with actual git worktrees.
 Removes entries for worktrees that no longer exist,
 and optionally adds untracked worktrees to registry."
   (interactive)
 
-  (let* ((registry (worktree-manager--get-registry))
-         (git-root (worktree-manager--git-root))
+  (let* ((registry (work-manager--get-registry))
+         (git-root (work-manager--git-root))
          (cleaned-registry '()))
 
     ;; Remove entries for non-existent worktrees
@@ -444,35 +444,35 @@ and optionally adds untracked worktrees to registry."
             (push entry cleaned-registry)
           (message "Removing stale registry entry: %s" path))))
 
-    (worktree-manager--save-registry (nreverse cleaned-registry))
+    (work-manager--save-registry (nreverse cleaned-registry))
     (message "Registry synchronized: %d entries" (length cleaned-registry))))
 
 ;;; CLI Helper Functions
 ;; These functions are designed to be easily callable from command line
 ;; using emacs --batch or emacsclient
 
-(defun worktree-manager-cli-new (branch-name &optional jira-key base-branch)
+(defun work-manager-cli-new (branch-name &optional jira-key base-branch)
   "CLI wrapper for creating a new worktree.
 BRANCH-NAME: Full branch name (e.g., 'feature/add-login')
 JIRA-KEY: Optional JIRA issue key
 BASE-BRANCH: Optional base branch (defaults to main/master)
 
 Example:
-  emacs --batch -l config/worktree-manager.el \\
-    --eval '(worktree-manager-cli-new \"feature/add-login\" \"PROJ-123\")'"
-  (let ((path (worktree-manager-new branch-name jira-key nil base-branch)))
+  emacs --batch -l config/work-manager.el \\
+    --eval '(work-manager-cli-new \"feature/add-login\" \"PROJ-123\")'"
+  (let ((path (work-manager-new branch-name jira-key nil base-branch)))
     (princ path)
     (terpri)
     path))
 
-(defun worktree-manager-cli-list ()
+(defun work-manager-cli-list ()
   "CLI wrapper for listing worktrees.
 Prints worktrees in a machine-readable format.
 
 Example:
-  emacs --batch -l config/worktree-manager.el \\
-    --eval '(worktree-manager-cli-list)'"
-  (let ((registry (worktree-manager--get-registry)))
+  emacs --batch -l config/work-manager.el \\
+    --eval '(work-manager-cli-list)'"
+  (let ((registry (work-manager--get-registry)))
     (dolist (entry registry)
       (princ (format "%s\t%s\t%s\n"
                     (alist-get 'branch entry)
@@ -480,16 +480,16 @@ Example:
                     (or (alist-get 'jira-key entry) ""))))
     registry))
 
-(defun worktree-manager-cli-remove (worktree-path &optional force)
+(defun work-manager-cli-remove (worktree-path &optional force)
   "CLI wrapper for removing a worktree.
 WORKTREE-PATH: Path to worktree to remove
 FORCE: If non-nil, force removal
 
 Example:
-  emacs --batch -l config/worktree-manager.el \\
-    --eval '(worktree-manager-cli-remove \"/path/to/worktree\" t)'"
-  (worktree-manager-remove worktree-path force))
+  emacs --batch -l config/work-manager.el \\
+    --eval '(work-manager-cli-remove \"/path/to/worktree\" t)'"
+  (work-manager-remove worktree-path force))
 
-(provide 'worktree-manager)
+(provide 'work-manager)
 
-;;; worktree-manager.el ends here
+;;; work-manager.el ends here
