@@ -3,6 +3,8 @@
 ;; Copyright (C) 2025 Jylhis
 
 ;; Author: Jylhis
+;; URL: https://github.com/Jylhis/jotain
+;; Version: 1.0.0
 ;; Keywords: tools, vc
 ;; Package-Requires: ((emacs "29.1") (magit "3.0.0") (org-jira "4.0.0"))
 

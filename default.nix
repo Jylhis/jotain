@@ -4,6 +4,11 @@
 ,
 }:
 let
+  # Custom packages
+  worktree-manager = pkgs.callPackage ./lisp/worktree-manager {
+    inherit (emacs.pkgs) trivialBuild magit org-jira;
+  };
+
   emacsWithPackages = emacs.pkgs.withPackages (
     epkgs: with epkgs; [
       adoc-mode
@@ -116,6 +121,9 @@ let
       wgrep
       yaml-mode
       zoxide
+
+      # Custom packages
+      worktree-manager
     ]
   );
 in
