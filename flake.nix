@@ -51,7 +51,7 @@
         packages = {
           default = self'.packages.jotain;
           jotain = pkgs.callPackage ./default.nix { };
-	  jotain-config = pkgs.callPackage ./config.nix { };
+          jotain-config = pkgs.callPackage ./config.nix { };
 
           emacs-dev = pkgs.callPackage ./. {
             devMode = true;

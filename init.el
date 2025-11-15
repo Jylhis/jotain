@@ -46,5 +46,15 @@
 
 (require 'app-launchers)
 
+;; Additional GC optimizations from Doom Emacs patterns
+;; Trigger GC when idle for 5 seconds
+(run-with-idle-timer 5 t #'garbage-collect)
+
+;; Prevent GC during minibuffer operations (completion!)
+(add-hook 'minibuffer-setup-hook
+          (lambda () (setq gc-cons-threshold most-positive-fixnum)))
+(add-hook 'minibuffer-exit-hook
+          (lambda () (setq gc-cons-threshold (* 16 1024 1024))))
+
 (provide 'init)
 ;;; init.el ends here

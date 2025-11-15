@@ -6,23 +6,24 @@
 ;;; Code:
 
 (use-package magit
+  :ensure
   :bind (("C-c g" . magit-status))
   :custom
   (magit-diff-refine-hunk t "Show word-granularity differences within diff hunks")
   (magit-diff-refine-ignore-whitespace t "Ignore whitespace changes in word-granularity differences")
   (magit-diff-hide-trailing-cr-characters t "Hide trailing ^M")
-  (magit-diff-context-lines 5 "Show more context lines for better understanding")
-  )
+  (magit-diff-context-lines 5 "Show more context lines for better understanding"))
 
-(use-package
-  magit-todos
+(use-package magit-todos
   :ensure
   :after magit
-  :config (magit-todos-mode 1))
+  :init
+  (magit-todos-mode 1))
 
 
 (use-package diff-hl
   :ensure
+  :after magit
   :custom
   (diff-hl-draw-borders nil)
   (fringes-outside-margins t)
@@ -31,8 +32,7 @@
          (after-init . global-diff-hl-show-hunk-mouse-mode)
          (dired-mode . diff-hl-dired-mode)
          (magit-post-refresh . diff-hl-magit-post-refresh))
-  :after magit
-  :config
+  :init
   (diff-hl-flydiff-mode 1))
 
 (use-package smerge-mode

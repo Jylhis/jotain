@@ -33,8 +33,9 @@
   :after modus-themes
   :custom
   (auto-dark-themes '((modus-operandi-tinted) (modus-vivendi-tinted)))
-  :config
+  :init
   (auto-dark-mode 1)
+  :config
   (add-hook 'after-make-frame-functions
             (lambda (frame)
               (when (display-graphic-p frame)
@@ -43,6 +44,7 @@
 (use-package diminish :ensure t)
 
 (use-package which-key
+  :ensure
   :diminish
   :hook (after-init . which-key-mode))
 
@@ -93,8 +95,9 @@
 (use-package nerd-icons-completion
   :ensure
   :after marginalia nerd-icons
-  :config
+  :init
   (nerd-icons-completion-mode)
+  :config
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
 (use-package hl-todo
@@ -115,7 +118,7 @@
 (use-package winner
   :bind (("C-c u" . winner-undo)
          ("C-c r" . winner-redo))
-  :config
+  :init
   (winner-mode 1))
 
 (use-package paren
@@ -132,8 +135,9 @@
 
 (use-package pixel-scroll
   :when (display-graphic-p)
-  :config
+  :init
   (pixel-scroll-precision-mode 1)
+  :config
   ;; Enable for graphical frames when using server-client
   (add-hook 'after-make-frame-functions
             (lambda (frame)
@@ -143,6 +147,7 @@
 
 (use-package emojify
   :ensure
+  :defer t
   :custom
   (emojify-inhibit-major-modes '(dired-mode
                                  doc-view-mode
@@ -167,6 +172,7 @@
 
 (use-package kkp
   :ensure
+  :init
   :config
   (global-kkp-mode +1))
 
