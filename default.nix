@@ -121,21 +121,7 @@ let
 in
 emacsWithPackages.overrideAttrs (oldAttrs: {
   passthru = (oldAttrs.passthru or { }) // {
-    # Test sources (shared across all test targets)
-    testSources = pkgs.lib.fileset.toSource {
-      root = ./.;
-      fileset = pkgs.lib.fileset.unions [
-        ./init.el
-        ./early-init.el
-        ./config
-        ./lisp
-        ./tests
-      ];
-    };
-
-    # Ultra-fast smoke tests (< 1 second)
-    # Note: testSources is defined above in passthru, but we can't reference it in the same set
-    # So we inline the path directly
+    # Smoke tests - ultra-fast validation (< 1 second)
     smoke-test =
       let
         testSources = pkgs.lib.fileset.toSource {
@@ -143,100 +129,57 @@ emacsWithPackages.overrideAttrs (oldAttrs: {
           fileset = pkgs.lib.fileset.unions [
             ./init.el
             ./early-init.el
-            ./config
-            ./lisp
+            ./elisp
             ./tests
           ];
         };
       in
-      pkgs.runCommand "emacs-smoke-tests" { } ''
+      pkgs.runCommand "jotain-smoke-tests" { } ''
         ${emacsWithPackages}/bin/emacs -Q --batch \
           --eval "(setq user-emacs-directory \"${testSources}/\")" \
-          --eval "(add-to-list 'load-path \"${testSources}/lisp\")" \
+          --eval "(add-to-list 'load-path \"${testSources}/elisp\")" \
           --eval "(add-to-list 'load-path \"${testSources}/tests\")" \
-          --eval "(add-to-list 'load-path \"${testSources}/config\")" \
           --eval "(require 'ert)" \
-          --load "${testSources}/tests/test-helpers.el" \
-          --load "${testSources}/tests/test-suite-smoke.el" \
+          --load "${testSources}/tests/test-jotain.el" \
           --eval "(ert-run-tests-batch-and-exit '(tag smoke))"
         touch $out
       '';
 
-    # Fast unit tests (< 5 seconds, excludes slow filesystem tests)
-    fast-tests =
-      let
-        testSources = pkgs.lib.fileset.toSource {
-          root = ./.;
-          fileset = pkgs.lib.fileset.unions [
-            ./init.el
-            ./early-init.el
-            ./config
-            ./lisp
-            ./tests
-          ];
-        };
-      in
-      pkgs.runCommand "emacs-fast-tests" { } ''
-        ${emacsWithPackages}/bin/emacs -Q --batch \
-          --eval "(setq user-emacs-directory \"${testSources}/\")" \
-          --eval "(add-to-list 'load-path \"${testSources}/lisp\")" \
-          --eval "(add-to-list 'load-path \"${testSources}/tests\")" \
-          --eval "(add-to-list 'load-path \"${testSources}/config\")" \
-          --eval "(require 'ert)" \
-          --load "${testSources}/tests/test-helpers.el" \
-          --load "${testSources}/tests/test-suite-fast.el" \
-          --eval "(ert-run-tests-batch-and-exit '(or (tag fast) (tag smoke)))"
-        touch $out
-      '';
-
-    # Full test suite (includes slow tests)
+    # Full tests - comprehensive validation
     tests =
       let
-        # Only include files needed for ERT tests (improves caching)
         testSources = pkgs.lib.fileset.toSource {
           root = ./.;
           fileset = pkgs.lib.fileset.unions [
             ./init.el
             ./early-init.el
-            ./config
-            ./lisp
+            ./elisp
             ./tests
           ];
         };
       in
-      pkgs.runCommand "emacs-config-tests"
+      pkgs.runCommand "jotain-tests"
         {
           buildInputs = [ pkgs.git ];
         }
         ''
-          # Create a temporary home directory for the test
+          # Create temporary home directory
           export HOME=$(mktemp -d)
           export XDG_CONFIG_HOME="$HOME/.config"
           export XDG_CACHE_HOME="$HOME/.cache"
           export XDG_DATA_HOME="$HOME/.local/share"
 
-          # Create a writable emacs directory
+          # Setup emacs directory
           mkdir -p "$HOME/.emacs.d"
-          # Copy ONLY test sources (filtered via lib.fileset for better caching)
           cp -r ${testSources}/* "$HOME/.emacs.d/" || true
 
-          echo "Running Emacs configuration tests..."
+          echo "Running Jotain tests..."
           ${emacsWithPackages}/bin/emacs -Q --batch \
-            --eval "(progn \
-                      (setq user-emacs-directory \"$HOME/.emacs.d/\") \
-                      (setq package-check-signature nil) \
-                      (setq package-archives nil) \
-                      (setq package-vc-heuristic-alist nil) \
-                      (fset 'yes-or-no-p (lambda (&rest _) t)) \
-                      (fset 'y-or-n-p (lambda (&rest _) t)) \
-                      (fset 'package-vc-install-from-checkout (lambda (&rest _) nil)) \
-                      (add-to-list 'load-path (expand-file-name \"lisp\" user-emacs-directory)) \
-                      (add-to-list 'load-path (expand-file-name \"tests\" user-emacs-directory)) \
-                      (add-to-list 'load-path (expand-file-name \"config\" user-emacs-directory)))" \
+            --eval "(setq user-emacs-directory \"$HOME/.emacs.d/\")" \
+            --eval "(add-to-list 'load-path (expand-file-name \"elisp\" user-emacs-directory))" \
+            --eval "(add-to-list 'load-path (expand-file-name \"tests\" user-emacs-directory))" \
             --eval "(require 'ert)" \
-            --eval "(require 'cl-lib)" \
-            --load "$HOME/.emacs.d/tests/test-helpers.el" \
-            --load "$HOME/.emacs.d/tests/test-all.el" \
+            --load "$HOME/.emacs.d/tests/test-jotain.el" \
             --eval "(ert-run-tests-batch-and-exit)"
           echo "All tests passed!"
           touch $out
