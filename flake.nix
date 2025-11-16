@@ -90,8 +90,6 @@
             "result-*"
             # Development artifacts
             ".dev-home/**"
-            # Test artifacts
-            "tests/.gitignore"
             # Lock files
             "flake.lock"
           ];
