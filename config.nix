@@ -1,26 +1,15 @@
 { pkgs, ... }:
-let
-  ignore = pkgs.lib.fileset.unions [
-    ./.claude
-    ./.envrc
-    ./.github
-    ./.gitignore
-    ./CLAUDE.md
-    ./default.nix
-    ./flake.lock
-    ./flake.nix
-    ./justfile
-    ./module.nix
-    ./nmt-tests
-    ./tests
-  ];
-in
+
 pkgs.stdenvNoCC.mkDerivation {
-  pname = "emacs-config";
-  version = "1.0.0";
+  pname = "jotain-config";
+  version = "0.2.0";
   src = pkgs.lib.fileset.toSource {
     root = ./.;
-    fileset = pkgs.lib.fileset.difference ./. ignore;
+    fileset = pkgs.lib.fileset.unions [
+      ./init.el
+      ./early-init.el
+      ./elisp
+    ];
   };
   installPhase = "cp -r $src $out";
 }
