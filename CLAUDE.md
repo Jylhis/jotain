@@ -7,8 +7,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 All Emacs packages are defined in default.nix via `emacsWithPackages`. When adding new packages:
 1. Add package to the `epkgs` list in default.nix
 2. Run `nix build` to verify the package builds
-3. Add corresponding `use-package` configuration in appropriate config/*.el file
-4. Run `just test` to ensure no regressions
+3. Add corresponding `use-package` configuration in appropriate elisp/jotain-*.el file
+   - Core built-ins → jotain-core.el
+   - UI/completion/fonts → jotain-editor.el
+   - Programming/languages → jotain-prog.el
+   - Git/Org/help → jotain-tools.el
+4. Run `nix build .#smoke-test` to verify module loads correctly
 
 The configuration uses `package.el` for package metadata but packages are pre-installed by Nix, not downloaded at runtime.
 
@@ -141,49 +145,36 @@ Only these scenarios bypass isolation (by design):
 
 ## Architecture Overview
 
-This is a modular Emacs configuration using Nix for reproducible builds. The configuration follows a feature-based module system where each aspect is isolated in its own file.
+Jotain is a minimalist, modular Emacs configuration using Nix for reproducible builds. The configuration follows a clean, consolidated module system.
 
 ### Module System
-The configuration is split into logical modules loaded via `require` in init.el:
-- **Core modules** (config/): Each handles a specific feature domain (completion, git, programming, etc.)
-- **Utility libraries** (lisp/): Shared functionality and platform detection
-- **Platform adaptations**: Automatic OS-specific configurations via platform.el detection
 
-All Emacs Lisp modules follow the `use-package` macro convention for package configuration, providing consistent structure with `:init`, `:config`, `:custom`, `:bind`, and `:hook` sections.
+The configuration uses a simple two-tier structure:
 
-**Module loading order in init.el:**
-1. `platform` (must be first for OS detection)
-2. `core` (fundamental Emacs settings)
-3. `fonts` (font configuration)
-4. `ui` (UI and appearance)
-5. `completion` (completion framework)
-6. `programming` (development tools)
-7. `per-project` (project-specific configurations)
-8. `writing` (Org-mode and documentation)
-9. `git` (version control)
-10. `help` (enhanced help system)
-11. `ai` (AI integrations)
-12. `systems` (system administration)
-13. `platforms` (platform adaptations)
-14. `android` (conditional, only on Android)
-15. `app-launchers` (application launcher utilities)
+**init.el** → **jotain.el** → **4 core modules**
+
+1. **init.el**: Minimal loader that sets up load path and requires jotain.el
+2. **jotain.el**: Main entry point that initializes modules in order
+3. **Core modules** (elisp/jotain-*.el):
+   - `jotain-core.el` - Core Emacs settings and built-in packages
+   - `jotain-editor.el` - UI, themes, completion framework, fonts
+   - `jotain-prog.el` - Programming tools, LSP, languages
+   - `jotain-tools.el` - Git, Org-mode, help system
+
+All modules use `use-package` for consistent configuration with `:init`, `:config`, `:custom`, `:bind`, and `:hook` sections.
 
 ### Key Design Patterns
-1. **Platform Detection**: The `platform.el` library detects the OS/environment and sets flags like `platform-android-p`, `platform-macos-p`, etc. Platform-specific code checks these flags. It must load first before other modules.
 
-2. **Lazy Loading**: Modules use `with-eval-after-load` and autoloads to defer package loading until needed.
+1. **Simplicity**: Only 4 core modules (down from 14+), each focused on a clear domain
+2. **Nix-native**: All packages pre-installed via Nix, no runtime package downloads
+3. **Lazy Loading**: Extensive use of `:defer`, `:hook`, and autoloads
+4. **Consolidated**: Related functionality grouped together (UI+completion, Git+Org+help)
 
-3. **Feature Modules**: Each config/*.el file is self-contained and can be loaded independently. They all `(provide 'module-name)` at the end.
+### Nix Integration
 
-4. **Nix Integration**:
-   - **default.nix**: Builds Emacs with all required packages via `emacsWithPackages`. Contains ERT test definitions in `passthru.tests`.
-   - **config.nix**: Creates deployment package using `lib.fileset` to filter out development files (tests, nix files, etc.).
-   - **flake.nix**: Defines packages, dev shells, checks, overlays, and home-manager module.
-
-### Module Dependencies
-- `platform.el` must load first (provides OS detection)
-- `core.el` sets fundamental Emacs defaults
-- Other modules can load in any order but may have soft dependencies (e.g., completion enhances programming)
+- **default.nix**: Builds Emacs with all packages via `emacsWithPackages`. Defines smoke and full test targets in `passthru`
+- **config.nix**: Deployment package containing only `init.el`, `early-init.el`, and `elisp/`
+- **flake.nix**: Flake outputs (packages, devShells, checks, overlays, homeModules)
 
 ### Home Manager Module (module.nix)
 The home-manager module handles deployment of the Emacs configuration:
@@ -204,157 +195,63 @@ The home-manager module handles deployment of the Emacs configuration:
 
 ## Testing Approach
 
-This project uses tiered testing for fast development feedback and comprehensive validation.
+Jotain uses streamlined smoke tests for fast validation.
 
-### Test Speed Tiers
+### Smoke Tests
 
-Tests are organized by speed for progressive validation:
+All tests are in a single file `tests/test-jotain.el`:
 
-**Instant Checks (< 10 seconds)**
 ```bash
-just check-instant    # Formatting + binary smoke + ERT smoke tests
-just test-smoke       # ERT smoke tests only (< 1 second)
+nix build .#smoke-test  # Ultra-fast smoke tests (< 1 second)
+nix build .#tests       # Full test suite (same as smoke for now)
 ```
 
-**Fast Validation (< 1 minute)**
-```bash
-just check-fast       # Instant checks + fast unit tests
-just test-fast        # Fast ERT tests only (< 5 seconds, excludes slow filesystem tests)
-```
+Tests validate:
+- Emacs version meets minimum (30.1+)
+- Directory structure (elisp/, init.el, early-init.el)
+- All jotain-* modules load without errors
+- Basic functionality works
 
-**Full Local Testing (< 5 minutes, excludes VM)**
-```bash
-just check-full       # All checks except VM runtime tests (same as `nix flake check`)
-just test             # Full ERT suite including slow tests
-just test-all         # ERT + NMT tests (excludes VM)
-```
+### Test Philosophy
 
-**Complete Validation (includes VM, ~5-10 minutes)**
-```bash
-just check-all              # Everything including VM runtime tests
-just test-all-plus-runtime  # Same as above (sets CI=1)
-just test-runtime           # VM runtime test only
-```
+- **Fast**: All tests complete in < 1 second
+- **Essential**: Only test what matters (module loading, basic functionality)
+- **Simple**: Single test file, no complex infrastructure
 
-**Parallel Execution (faster on multi-core)**
-```bash
-just check-parallel  # Run all fast checks in parallel using -j auto
-```
-
-### ERT (Emacs Lisp Regression Testing)
-
-Unit tests for Emacs Lisp code:
-- Test files in `tests/` directory
-- Named `test-*.el`
-- Tests use tags for speed tiers: `smoke`, `fast`, `unit`, `integration`, `slow`
-- Run specific tags with `just test-tag TAG`
-- Tests are built into the Nix package via `passthru.tests` in default.nix
-
-**Test Tiers:**
-- `tests/test-smoke.el`: Ultra-fast smoke tests (< 1 second, no I/O)
-- `tests/test-platform.el`, `tests/test-utils.el` (fast tests): Unit tests with minimal I/O
-- `tests/test-init-loads.el`: Integration tests (loads full config, slow)
-- All tests: `just test` or `nix build .#checks.x86_64-linux.emacs-tests`
-
-**Tag Conventions:**
-- `:tags '(smoke critical)` - Must pass, ultra-fast (< 1 second total)
-- `:tags '(fast unit)` - Fast unit tests (no heavy I/O)
-- `:tags '(unit)` - Standard unit tests
-- `:tags '(integration slow)` - Integration tests (loads packages/config)
-- `:tags '(filesystem slow)` - Tests with filesystem operations
-
-When adding ERT tests:
-1. Add tests in tests/test-feature.el with appropriate tags
-2. Tests auto-load via tests/test-all.el (no manual registration needed)
-3. Use fast tests for most unit testing, slow tests only when necessary
-4. Run `just test-smoke` for instant feedback during development
-5. Test naming convention: `(ert-deftest test-module/feature () ...)`
-
-### NMT (Nix Module Tests)
-
-Integration tests for the home-manager module:
-- Test files in `nmt-tests/` directory
-- Uses `home-manager.lib.homeManagerConfiguration` to build actual configurations
-- Tests use `mkTest` helper which wraps `pkgs.runCommand` for test execution
-- Run with `just test-nmt` or individual tests with `nix build .#checks.x86_64-linux.test-<name>`
-- Available tests:
-  - test-module-enabled: Comprehensive test (config files, directory structure, shell aliases, systemd service, fonts)
-  - test-module-disabled: Validates behavior when disabled
-
-When adding NMT tests:
-1. Add test definition in nmt-tests/default.nix using `mkTest` helper
-2. Tests are automatically included in `nix flake check`
-3. Update nmt-tests/README.md with test description
-4. Ensure tests pass with `just test-nmt`
-5. Tests should use `set -euo pipefail` for strict error handling
-
-### Runtime Validation
-
-Comprehensive end-to-end test using nixosTest:
-- Run with `just test-runtime` (starts a VM, 2-5 minutes)
-- Validates actual Emacs execution, daemon, and client connectivity
-- **Excluded from `nix flake check`** by default for faster local development
-- **Automatically runs in CI** when `CI` environment variable is set
-- Run locally with `CI=1 nix flake check` or `just test-all-plus-runtime`
-
-### Test Boundaries - What to Test Where
-
-**Use ERT (tests/) for:**
-- Pure Elisp functionality (utils.el, platform.el functions)
-- Configuration loading (init.el, early-init.el, module requires)
-- Unit tests (isolated function behavior, no external dependencies)
-- Smoke tests (fast critical validation, < 1 second with `:tags '(smoke)`)
-- Integration tests (package interactions, with `:tags '(integration)`)
-
-**Use NMT (nmt-tests/) for:**
-- Home-manager module behavior (file deployment, service configuration)
-- Integration with Nix (packages installed, paths correct, fileset filtering)
-- Module options (enable/disable, userConfig override)
-- Cross-module interactions (fonts + emacs, systemd + emacs)
-
-**Use nixosTest (nmt-tests/runtime.nix) for:**
-- Actual execution validation (daemon starts, client connects)
-- End-to-end testing (full configuration loads in real environment)
-- Platform-specific behavior (systemd service actually works)
-- Regression testing (catch breaking changes in real usage)
-
-**Don't test in Nix layer:**
-- Elisp correctness → Use ERT instead
-- UI/UX behavior → Use ERT with temp buffers or manual testing
-- Implementation details → Trust abstractions, test behavior
+When adding tests:
+1. Add to `tests/test-jotain.el`
+2. Use `:tags '(smoke)` for critical tests
+3. Keep tests simple and fast
+4. Test module loading, not implementation details
 
 ## Important Files
 
-- **init.el**: Main entry point that loads all configuration modules in order
+- **init.el**: Minimal loader that sets up load path and requires jotain.el
 - **early-init.el**: Pre-initialization settings (loaded before package system)
-- **lisp/platform.el**: Platform detection library (must load first)
-- **config/core.el**: Fundamental Emacs settings and built-in package configurations
-- **default.nix**: Emacs package builder with all dependencies
-- **config.nix**: Creates filtered configuration package for deployment using lib.fileset
+- **elisp/jotain.el**: Main entry point that initializes all modules
+- **elisp/jotain-core.el**: Core Emacs settings and built-in packages
+- **elisp/jotain-editor.el**: UI, themes, completion, fonts
+- **elisp/jotain-prog.el**: Programming tools, LSP, languages
+- **elisp/jotain-tools.el**: Git, Org-mode, help system
+- **default.nix**: Emacs package builder with all dependencies and test definitions
+- **config.nix**: Deployment package (only init.el, early-init.el, elisp/)
+- **flake.nix**: Flake outputs (packages, devShells, checks, overlays, homeModules)
 - **module.nix**: Home-manager module definition
-- **flake.nix**: Main flake entry point with all outputs
-- **justfile**: Development task runner with common commands
+- **tests/test-jotain.el**: Smoke tests
 
-### Fileset Filtering (config.nix)
-The config.nix file filters out development-only files when creating the deployment package.
+### Deployment Package (config.nix)
 
-**Excluded from deployment:**
-- `.claude/` - Claude Code configuration
-- `.envrc` - direnv configuration
-- `.github/` - GitHub workflows and CI
-- `.gitignore` - Git ignore rules
-- `CLAUDE.md` - This documentation file
-- `default.nix` - Nix package builder
-- `flake.lock` - Nix flake lock file
-- `flake.nix` - Nix flake definition
-- `justfile` - Development task runner
-- `module.nix` - Home-manager module definition
-- `nmt-tests/` - NMT integration tests
-- `tests/` - ERT unit tests
+The config.nix creates a minimal deployment package containing only runtime files:
 
-**Included in deployment:**
-- `init.el` - Main configuration entry point
-- `early-init.el` - Pre-initialization settings
-- `config/` - Feature modules (core, ui, completion, programming, etc.)
-- `lisp/` - Utility libraries (platform detection, app launchers, utils)
-- `config.nix` - The package definition itself
+**Included:**
+- `init.el` - Entry point
+- `early-init.el` - Pre-initialization
+- `elisp/` - All jotain-* modules
+
+**Excluded:**
+- Development files (.envrc, .github/, CLAUDE.md)
+- Nix build files (default.nix, flake.nix, module.nix)
+- Test files (tests/, nmt-tests/)
+- Build artifacts (result, .dev-home/)
+
+This keeps the deployed configuration minimal and focused on runtime needs.
