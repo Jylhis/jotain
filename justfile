@@ -21,7 +21,7 @@ check:
 [group('check')]
 test-smoke:
     @echo "Running smoke tests (<  1 second)..."
-    nix build .#checks.{{system}}.smoke-tests --print-build-logs
+    nix build .#checks.{{system}}.smoke-test --print-build-logs
 
 # Run fast unit tests (< 5 seconds, excludes slow filesystem tests)
 [group('check')]
@@ -33,7 +33,7 @@ test-fast:
 [group('check')]
 test:
     @echo "Running full ERT test suite..."
-    nix build .#checks.{{system}}.emacs-tests --print-build-logs
+    nix build .#checks.{{system}}.tests --print-build-logs
 
 # Run all fast checks (formatting + smoke + fast tests + NMT, excludes VM)
 [group('check')]
@@ -55,10 +55,9 @@ check-parallel:
     echo "Running fast checks in parallel..."
     nix build \
       .#checks.{{system}}.formatting \
-      .#checks.{{system}}.binary-smoke-test \
-      .#checks.{{system}}.smoke-tests \
+      .#checks.{{system}}.smoke-test \
       .#checks.{{system}}.fast-tests \
-      .#checks.{{system}}.emacs-tests \
+      .#checks.{{system}}.tests \
       .#checks.{{system}}.test-module-enabled \
       .#checks.{{system}}.test-module-disabled \
       --keep-going \
@@ -71,8 +70,7 @@ check-parallel:
 check-instant:
     @echo "Running instant checks (< 10 seconds)..."
     nix build .#checks.{{system}}.formatting --print-build-logs
-    nix build .#checks.{{system}}.binary-smoke-test --print-build-logs
-    nix build .#checks.{{system}}.smoke-tests --print-build-logs
+    nix build .#checks.{{system}}.smoke-test --print-build-logs
 
 # Fast validation (< 1 minute)
 [group('check')]
@@ -113,7 +111,7 @@ test-runtime:
 test-tag TAG:
     @echo "Running tests tagged with: {{TAG}}"
     emacs -Q --batch \
-        --eval "(progn (add-to-list 'load-path \"{{config_dir}}/lisp\") (add-to-list 'load-path \"{{config_dir}}/tests\") (add-to-list 'load-path \"{{config_dir}}/config\"))" \
+        --eval "(progn (add-to-list 'load-path \"{{config_dir}}/elisp\") (add-to-list 'load-path \"{{config_dir}}/tests\"))" \
         --eval "(require 'ert)" \
         --eval "(require 'cl-lib)" \
         --eval "(setq user-emacs-directory \"{{config_dir}}/\")" \
@@ -145,7 +143,7 @@ compile:
     set -euo pipefail
     find "{{config_dir}}" -name "*.el" -not -path "*/.*" | while read -r file; do
         echo "Compiling: $file"
-        emacs -Q --batch -L "{{config_dir}}" -L "{{config_dir}}/config" -L "{{config_dir}}/lisp" -f batch-byte-compile "$file"
+        emacs -Q --batch -L "{{config_dir}}" -L "{{config_dir}}/elisp" -f batch-byte-compile "$file"
     done
 
 # Maintenance and Cleanup
@@ -190,8 +188,7 @@ emacs-dev:
     emacs -Q \
         --eval "(progn \
                   (setq user-emacs-directory \"{{config_dir}}/\") \
-                  (add-to-list 'load-path \"{{config_dir}}/config\") \
-                  (add-to-list 'load-path \"{{config_dir}}/lisp\") \
+                  (add-to-list 'load-path \"{{config_dir}}/elisp\") \
                   (load-file \"{{config_dir}}/init.el\"))"
 
 # Start Emacs for interactive testing with project config (isolated)
@@ -210,8 +207,7 @@ emacs-test-interactive:
     emacs -Q \
         --eval "(progn \
                   (setq user-emacs-directory \"{{config_dir}}/\") \
-                  (add-to-list 'load-path \"{{config_dir}}/config\") \
-                  (add-to-list 'load-path \"{{config_dir}}/lisp\") \
+                  (add-to-list 'load-path \"{{config_dir}}/elisp\") \
                   (load-file \"{{config_dir}}/init.el\"))"
 
 # Start Emacs with clean configuration (no packages, no isolation - USE WITH CAUTION)
@@ -219,7 +215,7 @@ emacs-test-interactive:
 emacs-clean:
     @echo "⚠️  Warning: This runs without isolation!"
     @echo "Consider using 'just emacs-dev' instead for safe testing"
-    emacs -Q --eval "(progn (add-to-list 'load-path \"{{config_dir}}/config\") (add-to-list 'load-path \"{{config_dir}}/lisp\") (load-file \"{{config_dir}}/init.el\"))"
+    emacs -Q --eval "(progn (add-to-list 'load-path \"{{config_dir}}/elisp\") (load-file \"{{config_dir}}/init.el\"))"
 
 # Show configuration status
 [group('info')]
@@ -233,10 +229,8 @@ info:
     @find "{{config_dir}}" -name "*.el" -not -path "*/.*" | wc -l | xargs echo "  Total .el files:"
     @echo "  Main files:"
     @ls -la "{{config_dir}}"/*.el 2>/dev/null || echo "    No main .el files found"
-    @echo "  Config modules:"
-    @ls -1 "{{config_dir}}/config/"*.el 2>/dev/null | sed 's|.*/||; s|\.el$||' | xargs -I {} echo "    {}"
-    @echo "  Utility modules:"
-    @ls -1 "{{config_dir}}/lisp/"*.el 2>/dev/null | sed 's|.*/||; s|\.el$||' | xargs -I {} echo "    {}" || echo "    No utility modules found"
+    @echo "  Elisp modules:"
+    @ls -1 "{{config_dir}}/elisp/"*.el 2>/dev/null | sed 's|.*/||; s|\.el$||' | xargs -I {} echo "    {}" || echo "    No elisp modules found"
 
 # Show available Nix flake outputs
 [group('info')]

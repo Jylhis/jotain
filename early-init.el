@@ -8,39 +8,51 @@
 
 ;;; Code:
 
-;; Ensure Emacs version is 29.1 or higher
-(when (version< emacs-version "29.1")
-  (error "This configuration requires Emacs 29.1 or higher"))
+
+;; In noninteractive sessions, prioritize non-byte-compiled source files to
+;; prevent the use of stale byte-code. Otherwise, it saves us a little IO time
+;; to skip the mtime checks on every *.elc file.
+(setq load-prefer-newer noninteractive)
 
 ;; Disable package.el in favor of Nix package management
+;; TODO: We might still want to allow non-nix management in the future
 (setq package-enable-at-startup nil)
 
-;; Performance optimizations during startup
-(setq gc-cons-threshold most-positive-fixnum
-      gc-cons-percentage 0.8
-      read-process-output-max (* 1024 1024)) ; 1MB
-;; Disable file-name-handler-alist during startup for speed
-(defvar default-file-name-handler-alist file-name-handler-alist)
-(setq file-name-handler-alist nil)
+;; `use-package' is builtin since 29.
+;; It must be set before loading `use-package'.
+(setq use-package-enable-imenu-support t)
 
-;; Reset GC and file handlers after startup
-(add-hook 'emacs-startup-hook
-          (lambda ()
-            (setq gc-cons-threshold (* 16 1024 1024) ; 16MB (per Doom recommendation)
-                  gc-cons-percentage 0.1
-                  file-name-handler-alist default-file-name-handler-alist)))
+;; Native compilation settings (Emacs 30+)
+(when (and (fboundp 'native-comp-available-p)
+           (native-comp-available-p))
+  ;; Silence compiler warnings during init
+  (setq native-comp-async-report-warnings-errors nil)
+  ;; Don't store eln-cache in user-emacs-directory
+  (when (fboundp 'startup-redirect-eln-cache)
+    (startup-redirect-eln-cache
+     (convert-standard-filename
+      (expand-file-name "var/eln-cache/" user-emacs-directory))))
+  ;; Increase native compilation speed
+  (setq native-comp-speed 2))
 
-;; Disable GUI elements early
-(push '(tool-bar-lines . 0) default-frame-alist)
+;; UI optimizations - disable UI elements before frame creation
+;; Faster to disable these here (before they've been initialized)
 (push '(menu-bar-lines . 0) default-frame-alist)
+(push '(tool-bar-lines . 0) default-frame-alist)
 (push '(vertical-scroll-bars) default-frame-alist)
+(when (featurep 'ns)
+  (push '(ns-transparent-titlebar . t) default-frame-alist)
+  (push '(ns-appearance . dark) default-frame-ali))
 
-;; Avoid flash of unstyled content
+;; Disable startup screen
 (setq inhibit-startup-screen t
       inhibit-startup-message t
+      inhibit-startup-echo-area-message user-login-name
       initial-scratch-message nil)
 
-;; Set preferred coding system
-(prefer-coding-system 'utf-8)
+;; (setq mode-line-format nil)
+
+;; Prevent unwanted runtime compilation for performance
+(setq byte-compile-warnings '(not obsolete))
 
 ;;; early-init.el ends here

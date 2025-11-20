@@ -7,12 +7,11 @@
 
 ;;; Commentary:
 ;; Modern modular Emacs configuration for enhanced development experience.
-;; Configuration is split into logical modules in the config/ directory.
+;; Configuration is split into logical modules in the elisp/ directory.
 
 ;;; Code:
 
-;; Add config directories to load path
-(add-to-list 'load-path (expand-file-name "config" user-emacs-directory))
+;; Add config directory to load path
 (add-to-list 'load-path (expand-file-name "elisp" user-emacs-directory))
 
 ;; Load platform detection first
