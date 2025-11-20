@@ -40,6 +40,7 @@
    ("M-n" . scroll-up-line)))
 
 (use-package window
+  :ensure nil
   :bind ("C-x j" . my/toggle-window-split)
   :custom
   ;; Prefer side by side splitting
@@ -47,6 +48,7 @@
   (split-height-threshold nil))
 
 (use-package files
+  :ensure nil
   :hook
   (after-save . executable-make-buffer-file-executable-if-script-p)
   :custom
@@ -59,22 +61,26 @@
   (require-final-newline t "Ensure files end with newline"))
 
 (use-package autorevert
+  :ensure nil
   :custom
   (global-auto-revert-non-file-buffers t "Revert also non-file buffers")
   :init
   (global-auto-revert-mode 1)) ; Automatically refresh buffer if changed on disk
 
 (use-package recentf
+  :ensure nil
   :custom
   (recentf-max-saved-items 50 "Increase the default a bit")
   :init
   (recentf-mode 1)) ; Keep track of open files
 
 (use-package savehist
+  :ensure nil
   :init
   (savehist-mode))
 
 (use-package simple
+  :ensure nil
   :custom
   (read-extended-command-predicate
    #'command-completion-default-include-p "Hide commands in M-x which do not work in the current mode")
@@ -84,21 +90,26 @@
   (column-number-mode 1)) ; Show column number
 
 (use-package subword
+  :ensure nil
   :diminish
   :hook ((prog-mode . subword-mode)
          (minibuffer-setup . subword-mode)))
 
 (use-package repeat
+  :ensure nil
   :init
   (repeat-mode))
 
 (use-package delsel
+  :ensure nil
   :hook (after-init . delete-selection-mode))
 
 (use-package elec-pair
+  :ensure nil
   :hook (after-init . electric-pair-mode))
 
 (use-package dired
+  :ensure nil
   :custom
   (dired-auto-revert-buffer #'dired-buffer-stale-p "Revert the Dired buffer without prompting.")
   (dired-clean-confirm-killing-deleted-buffers nil "Disable the prompt about killing the Dired buffer for a deleted directory.")
@@ -120,14 +131,17 @@
                      "\\|^__pycache__\\'")))
 
 (use-package dired-x
+  :ensure nil
   :after dired
   :hook (dired-mode . dired-omit-mode))
 
 (use-package ibuffer
+  :ensure nil
   :bind
   (([remap list-buffers] . ibuffer)))
 
 (use-package ffap
+  :ensure nil
   :custom
   (ffap-machine-p-known 'reject)) ; Don't attempt to ping unknown hostnames
 
