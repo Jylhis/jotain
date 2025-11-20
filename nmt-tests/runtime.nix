@@ -59,8 +59,7 @@
       print("\n=== Test 3: Configuration Files Present ===")
       machine.succeed("sudo -u testuser test -f /home/testuser/.config/emacs/init.el")
       machine.succeed("sudo -u testuser test -f /home/testuser/.config/emacs/early-init.el")
-      machine.succeed("sudo -u testuser test -d /home/testuser/.config/emacs/config")
-      machine.succeed("sudo -u testuser test -d /home/testuser/.config/emacs/lisp")
+      machine.succeed("sudo -u testuser test -d /home/testuser/.config/emacs/elisp")
       print("PASS: Configuration files are present")
 
       print("\n=== Test 4: Configuration Loads Without Errors ===")
@@ -105,7 +104,7 @@
       print("\n=== Test 8: Platform Detection Works ===")
       output = machine.succeed("""
         sudo -u testuser emacs --batch \\
-          -l /home/testuser/.config/emacs/lisp/platform.el \\
+          -l /home/testuser/.config/emacs/elisp/platform.el \\
           --eval '(message "Linux: %s, GUI: %s" platform-linux-p platform-gui-p)' 2>&1
       """)
       assert "Linux: t" in output, f"Platform detection failed: {output}"

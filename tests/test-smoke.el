@@ -23,17 +23,11 @@
 
 ;;; Directory Structure (no I/O, just checks)
 
-(ert-deftest test-smoke/config-directory-exists ()
-  "Test that config/ directory exists."
+(ert-deftest test-smoke/elisp-directory-exists ()
+  "Test that elisp/ directory exists."
   :tags '(smoke critical)
-  (let ((config-dir (expand-file-name "config" user-emacs-directory)))
-    (should (file-directory-p config-dir))))
-
-(ert-deftest test-smoke/lisp-directory-exists ()
-  "Test that lisp/ directory exists."
-  :tags '(smoke critical)
-  (let ((lisp-dir (expand-file-name "lisp" user-emacs-directory)))
-    (should (file-directory-p lisp-dir))))
+  (let ((elisp-dir (expand-file-name "elisp" user-emacs-directory)))
+    (should (file-directory-p elisp-dir))))
 
 ;;; Core Files Exist (stat calls only, no loading)
 
