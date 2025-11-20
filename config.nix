@@ -10,7 +10,7 @@ let
     ./flake.lock
     ./flake.nix
     ./justfile
-    ./module.nix
+    ./nix
     ./nmt-tests
     ./tests
   ];

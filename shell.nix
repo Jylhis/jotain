@@ -1,6 +1,6 @@
 # Development shell with XDG isolation
 { pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-25.05-small.tar.gz") { }
-, jotainEmacs ? pkgs.callPackage ./. { inherit pkgs; }
+, jotainEmacs ? pkgs.callPackage ./emacs.nix { inherit pkgs; }
 , ...
 }:
 
@@ -8,6 +8,53 @@ let
   # Use toString to get the actual path, not the Nix store derivation
   projectRoot = toString ../..;
 
+  # Development wrapper for jot CLI that uses local sources
+  devJot = pkgs.writeShellScriptBin "jot" ''
+    #!/usr/bin/env bash
+
+    # Dynamically find project root (look for flake.nix)
+    PROJECT_ROOT="$PWD"
+    while [ ! -f "$PROJECT_ROOT/flake.nix" ] && [ "$PROJECT_ROOT" != "/" ]; do
+      PROJECT_ROOT="$(dirname "$PROJECT_ROOT")"
+    done
+
+    if [ ! -f "$PROJECT_ROOT/flake.nix" ]; then
+      echo "Error: Could not find project root (no flake.nix found)"
+      exit 1
+    fi
+
+    # Use local sources
+    export JOTAIN_DEV_MODE=1
+    export JOTAIN_ROOT="$PROJECT_ROOT"
+    export JOTAIN_ELISP_DIR="$PROJECT_ROOT/elisp"
+    export JOTAIN_CLI_DIR="$PROJECT_ROOT/cli"
+
+    # Isolated user directory
+    export JOTAIN_DEV_HOME="$PROJECT_ROOT/.dev-home"
+    mkdir -p "$JOTAIN_DEV_HOME"
+
+    # Override XDG paths to isolate from system
+    export XDG_CONFIG_HOME="$JOTAIN_DEV_HOME/.config"
+    export XDG_DATA_HOME="$JOTAIN_DEV_HOME/.local/share"
+    export XDG_CACHE_HOME="$JOTAIN_DEV_HOME/.cache"
+    export XDG_STATE_HOME="$JOTAIN_DEV_HOME/.local/state"
+
+    mkdir -p "$XDG_CONFIG_HOME/emacs"
+    mkdir -p "$XDG_DATA_HOME/emacs"
+    mkdir -p "$XDG_CACHE_HOME/emacs"
+    mkdir -p "$XDG_STATE_HOME/emacs"
+
+    # Use development Emacs
+    export PATH="${jotainEmacs}/bin:$PATH"
+
+    # Run local CLI script if it exists, otherwise show help
+    if [ -f "$PROJECT_ROOT/cli/jot" ]; then
+      exec bash "$PROJECT_ROOT/cli/jot" "$@"
+    else
+      echo "CLI not yet created. Use 'emacs' to launch development Emacs."
+      exit 1
+    fi
+  '';
 
   # Development wrapper for emacs that uses local sources
   devEmacsWrapper = pkgs.writeShellScriptBin "emacs-dev" ''
@@ -93,6 +140,7 @@ pkgs.mkShell {
     jotainEmacs
 
     # Development wrappers
+    devJot
     devEmacsWrapper
   ] ++ devTools;
 

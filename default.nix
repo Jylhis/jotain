@@ -1,134 +1,71 @@
-{ pkgs ? import <nixpkgs> { config.allowUnfree = true; }
-, emacs ? pkgs.emacs
-, devMode ? false
-,
-}:
+{ pkgs, lib, stdenv, ... }:
 let
-  emacsWithPackages = emacs.pkgs.withPackages (
-    epkgs: with epkgs; [
-      adoc-mode
-      modus-themes
-      sideline
-      sideline-flymake
-      sideline-eglot
-      ansible
-      auth-source-1password
-      auto-dark
-      avy
-      awk-ts-mode
-      bitbake-ts-mode
-      breadcrumb
-      cape
-      cmake-mode
-      compile-multi
-      compile-multi-embark
-      compile-multi-nerd-icons
-      consult
-      consult-compile-multi
-      consult-dash
-      consult-eglot
-      consult-eglot-embark
-      consult-flyspell
-      corfu
-      csv-mode
-      cuda-mode
-      dape
-      dash-docs
-      demangle-mode
-      devicetree-ts-mode
-      diff-hl
-      diminish
-      direnv
-      docker-compose-mode
-      dockerfile-mode
-      drag-stuff
-      dtrt-indent
-      editorconfig
-      elisp-lint
-      elsa
-      embark
-      embark-consult
-      emojify
-      expand-region
-      projection
-      projection-multi-embark
-      projection-multi
-      projection-dape
-      git-commit-ts-mode
-      gitlab-ci-mode
-      gnuplot
-      go-mode
-      haskell-mode
-      haskell-ts-mode
-      helpful
-      hl-todo
-      jq-ts-mode
-      just-mode
-      just-ts-mode
-      kind-icon
-      kkp
-      ligature
-      logview
-      magit
-      magit-todos
-      marginalia
-      markdown-mode
-      mermaid-mode
-      mermaid-ts-mode
-      modern-cpp-font-lock
-      multiple-cursors
-      nerd-icons
-      nerd-icons-completion
-      nerd-icons-corfu
-      nerd-icons-dired
-      nerd-icons-ibuffer
-      nix-mode
-      nix-ts-mode
-      # obsidian
-      orderless
-      org-appear
-      org-jira
-      org-modern
-      ox-gfm
-      ox-hugo
-      ox-jira
-      ox-slack
-      package-lint
-      pkgs.sqlite # consult-dash dependency
-      pretty-sha-path
-      rainbow-delimiters
-      smartparens
-      sops
-      sql-indent
-      ssh-config-mode
-      super-save
-      terraform-mode
-      tree-sitter-langs
-      treesit-auto
-      treesit-fold
-      treesit-grammars.with-all-grammars
-      vertico
-      vterm
-      vundo
-      web-mode
-      web-server # For claude-code-ide
-      websocket # For claude-code-ide
-      wgrep
-      yaml-mode
-      zoxide
-    ]
-  );
+  jotainEmacs = pkgs.callPackage ./emacs.nix { devMode = false; };
+
+  # CLI wrapper
+  jotainCLI = pkgs.writeShellScriptBin "jot" ''
+    #!/usr/bin/env bash
+
+    export JOTAIN_HOME="${placeholder "out"}"
+    export JOTAIN_ELISP_DIR="${placeholder "out"}/share/emacs/site-lisp/jotain"
+
+    # Use installed Emacs
+    export PATH="${jotainEmacs}/bin:$PATH"
+
+    # Run CLI commands
+    exec "${placeholder "out"}/libexec/jotain/jot-impl" "$@"
+  '';
+
 in
-emacsWithPackages.overrideAttrs (oldAttrs: {
-  passthru = (oldAttrs.passthru or { }) // {
+stdenv.mkDerivation {
+  pname = "jotain";
+  version = "0.1.0";
+
+  src = lib.cleanSource ./.;
+
+  buildInputs = [ jotainEmacs ];
+
+  installPhase = ''
+    mkdir -p $out/share/emacs/site-lisp/jotain
+    mkdir -p $out/libexec/jotain
+    mkdir -p $out/bin
+    mkdir -p $out/share/jotain
+
+    # Install elisp files if they exist
+    if [ -d elisp ]; then
+      cp -r elisp/* $out/share/emacs/site-lisp/jotain/
+    fi
+
+    # Install init files
+    cp init.el $out/share/jotain/
+    cp early-init.el $out/share/jotain/
+
+    # Install CLI if it exists
+    if [ -d cli ]; then
+      cp -r cli/* $out/libexec/jotain/
+      chmod +x $out/libexec/jotain/jot 2>/dev/null || true
+      # Create symlink to main CLI
+      if [ -f $out/libexec/jotain/jot ]; then
+        ln -s $out/libexec/jotain/jot $out/bin/jot
+      fi
+    fi
+  '';
+
+  meta = with lib; {
+    description = "A NixOS-native Emacs distribution";
+    homepage = "https://github.com/Jylhis/jotain";
+    license = licenses.gpl3Plus;
+    platforms = platforms.all;
+    maintainers = [ ];
+  };
+  passthru = {
     # Test sources (shared across all test targets)
     testSources = pkgs.lib.fileset.toSource {
       root = ./.;
       fileset = pkgs.lib.fileset.unions [
         ./init.el
         ./early-init.el
-        ./config
-        ./lisp
+        ./elisp
         ./tests
       ];
     };
@@ -143,18 +80,16 @@ emacsWithPackages.overrideAttrs (oldAttrs: {
           fileset = pkgs.lib.fileset.unions [
             ./init.el
             ./early-init.el
-            ./config
-            ./lisp
+            ./elisp
             ./tests
           ];
         };
       in
       pkgs.runCommand "emacs-smoke-tests" { } ''
-        ${emacsWithPackages}/bin/emacs -Q --batch \
+        ${jotainEmacs}/bin/emacs -Q --batch \
           --eval "(setq user-emacs-directory \"${testSources}/\")" \
-          --eval "(add-to-list 'load-path \"${testSources}/lisp\")" \
+          --eval "(add-to-list 'load-path \"${testSources}/elisp\")" \
           --eval "(add-to-list 'load-path \"${testSources}/tests\")" \
-          --eval "(add-to-list 'load-path \"${testSources}/config\")" \
           --eval "(require 'ert)" \
           --load "${testSources}/tests/test-helpers.el" \
           --load "${testSources}/tests/test-suite-smoke.el" \
@@ -170,18 +105,16 @@ emacsWithPackages.overrideAttrs (oldAttrs: {
           fileset = pkgs.lib.fileset.unions [
             ./init.el
             ./early-init.el
-            ./config
-            ./lisp
+            ./elisp
             ./tests
           ];
         };
       in
       pkgs.runCommand "emacs-fast-tests" { } ''
-        ${emacsWithPackages}/bin/emacs -Q --batch \
+        ${jotainEmacs}/bin/emacs -Q --batch \
           --eval "(setq user-emacs-directory \"${testSources}/\")" \
-          --eval "(add-to-list 'load-path \"${testSources}/lisp\")" \
+          --eval "(add-to-list 'load-path \"${testSources}/elisp\")" \
           --eval "(add-to-list 'load-path \"${testSources}/tests\")" \
-          --eval "(add-to-list 'load-path \"${testSources}/config\")" \
           --eval "(require 'ert)" \
           --load "${testSources}/tests/test-helpers.el" \
           --load "${testSources}/tests/test-suite-fast.el" \
@@ -198,8 +131,7 @@ emacsWithPackages.overrideAttrs (oldAttrs: {
           fileset = pkgs.lib.fileset.unions [
             ./init.el
             ./early-init.el
-            ./config
-            ./lisp
+            ./elisp
             ./tests
           ];
         };
@@ -221,7 +153,7 @@ emacsWithPackages.overrideAttrs (oldAttrs: {
           cp -r ${testSources}/* "$HOME/.emacs.d/" || true
 
           echo "Running Emacs configuration tests..."
-          ${emacsWithPackages}/bin/emacs -Q --batch \
+          ${jotainEmacs}/bin/emacs -Q --batch \
             --eval "(progn \
                       (setq user-emacs-directory \"$HOME/.emacs.d/\") \
                       (setq package-check-signature nil) \
@@ -230,9 +162,8 @@ emacsWithPackages.overrideAttrs (oldAttrs: {
                       (fset 'yes-or-no-p (lambda (&rest _) t)) \
                       (fset 'y-or-n-p (lambda (&rest _) t)) \
                       (fset 'package-vc-install-from-checkout (lambda (&rest _) nil)) \
-                      (add-to-list 'load-path (expand-file-name \"lisp\" user-emacs-directory)) \
-                      (add-to-list 'load-path (expand-file-name \"tests\" user-emacs-directory)) \
-                      (add-to-list 'load-path (expand-file-name \"config\" user-emacs-directory)))" \
+                      (add-to-list 'load-path (expand-file-name \"elisp\" user-emacs-directory)) \
+                      (add-to-list 'load-path (expand-file-name \"tests\" user-emacs-directory)))" \
             --eval "(require 'ert)" \
             --eval "(require 'cl-lib)" \
             --load "$HOME/.emacs.d/tests/test-helpers.el" \
@@ -242,4 +173,4 @@ emacsWithPackages.overrideAttrs (oldAttrs: {
           touch $out
         '';
   };
-})
+}

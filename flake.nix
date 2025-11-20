@@ -17,9 +17,14 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = inputs @ { self, nixpkgs, emacs-overlay, flake-parts, systems, treefmt-nix, ... }:
+  outputs = inputs @ { self, nixpkgs, emacs-overlay, flake-parts, systems, treefmt-nix, home-manager, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         treefmt-nix.flakeModule
@@ -30,12 +35,12 @@
       flake = {
         overlays.default = import ./nix/overlays { inherit inputs; };
 
-        # nixosModules = {
-        #   default = import ./nix/modules/nixos;
-        # };
+        nixosModules = {
+          default = import ./nix/modules/nixos;
+        };
 
         homeModules = {
-          default = import ./module.nix;
+          default = import ./nix/modules/home;
         };
       };
 
@@ -51,13 +56,12 @@
         packages = {
           default = self'.packages.jotain;
           jotain = pkgs.callPackage ./default.nix { };
-          jotain-config = pkgs.callPackage ./config.nix { };
 
-          emacs-dev = pkgs.callPackage ./. {
+          emacs-dev = pkgs.callPackage ./emacs.nix {
             devMode = true;
           };
 
-          emacs = pkgs.callPackage ./. {
+          emacs = pkgs.callPackage ./emacs.nix {
             devMode = false;
           };
         };
@@ -68,9 +72,43 @@
           };
         };
 
-        checks = {
-          formatting = config.treefmt.build.check self;
-        };
+        checks =
+          let
+            # Import NMT tests
+            nmtTests = pkgs.callPackage ./nmt-tests {
+              inherit home-manager;
+              homeModule = self.homeModules.default;
+            };
+
+            # Import runtime test
+            runtimeTests = pkgs.callPackage ./nmt-tests/runtime.nix {
+              inherit home-manager;
+              homeModule = self.homeModules.default;
+              emacsPackage = self'.packages.emacs;
+            };
+
+            # Get passthru tests from the jotain package
+            jotainPackage = self'.packages.jotain;
+
+            # Base checks (always run)
+            baseChecks = {
+              formatting = config.treefmt.build.check self;
+
+              # ERT tests from passthru
+              smoke-test = jotainPackage.smoke-test;
+              fast-tests = jotainPackage.fast-tests;
+              tests = jotainPackage.tests;
+
+              # NMT home-manager module tests
+              inherit (nmtTests) test-module-enabled test-module-disabled;
+            };
+
+            # Optional runtime test (only in CI)
+            runtimeCheck = lib.optionalAttrs (builtins.getEnv "CI" != "") {
+              inherit (runtimeTests) test-emacs-runtime;
+            };
+          in
+          baseChecks // runtimeCheck;
 
         treefmt = {
           programs.nixpkgs-fmt.enable = true;

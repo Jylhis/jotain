@@ -41,9 +41,8 @@ let
       homeConfig="${
         buildHomeConfig [
           {
-            programs.emacs = {
+            programs.jotain = {
               enable = true;
-              userConfig = ./..;
             };
           }
         ]
@@ -76,22 +75,15 @@ let
         fi
       done
 
-      echo "=== Testing Directory Structure ==="
+      echo "=== Testing Package Integration ==="
 
-      # Check for expected directories (config/, lisp/)
-      expectedDirs=(config lisp)
-      for dir in "''${expectedDirs[@]}"; do
-        if [ -d "$emacsConfigDir/$dir" ]; then
-          echo "PASS: Directory '$dir' exists"
-        else
-          echo "FAIL: Directory '$dir' not found"
-          echo "Available directories:"
-          ls -la "$emacsConfigDir/" || true
-          exit 1
-        fi
-      done
-
-      echo "PASS: Required directories present"
+      # Check that jotain package is in home-path
+      if [ -d "$homeConfig/home-path/bin" ]; then
+        echo "PASS: home-path/bin exists"
+      else
+        echo "FAIL: home-path/bin not found"
+        exit 1
+      fi
 
       echo "=== Testing Shell Aliases ==="
 
@@ -161,7 +153,7 @@ let
       homeConfig="${
         buildHomeConfig [
           {
-            programs.emacs.enable = false;
+            programs.jotain.enable = false;
           }
         ]
       }"
