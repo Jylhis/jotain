@@ -5,10 +5,12 @@
 ;;; Code:
 
 (use-package prog-mode
+  :ensure nil
   :hook
   (prog-mode . display-line-numbers-mode))
 
 (use-package treesit
+  :ensure nil
   :custom
   (treesit-font-lock-level 4))
 
@@ -105,6 +107,7 @@
   )
 
 (use-package flyspell
+  :ensure nil
   :hook
   (prog-mode . flyspell-prog-mode)
   (text-mode . flyspell-mode)
@@ -172,6 +175,7 @@
   :after (consult eglot embark))
 
 (use-package xref
+  :ensure nil
   :init
   (when (executable-find "rg")
     (setq xref-search-program 'ripgrep)))
@@ -203,6 +207,7 @@
 
 ;; Debugging
 (use-package gdb-mi
+  :ensure nil
   :custom
   (gdb-many-windows t)
   (gdb-show-main t)
@@ -247,6 +252,7 @@
               ("C-c C-e" . markdown-do)))
 
 (use-package cc-mode
+  :ensure nil
   :custom
   (c-basic-indent 5)
   (c-basic-offset 5)
@@ -265,6 +271,7 @@
          ("\\.txx\\'" . c++-mode)))
 
 (use-package conf-mode
+  :ensure nil
   :defer t
   :mode
   (("/.dockerignore\\'" . conf-unix-mode)
@@ -350,6 +357,7 @@
 
 ;; Enhanced error display using built-in features
 (use-package eldoc
+  :ensure nil
   :custom
   (eldoc-idle-delay 0.5)
   (eldoc-print-after-edit t)

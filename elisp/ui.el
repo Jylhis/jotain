@@ -49,6 +49,7 @@
   :hook (after-init . which-key-mode))
 
 (use-package hl-line
+  :ensure nil
   :custom
   (global-hl-line-sticky-flag t)
   :hook ((after-init . global-hl-line-mode)
@@ -60,6 +61,7 @@
   :hook((lisp-mode emacs-lisp-mode) . rainbow-delimiters-mode))
 
 (use-package calendar
+  :ensure nil
   :config
   (copy-face 'font-lock-constant-face 'calendar-iso-week-face)
   (set-face-attribute 'calendar-iso-week-face nil :height 0.7)
@@ -116,12 +118,14 @@
 
 ;; Essential built-in enhancements
 (use-package winner
+  :ensure nil
   :bind (("C-c u" . winner-undo)
          ("C-c r" . winner-redo))
   :init
   (winner-mode 1))
 
 (use-package paren
+  :ensure nil
   :hook (after-init . show-paren-mode)
   :custom
   (show-paren-delay 0.1)
@@ -130,10 +134,12 @@
   (show-paren-when-point-in-periphery t))
 
 (use-package mwheel
+  :ensure nil
   :custom
   (mouse-wheel-follow-mouse t))
 
 (use-package pixel-scroll
+  :ensure nil
   :when (display-graphic-p)
   :init
   (pixel-scroll-precision-mode 1)

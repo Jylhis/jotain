@@ -6,6 +6,7 @@
 ;;; Code:
 
 (use-package help-at-pt
+  :ensure nil
   :custom
   (help-at-pt-display-when-idle t)) ; Display messages when idle, without prompting
 
@@ -22,6 +23,7 @@
    ("C-h C" . #'helpful-command)))
 
 (use-package apropos
+  :ensure nil
   :custom
   (apropos-do-all t))
 
