@@ -55,49 +55,14 @@ let
     uniquePackages;
 
   # Map elisp package names to nixpkgs emacsPackages names
-  # Some packages have different names in nixpkgs
+  # Only needed for exceptions: packages with different names or that should be excluded
+  # Most packages work automatically via the `or pkgName` fallback in mapToNixpkgsName
   packageNameMap = {
-    # Core
-    "use-package" = "use-package";
-
-    # Completion
-    "vertico" = "vertico";
-    "consult" = "consult";
-    "corfu" = "corfu";
-    "embark" = "embark";
-    "embark-consult" = "embark-consult";
-    "marginalia" = "marginalia";
-    "orderless" = "orderless";
-    "cape" = "cape";
-
-    # UI
-    "doom-modeline" = "doom-modeline";
-    "doom-themes" = "doom-themes";
-    "modus-themes" = "modus-themes";
-    "nerd-icons" = "nerd-icons";
-    "all-the-icons" = "all-the-icons";
-
-    # Programming
-    "eglot" = "eglot";
-    "magit" = "magit";
-    "nix-mode" = "nix-mode";
-    "nix-ts-mode" = "nix-ts-mode";
-
-    # Editor
-    "smartparens" = "smartparens";
-    "rainbow-delimiters" = "rainbow-delimiters";
-    "undo-tree" = "undo-tree";
-
-    # Project
+    # Built-in packages (exclude from installation)
     "project" = null; # Built-in to Emacs 30+
-    "projectile" = "projectile";
 
-    # Utilities
-    "which-key" = "which-key";
-    "helpful" = "helpful";
-    "no-littering" = "no-littering";
-
-    # Add more mappings as needed
+    # Local libraries (exclude from installation)
+    "app-launcher" = null; # Local file in elisp/app-launcher.el
   };
 
   # Map elisp package name to nixpkgs name
