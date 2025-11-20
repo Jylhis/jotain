@@ -5,6 +5,10 @@
 ;; Counsel-Linux-App
 ;; Since we have counsel installed, we can use 'counsel-linux-app' to launch our Linux apps.  It list the apps by their executable command, so it's kind of tricky to use.
 
+;; app-launcher is a local file, not a package
+(use-package app-launcher
+  :ensure nil)
+
 (require 'app-launcher)
 
 ;;;###autoload
