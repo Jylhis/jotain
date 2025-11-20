@@ -36,6 +36,7 @@
   (diff-hl-flydiff-mode 1))
 
 (use-package smerge-mode
+  :ensure nil
   :bind (:map smerge-mode-map
               ("C-c ^ u" . smerge-keep-upper)
               ("C-c ^ l" . smerge-keep-lower)
@@ -43,6 +44,7 @@
               ("C-c ^ p" . smerge-prev)))
 
 (use-package ediff
+  :ensure nil
   :custom
   (ediff-window-setup-function 'ediff-setup-windows-plain)
   (ediff-split-window-function 'split-window-horizontally)

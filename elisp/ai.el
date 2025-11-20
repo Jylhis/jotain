@@ -8,6 +8,7 @@
 ;; Only load claude-code-ide if not in batch/test mode to avoid VC checkout issues
 (unless noninteractive
   (use-package claude-code-ide
+    :ensure nil
     :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
     :bind ("C-c C-'" . claude-code-ide-menu)
     :defer t
