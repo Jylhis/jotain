@@ -59,6 +59,9 @@ stdenv.mkDerivation {
     maintainers = [ ];
   };
   passthru = {
+    # Expose runtime dependencies (from jotainEmacs) for use by home-manager module
+    inherit (jotainEmacs) cliTools lspServers treeSitterGrammars allRuntimeDeps;
+
     # Test sources (shared across all test targets)
     testSources = pkgs.lib.fileset.toSource {
       root = ./.;

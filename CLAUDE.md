@@ -2,15 +2,451 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## System Prerequisites
+
+The following tools must be available in your system PATH for full functionality:
+
+- **git** (required): Used by magit and diff-hl for version control operations
+- **ripgrep** (optional): Fast text search for consult-ripgrep and xref
+- **fd** (optional): Fast file finder for consult-fd
+- **direnv** (optional): Automatic directory environment loading
+
+**Git is NOT bundled** with this configuration to avoid conflicts with user's git setup. Users typically have git configured separately via:
+
+```nix
+# Home Manager configuration
+programs.git = {
+  enable = true;
+  # ... your git config
+};
+
+# Or for git with SVN support:
+programs.git = {
+  enable = true;
+  package = pkgs.gitSVN;  # or pkgs.gitFull for all features
+};
+```
+
+If you need to install git manually:
+```nix
+home.packages = [ pkgs.git ];
+```
+
+**Note:** Other tools (ripgrep, fd, direnv) are provided by jotain's `includeRuntimeDeps` option but can be overridden if you manage them separately. Set `programs.jotain.includeRuntimeDeps = false` to manage all runtime dependencies yourself.
+
 ## Package Management
 
 All Emacs packages are defined in default.nix via `emacsWithPackages`. When adding new packages:
 1. Add package to the `epkgs` list in default.nix
 2. Run `nix build` to verify the package builds
-3. Add corresponding `use-package` configuration in appropriate config/*.el file
+3. Add corresponding `use-package` configuration in appropriate elisp/*.el file
 4. Run `just test` to ensure no regressions
 
 The configuration uses `package.el` for package metadata but packages are pre-installed by Nix, not downloaded at runtime.
+
+**Note**: For runtime dependencies (tree-sitter grammars, LSP servers, CLI tools, fonts), see the "Runtime Dependency Management" section below.
+
+## Runtime Dependency Management
+
+This configuration manages non-Emacs dependencies (tree-sitter grammars, fonts, LSP servers, CLI tools) through a centralized runtime dependency system. These dependencies are external programs and data that Emacs packages invoke at runtime.
+
+### Overview
+
+Runtime dependencies are separated from Emacs packages for several reasons:
+- **Modularity**: Easy to add/remove tools without rebuilding Emacs
+- **Reusability**: Same tools can be used by other applications
+- **Testability**: Can verify dependencies are correctly provisioned
+- **Flexibility**: Users can opt out via `includeRuntimeDeps = false`
+
+### Architecture
+
+The runtime dependency system consists of three key components:
+
+**1. nix/lib/runtime-deps.nix**
+
+Central definition file that categorizes all runtime dependencies:
+- `treeSitterGrammars`: Tree-sitter grammars for syntax highlighting
+- `fonts`: Font packages (Nerd Fonts, Inter, Source Serif Pro, etc.)
+- `lspServers`: Language Server Protocol servers (nil, gopls, etc.)
+- `cliTools`: Command-line tools (ripgrep, fd, direnv, etc.) - Note: git is NOT included, see System Prerequisites
+
+The file provides convenience aggregates:
+- `allRuntimeDeps`: LSP servers + CLI tools (excludes fonts and tree-sitter)
+- `allWithFonts`: All dependencies including fonts
+- `devEnv`: Essential development tools for devShells
+
+**2. emacs.nix**
+
+Wraps Emacs with runtime dependencies:
+- Adds all runtime deps to `PATH` via `makeWrapper`
+- Creates tree-sitter grammar directory and sets `TREE_SITTER_DIR`
+- Exposes dependencies via `passthru` for home-manager module
+- Tree-sitter grammars are automatically discovered by `treesit-auto`
+
+**3. nix/modules/home/default.nix**
+
+Home-manager module that provisions dependencies:
+- Controlled via `programs.jotain.includeRuntimeDeps` option (default: true)
+- When enabled, installs LSP servers, CLI tools, and fonts
+- Configures fontconfig automatically
+- When disabled, users manage dependencies separately
+
+### Integration Flow
+
+```
+runtime-deps.nix (definitions)
+      ↓
+emacs.nix (wrapping + PATH)
+      ↓
+home-manager module (deployment)
+      ↓
+User environment (installed packages)
+```
+
+### Adding New Dependencies
+
+#### Tree-sitter Grammars
+
+Tree-sitter grammars provide fast syntax highlighting and code analysis for treesit-auto and Emacs 29+ built-in treesit.
+
+**Steps:**
+1. Search nixpkgs: `nix search nixpkgs tree-sitter-grammars.<language>`
+2. Add to `treesitterGrammars` list in `nix/lib/runtime-deps.nix`:
+   ```nix
+   treesitterGrammars = with pkgs.tree-sitter-grammars; [
+     # ... existing grammars ...
+     tree-sitter-<language>
+   ];
+   ```
+3. Rebuild: `nix build` or `just build`
+4. Grammar automatically available to treesit-auto (no elisp changes needed)
+
+**Example**: Adding Haskell grammar
+```nix
+treesitterGrammars = with pkgs.tree-sitter-grammars; [
+  # ... existing ...
+  tree-sitter-haskell
+];
+```
+
+#### LSP Servers
+
+LSP servers are used by eglot (configured in elisp/programming.el).
+
+**Steps:**
+1. Search nixpkgs: `nix search nixpkgs <language>-lsp` or `nix search nixpkgs <language>-language-server`
+2. Add to `lspServers` list in `nix/lib/runtime-deps.nix`:
+   ```nix
+   lspServers = builtins.filter (x: x != null) [
+     # ... existing servers ...
+     pkgs.<lsp-server-package>  # Language description
+   ];
+   ```
+3. Optionally configure in `elisp/programming.el`:
+   ```elisp
+   (with-eval-after-load 'eglot
+     (add-to-list 'eglot-server-programs
+                  '(<mode> . ("<lsp-command>" "--args"))))
+   ```
+4. Test: `just test` and manually test in editor
+
+**Example**: Adding Rust Analyzer
+```nix
+lspServers = builtins.filter (x: x != null) [
+  # ... existing ...
+  pkgs.rust-analyzer  # Rust language server
+];
+```
+
+#### CLI Tools
+
+CLI tools are external programs invoked by Emacs packages via `executable-find` or `shell-command`.
+
+**Steps:**
+1. Identify the tool: Search elisp/*.el for `(executable-find "tool-name")` or shell-command usage
+2. Search nixpkgs: `nix search nixpkgs <tool-name>`
+3. Add to `cliTools` list in `nix/lib/runtime-deps.nix`:
+   ```nix
+   cliTools = builtins.filter (x: x != null) [
+     # ... existing tools ...
+     pkgs.<package-name>  # Tool description (which package uses it)
+   ];
+   ```
+4. If optional/unfree, use `optionalPackage` helper:
+   ```nix
+   (optionalPackage "<package-name>")  # Description
+   ```
+5. Test: `just test` and verify tool is in PATH
+
+**Example**: Adding pandoc for document conversion
+```nix
+cliTools = builtins.filter (x: x != null) [
+  # ... existing ...
+  pkgs.pandoc  # Universal document converter (used by org-mode)
+];
+```
+
+#### Fonts
+
+Fonts are used by elisp/fonts.el for editor appearance.
+
+**Steps:**
+1. Search nixpkgs: `nix search nixpkgs <font-name>`
+2. Add to `fonts` list in `nix/lib/runtime-deps.nix`:
+   ```nix
+   fonts = builtins.filter (x: x != null) [
+     # ... existing fonts ...
+     pkgs.<font-package>  # Font description
+   ];
+   ```
+3. Update font preferences in `elisp/fonts.el` if needed:
+   ```elisp
+   (defcustom j10s-fonts-default-family
+     '("New Font" "JetBrainsMono Nerd Font" ...)
+     ...)
+   ```
+4. Test rendering: `just emacs-dev` and check font display
+
+**Example**: Adding JetBrains Mono regular (not Nerd Font)
+```nix
+fonts = builtins.filter (x: x != null) [
+  # ... existing ...
+  pkgs.jetbrains-mono  # JetBrains Mono (regular, without Nerd Font icons)
+];
+```
+
+### Testing Runtime Dependencies
+
+**ERT Tests** (tests/test-runtime-deps.el):
+- Test that expected executables are in PATH
+- Test that tree-sitter grammars load correctly
+- Use `:tags '(unit)` for fast testing
+
+**NMT Tests** (nmt-tests/):
+- `test-runtime-deps-enabled`: Verifies packages installed when `includeRuntimeDeps = true`
+- `test-runtime-deps-disabled`: Verifies packages not installed when `includeRuntimeDeps = false`
+- Run with `just test-nmt`
+
+**Runtime Tests** (nmt-tests/runtime.nix):
+- End-to-end validation in VM
+- Tests actual tool execution
+- Run with `just test-runtime`
+
+**Manual Testing**:
+```bash
+# Enter development environment
+nix develop
+
+# Test in isolated Emacs
+just emacs-dev
+
+# Verify tool availability
+M-x executable-find RET ripgrep RET
+M-x executable-find RET gopls RET
+
+# Check tree-sitter grammars
+M-x treesit-language-available-p RET bash RET
+
+# Verify fonts
+M-x describe-font RET JetBrainsMono Nerd Font
+```
+
+### Home Manager Configuration
+
+Users can control runtime dependency installation:
+
+**Default behavior** (installs all dependencies):
+```nix
+programs.jotain = {
+  enable = true;
+  # includeRuntimeDeps = true;  # Default
+};
+```
+
+**Minimal installation** (no runtime deps):
+```nix
+programs.jotain = {
+  enable = true;
+  includeRuntimeDeps = false;  # User manages dependencies separately
+};
+```
+
+**Custom dependencies** (mix and match):
+```nix
+programs.jotain = {
+  enable = true;
+  includeRuntimeDeps = false;
+};
+
+# Install only specific tools
+home.packages = with pkgs; [
+  ripgrep  # For searching
+  gopls    # Go development only
+];
+```
+
+### Troubleshooting
+
+**Tool not found in PATH**:
+- Check if tool is in `nix/lib/runtime-deps.nix`
+- Verify emacs.nix wraps tool in PATH
+- Test with: `which <tool>` in shell after `nix develop`
+
+**Tree-sitter grammar not loading**:
+- Check grammar is in `treesitterGrammars` list
+- Verify TREE_SITTER_DIR is set: `M-x getenv RET TREE_SITTER_DIR`
+- Check grammar file exists: `ls $TREE_SITTER_DIR`
+
+**Font not displaying**:
+- Verify font is in `fonts` list
+- Check fontconfig: `fc-list | grep <font-name>`
+- Restart Emacs after font installation
+
+**LSP server not starting**:
+- Check server is in PATH: `M-x executable-find RET <lsp-command>`
+- Check eglot configuration: `M-x eglot-show-workspace-configuration`
+- View eglot events buffer: `*EGLOT <project> events*`
+
+## Emacs Daemon Setup
+
+This configuration uses the Emacs daemon/client model for faster startup and persistent sessions. The daemon runs in the background as a systemd user service (Linux) or launchd service (macOS), and you interact with it using `emacsclient`.
+
+### Overview
+
+**Benefits of Daemon Mode:**
+- Instant editor startup (daemon already running)
+- Persistent Emacs session across terminal windows and frames
+- Standard workflow for modern Emacs usage
+- Proper integration with system services
+
+**Architecture:**
+- Uses upstream home-manager `services.emacs` module (not custom implementation)
+- Systemd socket activation on Linux (starts daemon on first connection)
+- Automatic environment variable configuration (EDITOR/VISUAL use emacsclient)
+- Desktop entry for GUI emacsclient
+
+### Configuration
+
+The daemon is **enabled by default** but can be controlled via the `enableDaemon` option:
+
+**Default configuration** (daemon enabled):
+```nix
+programs.jotain = {
+  enable = true;
+  # enableDaemon = true;  # Default
+};
+```
+
+With this configuration:
+- `EDITOR = "emacsclient -t -a ''"` (terminal client, auto-start daemon)
+- `VISUAL = "emacsclient -c -a ''"` (GUI client, auto-start daemon)
+- Systemd service: `~/.config/systemd/user/emacs.service`
+- Socket activation: `~/.config/systemd/user/emacs.socket` (Linux only)
+- Desktop entry: `~/.local/share/applications/emacsclient.desktop`
+
+**Disable daemon** (traditional Emacs):
+```nix
+programs.jotain = {
+  enable = true;
+  enableDaemon = false;
+};
+```
+
+With daemon disabled:
+- `EDITOR = "emacs -nw"` (direct terminal emacs)
+- `VISUAL = "emacs"` (direct GUI emacs)
+- No systemd service files created
+- No emacsclient desktop entry
+
+### Usage
+
+**Managing the daemon** (Linux with systemd):
+```bash
+# Check daemon status
+systemctl --user status emacs.service
+
+# Start daemon manually
+systemctl --user start emacs.service
+
+# Stop daemon
+systemctl --user stop emacs.service
+
+# Restart daemon (after configuration changes)
+systemctl --user restart emacs.service
+
+# View daemon logs
+journalctl --user -u emacs.service
+```
+
+**Using emacsclient**:
+```bash
+# Open file in terminal
+emacsclient -t file.txt
+
+# Open file in GUI frame
+emacsclient -c file.txt
+
+# Open file in existing frame
+emacsclient -n file.txt
+
+# Evaluate Emacs Lisp expression
+emacsclient --eval '(+ 2 2)'
+
+# Use $EDITOR (automatically uses emacsclient when daemon enabled)
+export EDITOR="emacsclient -t -a ''"
+git commit  # Opens in emacsclient
+```
+
+**Emacsclient flags:**
+- `-t` or `-nw`: Open in terminal (no window)
+- `-c`: Create new frame
+- `-n`: Don't wait for editor to close (non-blocking)
+- `-a ''`: Alternate editor (empty string starts daemon if not running)
+- `-a emacs`: Alternate editor (explicitly starts emacs if daemon not available)
+
+### Platform Support
+
+- **Linux (systemd)**: Full support with socket activation
+- **macOS (launchd)**: Full support via launchd service
+- **Other platforms**: Daemon mode not supported (use `enableDaemon = false`)
+
+### Troubleshooting
+
+**Daemon not starting:**
+- Check systemd status: `systemctl --user status emacs.service`
+- View logs: `journalctl --user -u emacs.service -n 50`
+- Verify service file exists: `ls ~/.config/systemd/user/emacs.service`
+- Enable user lingering: `loginctl enable-linger $USER`
+
+**Emacsclient can't connect:**
+- Check daemon is running: `systemctl --user is-active emacs.service`
+- Test connection: `emacsclient --eval '(+ 2 2)'`
+- Check socket file: `ls /run/user/$UID/emacs/server` (or `~/.emacs.d/server`)
+- Restart daemon: `systemctl --user restart emacs.service`
+
+**Environment variables not set:**
+- Check shell profile: `echo $EDITOR` and `echo $VISUAL`
+- Re-login or source shell profile after home-manager activation
+- Verify activation: `grep -i editor ~/.nix-profile/activate` (or home-manager generation)
+
+**Daemon vs. non-daemon mode:**
+- To temporarily bypass daemon: `emacs file.txt` (direct emacs, not emacsclient)
+- To test without daemon: Set `enableDaemon = false` and rebuild
+- Check if running as daemon: `M-x (daemonp)` returns `t` in daemon mode
+
+**Configuration not loading:**
+- Daemon caches configuration on startup
+- Restart daemon after config changes: `systemctl --user restart emacs.service`
+- Or rebuild and let home-manager restart: `home-manager switch`
+
+### When to Disable Daemon
+
+Consider disabling the daemon if:
+- Debugging Emacs startup issues
+- Developing/testing Emacs configuration
+- Platform doesn't support systemd/launchd
+- Prefer traditional Emacs workflow
+- Running in constrained environments (containers, minimal systems)
 
 ## Development Commands
 
@@ -145,9 +581,9 @@ This is a modular Emacs configuration using Nix for reproducible builds. The con
 
 ### Module System
 The configuration is split into logical modules loaded via `require` in init.el:
-- **Core modules** (config/): Each handles a specific feature domain (completion, git, programming, etc.)
-- **Utility libraries** (lisp/): Shared functionality and platform detection
-- **Platform adaptations**: Automatic OS-specific configurations via platform.el detection
+- **Core modules** (elisp/): Each handles a specific feature domain (completion, git, programming, etc.)
+- **Utility libraries** (lisp/): Shared functionality and utility functions (app-launchers, utils)
+- **Platform adaptations**: Automatic OS-specific configurations via elisp/platform.el detection
 
 All Emacs Lisp modules follow the `use-package` macro convention for package configuration, providing consistent structure with `:init`, `:config`, `:custom`, `:bind`, and `:hook` sections.
 
@@ -177,6 +613,8 @@ All Emacs Lisp modules follow the `use-package` macro convention for package con
 
 4. **Nix Integration**:
    - **default.nix**: Builds Emacs with all required packages via `emacsWithPackages`. Contains ERT test definitions in `passthru.tests`.
+   - **emacs.nix**: Wraps Emacs with runtime dependencies (LSP servers, CLI tools, tree-sitter) and exposes them via `passthru`.
+   - **nix/lib/runtime-deps.nix**: Centralized definition of all runtime dependencies (tree-sitter, fonts, LSP, CLI tools).
    - **config.nix**: Creates deployment package using `lib.fileset` to filter out development files (tests, nix files, etc.).
    - **flake.nix**: Defines packages, dev shells, checks, overlays, and home-manager module.
 
@@ -185,22 +623,24 @@ All Emacs Lisp modules follow the `use-package` macro convention for package con
 - `core.el` sets fundamental Emacs defaults
 - Other modules can load in any order but may have soft dependencies (e.g., completion enhances programming)
 
-### Home Manager Module (module.nix)
+### Home Manager Module (nix/modules/home/default.nix)
 The home-manager module handles deployment of the Emacs configuration:
-- Deploys configuration files to `~/.config/emacs` via `programs.emacs.userConfig` option
-- Configures systemd service for Emacs daemon with socket activation
-- Sets up shell aliases: `jot` (terminal client), `emc` (terminal client), `emcg` (GUI client), `emqg` (terminal no config), `emq` (GUI no config)
-- Installs Nerd Fonts and other font packages
-- Controlled via `programs.emacs.enable` option
-- When disabled, no configuration is deployed and no services are started
-- Configuration path defaults to this repository's source but can be overridden
+- Deploys configuration files to `~/.config/emacs` via XDG config files
+- Installs Emacs with all packages via `programs.emacs`
+- Provisions runtime dependencies (LSP servers, CLI tools, fonts) via `includeRuntimeDeps` option
+- Sets environment variables (EDITOR, VISUAL)
+- Configures fontconfig for installed fonts
+- Controlled via `programs.jotain.enable` option
+- When disabled, no configuration is deployed and no dependencies are installed
+- Runtime dependencies can be individually controlled via `includeRuntimeDeps = false`
 
 ### Flake Outputs
-- **packages.emacs**: Emacs with all packages pre-installed (from default.nix)
-- **packages.config**: Configuration files only (from config.nix, filtered via fileset)
-- **overlays.default**: Provides `jotain` and `jotain-config` to nixpkgs
-- **homeModules.default**: Home-manager module (from module.nix)
-- **devShells.default**: Development environment with just, nixpkgs-fmt, deadnix, statix
+- **packages.jotain**: Configuration files only (from config.nix via default.nix, filtered via fileset)
+- **packages.emacs**: Emacs with all packages and runtime dependencies (from emacs.nix)
+- **packages.emacs-dev**: Development version with additional dev tools (package-lint, flycheck)
+- **overlays.default**: Provides `jotain`, `jotainEmacs`, and `jotainConfig` to nixpkgs
+- **homeModules.default**: Home-manager module (from nix/modules/home/default.nix)
+- **devShells.default**: Development environment with just, nixpkgs-fmt, statix, and isolated HOME
 
 ## Testing Approach
 
@@ -325,15 +765,28 @@ Comprehensive end-to-end test using nixosTest:
 
 ## Important Files
 
+### Configuration Files
 - **init.el**: Main entry point that loads all configuration modules in order
 - **early-init.el**: Pre-initialization settings (loaded before package system)
-- **lisp/platform.el**: Platform detection library (must load first)
-- **config/core.el**: Fundamental Emacs settings and built-in package configurations
-- **default.nix**: Emacs package builder with all dependencies
-- **config.nix**: Creates filtered configuration package for deployment using lib.fileset
-- **module.nix**: Home-manager module definition
+- **elisp/platform.el**: Platform detection library (must load first)
+- **elisp/*.el**: Feature modules (core, ui, completion, programming, git, etc.)
+- **lisp/**: Utility libraries (utils.el, app-launchers.el)
+
+### Nix Build Files
 - **flake.nix**: Main flake entry point with all outputs
+- **default.nix**: Configuration package builder (creates jotain package)
+- **emacs.nix**: Emacs wrapper with runtime dependencies and PATH setup
+- **config.nix**: Creates filtered configuration package for deployment using lib.fileset
+- **nix/lib/runtime-deps.nix**: Centralized runtime dependency definitions
+- **nix/lib/dependencies.nix**: Automatic Emacs package dependency extraction
+- **nix/modules/home/default.nix**: Home-manager module definition
+- **nix/overlays/default.nix**: Nixpkgs overlay providing jotain packages
+- **shell.nix**: Development shell with isolated environment
+
+### Development Tools
 - **justfile**: Development task runner with common commands
+- **tests/**: ERT unit tests for Emacs Lisp code
+- **nmt-tests/**: NMT integration tests for home-manager module
 
 ### Fileset Filtering (config.nix)
 The config.nix file filters out development-only files when creating the deployment package.

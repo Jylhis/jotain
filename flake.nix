@@ -100,7 +100,12 @@
               tests = jotainPackage.tests;
 
               # NMT home-manager module tests
-              inherit (nmtTests) test-module-enabled test-module-disabled;
+              inherit (nmtTests)
+                test-module-enabled
+                test-module-disabled
+                test-runtime-deps-enabled
+                test-runtime-deps-disabled
+                test-daemon-disabled;
             };
 
             # Optional runtime test (only in CI)

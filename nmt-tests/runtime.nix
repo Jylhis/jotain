@@ -24,9 +24,9 @@
 
         home-manager.users.testuser = {
           imports = [ homeModule ];
-          programs.emacs = {
+          programs.jotain = {
             enable = true;
-            package = emacsPackage;
+            # enableDaemon is true by default
           };
           home.stateVersion = "24.11";
         };
@@ -89,19 +89,42 @@
       print("  - eglot: OK")
       print("PASS: Key packages are available")
 
-      print("\n=== Test 6: Emacs Daemon Service ===")
+      print("\n=== Test 6: Systemd Service Files Exist ===")
+      machine.succeed("sudo -u testuser test -f /home/testuser/.config/systemd/user/emacs.service")
+      print("PASS: emacs.service file exists")
+      # Socket file may not exist on non-Linux or if socket activation is disabled
       try:
-        machine.wait_for_unit("emacs.service", "testuser")
-        print("PASS: Emacs daemon service started")
+        machine.succeed("sudo -u testuser test -f /home/testuser/.config/systemd/user/emacs.socket")
+        print("PASS: emacs.socket file exists (socket activation enabled)")
+      except:
+        print("INFO: emacs.socket not found (may be non-Linux or socket activation disabled)")
 
-        print("\n=== Test 7: Emacs Client Can Connect ===")
-        result = machine.succeed("sudo -u testuser emacsclient --eval '(+ 2 2)'")
-        assert "4" in result, f"Expected '4', got: {result}"
-        print("PASS: Emacs client connected and evaluated expression")
-      except Exception as e:
-        print(f"SKIP: Daemon/client tests (systemd user session not available): {e}")
+      print("\n=== Test 7: Emacs Daemon Service Starts ===")
+      # Start the user systemd session and enable lingering
+      machine.succeed("loginctl enable-linger testuser")
+      # Give systemd time to start user session
+      import time
+      time.sleep(2)
+      # Start the emacs service
+      machine.succeed("sudo -u testuser systemctl --user start emacs.service")
+      # Wait for service to be active
+      machine.wait_for_unit("emacs.service", "testuser")
+      print("PASS: Emacs daemon service started")
 
-      print("\n=== Test 8: Platform Detection Works ===")
+      print("\n=== Test 8: Emacs Client Can Connect ===")
+      result = machine.succeed("sudo -u testuser emacsclient --eval '(+ 2 2)'")
+      assert "4" in result, f"Expected '4', got: {result}"
+      print("PASS: Emacs client connected and evaluated expression")
+
+      print("\n=== Test 9: Environment Variables Use Emacsclient ===")
+      # Check that EDITOR and VISUAL are set to use emacsclient
+      editor = machine.succeed("sudo -u testuser bash -c 'echo $EDITOR'").strip()
+      visual = machine.succeed("sudo -u testuser bash -c 'echo $VISUAL'").strip()
+      assert "emacsclient" in editor, f"EDITOR should use emacsclient, got: {editor}"
+      assert "emacsclient" in visual, f"VISUAL should use emacsclient, got: {visual}"
+      print(f"PASS: EDITOR={editor}, VISUAL={visual}")
+
+      print("\n=== Test 10: Platform Detection Works ===")
       output = machine.succeed("""
         sudo -u testuser emacs --batch \\
           -l /home/testuser/.config/emacs/elisp/platform.el \\
@@ -110,7 +133,7 @@
       assert "Linux: t" in output, f"Platform detection failed: {output}"
       print("PASS: Platform detection works correctly")
 
-      print("\n=== Test 9: No Startup Warnings or Errors ===")
+      print("\n=== Test 11: No Startup Warnings or Errors ===")
       output = machine.succeed("""
         sudo -u testuser emacs --batch \\
           -l /home/testuser/.config/emacs/init.el \\
@@ -122,7 +145,7 @@
         raise Exception(f"Startup errors detected: {output}")
       print("PASS: No critical startup errors")
 
-      print("\n=== Test 10: Tree-sitter Support ===")
+      print("\n=== Test 12: Tree-sitter Support ===")
       output = machine.succeed("""
         sudo -u testuser emacs --batch \\
           --eval '(message "Treesit available: %s" (treesit-available-p))'
