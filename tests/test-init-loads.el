@@ -48,6 +48,54 @@
     (should (null failed-modules))
     (message "Loaded %d config modules successfully" (length modules))))
 
+(ert-deftest test-integration/package-archives-disabled ()
+  "Test that package archives are disabled after init.el loads.
+This prevents package.el from attempting MELPA/ELPA downloads.
+All packages must be pre-installed by Nix."
+  :tags '(integration critical)
+  ;; Save original state for cleanup
+  (let ((original-archives package-archives)
+        (init-file (expand-file-name "init.el" user-emacs-directory)))
+    (unwind-protect
+        (progn
+          ;; Load init.el
+          (load init-file nil t)
+          ;; Verify package-archives is nil
+          (should (null package-archives))
+          ;; Verify common archives are NOT present
+          (should-not (assoc "melpa" package-archives))
+          (should-not (assoc "gnu" package-archives))
+          (should-not (assoc "nongnu" package-archives))
+          (message "Package archives correctly disabled (Nix-only mode)"))
+      ;; Restore original state (test isolation)
+      (setq package-archives original-archives))))
+
+(ert-deftest test-integration/critical-packages-available ()
+  "Test that critical packages are pre-installed and available.
+These packages are installed by Nix and should be loadable
+without any download attempts."
+  :tags '(integration critical)
+  (let ((critical-packages '(use-package magit vertico consult org-modern)))
+    (dolist (pkg critical-packages)
+      (should (package-installed-p pkg))
+      (message "Package %s is available" pkg))))
+
+(ert-deftest test-integration/package-metadata-works ()
+  "Test that package.el metadata queries still function.
+Even with archives disabled, package-installed-p and related
+functions should work for querying Nix-installed packages."
+  :tags '(integration)
+  ;; Load init.el to set up package system
+  (let ((init-file (expand-file-name "init.el" user-emacs-directory)))
+    (load init-file nil t))
+  ;; Test metadata queries work
+  (should (functionp 'package-installed-p))
+  (should (package-installed-p 'use-package))
+  (should (package-installed-p 'magit))
+  ;; Verify package--initialized is true
+  (should package--initialized)
+  (message "Package metadata queries functional"))
+
 ;;; Feature Tests (require loaded config)
 
 (ert-deftest test-integration/native-comp-available ()

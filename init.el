@@ -17,10 +17,12 @@
 ;; Load platform detection first
 (require 'platform)
 
-;; Ensure package system is available
+;; Package.el provides metadata only - packages are pre-installed by Nix
 (require 'package)
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-(package-initialize)
+(setq package-archives nil)           ; Disable archives BEFORE initialization
+(setq package-archive-priorities nil) ; Disable archive priorities
+(setq package-vc-heuristic-alist nil) ; Disable VC package detection (Emacs 29+)
+(package-initialize)                  ; Initialize with no remote archives
 
 ;; Store automatic customization options elsewhere
 (setq custom-file (locate-user-emacs-file "custom.el"))
