@@ -9,6 +9,15 @@
 
 (require 'ert)
 
+;;; Tree-sitter Configuration
+;; Tests run with -Q flag which bypasses early-init.el, so we need to
+;; configure tree-sitter path here to match production environment.
+;; This ensures tests validate the same tree-sitter setup users will have.
+
+(when-let ((ts-dir (getenv "TREE_SITTER_DIR")))
+  (when (boundp 'treesit-extra-load-path)
+    (setq treesit-extra-load-path (list ts-dir))))
+
 ;;; Temp Directory Management
 
 (defun test-create-temp-directory-with-files (file-specs)
