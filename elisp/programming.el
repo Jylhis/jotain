@@ -16,10 +16,9 @@
 
 (use-package treesit-auto
   :ensure
-  :defer t
   :custom
-  (treesit-auto-install nil)
-  :init
+  (treesit-auto-install t)
+  :config
   (treesit-auto-add-to-auto-mode-alist 'all)
   (global-treesit-auto-mode))
 
