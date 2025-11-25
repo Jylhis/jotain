@@ -17,8 +17,10 @@
 (use-package treesit-auto
   :ensure
   :custom
-  ;; Tree-sitter grammars are provided by Nix via TREE_SITTER_DIR
-  ;; See: nix/lib/runtime-deps.nix and emacs.nix
+  ;; Tree-sitter grammars are provided by Nix and configured in early-init.el
+  ;; Grammar path: TREE_SITTER_DIR -> treesit-extra-load-path (see early-init.el)
+  ;; Grammar definitions: nix/lib/runtime-deps.nix
+  ;; PATH setup: emacs.nix wraps Emacs with runtime dependencies
   (treesit-auto-install t)
   :config
   (treesit-auto-add-to-auto-mode-alist 'all)
