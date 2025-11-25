@@ -61,5 +61,19 @@
     (insert "test")
     (should (= (point-max) 5))))
 
+;;; Runtime Dependencies (Critical)
+
+(ert-deftest test-smoke/tree-sitter-dir-set ()
+  "Test that TREE_SITTER_DIR is configured (critical for syntax highlighting)."
+  :tags '(smoke critical)
+  (let ((ts-dir (getenv "TREE_SITTER_DIR")))
+    (should ts-dir)
+    (should (not (string-empty-p ts-dir)))))
+
+(ert-deftest test-smoke/ripgrep-available ()
+  "Test that ripgrep is available (critical for search functionality)."
+  :tags '(smoke critical)
+  (should (executable-find "rg")))
+
 (provide 'test-smoke)
 ;;; test-smoke.el ends here
