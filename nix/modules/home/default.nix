@@ -77,13 +77,13 @@ in
       extraPackages = cfg.extraPackages;
     };
 
-    # Configure Emacs daemon service
+    # Configure Emacs daemon service when enabled
     services.emacs = lib.mkIf cfg.enableDaemon {
       enable = true;
       # package is inherited from programs.emacs.package automatically
       socketActivation.enable = pkgs.stdenv.isLinux;
       client = {
-        enable = true;
+        enable = true; # Only create desktop entry when daemon is enabled
         arguments = [ "-c" "-a" "" ];
       };
     };

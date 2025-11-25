@@ -127,33 +127,45 @@ let
         exit 1
       fi
 
-      # Check for emacsclient desktop entry
-      if [ -f "$homeConfig/home-files/.local/share/applications/emacsclient.desktop" ]; then
+      # Check for emacsclient desktop entry (added via home.packages)
+      if [ -f "$homeConfig/home-path/share/applications/emacsclient.desktop" ]; then
         echo "PASS: emacsclient.desktop entry exists"
       else
-        echo "WARN: emacsclient.desktop not found"
-        echo "Available desktop entries:"
-        ls -1 "$homeConfig/home-files/.local/share/applications/" 2>/dev/null || echo "No applications directory"
+        echo "FAIL: emacsclient.desktop not found"
+        echo "Available desktop entries in home-path:"
+        ls -1 "$homeConfig/home-path/share/applications/" 2>/dev/null || echo "No applications directory in home-path"
+        exit 1
       fi
 
       echo "=== Testing Environment Variables ==="
 
       # Check that EDITOR and VISUAL use emacsclient (daemon enabled by default)
-      if grep -q 'EDITOR.*emacsclient' "$homeConfig/activate" 2>/dev/null; then
-        echo "PASS: EDITOR uses emacsclient"
-      else
-        echo "FAIL: EDITOR does not use emacsclient"
-        echo "Searching for EDITOR in activation:"
-        grep -i 'EDITOR' "$homeConfig/activate" 2>/dev/null | head -5 || true
-        exit 1
-      fi
+      # Session variables are in home-path/etc/profile.d/hm-session-vars.sh
+      sessionVarsFile="$homeConfig/home-path/etc/profile.d/hm-session-vars.sh"
 
-      if grep -q 'VISUAL.*emacsclient' "$homeConfig/activate" 2>/dev/null; then
-        echo "PASS: VISUAL uses emacsclient"
+      if [ -f "$sessionVarsFile" ]; then
+        echo "PASS: Session variables file exists"
+
+        if grep -q 'EDITOR.*emacsclient' "$sessionVarsFile" 2>/dev/null; then
+          echo "PASS: EDITOR uses emacsclient"
+        else
+          echo "FAIL: EDITOR does not use emacsclient"
+          echo "Contents of session vars file:"
+          cat "$sessionVarsFile" | head -20 || true
+          exit 1
+        fi
+
+        if grep -q 'VISUAL.*emacsclient' "$sessionVarsFile" 2>/dev/null; then
+          echo "PASS: VISUAL uses emacsclient"
+        else
+          echo "FAIL: VISUAL does not use emacsclient"
+          echo "Contents of session vars file:"
+          cat "$sessionVarsFile" | head -20 || true
+          exit 1
+        fi
       else
-        echo "FAIL: VISUAL does not use emacsclient"
-        echo "Searching for VISUAL in activation:"
-        grep -i 'VISUAL' "$homeConfig/activate" 2>/dev/null | head -5 || true
+        echo "FAIL: Session variables file not found"
+        echo "Expected: $sessionVarsFile"
         exit 1
       fi
 
@@ -399,30 +411,51 @@ let
         echo "PASS: emacs.socket not created (daemon disabled)"
       fi
 
-      # Check that emacsclient desktop entry is NOT created
-      if [ -f "$homeConfig/home-files/.local/share/applications/emacsclient.desktop" ]; then
-        echo "FAIL: emacsclient.desktop exists when daemon is disabled"
-        exit 1
+      # Check emacsclient desktop entry
+      # Note: emacsclient.desktop will exist from the base Emacs package,
+      # but when daemon is disabled, it should NOT be overridden by services.emacs
+      # We verify this by checking that it comes from the Emacs package path
+      if [ -L "$homeConfig/home-path/share/applications/emacsclient.desktop" ]; then
+        desktopTarget=$(readlink "$homeConfig/home-path/share/applications/emacsclient.desktop")
+        echo "emacsclient.desktop is a symlink to: $desktopTarget"
+
+        # Should point to emacs package, not a custom writeTextDir package
+        if echo "$desktopTarget" | grep -q "emacs-with.*packages"; then
+          echo "PASS: emacsclient.desktop from base Emacs package (daemon disabled correctly)"
+        else
+          echo "FAIL: emacsclient.desktop not from base Emacs package"
+          echo "Target: $desktopTarget"
+          exit 1
+        fi
       else
-        echo "PASS: emacsclient.desktop not created (daemon disabled)"
+        echo "INFO: emacsclient.desktop not found (acceptable when daemon disabled)"
       fi
 
       # Check that EDITOR and VISUAL use direct emacs (not emacsclient)
-      if grep -q 'EDITOR.*emacs -nw' "$homeConfig/activate" 2>/dev/null; then
-        echo "PASS: EDITOR uses direct emacs"
-      else
-        echo "FAIL: EDITOR does not use direct emacs"
-        echo "Searching for EDITOR in activation:"
-        grep -i 'EDITOR' "$homeConfig/activate" 2>/dev/null | head -5 || true
-        exit 1
-      fi
+      # Session variables are in home-path/etc/profile.d/hm-session-vars.sh
+      sessionVarsFile="$homeConfig/home-path/etc/profile.d/hm-session-vars.sh"
 
-      if grep -q 'VISUAL.*emacs' "$homeConfig/activate" 2>/dev/null && ! grep -q 'VISUAL.*emacsclient' "$homeConfig/activate" 2>/dev/null; then
-        echo "PASS: VISUAL uses direct emacs"
+      if [ -f "$sessionVarsFile" ]; then
+        if grep -q 'EDITOR.*emacs -nw' "$sessionVarsFile" 2>/dev/null; then
+          echo "PASS: EDITOR uses direct emacs"
+        else
+          echo "FAIL: EDITOR does not use direct emacs"
+          echo "Contents of session vars file:"
+          cat "$sessionVarsFile" | head -20 || true
+          exit 1
+        fi
+
+        if grep -q 'VISUAL.*emacs' "$sessionVarsFile" 2>/dev/null && ! grep -q 'VISUAL.*emacsclient' "$sessionVarsFile" 2>/dev/null; then
+          echo "PASS: VISUAL uses direct emacs"
+        else
+          echo "FAIL: VISUAL does not use direct emacs"
+          echo "Contents of session vars file:"
+          cat "$sessionVarsFile" | head -20 || true
+          exit 1
+        fi
       else
-        echo "FAIL: VISUAL does not use direct emacs"
-        echo "Searching for VISUAL in activation:"
-        grep -i 'VISUAL' "$homeConfig/activate" 2>/dev/null | head -5 || true
+        echo "FAIL: Session variables file not found"
+        echo "Expected: $sessionVarsFile"
         exit 1
       fi
 

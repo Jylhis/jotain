@@ -14,6 +14,12 @@
 ;; to skip the mtime checks on every *.elc file.
 (setq load-prefer-newer noninteractive)
 
+;; Configure tree-sitter grammar search path (provided by Nix)
+;; Tree-sitter grammars are installed by Nix and exposed via TREE_SITTER_DIR
+;; See: nix/lib/runtime-deps.nix and emacs.nix for grammar provisioning
+(when-let ((ts-dir (getenv "TREE_SITTER_DIR")))
+  (setq treesit-extra-load-path (list ts-dir)))
+
 ;; Disable package.el in favor of Nix package management
 ;; TODO: We might still want to allow non-nix management in the future
 (setq package-enable-at-startup nil)
