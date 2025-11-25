@@ -17,10 +17,12 @@
 ;; Disable package.el in favor of Nix package management
 ;; TODO: We might still want to allow non-nix management in the future
 (setq package-enable-at-startup nil)
+(setq package-check-signature nil)       ; Disable GPG signature checks (no remote packages)
 
 ;; `use-package' is builtin since 29.
 ;; It must be set before loading `use-package'.
 (setq use-package-enable-imenu-support t)
+(setq use-package-always-ensure nil)     ; CRITICAL: Never auto-install packages
 
 ;; Native compilation settings (Emacs 30+)
 (when (and (fboundp 'native-comp-available-p)
