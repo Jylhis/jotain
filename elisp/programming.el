@@ -17,6 +17,8 @@
 (use-package treesit-auto
   :ensure
   :custom
+  ;; Tree-sitter grammars are provided by Nix via TREE_SITTER_DIR
+  ;; See: nix/lib/runtime-deps.nix and emacs.nix
   (treesit-auto-install t)
   :config
   (treesit-auto-add-to-auto-mode-alist 'all)
@@ -176,8 +178,8 @@
 (use-package xref
   :ensure nil
   :init
-  (when (executable-find "rg")
-    (setq xref-search-program 'ripgrep)))
+  ;; Ripgrep is guaranteed to be available via Nix (see nix/lib/runtime-deps.nix)
+  (setq xref-search-program 'ripgrep))
 
 (use-package elisp-lint
   :ensure t
@@ -196,9 +198,9 @@
   )
 
 (use-package direnv
-  :if (executable-find "direnv")
   :ensure
   :defer t
+  ;; Direnv is guaranteed to be available via Nix (see nix/lib/runtime-deps.nix)
   :init
   (direnv-mode)
   :config

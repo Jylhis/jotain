@@ -2,8 +2,11 @@
 { inputs, ... }:
 
 final: prev: {
-  # Add jotain to pkgs
+  # Add jotain configuration package to pkgs
   jotain = final.callPackage ../.. { };
+
+  # Add jotain Emacs package (Emacs with all dependencies)
+  jotainEmacs = final.callPackage ../../emacs.nix { devMode = false; };
 
   # Custom Emacs package overrides can go here
   emacsPackagesFor = emacs: (prev.emacsPackagesFor emacs).overrideScope (efinal: esuper: {
