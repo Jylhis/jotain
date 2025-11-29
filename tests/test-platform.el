@@ -71,12 +71,42 @@
 (ert-deftest test-platform-android-detection ()
   "Test Android platform detection logic."
   :tags '(unit platform)
-  ;; Mock Android environment
-  (let ((system-type 'gnu/linux)
-        (process-environment (cons "TERMUX_VERSION=1.0" process-environment)))
-    ;; This test requires reloading platform.el with mocked environment
-    ;; In a real test, we'd need to structure the code to allow mocking
-    (should t))) ; Placeholder
+  ;; Test that the constant is defined and is a boolean
+  (should (booleanp platform-android-p))
+
+  ;; Test the detection logic manually with mocked environment
+  ;; Since platform-android-p is a defconst evaluated at load time,
+  ;; we can't change it, but we can verify the logic would work correctly
+  (let ((mock-system-type 'gnu/linux)
+        (mock-termux-version "1.0")
+        (mock-prefix "/data/data/com.termux/files/usr"))
+
+    ;; Simulate the Android detection logic
+    (let ((would-detect-android
+           (and (eq mock-system-type 'gnu/linux)
+                (or mock-termux-version
+                    (string-match-p "android" (or mock-prefix ""))))))
+      (should would-detect-android)))
+
+  ;; Test non-Android Linux case
+  (let ((mock-system-type 'gnu/linux)
+        (mock-termux-version nil)
+        (mock-prefix "/usr"))
+    (let ((would-detect-android
+           (and (eq mock-system-type 'gnu/linux)
+                (or mock-termux-version
+                    (string-match-p "android" (or mock-prefix ""))))))
+      (should-not would-detect-android)))
+
+  ;; Test that current platform detection is consistent
+  ;; If we're on Linux, android-p should be false unless we have Android indicators
+  (when (eq system-type 'gnu/linux)
+    (let ((has-termux (getenv "TERMUX_VERSION"))
+          (has-android-prefix (and (getenv "PREFIX")
+                                   (string-match-p "android" (getenv "PREFIX")))))
+      (if (or has-termux has-android-prefix)
+          (should platform-android-p)
+        (should-not platform-android-p)))))
 
 (provide 'test-platform)
 ;;; test-platform.el ends here

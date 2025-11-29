@@ -36,13 +36,14 @@
   "Test that tree-sitter grammar files exist in TREE_SITTER_DIR."
   :tags '(unit)
   (let ((ts-dir (getenv "TREE_SITTER_DIR")))
-    (skip-unless ts-dir)
-    (skip-unless (file-directory-p ts-dir))
-    
+    ;; Changed from skip-unless to should: TREE_SITTER_DIR must be set
+    (should ts-dir)
+    (should (file-directory-p ts-dir))
+
     ;; Check for at least some common grammars
     (let ((grammar-files (directory-files ts-dir t "\\.so$")))
       (should (> (length grammar-files) 0))
-      
+
       ;; Look for specific critical grammars
       (let ((files-string (mapconcat #'identity grammar-files " ")))
         ;; At least one of these should exist
@@ -54,16 +55,17 @@
   "Test that commonly used tree-sitter grammars are available."
   :tags '(integration)
   (let ((ts-dir (getenv "TREE_SITTER_DIR")))
-    (skip-unless ts-dir)
-    (skip-unless (file-directory-p ts-dir))
-    
+    ;; Changed from skip-unless to should: TREE_SITTER_DIR must be set
+    (should ts-dir)
+    (should (file-directory-p ts-dir))
+
     ;; List of critical grammars we expect to have
     (let ((expected-grammars '("nix" "bash" "python" "json" "yaml")))
       (dolist (lang expected-grammars)
-        (let ((grammar-file (expand-file-name 
+        (let ((grammar-file (expand-file-name
                              (concat "libtree-sitter-" lang ".so")
                              ts-dir)))
-          ;; Use should with message for better error reporting
+          ;; Changed from skip to should: grammars must exist
           (should (file-exists-p grammar-file)))))))
 
 ;;; CLI Tools in PATH
@@ -154,16 +156,18 @@
 (ert-deftest test-runtime-deps/treesit-available ()
   "Test that Emacs has tree-sitter support compiled in."
   :tags '(integration)
-  (skip-unless (fboundp 'treesit-available-p))
+  ;; Changed from skip-unless to should: treesit must be available
+  (should (fboundp 'treesit-available-p))
   (should (treesit-available-p)))
 
 (ert-deftest test-runtime-deps/treesit-can-load-grammar ()
   "Test that tree-sitter can actually load a grammar."
   :tags '(integration slow)
-  (skip-unless (fboundp 'treesit-available-p))
-  (skip-unless (treesit-available-p))
-  (skip-unless (getenv "TREE_SITTER_DIR"))
-  
+  ;; Changed from skip-unless to should: treesit must be available
+  (should (fboundp 'treesit-available-p))
+  (should (treesit-available-p))
+  (should (getenv "TREE_SITTER_DIR"))
+
   ;; Try to load a common grammar (nix or bash)
   (let ((loaded nil)
         (grammars-to-try '(nix bash python)))
@@ -172,8 +176,8 @@
           (when (treesit-language-available-p lang)
             (setq loaded t))
         (error nil)))
-    
-    ;; At least one grammar should load
+
+    ;; Changed: at least one grammar MUST load (not just should)
     (should loaded)))
 
 ;;; Comprehensive Runtime Environment Check
