@@ -19,7 +19,7 @@
 #     home.packages = runtimeDeps.lspServers ++ runtimeDeps.cliTools;
 #   }
 
-{ pkgs }:
+{ lib, pkgs }:
 
 let
   # Helper to check if package exists in pkgs and is not unfree
@@ -197,54 +197,58 @@ let
   # 2. Find package in nixpkgs: nix search nixpkgs <tool-name>
   # 3. Add to list below with comment indicating which package uses it
 
-  cliTools = builtins.filter (x: x != null) [
-    # Search and navigation tools
-    # Used by: elisp/completion.el (consult-ripgrep, consult-fd)
-    # Used by: elisp/programming.el (xref-search-program)
-    pkgs.ripgrep # Fast recursive grep (rg command)
-    pkgs.fd # Fast find alternative (fd command)
+  cliTools = builtins.filter (x: x != null) (
+    [
+      # Search and navigation tools
+      # Used by: elisp/completion.el (consult-ripgrep, consult-fd)
+      # Used by: elisp/programming.el (xref-search-program)
+      pkgs.ripgrep # Fast recursive grep (rg command)
+      pkgs.fd # Fast find alternative (fd command)
 
-    # Version control
-    # Used by: elisp/git.el (magit, diff-hl)
-    # NOTE: git is NOT included here - it's a system-level dependency that users
-    # should manage separately (e.g., via programs.git.enable or home.packages).
-    # Including it causes conflicts when users have custom git configurations
-    # (git-with-svn, git-full, etc.). Magit will find git via PATH.
+      # Version control
+      # Used by: elisp/git.el (magit, diff-hl)
+      # NOTE: git is NOT included here - it's a system-level dependency that users
+      # should manage separately (e.g., via programs.git.enable or home.packages).
+      # Including it causes conflicts when users have custom git configurations
+      # (git-with-svn, git-full, etc.). Magit will find git via PATH.
 
-    # Directory environment management
-    # Used by: elisp/programming.el (direnv-mode)
-    pkgs.direnv
+      # Directory environment management
+      # Used by: elisp/programming.el (direnv-mode)
+      pkgs.direnv
 
-    # File navigation with frecency
-    # Used by: elisp/completion.el (zoxide package)
-    (optionalPackage "zoxide")
+      # File navigation with frecency
+      # Used by: elisp/completion.el (zoxide package)
+      (optionalPackage "zoxide")
 
-    # Secrets management
-    # Used by: elisp/systems.el (sops package)
-    (optionalPackage "sops")
+      # Secrets management
+      # Used by: elisp/systems.el (sops package)
+      (optionalPackage "sops")
 
-    # 1Password CLI integration
-    # Used by: elisp/systems.el (auth-source-1password)
-    # NOTE: Commented out because it's unfree. Install manually if needed.
-    # (optionalPackage "_1password-cli") # Provides 'op' command
+      # 1Password CLI integration
+      # Used by: elisp/systems.el (auth-source-1password)
+      # NOTE: Commented out because it's unfree. Install manually if needed.
+      # (optionalPackage "_1password-cli") # Provides 'op' command
 
-    # Markdown rendering
-    # Used by: elisp/programming.el (markdown-mode)
-    (optionalPackage "multimarkdown")
+      # Markdown rendering
+      # Used by: elisp/programming.el (markdown-mode)
+      (optionalPackage "multimarkdown")
 
-    # Terminal emulator dependencies
+      # Additional tools (uncomment as needed):
+      # pkgs.sqlite  # Used by org-roam, forge
+      # pkgs.graphviz  # Used by org-mode diagrams
+      # pkgs.imagemagick  # Image manipulation for org-mode
+      # pkgs.pandoc  # Universal document converter
+      # pkgs.aspell  # Spell checker (or hunspell)
+      # pkgs.hunspell  # Alternative spell checker
+      # pkgs.dictionaries  # For flyspell dictionaries
+    ]
+    # Terminal emulator dependencies (Linux only)
     # Used by: elisp/programming.el (vterm package)
-    pkgs.libvterm # Required by emacs-vterm
-
-    # Additional tools (uncomment as needed):
-    # pkgs.sqlite  # Used by org-roam, forge
-    # pkgs.graphviz  # Used by org-mode diagrams
-    # pkgs.imagemagick  # Image manipulation for org-mode
-    # pkgs.pandoc  # Universal document converter
-    # pkgs.aspell  # Spell checker (or hunspell)
-    # pkgs.hunspell  # Alternative spell checker
-    # pkgs.dictionaries  # For flyspell dictionaries
-  ];
+    # Note: libvterm is not available on Darwin (macOS) systems
+    ++ lib.optionals pkgs.stdenv.isLinux [
+      pkgs.libvterm # Required by emacs-vterm
+    ]
+  );
 
   # ============================================================================
   # CONVENIENCE AGGREGATES
