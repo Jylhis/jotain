@@ -2,42 +2,64 @@
 { lib, pkgs }:
 
 let
-  # Extract use-package declarations from an elisp file using regex
+  # Extract use-package declarations from an elisp file using pure Nix
   extractUsePackages = elispFile:
     let
       content = builtins.readFile elispFile;
 
-      # Use perl to extract use-package declarations
-      # Matches (use-package PACKAGE-NAME ...) but excludes those with :ensure nil or :nodep
-      extracted = pkgs.runCommand "extract-packages-${baseNameOf elispFile}"
-        {
-          buildInputs = [ pkgs.perl ];
-          inherit content;
-        } ''
-        echo "$content" | perl -ne '
-          # Match (use-package package-name
-          if (/\(use-package\s+([a-zA-Z0-9-]+)/) {
-            my $pkg = $1;
-            my $line = $_;
+      # Split content into lines
+      lines = lib.splitString "\n" content;
 
-            # Read ahead to check for :ensure nil or :nodep
-            my $block = $_;
-            my $paren_count = 1;
-            while ($paren_count > 0 && defined($line = <>)) {
-              $block .= $line;
-              $paren_count += ($line =~ tr/\(//);
-              $paren_count -= ($line =~ tr/\)//);
-            }
+      # Extract package names from use-package declarations
+      # This is a simplified regex-based approach that works in pure Nix
+      extractPackageName = line:
+        let
+          # Match (use-package PACKAGE-NAME
+          match = builtins.match "[[:space:]]*\\(use-package[[:space:]]+([a-zA-Z0-9-]+).*" line;
+        in
+        if match != null then builtins.head match else null;
 
-            # Skip if :ensure nil or :nodep is present
-            unless ($block =~ /:ensure\s+nil/ || $block =~ /:nodep/) {
-              print "$pkg\n";
-            }
-          }
-        ' > $out
-      '';
+      # Check if a block contains :ensure nil or :nodep
+      # We need to find the matching closing paren for this use-package
+      shouldSkip = pkgName: lineIdx:
+        let
+          # Get the use-package block by counting parentheses
+          # Start with 1 open paren (from the (use-package line)
+          getBlock = idx: depth: accum:
+            if idx >= (builtins.length lines) || depth == 0 then
+              accum
+            else
+              let
+                line = builtins.elemAt lines idx;
+                # Count opening and closing parens
+                opens = lib.length (lib.filter (c: c == "(") (lib.stringToCharacters line));
+                closes = lib.length (lib.filter (c: c == ")") (lib.stringToCharacters line));
+                newDepth = depth + opens - closes;
+                newAccum = accum + " " + line;
+              in
+              getBlock (idx + 1) newDepth newAccum;
+
+          # Get the full use-package block text
+          blockText = getBlock (lineIdx + 1) 1 (builtins.elemAt lines lineIdx);
+
+          # Check for :ensure nil or :nodep in the block
+          hasEnsureNil = builtins.match ".*:ensure[[:space:]]+nil.*" blockText != null;
+          hasNodep = builtins.match ".*:nodep.*" blockText != null;
+        in
+        hasEnsureNil || hasNodep;
+
+      # Extract packages from all lines
+      packagesWithIndex = lib.imap0
+        (idx: line:
+          let pkgName = extractPackageName line;
+          in if pkgName != null && !(shouldSkip pkgName idx) then pkgName else null
+        )
+        lines;
+
+      # Filter out nulls
+      packages = builtins.filter (x: x != null) packagesWithIndex;
     in
-    lib.splitString "\n" (lib.removeSuffix "\n" (builtins.readFile extracted));
+    packages;
 
   # Scan directory for all .el files and extract packages
   scanDirectory = dir:
@@ -60,6 +82,8 @@ let
   packageNameMap = {
     # Built-in packages (exclude from installation)
     "project" = null; # Built-in to Emacs 30+
+    "diff-mode" = null; # Built-in to Emacs
+    "xt-mouse" = null; # Built-in to Emacs
 
     # Local libraries (exclude from installation)
     "app-launcher" = null; # Local file in elisp/app-launcher.el
