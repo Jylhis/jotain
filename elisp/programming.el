@@ -345,12 +345,15 @@
   :custom
   (xterm-mouse-mode 1 "Enable mouse in terminal"))
 
-(use-package vterm
-  :ensure
-  :defer t
-  :commands (vterm vterm-other-window)
-  :custom
-  (vterm-always-compile-module t))
+;; vterm requires libvterm which is not available on macOS
+;; Also disabled on Android for performance/compatibility
+(platform-unless (or platform-macos-p platform-android-p)
+		 (use-package vterm
+		   :ensure
+		   :defer t
+		   :commands (vterm vterm-other-window)
+		   :custom
+		   (vterm-always-compile-module t)))
 
 (use-package editorconfig
   :ensure t

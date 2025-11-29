@@ -6,7 +6,7 @@
   dependencies = import ./dependencies.nix { inherit lib pkgs; };
 
   # Runtime dependencies (external tools and LSP servers)
-  runtimeDeps = import ./runtime-deps.nix { inherit pkgs; };
+  runtimeDeps = import ./runtime-deps.nix { inherit lib pkgs; };
 
   # Additional utility functions can be added here
 }
