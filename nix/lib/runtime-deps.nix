@@ -14,7 +14,7 @@
 #     # In home-manager or NixOS configuration:
 #     home.packages = runtimeDeps.allRuntimeDeps;
 #     fonts.packages = runtimeDeps.fonts;
-#     
+#
 #     # Or selectively:
 #     home.packages = runtimeDeps.lspServers ++ runtimeDeps.cliTools;
 #   }
@@ -100,22 +100,14 @@ let
   # 2. Add to appropriate category below
   # 3. Update elisp/fonts.el with font preferences if needed
 
-  fonts = builtins.filter (x: x != null) [
-    # Nerd Fonts (programming fonts with icons)
-    # Used by: elisp/fonts.el j10s-fonts-default-family
-    # Note: nerdfonts package structure varies across nixpkgs versions
-    (if (builtins.hasAttr "nerdfonts" pkgs) then
-      (pkgs.nerdfonts.override {
-        fonts = [
-          "JetBrainsMono" # Primary programming font
-          "FiraCode" # Alternative with ligatures
-          "Iosevka" # Condensed programming font
-          "CascadiaCode" # Microsoft's programming font
-          "Hack" # Fallback programming font
-        ];
-      })
-    else
-      null) # Fallback if nerdfonts not available
+  fonts = [
+
+          pkgs.jetbrains-mono
+
+          pkgs.fira-code
+          pkgs.iosevka
+          pkgs.cascadia-code
+          pkgs.hack-font
 
     # UI and variable-pitch fonts
     # Used by: elisp/fonts.el j10s-fonts-variable-family
@@ -128,11 +120,7 @@ let
 
     # Emoji support
     # Used by: elisp/fonts.el j10s-fonts-setup-performance
-    (optionalPackage "noto-fonts-color-emoji")
-
-    # System fallback fonts (optional but recommended)
-    pkgs.dejavu_fonts # Contains DejaVu Sans Mono, Sans, Serif (fallbacks)
-    (optionalPackage "ubuntu-classic") # Ubuntu font (variable-pitch fallback)
+    pkgs.noto-fonts-color-emoji
   ];
 
   # ============================================================================
