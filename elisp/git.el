@@ -17,13 +17,15 @@
 (use-package magit-todos
   :ensure
   :after magit
-  :init
+  :demand t
+  :config
   (magit-todos-mode 1))
 
 
 (use-package diff-hl
   :ensure
   :after magit
+  :demand t
   :custom
   (diff-hl-draw-borders nil)
   (fringes-outside-margins t)
@@ -32,7 +34,7 @@
          (after-init . global-diff-hl-show-hunk-mouse-mode)
          (dired-mode . diff-hl-dired-mode)
          (magit-post-refresh . diff-hl-magit-post-refresh))
-  :init
+  :config
   (diff-hl-flydiff-mode 1))
 
 (use-package smerge-mode

@@ -34,6 +34,31 @@ home.packages = [ pkgs.git ];
 
 **Note:** Other tools (ripgrep, fd, direnv) are provided by jotain's `includeRuntimeDeps` option but can be overridden if you manage them separately. Set `programs.jotain.includeRuntimeDeps = false` to manage all runtime dependencies yourself.
 
+## Quick Start: Try Without Installing
+
+You can try Jotain instantly without installation using `nix run`:
+
+```bash
+# Try Jotain with default configuration
+nix run github:Jylhis/jotain
+
+# Run with specific arguments
+nix run github:Jylhis/jotain -- --batch --eval '(message "Hello from Jotain!")'
+
+# Test locally after cloning
+git clone https://github.com/Jylhis/jotain.git
+cd jotain
+nix run .
+```
+
+**How it works:**
+- Creates a temporary isolated environment (automatically cleaned up on exit)
+- Copies the full Jotain configuration to the temporary directory
+- Launches Emacs with all packages and runtime dependencies
+- Your personal Emacs config (`~/.config/emacs` or `~/.emacs.d`) remains completely untouched
+
+**For development:** If you're working on Jotain itself, use `nix develop` and `emacs-dev` instead (see Development Commands section below).
+
 ## Package Management
 
 All Emacs packages are defined in default.nix via `emacsWithPackages`. When adding new packages:

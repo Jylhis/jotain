@@ -31,17 +31,18 @@
   :ensure
   :diminish
   :after modus-themes
+  :demand t
   :custom
   (auto-dark-themes '((modus-operandi-tinted) (modus-vivendi-tinted)))
-  :init
-  (auto-dark-mode 1)
   :config
+  (auto-dark-mode 1)
   (add-hook 'after-make-frame-functions
             (lambda (frame)
               (when (display-graphic-p frame)
                 (with-selected-frame frame (auto-dark-mode 1))))))
 
-(use-package diminish :ensure t)
+(use-package diminish
+  :ensure t)
 
 (use-package which-key
   :ensure
@@ -75,10 +76,11 @@
   :ensure
   :hook (prog-mode . breadcrumb-mode))
 
-(use-package nerd-icons :ensure t)
+(use-package nerd-icons
+  :ensure t)
 
 (use-package nerd-icons-corfu
-  :ensure
+  :ensure t
   :after nerd-icons corfu
   :config
   (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
@@ -97,9 +99,9 @@
 (use-package nerd-icons-completion
   :ensure
   :after marginalia nerd-icons
-  :init
-  (nerd-icons-completion-mode)
+  :demand t
   :config
+  (nerd-icons-completion-mode)
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
 (use-package hl-todo
