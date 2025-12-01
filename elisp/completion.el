@@ -7,7 +7,8 @@
 
 (use-package vertico
   :ensure
-  :init
+  :demand t
+  :config
   (vertico-mode))
 
 ;; Configure directory extension.
@@ -25,6 +26,7 @@
 (use-package vertico-multiform
   :after vertico
   :ensure nil
+  :demand t
   :custom
   (vertico-multiform-categories
    '((file buffer grid)
@@ -37,7 +39,7 @@
      (consult-grep buffer)
      (consult-fd grid)
      (execute-extended-command 'vertical)))
-  :init
+  :config
   (vertico-multiform-mode 1))
 
 (use-package vertico-buffer
@@ -49,8 +51,10 @@
 
 (use-package corfu
   :ensure
-  :init
+  :demand t
+  :config
   (global-corfu-mode)
+  (require 'corfu-history)
   (corfu-history-mode))
 
 (use-package kind-icon
@@ -66,24 +70,23 @@
 
 (use-package cape
   :ensure
-  :init
-  ;; Add to completion-at-point-functions globally
-  ;; Order matters: more specific completers first
-  (add-to-list 'completion-at-point-functions #'cape-dabbrev)
-  (add-to-list 'completion-at-point-functions #'cape-file)
-  (add-to-list 'completion-at-point-functions #'cape-keyword)
-
+  :demand t
   :custom
   ;; Improve file path completion behavior
   (cape-file-directory-must-exist t)  ; Only complete existing directories
   (cape-file-prefix '("~" "/" "./" "../"))  ; Trigger on ~, /, ./, ../
-  ;; Improve dabbrev completion
-  (cape-dabbrev-min-length 3)  ; Require at least 3 chars before suggesting
+  :config
+  ;; Add to completion-at-point-functions globally
+  ;; Use add-hook to modify the default value, not buffer-local value
+  ;; Order matters: more specific completers first
+  (add-hook 'completion-at-point-functions #'cape-dabbrev)
+  (add-hook 'completion-at-point-functions #'cape-file)
+  (add-hook 'completion-at-point-functions #'cape-keyword)
 
   ;; Add Obsidian completion when available
   ;; (with-eval-after-load 'obsidian
   ;; (when (fboundp 'obsidian-completion-at-point)
-  ;; (add-to-list 'completion-at-point-functions #'obsidian-completion-at-point)))
+  ;; (add-hook 'completion-at-point-functions #'obsidian-completion-at-point)))
   )
 
 (use-package consult
@@ -164,7 +167,8 @@
 
 (use-package marginalia
   :ensure
-  :init
+  :demand t
+  :config
   (marginalia-mode))
 
 (use-package embark
