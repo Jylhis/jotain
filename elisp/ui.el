@@ -41,8 +41,7 @@
               (when (display-graphic-p frame)
                 (with-selected-frame frame (auto-dark-mode 1))))))
 
-(use-package diminish
-  :ensure t)
+(use-package diminish)
 
 (use-package which-key
   :ensure
@@ -76,11 +75,9 @@
   :ensure
   :hook (prog-mode . breadcrumb-mode))
 
-(use-package nerd-icons
-  :ensure t)
+(use-package nerd-icons)
 
 (use-package nerd-icons-corfu
-  :ensure t
   :after nerd-icons corfu
   :config
   (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))

@@ -39,14 +39,12 @@
   ("C-x P" . projection-map))
 
 (use-package projection-multi
-  :ensure t
   ;; Allow interactively selecting available compilation targets from the current
   ;; project type.
   :bind ( :map project-prefix-map
           ("RET" . projection-multi-compile)))
 
 (use-package projection-multi-embark
-  :ensure t
   :after embark
   :after projection-multi
   :demand t

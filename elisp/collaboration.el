@@ -6,7 +6,6 @@
 ;;; Code:
 
 (use-package org-jira
-  :ensure t
   :after org
   :config
   ;; The user needs to configure JIRA access.
