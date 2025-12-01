@@ -125,7 +125,6 @@ Returns (font-name . height) or nil if none found."
 ;;; Ligature Support
 
 (use-package ligature
-  :ensure t
   :config
   ;; Enable ligatures for programming modes
   (ligature-set-ligatures

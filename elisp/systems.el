@@ -14,7 +14,6 @@
   )
 
 (use-package sops
-  :ensure t
   :demand t
   :bind (("C-c C-c" . sops-save-file)
          ("C-c C-k" . sops-cancel)
@@ -26,7 +25,6 @@
 ;; This allows Emacs to securely retrieve credentials from 1Password
 ;; for various applications like email, git, JIRA, etc.
 (use-package auth-source-1password
-  :ensure t
   :defer t
   :custom
   ;; Set the default vault name (customize as needed)

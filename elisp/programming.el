@@ -184,16 +184,13 @@
   (setq xref-search-program 'ripgrep))
 
 (use-package elisp-lint
-  :ensure t
   :defer t
   :commands (elisp-lint-file elisp-lint-buffer))
 (use-package package-lint
-  :ensure t
   :defer t
   :commands (package-lint-current-buffer package-lint-buffer))
 
 (use-package dtrt-indent
-  :ensure t
   :defer t
   :diminish
   :hook (prog-mode . dtrt-indent-mode)
@@ -279,47 +276,43 @@
   (("/.dockerignore\\'" . conf-unix-mode)
    ("/.gitignore\\'" . conf-unix-mode)))
 
-(use-package cuda-mode :ensure t)
-(use-package haskell-mode :ensure t)
+(use-package cuda-mode)
+(use-package haskell-mode)
 (use-package diff-mode
   :ensure
   :defer t
   :mode "\\.patch[0-9]*\\'")
 (use-package terraform-mode
-  :ensure t
   :defer
   :mode "\\.tf\\'")
 
-(use-package dockerfile-mode :ensure t)
-(use-package docker-compose-mode :ensure t)
-(use-package gitlab-ci-mode :ensure t)
+(use-package dockerfile-mode)
+(use-package docker-compose-mode)
+(use-package gitlab-ci-mode)
 (use-package ansible
-  :ensure t
   :defer t)
-(use-package ssh-config-mode :ensure t)
+(use-package ssh-config-mode)
 (use-package adoc-mode
-  :ensure t
   :defer t
   :mode "\\.adoc\\'")
-(use-package go-mode :ensure t)
-(use-package nix-mode :ensure t)
+(use-package go-mode)
+(use-package nix-mode)
 (use-package nix-ts-mode :ensure :mode "\\.nix\\'")
 (use-package cmake-mode
   :ensure
   :defer t
   :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
-(use-package mermaid-mode :ensure t)
+(use-package mermaid-mode)
 (use-package yaml-mode
-  :ensure t
   :defer t
   )
 (use-package modern-cpp-font-lock :ensure
   :hook (c++-mode . modern-c++-font-lock-mode))
-(use-package just-mode :ensure t)
+(use-package just-mode)
 (use-package demangle-mode
   :ensure
   :hook asm-mode)
-(use-package sql-indent :ensure t)
+(use-package sql-indent)
 
 (use-package web-mode
   :ensure
@@ -355,7 +348,6 @@
 		   (vterm-always-compile-module t)))
 
 (use-package editorconfig
-  :ensure t
   :defer t
   :diminish
   :hook (prog-mode . editorconfig-mode))
