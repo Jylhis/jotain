@@ -15,10 +15,11 @@
 
 (use-package sops
   :ensure t
+  :demand t
   :bind (("C-c C-c" . sops-save-file)
          ("C-c C-k" . sops-cancel)
          ("C-c C-d" . sops-edit-file))
-  :init
+  :config
   (global-sops-mode 1))
 
 ;; 1Password integration for auth-source

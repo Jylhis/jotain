@@ -201,11 +201,10 @@
 
 (use-package direnv
   :ensure
-  :defer t
+  :demand t
   ;; Direnv is guaranteed to be available via Nix (see nix/lib/runtime-deps.nix)
-  :init
-  (direnv-mode)
   :config
+  (direnv-mode)
   (add-to-list 'warning-suppress-types '(direnv)))
 
 ;; Debugging

@@ -9,6 +9,15 @@
 
 (require 'ert)
 
+;;; use-package Configuration
+;; Configure use-package before loading any modules that use it.
+;; These settings mirror early-init.el to ensure consistent behavior.
+
+(setq use-package-enable-imenu-support t)
+(setq use-package-always-ensure nil)     ; CRITICAL: Never auto-install packages
+
+(require 'use-package)
+
 ;;; Tree-sitter Configuration
 ;; Tests run with -Q flag which bypasses early-init.el, so we need to
 ;; configure tree-sitter path here to match production environment.

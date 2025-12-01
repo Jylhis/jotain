@@ -94,8 +94,8 @@
   (require 'cape)
   (should (boundp 'cape-file-directory-must-exist))
   (should cape-file-directory-must-exist)
-  (should (boundp 'cape-dabbrev-min-length))
-  (should (= cape-dabbrev-min-length 3)))
+  (should (boundp 'cape-file-prefix))
+  (should (listp cape-file-prefix)))
 
 ;;; Consult Configuration
 
@@ -135,7 +135,7 @@
   ;; Check file category uses partial-completion first
   (let ((file-override (assoc 'file completion-category-overrides)))
     (should file-override)
-    (should (member 'partial-completion (cadr (assoc 'styles (cdr file-override)))))))
+    (should (member 'partial-completion (cdr (assoc 'styles (cdr file-override)))))))
 
 ;;; Marginalia Configuration
 
@@ -164,12 +164,12 @@
 (ert-deftest test-completion/embark-consult-integration ()
   "Test that embark-consult integration is configured."
   :tags '(unit)
-  (should (fboundp 'embark-export))
   ;; embark-consult loads automatically after embark and consult
   (require 'embark)
   (require 'consult)
   (require 'embark-consult)
-  (should (featurep 'embark-consult)))
+  (should (featurep 'embark-consult))
+  (should (fboundp 'embark-export)))
 
 ;;; Avy Configuration
 

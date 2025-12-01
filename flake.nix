@@ -64,11 +64,43 @@
           emacs = pkgs.callPackage ./emacs.nix {
             devMode = false;
           };
+
+          # Wrapper for `nix run` - try Jotain without installation
+          emacs-run = pkgs.writeShellApplication {
+            name = "emacs-run";
+            text = ''
+              # Create temporary isolated home
+              TEMP_HOME=$(mktemp -d)
+              trap 'rm -rf "$TEMP_HOME"' EXIT
+
+              # Set up XDG isolation
+              export XDG_CONFIG_HOME="$TEMP_HOME/.config"
+              export XDG_DATA_HOME="$TEMP_HOME/.local/share"
+              export XDG_CACHE_HOME="$TEMP_HOME/.cache"
+              export XDG_STATE_HOME="$TEMP_HOME/.local/state"
+
+              # Create emacs config directory
+              mkdir -p "$XDG_CONFIG_HOME/emacs"
+
+              # Copy configuration files
+              cp -r ${self'.packages.jotain}/share/jotain/* "$XDG_CONFIG_HOME/emacs/"
+
+              # Run Emacs with isolated config
+              exec ${self'.packages.emacs}/bin/emacs --init-directory="$XDG_CONFIG_HOME/emacs" "$@"
+            '';
+          };
         };
 
         devShells = {
           default = pkgs.callPackage ./shell.nix {
             jotainEmacs = self'.packages.emacs-dev;
+          };
+        };
+
+        apps = {
+          default = {
+            type = "app";
+            program = "${self'.packages.emacs-run}/bin/emacs-run";
           };
         };
 

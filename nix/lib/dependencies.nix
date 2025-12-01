@@ -2,64 +2,60 @@
 { lib, pkgs }:
 
 let
-  # Extract use-package declarations from an elisp file using pure Nix
+  # Manual overrides for complex cases or files that need explicit control
+  # Only add entries here if the pure Nix extraction fails for a specific file
+  packageOverrides = {
+    # No overrides needed - pure Nix extraction works correctly
+  };
+
+  # Extract use-package declarations from an elisp file using pure Nix regex
+  # No derivations = no cross-system build issues
   extractUsePackages = elispFile:
     let
-      content = builtins.readFile elispFile;
-
-      # Split content into lines
-      lines = lib.splitString "\n" content;
-
-      # Extract package names from use-package declarations
-      # This is a simplified regex-based approach that works in pure Nix
-      extractPackageName = line:
-        let
-          # Match (use-package PACKAGE-NAME
-          match = builtins.match "[[:space:]]*\\(use-package[[:space:]]+([a-zA-Z0-9-]+).*" line;
-        in
-        if match != null then builtins.head match else null;
-
-      # Check if a block contains :ensure nil or :nodep
-      # We need to find the matching closing paren for this use-package
-      shouldSkip = pkgName: lineIdx:
-        let
-          # Get the use-package block by counting parentheses
-          # Start with 1 open paren (from the (use-package line)
-          getBlock = idx: depth: accum:
-            if idx >= (builtins.length lines) || depth == 0 then
-              accum
-            else
-              let
-                line = builtins.elemAt lines idx;
-                # Count opening and closing parens
-                opens = lib.length (lib.filter (c: c == "(") (lib.stringToCharacters line));
-                closes = lib.length (lib.filter (c: c == ")") (lib.stringToCharacters line));
-                newDepth = depth + opens - closes;
-                newAccum = accum + " " + line;
-              in
-              getBlock (idx + 1) newDepth newAccum;
-
-          # Get the full use-package block text
-          blockText = getBlock (lineIdx + 1) 1 (builtins.elemAt lines lineIdx);
-
-          # Check for :ensure nil or :nodep in the block
-          hasEnsureNil = builtins.match ".*:ensure[[:space:]]+nil.*" blockText != null;
-          hasNodep = builtins.match ".*:nodep.*" blockText != null;
-        in
-        hasEnsureNil || hasNodep;
-
-      # Extract packages from all lines
-      packagesWithIndex = lib.imap0
-        (idx: line:
-          let pkgName = extractPackageName line;
-          in if pkgName != null && !(shouldSkip pkgName idx) then pkgName else null
-        )
-        lines;
-
-      # Filter out nulls
-      packages = builtins.filter (x: x != null) packagesWithIndex;
+      fileName = baseNameOf elispFile;
     in
-    packages;
+    if packageOverrides ? ${fileName} then
+    # Use manual override if available
+      packageOverrides.${fileName}
+    else
+    # Otherwise use pure Nix extraction
+      let
+        content = builtins.readFile elispFile;
+
+        # Split by (use-package PACKAGE-NAME
+        # Returns list alternating between strings and capture groups
+        parts = builtins.split "\\(use-package[[:space:]]+([a-zA-Z0-9-]+)" content;
+
+        # Process each match with its index
+        processBlock = idx: item:
+          if builtins.isList item then
+            let
+              pkgName = builtins.head item; # Package name from capture group
+
+              # Get the next part (block content after package name)
+              # This contains the rest of the use-package declaration
+              nextIdx = idx + 1;
+              nextPart =
+                if nextIdx < builtins.length parts
+                then builtins.elemAt parts nextIdx
+                else "";
+
+              # Check for :ensure nil or :nodep in the block
+              # We look at a reasonable chunk (next part until next use-package or end)
+              hasEnsureNil = builtins.match ".*:ensure[[:space:]]+nil.*" nextPart != null;
+              hasNoDep = builtins.match ".*:nodep.*" nextPart != null;
+            in
+            if hasEnsureNil || hasNoDep then null else pkgName
+          else
+            null;
+
+        # Process all parts with their indices
+        results = lib.imap0 (idx: item: processBlock idx item) parts;
+
+        # Filter out nulls and empty strings
+        validPackages = builtins.filter (x: x != null && x != "") results;
+      in
+      validPackages;
 
   # Scan directory for all .el files and extract packages
   scanDirectory = dir:

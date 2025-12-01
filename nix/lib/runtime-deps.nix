@@ -102,12 +102,12 @@ let
 
   fonts = [
 
-          pkgs.jetbrains-mono
+    pkgs.jetbrains-mono
 
-          pkgs.fira-code
-          pkgs.iosevka
-          pkgs.cascadia-code
-          pkgs.hack-font
+    pkgs.fira-code
+    pkgs.iosevka
+    pkgs.cascadia-code
+    pkgs.hack-font
 
     # UI and variable-pitch fonts
     # Used by: elisp/fonts.el j10s-fonts-variable-family
