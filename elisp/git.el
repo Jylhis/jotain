@@ -21,6 +21,13 @@
   :config
   (magit-todos-mode 1))
 
+(use-package gited
+  :ensure
+  :after magit
+  :bind (:map dired-mode-map
+              ("C-x C-g" . gited-list-branches))
+  :custom
+  (gited-expert t "Skip confirmation for operations"))
 
 (use-package diff-hl
   :ensure
