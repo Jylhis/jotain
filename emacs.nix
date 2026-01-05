@@ -60,8 +60,9 @@ let
         fullname=$(basename "${grammar}")
         # Remove hash prefix if present (e.g., "abc123-tree-sitter-bash-grammar-0.25.10")
         fullname=''${fullname#*-}
-        # Extract language name (everything between "tree-sitter-" and "-grammar")
-        lang=$(echo "$fullname" | sed -E 's/tree-sitter-([^-]+)-grammar.*/\1/')
+        # Extract language name (everything between "tree-sitter-" and version number)
+        # Handles both old format (tree-sitter-bash-grammar-X.Y.Z) and new format (tree-sitter-bash-X.Y.Z)
+        lang=$(echo "$fullname" | sed -E 's/tree-sitter-([a-z]+)(-grammar)?-[0-9].*/\1/')
 
         # Copy with the expected name pattern
         cp "${grammar}/parser" "$out/libtree-sitter-$lang.so"
