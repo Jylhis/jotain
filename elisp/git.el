@@ -21,6 +21,9 @@
   :config
   (magit-todos-mode 1))
 
+(use-package gited
+  :ensure
+  :after magit)
 
 (use-package diff-hl
   :ensure
