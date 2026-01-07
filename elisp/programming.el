@@ -162,6 +162,13 @@
   (add-to-list 'eglot-server-programs
                '((go-mode go-ts-mode) . ("gopls")))
 
+  (add-to-list 'eglot-server-programs
+               '(dockerfile-mode . ("docker-langserver" "--stdio")))
+
+  ;; SonarLint for code quality analysis
+  (add-to-list 'eglot-server-programs
+               '((php-mode web-mode xml-mode nxml-mode) . ("sonarlint-ls" "-stdio")))
+
   ;; Optimize for better performance
   (fset #'jsonrpc--log-event #'ignore)) ; Disable JSON-RPC event logging
 
