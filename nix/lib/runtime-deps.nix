@@ -159,6 +159,9 @@ let
     # YAML
     pkgs.yaml-language-server
 
+    # Docker
+    pkgs.dockerfile-language-server # Docker language server for Dockerfiles
+
     # JSON
     # pkgs.nodePackages.vscode-langservers-extracted  # Provides jsonls
 
@@ -167,6 +170,9 @@ let
 
     # C/C++
     pkgs.clang-tools # Provides clangd LSP server
+
+    # SonarLint (multi-language code analysis)
+    pkgs.sonarlint-ls # SonarLint language server for code quality analysis
 
     # Additional LSP servers (add as needed):
     # pkgs.terraform-ls  # Terraform
