@@ -172,7 +172,7 @@ let
     pkgs.clang-tools # Provides clangd LSP server
 
     # SonarLint (multi-language code analysis)
-    pkgs.sonarlint-ls # SonarLint language server for code quality analysis
+    # pkgs.sonarlint-ls # SonarLint language server for code quality analysis (broken build)
 
     # Additional LSP servers (add as needed):
     # pkgs.terraform-ls  # Terraform
