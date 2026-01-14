@@ -16,7 +16,7 @@
   )
 
 (use-package projection
-  :ensure
+  :ensure t
   ;; Enable the `projection-hook' feature.
   :hook (after-init . global-projection-hook-mode)
 
@@ -53,7 +53,7 @@
 
 ;; Compilation
 (use-package compile-multi
-  :ensure
+  :ensure t
   :config
   (setq compile-multi-config
         '((go-mode . (("go test" . "go test ./...")
@@ -68,19 +68,19 @@
           )))
 
 (use-package consult-compile-multi
-  :ensure
+  :ensure t
   :after compile-multi
   :demand t
   :config (consult-compile-multi-mode))
 
 (use-package compile-multi-nerd-icons
-  :ensure
+  :ensure t
   :after nerd-icons-completion
   :after compile-multi
   :demand t)
 
 (use-package compile-multi-embark
-  :ensure
+  :ensure t
   :after embark
   :after compile-multi
   :demand t

@@ -147,7 +147,7 @@
 
 ;;; Essential packages
 (use-package super-save
-  :ensure
+  :ensure t
   :diminish
   :custom
   (super-save-auto-save-when-idle t)
@@ -158,22 +158,22 @@
   (super-save-mode 1))
 
 (use-package vundo
-  :ensure
+  :ensure t
   :bind ("C-x u" . vundo)
   :config (setq vundo-glyph-alist vundo-unicode-symbols))
 
 (use-package expand-region
-  :ensure
+  :ensure t
   :bind ("C-=" . er/expand-region))
 
 (use-package multiple-cursors
-  :ensure
+  :ensure t
   :bind
   (("C->" . mc/mark-next-like-this)
    ("C-<" . mc/mark-previous-like-this)))
 
 (use-package drag-stuff
-  :ensure
+  :ensure t
   :diminish
   :autoload drag-stuff-define-keys
   :hook ((text-mode prog-mode) . drag-stuff-mode)
@@ -182,7 +182,7 @@
   (drag-stuff-define-keys))
 
 (use-package pretty-sha-path
-  :ensure
+  :ensure t
   :hook ((shell-mode dired-mode) . pretty-sha-path-mode))
 
 ;; Startup performance monitoring

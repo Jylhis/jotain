@@ -5,7 +5,7 @@
 ;;; Code:
 
 (use-package logview
-  :ensure
+  :ensure t
   :defer t
   :custom
   (logview-additional-submodes '(("ROS2" (format . "[LEVEL] [TIMESTAMP] [NAME]:") (levels . "SLF4J")
