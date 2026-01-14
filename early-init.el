@@ -3,7 +3,7 @@
 ;; Author: Markus Jylhänkangas <markus@jylhis.com>
 
 ;;; Commentary:
-;; Early initialization file for Emacs 29+.
+;; Early initialization file for Emacs 30+.
 ;; This file is loaded before package initialization and GUI setup.
 
 ;;; Code:
