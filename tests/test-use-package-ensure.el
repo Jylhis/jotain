@@ -1,22 +1,21 @@
 ;;; test-use-package-ensure.el --- Tests for use-package :ensure configuration -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Tests to ensure :ensure t is never used in configuration files.
-;; Packages are pre-installed by Nix and should never trigger runtime installation.
+;; Tests to verify correct :ensure usage in configuration files.
+;;
+;; Convention (Emacs 30+):
+;; - External packages: Use explicit `:ensure t` for documentation
+;; - Built-in packages: Use `:ensure nil` to mark as built-in
+;; - Packages are pre-installed by Nix, :ensure t does not trigger installation
+;;   when `use-package-always-ensure` is nil
 ;;
 ;; Context:
 ;; - early-init.el sets (setq use-package-always-ensure nil)
 ;; - This prevents use-package from auto-installing packages
-;; - Individual :ensure t overrides this global setting
-;; - This causes errors: "Failed to install X: Package 'X' is unavailable"
-;; - Packages ARE correctly installed by Nix, but use-package tries to install them again
+;; - Individual :ensure t with nil global setting is a no-op (just documentation)
+;; - Built-in packages (Emacs 30+): which-key, editorconfig, use-package
 ;;
-;; Solution:
-;; - Remove all :ensure t from elisp/*.el files
-;; - Rely on global use-package-always-ensure nil setting
-;; - Nix provides all packages at build time
-;;
-;; This test suite validates that no :ensure t remains in the codebase.
+;; This test suite validates consistent :ensure usage patterns.
 
 ;;; Code:
 
@@ -51,10 +50,17 @@ This ensures tests run with the same configuration as production."
 
 ;;; Module Parsing Tests (Static Analysis)
 
-(defun test-use-package-ensure--find-ensure-t-violations ()
-  "Find all :ensure t violations in elisp/*.el files.
-Returns a list of (file . line-numbers) alist."
+(defun test-use-package-ensure--find-builtin-with-ensure-t ()
+  "Find built-in packages incorrectly using :ensure t in elisp/*.el files.
+Built-in packages should use :ensure nil. Returns list of (file . issues)."
   (let ((elisp-dir (expand-file-name "elisp" user-emacs-directory))
+        ;; Built-in packages in Emacs 30+ that must use :ensure nil
+        (builtin-packages '("which-key" "editorconfig" "use-package"
+                            "project" "eglot" "flymake" "eldoc"
+                            "xref" "treesit" "winner" "paren"
+                            "mwheel" "pixel-scroll" "smerge-mode"
+                            "ediff" "gdb-mi" "diff-mode" "conf-mode"
+                            "calendar" "hl-line" "flyspell"))
         (violations '()))
     (when (file-directory-p elisp-dir)
       (dolist (file (directory-files elisp-dir t "\\.el$"))
@@ -62,62 +68,64 @@ Returns a list of (file . line-numbers) alist."
           (insert-file-contents file)
           (goto-char (point-min))
           (let ((file-violations '()))
-            ;; Search for :ensure t patterns
-            ;; Matches: ":ensure t", ":ensure t)", ":ensure t ", etc.
-            (while (re-search-forward "^[[:space:]]*:ensure[[:space:]]+t\\b" nil t)
-              (push (line-number-at-pos) file-violations))
+            ;; Search for use-package declarations of built-in packages with :ensure t
+            (while (re-search-forward "(use-package[[:space:]]+\\([a-zA-Z0-9_-]+\\)" nil t)
+              (let ((pkg-name (match-string 1))
+                    (pkg-start (match-beginning 0)))
+                (when (member pkg-name builtin-packages)
+                  ;; Check if this block has :ensure t (should be :ensure nil)
+                  (save-excursion
+                    (goto-char pkg-start)
+                    (let ((block-end (save-excursion
+                                       (forward-sexp)
+                                       (point))))
+                      (when (re-search-forward ":ensure[[:space:]]+t\\b" block-end t)
+                        (push (format "Line %d: %s should use :ensure nil (built-in)"
+                                      (line-number-at-pos) pkg-name)
+                              file-violations)))))))
             (when file-violations
-              (push (cons file (nreverse file-violations)) violations))))))
+              (push (cons (file-name-nondirectory file) (nreverse file-violations))
+                    violations))))))
     (nreverse violations)))
 
-(defun test-use-package-ensure--format-violations (violations)
-  "Format VIOLATIONS list into human-readable error message."
-  (if (null violations)
-      "No :ensure t violations found."
-    (let ((msg (format "\nFound :ensure t in %d file(s):\n\n" (length violations))))
-      (dolist (violation violations)
-        (let ((file (car violation))
-              (lines (cdr violation)))
-          (setq msg (concat msg
-                            (format "  %s:\n    Lines: %s\n\n"
-                                    (file-name-nondirectory file)
-                                    (mapconcat #'number-to-string lines ", "))))))
-      (concat msg
-              "\nFix: Remove all :ensure t from these files.\n"
-              "Packages are pre-installed by Nix and don't need :ensure.\n"))))
-
-(ert-deftest test-use-package-ensure/no-ensure-t-in-config-files ()
-  "Test that no elisp/*.el files contain :ensure t.
-This is the primary regression test that will fail until all :ensure t are removed."
+(ert-deftest test-use-package-ensure/builtin-packages-use-ensure-nil ()
+  "Test that built-in packages (Emacs 30+) use :ensure nil, not :ensure t."
   :tags '(fast unit critical)
-  (let ((violations (test-use-package-ensure--find-ensure-t-violations)))
-    (should-not violations)
-    ;; If violations found, provide helpful error message
+  (let ((violations (test-use-package-ensure--find-builtin-with-ensure-t)))
     (when violations
-      (ert-fail (test-use-package-ensure--format-violations violations)))))
+      (let ((msg "Built-in packages should use :ensure nil:\n\n"))
+        (dolist (v violations)
+          (setq msg (concat msg (format "  %s:\n" (car v))))
+          (dolist (issue (cdr v))
+            (setq msg (concat msg (format "    - %s\n" issue)))))
+        (ert-fail msg)))
+    (should-not violations)))
 
-(ert-deftest test-use-package-ensure/specific-known-files-clean ()
-  "Test that specific files known to have had :ensure t are now clean.
-This provides focused regression testing for files that were fixed."
+(ert-deftest test-use-package-ensure/external-packages-documented ()
+  "Test that external packages follow consistent :ensure patterns.
+External packages should use :ensure t for explicit documentation."
   :tags '(fast unit)
-  (let ((files-to-check '("programming.el"
-                          "per-project.el"
-                          "systems.el"
-                          "ui.el"
-                          "fonts.el"
-                          "collaboration.el"))
-        (elisp-dir (expand-file-name "elisp" user-emacs-directory)))
-    (dolist (file files-to-check)
-      (let ((file-path (expand-file-name file elisp-dir)))
-        (when (file-exists-p file-path)
+  ;; This is informational - we verify external packages have :ensure t
+  ;; by checking a sample of known external packages
+  (let ((elisp-dir (expand-file-name "elisp" user-emacs-directory))
+        (sample-externals '("magit" "vertico" "consult" "corfu" "orderless")))
+    (dolist (pkg sample-externals)
+      (let ((found nil))
+        (dolist (file (directory-files elisp-dir t "\\.el$"))
           (with-temp-buffer
-            (insert-file-contents file-path)
+            (insert-file-contents file)
             (goto-char (point-min))
-            (should-not (re-search-forward "^[[:space:]]*:ensure[[:space:]]+t\\b" nil t))
-            ;; If found, provide context
-            (when (re-search-forward "^[[:space:]]*:ensure[[:space:]]+t\\b" nil t)
-              (let ((line (line-number-at-pos)))
-                (ert-fail (format "Found :ensure t in %s at line %d" file line))))))))))
+            (when (re-search-forward (format "(use-package[[:space:]]+%s\\b" pkg) nil t)
+              (setq found t)
+              (let ((pkg-start (match-beginning 0)))
+                (save-excursion
+                  (goto-char pkg-start)
+                  (let ((block-end (save-excursion (forward-sexp) (point))))
+                    ;; External packages should have :ensure t
+                    (should (re-search-forward ":ensure[[:space:]]+t\\b" block-end t))))))))
+        (when (not found)
+          ;; Package not found in config, skip
+          t)))))
 
 ;;; Integration Tests (Runtime Behavior)
 
@@ -174,8 +182,8 @@ Explicit :ensure nil is fine and documents intent."
   (should (macroexpand '(use-package test-pkg :ensure nil))))
 
 (ert-deftest test-use-package-ensure/no-ensure-keyword-is-allowed ()
-  "Test that omitting :ensure entirely is allowed (preferred).
-This is the recommended pattern - rely on global setting."
+  "Test that omitting :ensure entirely is allowed.
+While explicit :ensure t is preferred for external packages, omitting works too."
   :tags '(fast unit)
   ;; This should not error
   (should (macroexpand '(use-package test-pkg))))
