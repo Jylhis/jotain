@@ -22,12 +22,13 @@
   (should (= treesit-font-lock-level 4)))
 
 (ert-deftest test-programming/treesit-auto-loaded ()
-  "Test that treesit-auto is available."
+  "Test that treesit-auto is available and configured for Nix-provided grammars."
   :tags '(unit)
   (should (featurep 'treesit-auto))
   (should (fboundp 'global-treesit-auto-mode))
   (should (boundp 'treesit-auto-install))
-  (should treesit-auto-install))
+  ;; treesit-auto-install should be nil - grammars are provided by Nix
+  (should-not treesit-auto-install))
 
 (ert-deftest test-programming/treesit-auto-enabled ()
   "Test that global-treesit-auto-mode is enabled."
