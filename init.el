@@ -3,7 +3,7 @@
 ;; Author: Markus Jylhänkangas <markus@jylhis.com>
 ;; URL: https://github.com/Jylhis/jotain
 ;; Version: 2.0
-;; Package-Requires: ((emacs "29.1"))
+;; Package-Requires: ((emacs "30.2"))
 
 ;;; Commentary:
 ;; Modern modular Emacs configuration for enhanced development experience.
