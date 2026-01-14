@@ -15,13 +15,13 @@
   (treesit-font-lock-level 4))
 
 (use-package treesit-auto
-  :ensure
+  :ensure t
   :custom
   ;; Tree-sitter grammars are provided by Nix and configured in early-init.el
   ;; Grammar path: TREE_SITTER_DIR -> treesit-extra-load-path (see early-init.el)
   ;; Grammar definitions: nix/lib/runtime-deps.nix
   ;; PATH setup: emacs.nix wraps Emacs with runtime dependencies
-  (treesit-auto-install t)
+  (treesit-auto-install nil)  ; Grammars provided by Nix, no runtime installation
   :config
   (treesit-auto-add-to-auto-mode-alist 'all)
   (global-treesit-auto-mode))
@@ -29,7 +29,7 @@
 (use-package treesit-fold
   :disabled
   :diminish
-  :ensure
+  :ensure t
   :hook (after-init . global-treesit-fold-indicators-mode)
   :init (setq treesit-fold-indicators-priority -1))
 
@@ -118,7 +118,7 @@
               ("C-M-i" . nil)))  ; Unbind to allow completion-at-point
 
 (use-package consult-flyspell
-  :ensure
+  :ensure t
   :defer t
   :after (consult flyspell))
 
@@ -148,14 +148,12 @@
   ;; Remove redundant flymake activation - Eglot does this automatically
   (add-hook 'eglot-managed-mode-hook #'eldoc-mode)
 
-  ;; Enable inlay hints for supported languages (Emacs 29+)
+  ;; Enable inlay hints for supported languages
+  ;; Note: In Emacs 30, ts-modes inherit from base modes, so we only list base modes
   (when (fboundp 'eglot-inlay-hints-mode)
     (add-hook 'eglot-managed-mode-hook
               (lambda ()
-                (when (member major-mode '(go-mode go-ts-mode
-						   rust-mode rust-ts-mode
-						   typescript-mode typescript-ts-mode
-						   python-mode python-ts-mode))
+                (when (member major-mode '(go-mode rust-mode typescript-mode python-mode))
                   (eglot-inlay-hints-mode 1)))))
 
   ;; Configure server-specific settings
@@ -173,14 +171,14 @@
   (fset #'jsonrpc--log-event #'ignore)) ; Disable JSON-RPC event logging
 
 (use-package consult-eglot
-  :ensure
+  :ensure t
   :defer t
   :after (consult eglot)
   :bind (:map eglot-mode-map
               ("C-M-." . consult-eglot-symbols)))
 
 (use-package consult-eglot-embark
-  :ensure
+  :ensure t
   :defer t
   :after (consult eglot embark))
 
@@ -204,7 +202,7 @@
   )
 
 (use-package direnv
-  :ensure
+  :ensure t
   :demand t
   ;; Direnv is guaranteed to be available via Nix (see nix/lib/runtime-deps.nix)
   :config
@@ -220,7 +218,7 @@
   (gdb-debuginfod-enable-setting t))
 
 (use-package dape
-  :ensure
+  :ensure t
   :defer t
   :commands (dape dape-breakpoint-toggle)
   :custom
@@ -234,7 +232,7 @@
     (add-hook 'dape-compile-hook 'kill-buffer)))
 
 (use-package wgrep
-  :ensure
+  :ensure t
   :defer t
   :custom
   (wgrep-auto-save-buffer t)
@@ -242,12 +240,12 @@
 
 ;; Major modes
 (use-package gnuplot
-  :ensure
+  :ensure t
   :mode ("\\.plt\\'" . gnuplot-mode))
 
 (use-package markdown-mode
   :after dash
-  :ensure
+  :ensure t
   :defer t
   :mode (("README\\.md\\'" . gfm-mode)
          ("\\.md\\'" . markdown-mode))
@@ -286,7 +284,7 @@
 (use-package cuda-mode)
 (use-package haskell-mode)
 (use-package diff-mode
-  :ensure
+  :ensure nil  ; Built-in
   :defer t
   :mode "\\.patch[0-9]*\\'")
 (use-package terraform-mode
@@ -304,25 +302,26 @@
   :mode "\\.adoc\\'")
 (use-package go-mode)
 (use-package nix-mode)
-(use-package nix-ts-mode :ensure :mode "\\.nix\\'")
+(use-package nix-ts-mode :ensure t :mode "\\.nix\\'")
 (use-package cmake-mode
-  :ensure
+  :ensure t
   :defer t
   :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
 (use-package mermaid-mode)
 (use-package yaml-mode
   :defer t
   )
-(use-package modern-cpp-font-lock :ensure
+(use-package modern-cpp-font-lock
+  :ensure t
   :hook (c++-mode . modern-c++-font-lock-mode))
 (use-package just-mode)
 (use-package demangle-mode
-  :ensure
+  :ensure t
   :hook asm-mode)
 (use-package sql-indent)
 
 (use-package web-mode
-  :ensure
+  :ensure t
   :mode (("\\.html?\\'" . web-mode)
          ("\\.phtml\\'" . web-mode)
          ("\\.tpl\\.php\\'" . web-mode)
@@ -348,13 +347,14 @@
 ;; Also disabled on Android for performance/compatibility
 (platform-unless (or platform-macos-p platform-android-p)
 		 (use-package vterm
-		   :ensure
+		   :ensure t
 		   :defer t
 		   :commands (vterm vterm-other-window)
 		   :custom
 		   (vterm-always-compile-module t)))
 
 (use-package editorconfig
+  :ensure nil  ; Built-in since Emacs 30
   :defer t
   :diminish
   :hook (prog-mode . editorconfig-mode))
