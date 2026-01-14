@@ -16,7 +16,7 @@
   (scroll-bar-mode -1))
 
 (use-package modus-themes
-  :ensure
+  :ensure t
   :custom
   (modus-themes-italic-constructs t)
   (modus-themes-bold-constructs nil)
@@ -28,7 +28,7 @@
   )
 
 (use-package auto-dark
-  :ensure
+  :ensure t
   :diminish
   :after modus-themes
   :demand t
@@ -44,7 +44,7 @@
 (use-package diminish)
 
 (use-package which-key
-  :ensure
+  :ensure nil  ; Built-in since Emacs 30
   :diminish
   :hook (after-init . which-key-mode))
 
@@ -57,7 +57,7 @@
           (lambda () (setq-local global-hl-line-mode nil)))))
 
 (use-package rainbow-delimiters
-  :ensure
+  :ensure t
   :hook((lisp-mode emacs-lisp-mode) . rainbow-delimiters-mode))
 
 (use-package calendar
@@ -72,7 +72,7 @@
                      'font-lock-face 'calendar-iso-week-face)))
 
 (use-package breadcrumb
-  :ensure
+  :ensure t
   :hook (prog-mode . breadcrumb-mode))
 
 (use-package nerd-icons)
@@ -83,18 +83,18 @@
   (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
 
 (use-package nerd-icons-ibuffer
-  :ensure
+  :ensure t
   :after nerd-icons
   :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
 
 (use-package nerd-icons-dired
-  :ensure
+  :ensure t
   :after nerd-icons
   :hook
   (dired-mode . nerd-icons-dired-mode))
 
 (use-package nerd-icons-completion
-  :ensure
+  :ensure t
   :after marginalia nerd-icons
   :demand t
   :config
@@ -102,7 +102,7 @@
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
 (use-package hl-todo
-  :ensure
+  :ensure t
   :hook (prog-mode . hl-todo-mode)
   :config
   (setq
@@ -151,7 +151,7 @@
                   (pixel-scroll-precision-mode 1))))))
 
 (use-package emojify
-  :ensure
+  :ensure t
   :defer t
   :custom
   (emojify-inhibit-major-modes '(dired-mode
@@ -176,8 +176,7 @@
   )
 
 (use-package kkp
-  :ensure
-  :init
+  :ensure t
   :config
   (global-kkp-mode +1))
 
