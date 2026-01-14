@@ -11,7 +11,7 @@
   (help-at-pt-display-when-idle t)) ; Display messages when idle, without prompting
 
 (use-package helpful
-  :ensure
+  :ensure t
   :diminish
   :bind
   (("C-h f" . #'helpful-callable)
@@ -28,7 +28,7 @@
   (apropos-do-all t))
 
 (use-package dash-docs
-  :ensure
+  :ensure t
   :defer t
   :defines (dash-docs-docsets dash-docs-docsets-path)
   :custom
@@ -49,7 +49,7 @@
                 (lambda () (setq-local dash-docs-docsets docsets))))))
 
 (use-package consult-dash
-  :ensure
+  :ensure t
   :defer t
   :after consult
   )

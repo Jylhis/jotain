@@ -26,35 +26,35 @@
          ("C-c c" . org-capture)))
 
 (use-package org-appear
-  :ensure
+  :ensure t
   :hook
   (org-mode . org-appear-mode)
   :after org)
 
 (use-package org-modern
-  :ensure
+  :ensure t
   :after org
   :hook
   (org-mode . global-org-modern-mode))
 
 ;; Org exporters
 (use-package ox-slack
-  :ensure
+  :ensure t
   :after org
   :defer t)
 
 (use-package ox-jira
-  :ensure
+  :ensure t
   :after org
   :defer t)
 
 (use-package ox-hugo
-  :ensure
+  :ensure t
   :after org
   :defer t)
 
 (use-package ox-gfm
-  :ensure
+  :ensure t
   :after org
   :defer t)
 

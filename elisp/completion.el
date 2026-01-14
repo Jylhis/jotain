@@ -6,7 +6,7 @@
 ;;; Code:
 
 (use-package vertico
-  :ensure
+  :ensure t
   :demand t
   :config
   (vertico-mode))
@@ -50,7 +50,7 @@
   (vertico-buffer-display-action '(display-buffer-reuse-window)))
 
 (use-package corfu
-  :ensure
+  :ensure t
   :demand t
   :config
   (global-corfu-mode)
@@ -58,7 +58,7 @@
   (corfu-history-mode))
 
 (use-package kind-icon
-  :ensure
+  :ensure t
   :after corfu
   :custom
   (kind-icon-default-face 'corfu-default)  ; Match corfu's face
@@ -69,7 +69,7 @@
   (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
 
 (use-package cape
-  :ensure
+  :ensure t
   :demand t
   :custom
   ;; Improve file path completion behavior
@@ -90,7 +90,7 @@
   )
 
 (use-package consult
-  :ensure
+  :ensure t
   :hook (completion-list-mode . consult-preview-at-point-mode)
   :bind (;; C-c bindings in `mode-specific-map'
          ("C-c M-x" . consult-mode-command)
@@ -149,13 +149,14 @@
   :init
   ;; Use Consult to select xref locations with preview
   (setq xref-show-xrefs-function #'consult-xref
-        xref-show-definitions-function #'consult-xref))
-
+        xref-show-definitions-function #'consult-xref)
+  ;; Emacs 30: Sort completions by minibuffer history
+  (setq completions-sort 'historical))
 
 ;; prescient?
 ;; https://github.com/Takishima/emacs-config/blob/main/.emacs_lisp/init-emacs.el#L253C14-L253C31
 (use-package orderless
-  :ensure
+  :ensure t
   :custom
   (completion-styles '(orderless partial-completion flex basic))
   (completion-category-defaults nil)
@@ -166,13 +167,13 @@
                                    (project-file (styles partial-completion orderless)))))
 
 (use-package marginalia
-  :ensure
+  :ensure t
   :demand t
   :config
   (marginalia-mode))
 
 (use-package embark
-  :ensure
+  :ensure t
   :bind
   (("C-." . embark-act)
    ("C-;" . embark-dwim)
@@ -187,14 +188,14 @@
                  (window-parameters (mode-line-format . none)))))
 
 (use-package embark-consult
-  :ensure
+  :ensure t
   :after (embark consult)
   :hook (embark-collect-mode . consult-preview-at-point-mode)
   :bind (:map minibuffer-mode-map
               ("C-c C-o" . embark-export)))
 
 (use-package avy
-  :ensure
+  :ensure t
   :bind (
          ("M-g c"   . avy-goto-char)
          ("M-g l" . avy-goto-line)
@@ -202,7 +203,7 @@
   :custom (avy-all-windows 'all-frames))
 
 (use-package zoxide
-  :ensure
+  :ensure t
   :bind
   ("M-g z" . zoxide-find-file)
   ("M-g M-z" . zoxide-find-file)

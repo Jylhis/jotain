@@ -6,7 +6,7 @@
 ;;; Code:
 
 (use-package magit
-  :ensure
+  :ensure t
   :bind (("C-c g" . magit-status))
   :custom
   (magit-diff-refine-hunk t "Show word-granularity differences within diff hunks")
@@ -15,18 +15,18 @@
   (magit-diff-context-lines 5 "Show more context lines for better understanding"))
 
 (use-package magit-todos
-  :ensure
+  :ensure t
   :after magit
   :demand t
   :config
   (magit-todos-mode 1))
 
 (use-package gited
-  :ensure
+  :ensure t
   :after magit)
 
 (use-package diff-hl
-  :ensure
+  :ensure t
   :after magit
   :demand t
   :custom
