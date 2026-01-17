@@ -6,6 +6,7 @@ let
     ./.github
     ./.gitignore
     ./CLAUDE.md
+    ./LLM.md
     ./default.nix
     ./flake.lock
     ./flake.nix
