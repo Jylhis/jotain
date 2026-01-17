@@ -143,9 +143,6 @@ let
     # Go
     pkgs.gopls # Official Go LSP server
 
-    # Bash
-    pkgs.nodePackages.bash-language-server
-
     # Python (optional - uncomment if using Python development)
     # pkgs.python3Packages.python-lsp-server
     # pkgs.pyright  # Microsoft's Python LSP (alternative)
