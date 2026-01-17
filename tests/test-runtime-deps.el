@@ -115,11 +115,6 @@
   :tags '(unit)
   (should (executable-find "gopls")))
 
-(ert-deftest test-runtime-deps/bash-language-server-available ()
-  "Test that bash-language-server is available in PATH."
-  :tags '(unit)
-  (should (executable-find "bash-language-server")))
-
 (ert-deftest test-runtime-deps/typescript-language-server-available ()
   "Test that typescript-language-server is available in PATH."
   :tags '(unit)

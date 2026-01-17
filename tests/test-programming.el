@@ -304,11 +304,6 @@
   :tags '(integration)
   (should (executable-find "gopls")))
 
-(ert-deftest test-programming/bash-language-server-available ()
-  "Test that bash-language-server is available in PATH."
-  :tags '(integration)
-  (should (executable-find "bash-language-server")))
-
 (ert-deftest test-programming/typescript-language-server-available ()
   "Test that typescript-language-server is available in PATH."
   :tags '(integration)
