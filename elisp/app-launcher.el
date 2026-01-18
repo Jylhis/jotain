@@ -35,6 +35,7 @@
 
 (require 'xdg)
 (require 'cl-seq)
+(require 'seq)
 
 (defcustom app-launcher-apps-directories
   (mapcar (lambda (dir) (expand-file-name "applications" dir))
@@ -154,16 +155,18 @@ This function always returns its elements in a stable order."
   (let ((str (cdr (assq 'comment (gethash choice app-launcher--cache)))))
     (when str (concat " - " (propertize str 'face 'completions-annotations)))))
 
+(defun app-launcher--format-command (exec)
+  "Format the exec command by removing ignored arguments."
+  (mapconcat #'identity
+             (seq-remove (lambda (chunk)
+                           (member chunk '("%U" "%F" "%u" "%f")))
+                         (split-string exec " "))
+             " "))
+
 (defun app-launcher--action-function-default (selected)
   "Default function used to run the selected application."
   (let* ((exec (cdr (assq 'exec (gethash selected app-launcher--cache))))
-	 (command (let (result)
-		    (dolist (chunk (split-string exec " ") result)
-		      (unless (or (equal chunk "%U")
-				  (equal chunk "%F")
-				  (equal chunk "%u")
-				  (equal chunk "%f"))
-			(setq result (concat result chunk " ")))))))
+	 (command (app-launcher--format-command exec)))
     (call-process-shell-command command nil 0 nil)))
 
 ;;;###autoload
