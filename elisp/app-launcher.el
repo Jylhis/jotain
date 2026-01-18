@@ -51,6 +51,56 @@
   "Define the function that is used to run the selected application."
   :type 'function)
 
+(defconst app-launcher--awk-script
+  "BEGIN { FS=\"=\" }
+FNR==1 {
+    if (NR > 1) {
+        if (is_app && name != \"\" && exec_cmd != \"\") {
+             printf \"%s\\0%s\\0%s\\0%s\\0%s\\0%s\\0\", last_file, name, exec_cmd, comment, visible, try_exec
+        } else if (last_file != \"\") {
+             if (has_entry_group == 0) {
+                 printf \"%s\\0ERROR\\0no [Desktop Entry] group\\0\\0\\0\\0\", last_file
+             } else if (name == \"\") {
+                 printf \"%s\\0ERROR\\0no Name\\0\\0\\0\\0\", last_file
+             }
+        }
+    }
+    last_file = FILENAME
+    in_entry = 0
+    is_app = 0
+    has_entry_group = 0
+    name = \"\"
+    exec_cmd = \"\"
+    comment = \"\"
+    visible = \"t\"
+    try_exec = \"\"
+}
+
+/^ *\\[Desktop Entry\\] *$/ { in_entry = 1; has_entry_group = 1; next }
+/^ *\\[/ { in_entry = 0 }
+
+in_entry {
+    if (/^ *Type *= *Application *$/) { is_app = 1 }
+    else if (/^ *Name *=/) { sub(/^ *Name *= */, \"\"); name = $0 }
+    else if (/^ *Exec *=/) { sub(/^ *Exec *= */, \"\"); exec_cmd = $0 }
+    else if (/^ *Comment *=/) { sub(/^ *Comment *= */, \"\"); comment = $0 }
+    else if (/^ *(Hidden|NoDisplay) *= *(true|1) *$/) { visible = \"nil\" }
+    else if (/^ *TryExec *=/) { sub(/^ *TryExec *= */, \"\"); try_exec = $0 }
+}
+
+END {
+    if (is_app && name != \"\" && exec_cmd != \"\") {
+         printf \"%s\\0%s\\0%s\\0%s\\0%s\\0%s\\0\", last_file, name, exec_cmd, comment, visible, try_exec
+    } else if (last_file != \"\") {
+         if (has_entry_group == 0) {
+             printf \"%s\\0ERROR\\0no [Desktop Entry] group\\0\\0\\0\\0\", last_file
+         } else if (name == \"\") {
+             printf \"%s\\0ERROR\\0no Name\\0\\0\\0\\0\", last_file
+         }
+    }
+}"
+  "Awk script to parse .desktop files.")
+
 (defvar app-launcher--cache nil
   "Cache of desktop files data.")
 
@@ -78,60 +128,35 @@ This function always returns its elements in a stable order."
 
 (defun app-launcher-parse-files (files)
   "Parse the .desktop files to return usable informations."
-  (let ((hash (make-hash-table :test #'equal)))
-    (dolist (entry files hash)
-      (let ((file (cdr entry)))
-	(with-temp-buffer
-	  (insert-file-contents file)
-	  (goto-char (point-min))
-	  (let ((start (re-search-forward "^\\[Desktop Entry\\] *$" nil t))
-		(end (re-search-forward "^\\[" nil t))
-		(visible t)
-		name comment exec)
-	    (catch 'break
-	      (unless start
-		(message "Warning: File %s has no [Desktop Entry] group" file)
-		(throw 'break nil))
-
-	      (goto-char start)
-	      (when (re-search-forward "^\\(Hidden\\|NoDisplay\\) *= *\\(1\\|true\\) *$" end t)
-		(setq visible nil))
-	      (setq name (match-string 1))
-
-	      (goto-char start)
-	      (unless (re-search-forward "^Type *= *Application *$" end t)
-		(throw 'break nil))
-	      (setq name (match-string 1))
-
-	      (goto-char start)
-	      (unless (re-search-forward "^Name *= *\\(.+\\)$" end t)
-		(push file counsel-linux-apps-faulty)
-		(message "Warning: File %s has no Name" file)
-		(throw 'break nil))
-	      (setq name (match-string 1))
-
-	      (goto-char start)
-	      (when (re-search-forward "^Comment *= *\\(.+\\)$" end t)
-		(setq comment (match-string 1)))
-
-	      (goto-char start)
-	      (unless (re-search-forward "^Exec *= *\\(.+\\)$" end t)
-		;; Don't warn because this can technically be a valid desktop file.
-		(throw 'break nil))
-	      (setq exec (match-string 1))
-
-	      (goto-char start)
-	      (when (re-search-forward "^TryExec *= *\\(.+\\)$" end t)
-		(let ((try-exec (match-string 1)))
-		  (unless (locate-file try-exec exec-path nil #'file-executable-p)
-		    (throw 'break nil))))
-
-	      (puthash name
-		       (list (cons 'file file)
-			     (cons 'exec exec)
-			     (cons 'comment comment)
-			     (cons 'visible visible))
-		       hash))))))))
+  (let ((hash (make-hash-table :test #'equal))
+        (file-list (mapcar #'cdr files)))
+    (when file-list
+      (with-temp-buffer
+        (mapc (lambda (f) (insert (expand-file-name f) "\0")) file-list)
+        (call-process-region (point-min) (point-max) "xargs" t t nil "-0" "awk" app-launcher--awk-script)
+        (goto-char (point-min))
+        (let (file name exec comment visible try-exec)
+          (while (not (eobp))
+            (setq file (buffer-substring-no-properties (point) (1- (search-forward "\0")))
+                  name (buffer-substring-no-properties (point) (1- (search-forward "\0")))
+                  exec (buffer-substring-no-properties (point) (1- (search-forward "\0")))
+                  comment (buffer-substring-no-properties (point) (1- (search-forward "\0")))
+                  visible (buffer-substring-no-properties (point) (1- (search-forward "\0")))
+                  try-exec (buffer-substring-no-properties (point) (1- (search-forward "\0"))))
+            (if (string= name "ERROR")
+                (progn
+                  (message "Warning: File %s has %s" file exec)
+                  (when (boundp 'counsel-linux-apps-faulty)
+                    (push file counsel-linux-apps-faulty)))
+              (when (or (string= try-exec "")
+                        (locate-file try-exec exec-path nil #'file-executable-p))
+                (puthash name
+                         (list (cons 'file file)
+                               (cons 'exec exec)
+                               (cons 'comment comment)
+                               (cons 'visible (string= visible "t")))
+                         hash)))))))
+    hash))
 
 (defun app-launcher-list-apps ()
   "Return list of all Linux .desktop applications."
