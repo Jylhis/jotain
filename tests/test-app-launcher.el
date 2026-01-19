@@ -3,6 +3,7 @@
 (require 'ert)
 (require 'app-launcher)
 (require 'cl-lib)
+(require 'subr-x)
 
 ;; Duplicate the legacy logic for benchmarking
 (defun app-launcher--format-command-legacy (exec)
