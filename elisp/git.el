@@ -15,7 +15,8 @@
   (magit-diff-context-lines 5 "Show more context lines for better understanding")
   :config
   ;; Show worktrees section in status buffer if multiple worktrees exist
-  (add-hook 'magit-status-sections-hook 'magit-insert-worktrees t))
+  (when (fboundp 'magit-insert-worktrees)
+    (add-hook 'magit-status-sections-hook 'magit-insert-worktrees t)))
 
 (use-package magit-todos
   :ensure t
