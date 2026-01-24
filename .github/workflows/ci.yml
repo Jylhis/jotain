@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Flake Check
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Free Disk Space
+        uses: wimpysworld/nothing-but-nix@main
+        with:
+          hatchet-protocol: 'cleave'
+
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@main
+
+      - name: FlakeHub Cache
+        uses: DeterminateSystems/flakehub-cache-action@main
+
+      - name: Check Flake
+        run: nix flake check --print-build-logs
+
+      - name: Publish to FlakeHub
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: DeterminateSystems/flakehub-push@main
+        with:
+          rolling: true
+          visibility: public
+
+  runtime-test:
+    name: Runtime Test (VM)
+    needs: check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'test-runtime')
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Free Disk Space
+        uses: wimpysworld/nothing-but-nix@main
+        with:
+          hatchet-protocol: 'cleave'
+
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@main
+        with:
+          extra-conf: |
+            system-features = kvm
+
+      - name: FlakeHub Cache
+        uses: DeterminateSystems/flakehub-cache-action@main
+
+      - name: Run Runtime Tests
+        env:
+          CI: 1
+        run: nix build .#checks.x86_64-linux.test-emacs-runtime --print-build-logs
