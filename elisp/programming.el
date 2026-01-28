@@ -62,21 +62,12 @@
                                          (_ 'default)))
                      (flymake-diagnostic-text diagnostic)))))))
 
-  ;; Show diagnostic after a short delay
-  (defvar-local j10s/flymake-diagnostic-timer nil)
-  (defun j10s/flymake-show-diagnostic-delayed ()
-    "Show diagnostic after a delay."
-    (when flymake-mode
-      (when j10s/flymake-diagnostic-timer
-        (cancel-timer j10s/flymake-diagnostic-timer))
-      (setq j10s/flymake-diagnostic-timer
-            (run-with-timer 0.5 nil #'j10s/flymake-show-diagnostic-at-point))))
-
-  (add-hook 'flymake-mode-hook
-            (lambda ()
-              (if flymake-mode
-                  (add-hook 'post-command-hook #'j10s/flymake-show-diagnostic-delayed nil t)
-                (remove-hook 'post-command-hook #'j10s/flymake-show-diagnostic-delayed t))))
+  ;; Show diagnostics using an idle timer (efficient)
+  (defvar j10s/flymake-idle-timer nil "Timer for showing flymake diagnostics.")
+  (when (timerp j10s/flymake-idle-timer)
+    (cancel-timer j10s/flymake-idle-timer))
+  (setq j10s/flymake-idle-timer
+        (run-with-idle-timer 0.5 t #'j10s/flymake-show-diagnostic-at-point))
 
   ;; Configure elisp-flymake-byte-compile to trust local configuration files
   (with-eval-after-load 'elisp-mode
