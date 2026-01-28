@@ -54,7 +54,7 @@
   :tags '(unit)
   (require 'flymake)
   (should (fboundp 'j10s/flymake-show-diagnostic-at-point))
-  (should (fboundp 'j10s/flymake-show-diagnostic-delayed))
+  (should (boundp 'j10s/flymake-idle-timer))
   (should (fboundp 'j10s/trust-local-elisp-files)))
 
 (ert-deftest test-programming/flymake-elisp-trust-config ()
