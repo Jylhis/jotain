@@ -316,7 +316,7 @@
   :mode "\\.csv\\'"
   :hook (csv-mode . csv-align-mode)
   :custom
-  (csv-separators '("," ";" "|" " " "\t")))
+  (csv-separators '("," ";" "|" "\t")))
 (use-package modern-cpp-font-lock
   :ensure t
   :hook (c++-mode . modern-c++-font-lock-mode))
