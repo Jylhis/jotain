@@ -198,6 +198,15 @@
   (when (locate-library "just-mode")
     (should (locate-library "just-mode"))))
 
+(ert-deftest test-programming/csv-mode-registered ()
+  "Test that csv-mode is registered for .csv files."
+  :tags '(unit)
+  (should (assoc "\\.csv\\'" auto-mode-alist))
+  (when (locate-library "csv-mode")
+    (require 'csv-mode)
+    (should (boundp 'csv-separators))
+    (should (member "," csv-separators))))
+
 ;;; C/C++ Configuration
 
 (ert-deftest test-programming/cc-mode-configured ()
