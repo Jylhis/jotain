@@ -64,10 +64,17 @@
 
   ;; Show diagnostics using an idle timer (efficient)
   (defvar j10s/flymake-idle-timer nil "Timer for showing flymake diagnostics.")
-  (when (timerp j10s/flymake-idle-timer)
-    (cancel-timer j10s/flymake-idle-timer))
-  (setq j10s/flymake-idle-timer
-        (run-with-idle-timer 0.5 t #'j10s/flymake-show-diagnostic-at-point))
+
+  (defun j10s/flymake-ensure-idle-timer ()
+    "Start the Flymake idle diagnostic timer if not already running."
+    (unless (timerp j10s/flymake-idle-timer)
+      (setq j10s/flymake-idle-timer
+            (run-with-idle-timer 0.5 t
+                                 (lambda ()
+                                   (when (bound-and-true-p flymake-mode)
+                                     (j10s/flymake-show-diagnostic-at-point)))))))
+
+  (add-hook 'flymake-mode-hook #'j10s/flymake-ensure-idle-timer)
 
   ;; Configure elisp-flymake-byte-compile to trust local configuration files
   (with-eval-after-load 'elisp-mode
