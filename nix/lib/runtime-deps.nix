@@ -51,38 +51,10 @@ let
   # - Emacs 29+ built-in treesit
   #
   # How to add new grammars:
-  # 1. Find the grammar in nixpkgs: nix search nixpkgs tree-sitter-grammars
-  # 2. Add to the list below: tree-sitter-grammars.tree-sitter-<language>
-  # 3. Grammar will be automatically available to treesit-auto
+  # We now use all available grammars from nixpkgs via pkgs.tree-sitter.allGrammars.
+  # No manual addition is needed.
 
-  treesitterGrammars = with pkgs.tree-sitter-grammars; [
-    # Core languages
-    tree-sitter-bash
-    tree-sitter-c
-    tree-sitter-cpp
-    tree-sitter-go
-    tree-sitter-gomod
-    tree-sitter-javascript
-    tree-sitter-json
-    tree-sitter-lua
-    tree-sitter-markdown
-    tree-sitter-nix
-    tree-sitter-python
-    tree-sitter-rust
-    tree-sitter-typescript
-    tree-sitter-yaml
-
-    # Web development
-    tree-sitter-tsx
-    tree-sitter-css
-    tree-sitter-html
-
-    # Additional languages (add as needed)
-    # tree-sitter-haskell
-    # tree-sitter-java
-    # tree-sitter-ruby
-    # tree-sitter-toml
-  ];
+  treesitterGrammars = pkgs.tree-sitter.allGrammars;
 
   # ============================================================================
   # FONTS
