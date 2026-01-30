@@ -40,6 +40,7 @@
 (require 'help)        ; Enhanced help system
 (require 'ai)          ; AI integrations
 (require 'systems)     ; System administration tools
+(require 'dashboard)   ; Startup dashboard
 
 ;; Load platform-specific configurations
 (require 'platforms)   ; General platform adaptations
