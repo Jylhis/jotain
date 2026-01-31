@@ -5,6 +5,8 @@
 
 ;;; Code:
 
+(require 'xdg)
+
 (use-package enlight
   :ensure t
   :custom
@@ -14,10 +16,10 @@
     (propertize "MENU" 'face 'highlight)
     "\n"
     (enlight-menu
-     '(("Org Mode"
+     `(("Org Mode"
         ("Org-Agenda (current day)" (org-agenda nil "a") "a"))
        ("Downloads"
-        ("Downloads folder" (dired "~/Downloads") "a"))
+        ("Downloads folder" (dired ,(or (xdg-user-dir "DOWNLOAD") "~/Downloads")) "d"))
        ("Other"
         ("Projects" project-switch-project "p")))))))
 
