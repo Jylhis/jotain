@@ -32,6 +32,7 @@
 (require 'core)        ; Core Emacs settings and built-ins
 (require 'fonts)       ; Font configuration and management
 (require 'ui)          ; UI and appearance
+(require 'dashboard)   ; Startup dashboard
 (require 'completion)  ; Modern completion framework
 (require 'programming) ; Programming and development tools
 (require 'per-project) ; Thing to help with project specific setups
