@@ -5,13 +5,27 @@
 
 ;;; Code:
 
+(defgroup j10s-ui nil
+  "Customization group for UI."
+  :group 'emacs)
+
+(defcustom j10s-theme-light 'modus-operandi-tinted
+  "Theme to use when system is in light mode or detection fails."
+  :type 'symbol
+  :group 'j10s-ui)
+
+(defcustom j10s-theme-dark 'modus-vivendi-tinted
+  "Theme to use when system is in dark mode."
+  :type 'symbol
+  :group 'j10s-ui)
+
 (use-package emacs
   :init
   ;; Trust all themes by default without prompting
   (setq custom-safe-themes t)
   ;; (load-theme 'leuven t)
   ;; (load-theme 'leuven-dark t t)
-  (load-theme 'modus-vivendi-tinted t)
+  (load-theme j10s-theme-light t)
   (tool-bar-mode -1)
   (scroll-bar-mode -1))
 
@@ -24,7 +38,7 @@
   (modus-themes-variable-pitch-ui nil)
   :bind ("C-c t" . modus-themes-toggle)
   :config
-  (setq modus-themes-to-toggle '(modus-operandi-tinted modus-vivendi-tinted))
+  (setq modus-themes-to-toggle `(,j10s-theme-light ,j10s-theme-dark))
   )
 
 (use-package auto-dark
@@ -32,9 +46,8 @@
   :diminish
   :after modus-themes
   :demand t
-  :custom
-  (auto-dark-themes '((modus-operandi-tinted) (modus-vivendi-tinted)))
   :config
+  (setq auto-dark-themes `((,j10s-theme-light) (,j10s-theme-dark)))
   (auto-dark-mode 1)
   (add-hook 'after-make-frame-functions
             (lambda (frame)
