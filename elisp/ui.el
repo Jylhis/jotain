@@ -5,13 +5,30 @@
 
 ;;; Code:
 
+(defgroup jylhis-ui nil
+  "Customization group for UI."
+  :group 'emacs)
+
+(defcustom jylhis-theme-light 'modus-operandi-tinted
+  "Theme to use when system is in light mode or detection fails."
+  :type 'symbol
+  :group 'jylhis-ui)
+
+(defcustom jylhis-theme-dark 'modus-vivendi-tinted
+  "Theme to use when system is in dark mode."
+  :type 'symbol
+  :group 'jylhis-ui)
+
 (use-package emacs
   :init
   ;; Trust all themes by default without prompting
   (setq custom-safe-themes t)
   ;; (load-theme 'leuven t)
   ;; (load-theme 'leuven-dark t t)
-  (load-theme 'modus-vivendi-tinted t)
+  (if (and (boundp 'system-uses-dark-theme)
+           system-uses-dark-theme)
+      (load-theme jylhis-theme-dark t)
+    (load-theme jylhis-theme-light t))
   (tool-bar-mode -1)
   (scroll-bar-mode -1))
 
@@ -24,7 +41,7 @@
   (modus-themes-variable-pitch-ui nil)
   :bind ("C-c t" . modus-themes-toggle)
   :config
-  (setq modus-themes-to-toggle '(modus-operandi-tinted modus-vivendi-tinted))
+  (setq modus-themes-to-toggle `(,jylhis-theme-light ,jylhis-theme-dark))
   )
 
 (use-package auto-dark
@@ -32,9 +49,8 @@
   :diminish
   :after modus-themes
   :demand t
-  :custom
-  (auto-dark-themes '((modus-operandi-tinted) (modus-vivendi-tinted)))
   :config
+  (setq auto-dark-themes `((,jylhis-theme-light) (,jylhis-theme-dark)))
   (auto-dark-mode 1)
   (add-hook 'after-make-frame-functions
             (lambda (frame)
