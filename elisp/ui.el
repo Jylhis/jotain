@@ -25,7 +25,10 @@
   (setq custom-safe-themes t)
   ;; (load-theme 'leuven t)
   ;; (load-theme 'leuven-dark t t)
-  (load-theme j10s-theme-light t)
+  (if (and (boundp 'system-uses-dark-theme)
+           system-uses-dark-theme)
+      (load-theme j10s-theme-dark t)
+    (load-theme j10s-theme-light t))
   (tool-bar-mode -1)
   (scroll-bar-mode -1))
 
