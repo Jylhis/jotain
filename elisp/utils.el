@@ -5,6 +5,7 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'ansi-color)
 
 ;;;###autoload
@@ -46,11 +47,11 @@ Otherwise, use `my/org-agenda-directories'."
   (let* ((directories (or directories my/org-agenda-directories))
          (org-files '()))
     ;; Collect org files from all directories that exist
-    (dolist (dir directories)
-      (let ((expanded-dir (expand-file-name dir)))
-        (when (file-exists-p expanded-dir)
-          (setq org-files (append org-files
-                                  (my/find-org-files-recursively expanded-dir))))))
+    (setq org-files (cl-mapcan (lambda (dir)
+                                 (let ((expanded-dir (expand-file-name dir)))
+                                   (when (file-exists-p expanded-dir)
+                                     (my/find-org-files-recursively expanded-dir))))
+                               directories))
     ;; Remove duplicates (in case of symlinks or overlapping paths)
     (setq org-files (delete-dups org-files))
     (when org-files
