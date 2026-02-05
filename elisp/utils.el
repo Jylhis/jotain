@@ -44,11 +44,13 @@ Each directory will be searched recursively for .org files."
 If DIRECTORIES is provided, search those directories.
 Otherwise, use `my/org-agenda-directories'."
   (let* ((directories (or directories my/org-agenda-directories))
-         (org-files '()))
+         (org-files '())
+         (valid-dir-count 0))
     ;; Collect org files from all directories that exist
     (dolist (dir directories)
       (let ((expanded-dir (expand-file-name dir)))
         (when (file-exists-p expanded-dir)
+          (setq valid-dir-count (1+ valid-dir-count))
           (setq org-files (append org-files
                                   (my/find-org-files-recursively expanded-dir))))))
     ;; Remove duplicates (in case of symlinks or overlapping paths)
@@ -57,7 +59,7 @@ Otherwise, use `my/org-agenda-directories'."
       (setq org-agenda-files org-files))
     (message "Updated org-agenda-files: %d files found across %d directories"
              (length org-files)
-             (length (seq-filter (lambda (d) (file-exists-p (expand-file-name d))) directories)))))
+             valid-dir-count)))
 
 (defun my/setup-org-agenda-files ()
   "Set up dynamic org agenda files updating."
