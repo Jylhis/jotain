@@ -6,6 +6,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'seq)
 (require 'ansi-color)
 
 ;;;###autoload
@@ -45,15 +46,14 @@ Each directory will be searched recursively for .org files."
 If DIRECTORIES is provided, search those directories.
 Otherwise, use `my/org-agenda-directories'."
   (let* ((directories (or directories my/org-agenda-directories))
-         (org-files (delete-dups
-                     (cl-mapcan (lambda (dir)
-                                  (my/find-org-files-recursively (expand-file-name dir)))
-                                directories))))
+         (expanded-dirs (mapcar #'expand-file-name directories))
+         (valid-dirs (seq-filter #'file-directory-p expanded-dirs))
+         (org-files (delete-dups (cl-mapcan #'my/find-org-files-recursively valid-dirs))))
     (when org-files
       (setq org-agenda-files org-files))
     (message "Updated org-agenda-files: %d files found across %d directories"
              (length org-files)
-             (length (seq-filter (lambda (d) (file-exists-p (expand-file-name d))) directories)))))
+             (length valid-dirs))))
 
 (defun my/setup-org-agenda-files ()
   "Set up dynamic org agenda files updating."
