@@ -55,7 +55,7 @@
   (require 'flymake)
   (should (fboundp 'j10s/flymake-show-diagnostic-at-point))
   (should (boundp 'j10s/flymake-idle-timer))
-  (should (fboundp 'j10s/flymake-ensure-idle-timer))
+  (should (fboundp 'j10s/flymake-manage-idle-timer))
   (should (fboundp 'j10s/flymake-cleanup-timer))
   (should (fboundp 'j10s/trust-local-elisp-files)))
 
