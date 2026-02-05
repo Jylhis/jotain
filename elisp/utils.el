@@ -51,8 +51,8 @@ Otherwise, use `my/org-agenda-directories'."
       (let ((expanded-dir (expand-file-name dir)))
         (when (file-exists-p expanded-dir)
           (setq valid-dir-count (1+ valid-dir-count))
-          (setq org-files (append org-files
-                                  (my/find-org-files-recursively expanded-dir))))))
+          (setq org-files (nconc org-files
+                                 (my/find-org-files-recursively expanded-dir))))))
     ;; Remove duplicates (in case of symlinks or overlapping paths)
     (setq org-files (delete-dups org-files))
     (when org-files
