@@ -45,15 +45,10 @@ Each directory will be searched recursively for .org files."
 If DIRECTORIES is provided, search those directories.
 Otherwise, use `my/org-agenda-directories'."
   (let* ((directories (or directories my/org-agenda-directories))
-         (org-files '()))
-    ;; Collect org files from all directories that exist
-    (setq org-files (cl-mapcan (lambda (dir)
-                                 (let ((expanded-dir (expand-file-name dir)))
-                                   (when (file-exists-p expanded-dir)
-                                     (my/find-org-files-recursively expanded-dir))))
-                               directories))
-    ;; Remove duplicates (in case of symlinks or overlapping paths)
-    (setq org-files (delete-dups org-files))
+         (org-files (delete-dups
+                     (cl-mapcan (lambda (dir)
+                                  (my/find-org-files-recursively (expand-file-name dir)))
+                                directories))))
     (when org-files
       (setq org-agenda-files org-files))
     (message "Updated org-agenda-files: %d files found across %d directories"
