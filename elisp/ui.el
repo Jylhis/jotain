@@ -32,17 +32,20 @@
   (tool-bar-mode -1)
   (scroll-bar-mode -1))
 
+(defun jylhis/toggle-theme ()
+  "Toggle between light and dark themes."
+  (interactive)
+  (if (eq (car custom-enabled-themes) jylhis-theme-light)
+      (progn
+        (disable-theme jylhis-theme-light)
+        (load-theme jylhis-theme-dark t))
+    (progn
+      (disable-theme jylhis-theme-dark)
+      (load-theme jylhis-theme-light t))))
+
 (use-package modus-themes
   :ensure t
-  :custom
-  (modus-themes-italic-constructs t)
-  (modus-themes-bold-constructs nil)
-  (modus-themes-mixed-fonts t)
-  (modus-themes-variable-pitch-ui nil)
-  :bind ("C-c t" . modus-themes-toggle)
-  :config
-  (setq modus-themes-to-toggle `(,jylhis-theme-light ,jylhis-theme-dark))
-  )
+  :bind ("C-c t" . jylhis/toggle-theme))
 
 (use-package auto-dark
   :ensure t
