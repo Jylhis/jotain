@@ -177,7 +177,9 @@
             (princ (format "Current font: %s\n" font))
           (princ "Font: (default)\n")))
       (when (display-graphic-p)
-        (princ (format "Available fonts: %d\n" (length (font-family-list)))))
+        (if (bound-and-true-p j10s-fonts--available-cache)
+            (princ (format "Available fonts: %d\n" (length j10s-fonts--available-cache)))
+          (princ "Available fonts: (uncached)\n")))
       (princ "\n=== Environment ===\n")
       (when platform-android-p
         (princ (format "EXTERNAL_STORAGE: %s\n" (or (getenv "EXTERNAL_STORAGE") "not set")))
