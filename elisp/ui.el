@@ -35,7 +35,7 @@
 (defun j10s/toggle-theme ()
   "Toggle between light and dark themes."
   (interactive)
-(if (memq j10s-theme-light custom-enabled-themes)
+  (if (eq (car custom-enabled-themes) j10s-theme-light)
       (progn
         (disable-theme j10s-theme-light)
         (load-theme j10s-theme-dark t))
