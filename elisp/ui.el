@@ -32,17 +32,20 @@
   (tool-bar-mode -1)
   (scroll-bar-mode -1))
 
+(defun j10s/toggle-theme ()
+  "Toggle between light and dark themes."
+  (interactive)
+  (if (eq (car custom-enabled-themes) j10s-theme-light)
+      (progn
+        (disable-theme j10s-theme-light)
+        (load-theme j10s-theme-dark t))
+    (progn
+      (disable-theme j10s-theme-dark)
+      (load-theme j10s-theme-light t))))
+
 (use-package modus-themes
   :ensure t
-  :custom
-  (modus-themes-italic-constructs t)
-  (modus-themes-bold-constructs nil)
-  (modus-themes-mixed-fonts t)
-  (modus-themes-variable-pitch-ui nil)
-  :bind ("C-c t" . modus-themes-toggle)
-  :config
-  (setq modus-themes-to-toggle `(,j10s-theme-light ,j10s-theme-dark))
-  )
+  :bind ("C-c t" . j10s/toggle-theme))
 
 (use-package auto-dark
   :ensure t
