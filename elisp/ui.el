@@ -15,7 +15,7 @@ Replaces :foreground nil with :foreground 'unspecified."
   (if (eq face 'font-lock-doc-markup-face)
       (let ((new-args (copy-sequence args)))
         (let ((tail new-args))
-          (while tail
+          (while (and tail (cdr tail))
             (when (and (eq (car tail) :foreground)
                        (null (cadr tail)))
               (setcar (cdr tail) 'unspecified))
