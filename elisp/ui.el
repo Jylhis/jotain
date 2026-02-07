@@ -35,7 +35,7 @@
 (defun jylhis/toggle-theme ()
   "Toggle between light and dark themes."
   (interactive)
-(if (memq jylhis-theme-light custom-enabled-themes)
+  (if (eq (car custom-enabled-themes) jylhis-theme-light)
       (progn
         (disable-theme jylhis-theme-light)
         (load-theme jylhis-theme-dark t))
