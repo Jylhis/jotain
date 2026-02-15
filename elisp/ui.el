@@ -9,6 +9,22 @@
   "Customization group for UI."
   :group 'emacs)
 
+(defun j10s/fix-font-lock-doc-markup-face (fn face frame &rest args)
+  "Workaround for invalid nil foreground in `font-lock-doc-markup-face'.
+Replaces :foreground nil with :foreground 'unspecified."
+  (if (eq face 'font-lock-doc-markup-face)
+      (let ((new-args (copy-sequence args)))
+        (let ((tail new-args))
+          (while (and tail (cdr tail))
+            (when (and (eq (car tail) :foreground)
+                       (null (cadr tail)))
+              (setcar (cdr tail) 'unspecified))
+            (setq tail (cddr tail))))
+        (apply fn face frame new-args))
+    (apply fn face frame args)))
+
+(advice-add 'set-face-attribute :around #'j10s/fix-font-lock-doc-markup-face)
+
 (defcustom j10s-theme-light 'modus-operandi-tinted
   "Theme to use when system is in light mode or detection fails."
   :type 'symbol
