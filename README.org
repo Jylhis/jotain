@@ -1,69 +1,144 @@
-#+title: Jotain
+#+title: Jotain: A Modern Emacs Configuration
 
-Modern Emacs configuration with built-in themes and minimal dependencies.
+* Introduction
 
-Requirements: Emacs 30.1+, Nix
+Jotain is a modern, modular Emacs configuration managed with Nix Flakes, emphasizing performance and reproducible development. It provides a complete development environment with LSP support, modern completion (Vertico/Corfu), Git integration (Magit), and sensible defaults.
+
+* Features
+
+- **Reproducible:** Managed by a Nix Flake for consistent development environments.
+- **Modular:** Configuration is split into logical modules for easy customization.
+- **Performant:** `early-init.el` is optimized for fast startup times.
+- **Integrated:** Comes with a home-manager module for easy installation and configuration.
+- **Comprehensive:** Includes a wide range of packages for development, writing, and more.
+- **Well-tested:** A comprehensive testing suite ensures the stability of the configuration.
 
 * Installation
 
-Add to your home-manager configuration:
+Add Jotain to your `flake.nix` and `home-manager` configuration:
 
 #+begin_src nix
 {
-  inputs.jotain.url = "github:Jylhis/jotain";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    home-manager.url = "github:nix-community/home-manager";
+    jotain.url = "github:Jylhis/jotain";
+  };
 
-  # In your home-manager configuration:
-  imports = [ inputs.jotain.homeModules.default ];
-
-  programs.jotain = {
-    enable = true;
-    # enableDaemon = true;        # Default: Emacs daemon with emacsclient
-    # includeRuntimeDeps = true;  # Default: LSP servers, fonts, CLI tools
+  outputs = { nixpkgs, home-manager, jotain, ... }: {
+    homeConfigurations."<your-username>" = home-manager.lib.homeManagerConfiguration {
+      pkgs = nixpkgs.legacyPackages.x86_64-linux;
+      modules = [
+        jotain.homeModules.default
+        {
+          programs.jotain.enable = true;
+        }
+      ];
+    };
   };
 }
 #+end_src
 
+* Usage
+
+** Daemon Management
+
+By default, Jotain runs Emacs as a systemd/launchd service.
+
+- *Check status:* `systemctl --user status emacs.service`
+- *Restart after config changes:* `systemctl --user restart emacs.service`
+- *View logs:* `journalctl --user -u emacs.service`
+- *Connect to running daemon:*
+  - `emacsclient -c` (New GUI frame)
+  - `emacsclient -t` (Terminal)
+
+** Core Keybindings
+
+| Key         | Action                                |
+|-------------+---------------------------------------|
+| =C-x g=       | Magit status                          |
+| =C-x p f=     | Project find file                     |
+| =C-x b=       | Switch buffer (consult)               |
+| =C-s=         | Search in buffer                      |
+| =M-.=         | Go to definition                      |
+| =M-,=         | Go back                               |
+| =C-c t=       | Toggle between light and dark themes  |
+| =C-x j=       | Toggle window split direction         |
+| =C-c u/r=   | Winner undo/redo window configurations|
+
+* Configuration
+
+** Home-manager Module Options
+
+- `programs.jotain.enable`: (boolean, default: `false`) Enable Jotain Emacs configuration.
+- `programs.jotain.enableDaemon`: (boolean, default: `true`) Run Emacs as a systemd/launchd service.
+- `programs.jotain.includeRuntimeDeps`: (boolean, default: `true`) Install runtime dependencies (LSP servers, CLI tools, fonts).
+- `programs.jotain.extraPackages`: (function, default: `epkgs: []`) Add extra Emacs packages.
+
+  #+begin_src nix
+  programs.jotain.extraPackages = epkgs: [
+    epkgs.pdf-tools
+    epkgs.org-roam
+  ];
+  #+end_src
+
+** User Customization
+
+You can add your own custom elisp code to `~/.config/emacs/custom.el`. This file is automatically loaded if it exists and will persist across rebuilds.
+
 * Development
 
+** Enter Development Environment
+
+To access all project-specific tools and dependencies, enter the Nix development shell:
+
 #+begin_src bash
-nix develop           # Enter development shell
-just test             # Run tests
-just build            # Build configuration
-just emacs-dev        # Test in isolated Emacs
+nix develop
 #+end_src
 
-See [[file:CLAUDE.md][CLAUDE.md]] for detailed development documentation.
+The environment is isolated, using a `.dev-home/` directory for Emacs's configuration files.
 
-* Core Keybindings
+** Development Commands
 
-** Navigation & Windows
-- =C-x j= - Toggle between horizontal/vertical window split
-- =C-c u/r= - Winner undo/redo window configurations
-- =C-x t t/k= - Create/close tabs (tab-bar-mode)
-- =C-x t n/p= - Navigate between tabs
+The `justfile` provides commands for common development tasks:
 
-** Files & Buffers  
-- =C-x C-f= - Find file (with vertico completion)
-- =C-x b= - Switch buffer (with consult)
-- =C-x p f= - Project find file
+#+begin_src bash
+just test-smoke       # Ultra-fast smoke tests (< 1 second)
+just test-fast        # Fast unit tests (< 5 seconds)
+just test             # Full ERT test suite
+just test-all         # ERT + NMT module tests (excludes VM)
+just build            # Build Emacs package
+just emacs-dev        # Run Emacs with project config (isolated, safe)
+#+end_src
 
-** Search & Replace
-- =C-s= - Search in buffer
-- =M-x consult-ripgrep= - Project-wide search
-- =M-.= / =M-,= - Go to/back from definition
+** Architecture
 
-** Git Integration
-- =C-x g= - Magit status
-- =C-c g= - Git commands
+- *elisp/*: Feature modules (core, ui, completion, programming, git, etc.)
+- *tests/*: ERT unit tests (test-*.el)
+- *nmt-tests/*: Nix module integration tests
+- *nix/lib/*: Runtime dependencies and helpers
+- *nix/modules/*: Home-manager and NixOS modules
 
-** Themes
-- =C-c t= - Toggle between light/dark modus themes
+** Adding Packages
 
-* Configuration Structure
+1. Add the package to the `epkgs` list in `default.nix`.
+2. Add a `use-package` configuration in the appropriate `elisp/*.el` file.
+3. Run `just test` to verify.
 
-- =init.el= - Main initialization
-- =early-init.el= - Performance optimizations
-- =elisp/*.el= - Feature modules (completion, git, ui, programming)
-- =default.nix= - Package definitions
-- =emacs.nix= - Emacs wrapper with runtime dependencies
-- =nix/lib/runtime-deps.nix= - LSP servers, CLI tools, fonts
+For runtime dependencies (LSP servers, CLI tools, fonts, tree-sitter grammars), add them to `nix/lib/runtime-deps.nix`.
+
+** Testing
+
+- *Smoke tests:* `:tags '(smoke critical)`
+- *Fast tests:* `:tags '(fast unit)`
+- *Unit tests:* `:tags '(unit)`
+- *Integration tests:* `:tags '(integration slow)`
+
+Tests are automatically loaded from `tests/test-all.el`.
+
+* Troubleshooting
+
+- *Emacs not finding LSP server:* Check if `includeRuntimeDeps = true` or install the server manually.
+- *Fonts not displaying correctly:* Ensure `fonts.fontconfig.enable = true` in your home-manager configuration.
+- *Daemon not starting:* Check the service status and logs.
+- *Configuration not applying:* Restart the daemon: `systemctl --user restart emacs.service`.

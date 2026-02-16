@@ -9,48 +9,41 @@
   "Customization group for UI."
   :group 'emacs)
 
-(defcustom jylhis-theme-light 'modus-operandi-tinted
+(defcustom jylhis-theme-light 'nord-light
   "Theme to use when system is in light mode or detection fails."
   :type 'symbol
   :group 'jylhis-ui)
 
-(defcustom jylhis-theme-dark 'modus-vivendi-tinted
+(defcustom jylhis-theme-dark 'nord
   "Theme to use when system is in dark mode."
   :type 'symbol
   :group 'jylhis-ui)
+
+(use-package nord-theme
+  :ensure t
+  :demand t
+  :bind (("C-c t" . nord-toggle-theme))
+  :config
+  (setq nord-disable-line-numbers-background t)
+  (setq nord-region-highlight 'snow)
+  (setq nord-uniform-mode-lines t))
 
 (use-package emacs
   :init
   ;; Trust all themes by default without prompting
   (setq custom-safe-themes t)
-  ;; (load-theme 'leuven t)
-  ;; (load-theme 'leuven-dark t t)
-  (if (and (boundp 'system-uses-dark-theme)
-           system-uses-dark-theme)
-      (load-theme jylhis-theme-dark t)
-    (load-theme jylhis-theme-light t))
+  (when (interactive-p)
+    (if (and (boundp 'system-uses-dark-theme)
+             system-uses-dark-theme)
+        (load-theme jylhis-theme-dark t)
+      (load-theme jylhis-theme-light t)))
   (tool-bar-mode -1)
   (scroll-bar-mode -1))
-
-(defun jylhis/toggle-theme ()
-  "Toggle between light and dark themes."
-  (interactive)
-  (if (eq (car custom-enabled-themes) jylhis-theme-light)
-      (progn
-        (disable-theme jylhis-theme-light)
-        (load-theme jylhis-theme-dark t))
-    (progn
-      (disable-theme jylhis-theme-dark)
-      (load-theme jylhis-theme-light t))))
-
-(use-package modus-themes
-  :ensure t
-  :bind ("C-c t" . jylhis/toggle-theme))
 
 (use-package auto-dark
   :ensure t
   :diminish
-  :after modus-themes
+  :after nord-theme
   :demand t
   :config
   (setq auto-dark-themes `((,jylhis-theme-light) (,jylhis-theme-dark)))
