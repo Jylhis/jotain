@@ -46,7 +46,7 @@
 (require 'platforms)   ; General platform adaptations
 (when platform-android-p (require 'android)) ; Enhanced Android support
 
-(require 'app-launchers)
+
 
 ;; Additional GC optimizations from Doom Emacs patterns
 ;; Trigger GC when idle for 5 seconds
