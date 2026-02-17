@@ -9,7 +9,7 @@
   "Customization group for UI."
   :group 'emacs)
 
-(defcustom jylhis-theme-light 'nord-light
+(defcustom jylhis-theme-light 'doom-nord-light
   "Theme to use when system is in light mode or detection fails."
   :type 'symbol
   :group 'jylhis-ui)
@@ -19,10 +19,12 @@
   :type 'symbol
   :group 'jylhis-ui)
 
+(use-package doom-themes
+  :ensure t)
+
 (use-package nord-theme
   :ensure t
   :demand t
-  :bind (("C-c t" . nord-toggle-theme))
   :config
   (setq nord-disable-line-numbers-background t)
   (setq nord-region-highlight 'snow)

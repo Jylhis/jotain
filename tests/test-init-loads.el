@@ -38,8 +38,8 @@
 (ert-deftest test-integration/all-config-modules-load ()
   "Test that all configuration modules can be loaded."
   :tags '(integration slow)
-  (let ((modules '(platform core fonts ui completion programming
-			    per-project writing git help ai systems platforms))
+  (let ((modules '(platform core fonts ui dashboard completion programming
+			    per-project writing git help systems platforms))
         (failed-modules nil))
     (dolist (module modules)
       (unless (require module nil t)
