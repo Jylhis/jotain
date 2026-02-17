@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, options, ... }:
 
 let
   cfg = config.programs.jotain;
@@ -69,7 +69,8 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf cfg.enable (lib.mkMerge [
+    {
     # Install Emacs via the programs.emacs module
     programs.emacs = {
       enable = true;
@@ -168,5 +169,9 @@ in
       (provide 'init)
       ;;; init.el ends here
     '';
-  };
+    }
+    (lib.optionalAttrs (options ? stylix) {
+      stylix.targets.emacs.enable = false;
+    })
+  ]);
 }
