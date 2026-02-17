@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, options, ... }:
 
 let
   cfg = config.programs.jotain;
@@ -108,6 +108,11 @@ in
     # fonts.fontconfig is Linux-only in home-manager; nix-darwin doesn't have it
     (lib.mkIf (cfg.includeRuntimeDeps && pkgs.stdenv.isLinux) {
       fonts.fontconfig.enable = true;
+    })
+
+    # Disable stylix's emacs target if stylix module is imported
+    (lib.optionalAttrs (options ? stylix) {
+      stylix.targets.emacs.enable = false;
     })
   ]);
 }
