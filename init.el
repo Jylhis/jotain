@@ -39,7 +39,6 @@
 (require 'writing)     ; Org-mode and documentation
 (require 'git)         ; Git and version control
 (require 'help)        ; Enhanced help system
-(require 'ai)          ; AI integrations
 (require 'systems)     ; System administration tools
 
 ;; Load platform-specific configurations
