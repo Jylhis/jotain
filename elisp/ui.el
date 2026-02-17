@@ -14,7 +14,7 @@
   :type 'symbol
   :group 'jylhis-ui)
 
-(defcustom jylhis-theme-dark 'nord
+(defcustom jylhis-theme-dark 'doom-nord
   "Theme to use when system is in dark mode."
   :type 'symbol
   :group 'jylhis-ui)
@@ -22,13 +22,13 @@
 (use-package doom-themes
   :ensure t)
 
-(use-package nord-theme
-  :ensure t
-  :demand t
-  :config
-  (setq nord-disable-line-numbers-background t)
-  (setq nord-region-highlight 'snow)
-  (setq nord-uniform-mode-lines t))
+;; (use-package nord-theme
+;;   :ensure t
+;;   :demand t
+;;   :config
+;;   (setq nord-disable-line-numbers-background t)
+;;   (setq nord-region-highlight 'snow)
+;;   (setq nord-uniform-mode-lines t))
 
 (use-package emacs
   :init
