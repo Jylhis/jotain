@@ -80,9 +80,6 @@ let
     "project" = null; # Built-in to Emacs 30+
     "diff-mode" = null; # Built-in to Emacs
     "xt-mouse" = null; # Built-in to Emacs
-
-    # Local libraries (exclude from installation)
-    "app-launcher" = null; # Local file in elisp/app-launcher.el
   };
 
   # Map elisp package name to nixpkgs name
