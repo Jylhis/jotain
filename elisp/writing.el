@@ -88,8 +88,8 @@
   (set-face-attribute 'org-drawer nil :height 0.9 :slant 'italic))
 
 ;; Also update fonts.el serif font references
-(when (facep 'j10s-fonts-serif)
-  (set-face-attribute 'j10s-fonts-serif nil :family "Source Serif Pro"))
+(when (facep 'jotain-fonts-serif)
+  (set-face-attribute 'jotain-fonts-serif nil :family "Source Serif Pro"))
 
 (provide 'writing)
 ;;; writing.el ends here

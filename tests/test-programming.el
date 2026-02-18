@@ -53,18 +53,18 @@
   "Test that custom flymake functions are defined."
   :tags '(unit)
   (require 'flymake)
-  (should (fboundp 'j10s/flymake-show-diagnostic-at-point))
-  (should (fboundp 'j10s/flymake-show-diagnostic-delayed))
-  (should (fboundp 'j10s/trust-local-elisp-files)))
+  (should (fboundp 'jotain/flymake-show-diagnostic-at-point))
+  (should (fboundp 'jotain/flymake-show-diagnostic-delayed))
+  (should (fboundp 'jotain/trust-local-elisp-files)))
 
 (ert-deftest test-programming/flymake-elisp-trust-config ()
   "Test that elisp flymake trusts local configuration files."
   :tags '(unit)
   (require 'flymake)
-  (should (fboundp 'j10s/trust-local-elisp-files))
+  (should (fboundp 'jotain/trust-local-elisp-files))
   ;; Function should be added to emacs-lisp-mode-hook
   (with-eval-after-load 'elisp-mode
-    (should (member 'j10s/trust-local-elisp-files
+    (should (member 'jotain/trust-local-elisp-files
                     (bound-and-true-p emacs-lisp-mode-hook)))))
 
 ;;; Eglot (LSP) Configuration

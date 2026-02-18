@@ -82,16 +82,16 @@ let
     pkgs.hack-font
 
     # UI and variable-pitch fonts
-    # Used by: elisp/fonts.el j10s-fonts-variable-family
+    # Used by: elisp/fonts.el jotain-fonts-variable-family
     pkgs.inter # Modern UI font (primary)
 
     # Serif fonts for formal writing
-    # Used by: elisp/fonts.el j10s-fonts-serif-family, elisp/writing.el
+    # Used by: elisp/fonts.el jotain-fonts-serif-family, elisp/writing.el
     pkgs.source-serif-pro
     pkgs.liberation_ttf # Contains Liberation Serif
 
     # Emoji support
-    # Used by: elisp/fonts.el j10s-fonts-setup-performance
+    # Used by: elisp/fonts.el jotain-fonts-setup-performance
     pkgs.noto-fonts-color-emoji
   ];
 
