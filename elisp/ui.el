@@ -5,44 +5,57 @@
 
 ;;; Code:
 
-(defgroup jylhis-ui nil
+(defgroup jotain-ui nil
   "Customization group for UI."
   :group 'emacs)
 
-(defcustom jylhis-theme-light 'doom-nord-light
+(defcustom jotain-theme-light 'doom-nord-light
   "Theme to use when system is in light mode or detection fails."
   :type 'symbol
-  :group 'jylhis-ui)
+  :group 'jotain-ui)
 
-(defcustom jylhis-theme-dark 'nord
+(defcustom jotain-theme-dark 'nord
   "Theme to use when system is in dark mode."
   :type 'symbol
-  :group 'jylhis-ui)
+  :group 'jotain-ui)
 
 (use-package doom-themes
-  :ensure t)
+  :ensure t
+  :demand t)
 
 (use-package nord-theme
-  :ensure t)
+  :ensure t
+  :demand t)
+
+(defun jotain-ui-apply-theme (&optional _frame)
+  "Apply the configured themes.
+If FRAME is non-nil, apply it to that frame."
+  (load-theme jotain-theme-light t t)
+  (load-theme jotain-theme-dark t))
 
 (use-package emacs
   :init
   ;; Trust all themes by default without prompting
   (setq custom-safe-themes t)
-  (load-theme jylhis-theme-light t t)
-  (load-theme jylhis-theme-dark t)
+
+  ;; In daemon mode, themes must be loaded after a frame is created
+  (if (daemonp)
+      (add-hook 'server-after-make-frame-hook #'jotain-ui-apply-theme)
+    (jotain-ui-apply-theme))
+
   (tool-bar-mode -1)
   (scroll-bar-mode -1))
 
 (use-package auto-dark
-  :ensure
+  :ensure t
+  :demand t
   :diminish
   :bind ("C-c t" . auto-dark-toggle-appearance)
   :after nord-theme doom-themes
   :custom
-  (auto-dark-themes `((,jylhis-theme-light) (,jylhis-theme-dark)))
-  :init (auto-dark-mode)
+  (auto-dark-themes `((,jotain-theme-light) (,jotain-theme-dark)))
   :config
+  (auto-dark-mode 1)
   (add-hook 'after-make-frame-functions
             (lambda (frame)
               (when (display-graphic-p frame)
