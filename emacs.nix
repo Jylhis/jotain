@@ -13,6 +13,7 @@ let
   corePackages = epkgs: with epkgs; [
     use-package
     no-littering
+    jotain-modules
   ];
 
   # Get packages from elisp directory if it exists

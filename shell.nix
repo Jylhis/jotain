@@ -29,6 +29,10 @@ let
     export JOTAIN_ELISP_DIR="$PROJECT_ROOT/elisp"
     export JOTAIN_CLI_DIR="$PROJECT_ROOT/cli"
 
+    # Prepend local elisp so local files shadow the Nix-built jotain-modules
+    EMACSLOADPATH="$PROJECT_ROOT/elisp:''${EMACSLOADPATH:-}"
+    export EMACSLOADPATH
+
     # Isolated user directory
     export JOTAIN_DEV_HOME="$PROJECT_ROOT/.dev-home"
     mkdir -p "$JOTAIN_DEV_HOME"
@@ -75,6 +79,10 @@ let
     export JOTAIN_DEV_MODE=1
     export JOTAIN_ROOT="$PROJECT_ROOT"
     export JOTAIN_ELISP_DIR="$PROJECT_ROOT/elisp"
+
+    # Prepend local elisp so local files shadow the Nix-built jotain-modules
+    EMACSLOADPATH="$PROJECT_ROOT/elisp:''${EMACSLOADPATH:-}"
+    export EMACSLOADPATH
 
     # Isolated user directory
     export JOTAIN_DEV_HOME="$PROJECT_ROOT/.dev-home"
