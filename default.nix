@@ -36,8 +36,10 @@ stdenv.mkDerivation {
       cp -r elisp/* $out/share/emacs/site-lisp/jotain/
     fi
 
-    # Install init files
+    # Install init files (substitute Nix store paths)
     cp init.el $out/share/jotain/
+    substituteInPlace $out/share/jotain/init.el \
+      --replace-fail '@sitelisp@' "$out/share/emacs/site-lisp/jotain"
     cp early-init.el $out/share/jotain/
 
     # Install CLI if it exists
