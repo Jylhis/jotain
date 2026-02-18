@@ -1,4 +1,4 @@
-;;; init.el --- Emacs configuration file -*- lexical-binding: t; -*-
+;;; init.el --- Jotain Emacs configuration (Nix deployment) -*- lexical-binding: t; -*-
 
 ;; Author: Markus Jylhänkangas <markus@jylhis.com>
 ;; URL: https://github.com/Jylhis/jotain
@@ -10,9 +10,8 @@
 ;; Configuration is split into logical modules in the elisp/ directory.
 
 ;;; Code:
-
-;; Add config directory to load path
-(add-to-list 'load-path (expand-file-name "elisp" user-emacs-directory))
+;; Add Jotain elisp directory to load path
+(add-to-list 'load-path "@sitelisp@")
 
 ;; Load platform detection first
 (require 'platform)
@@ -44,8 +43,6 @@
 ;; Load platform-specific configurations
 (require 'platforms)   ; General platform adaptations
 (when platform-android-p (require 'android)) ; Enhanced Android support
-
-
 
 ;; Additional GC optimizations from Doom Emacs patterns
 ;; Trigger GC when idle for 5 seconds
