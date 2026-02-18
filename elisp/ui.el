@@ -14,7 +14,7 @@
   :type 'symbol
   :group 'j10s-ui)
 
-(defcustom j10s-theme-dark 'doom-nord
+(defcustom j10s-theme-dark 'nord
   "Theme to use when system is in dark mode."
   :type 'symbol
   :group 'j10s-ui)
@@ -22,34 +22,27 @@
 (use-package doom-themes
   :ensure t)
 
-;; (use-package nord-theme
-;;   :ensure t
-;;   :demand t
-;;   :config
-;;   (setq nord-disable-line-numbers-background t)
-;;   (setq nord-region-highlight 'snow)
-;;   (setq nord-uniform-mode-lines t))
+(use-package nord-theme
+  :ensure t)
 
 (use-package emacs
   :init
   ;; Trust all themes by default without prompting
   (setq custom-safe-themes t)
-  (when (interactive-p)
-    (if (and (boundp 'system-uses-dark-theme)
-             system-uses-dark-theme)
-        (load-theme j10s-theme-dark t)
-      (load-theme j10s-theme-light t)))
+  (load-theme j10s-theme-light t t)
+  (load-theme j10s-theme-dark t)
   (tool-bar-mode -1)
   (scroll-bar-mode -1))
 
 (use-package auto-dark
-  :ensure t
+  :ensure
   :diminish
-  :after nord-theme
-  :demand t
+  :bind ("C-c t" . auto-dark-toggle-appearance)
+  :after nord-theme doom-themes
+  :custom
+  (auto-dark-themes `((,j10s-theme-light) (,j10s-theme-dark)))
+  :init (auto-dark-mode)
   :config
-  (setq auto-dark-themes `((,j10s-theme-light) (,j10s-theme-dark)))
-  (auto-dark-mode 1)
   (add-hook 'after-make-frame-functions
             (lambda (frame)
               (when (display-graphic-p frame)

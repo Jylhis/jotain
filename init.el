@@ -10,8 +10,6 @@
 ;; Configuration is split into logical modules in the elisp/ directory.
 
 ;;; Code:
-;; Add Jotain elisp directory to load path
-(add-to-list 'load-path "@sitelisp@")
 
 ;; Load platform detection first
 (require 'platform)
