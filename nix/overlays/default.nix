@@ -8,11 +8,16 @@ final: prev: {
   # Add jotain Emacs package (Emacs with all dependencies)
   jotainEmacs = final.callPackage ../../emacs.nix { devMode = false; };
 
-  # Custom Emacs package overrides can go here
+  # Custom Emacs package overrides
   emacsPackagesFor = emacs: (prev.emacsPackagesFor emacs).overrideScope (efinal: esuper: {
-    # Example: Override a package
-    # magit = esuper.magit.overrideAttrs (old: {
-    #   # customizations
-    # });
+    # Jotain elisp modules as a proper Emacs package
+    jotain-modules = efinal.trivialBuild {
+      pname = "jotain-modules";
+      version = "0.1.0";
+      src = ../../elisp;
+      # Skip byte-compilation: android.el requires platform.el but comes
+      # first alphabetically. Native compilation will JIT-compile at runtime.
+      buildPhase = ":";
+    };
   });
 }
