@@ -90,13 +90,20 @@
   (should (executable-find "direnv")))
 
 (ert-deftest test-runtime-deps/mermaid-available ()
-  "Test that mermaid-cli (mmdc) is available in PATH."
+  "Test that mermaid-cli is available in PATH."
   :tags '(fast unit)
-  (should (executable-find "mmdc")))
+  (let ((found (or (executable-find "mmdc")
+                   (executable-find "mermaid-cli")
+                   (executable-find "mermaid"))))
+    (message "Mermaid CLI found at: %s" found)
+    ;; Debug PATH
+    (unless found
+      (message "PATH: %s" (getenv "PATH"))
+      (message "exec-path: %s" exec-path))
+    (should found)))
 
 (ert-deftest test-runtime-deps/cli-tools-functional ()
   "Test that CLI tools can actually execute."
-  :tags '(unit)
   ;; Test ripgrep
   (when (executable-find "rg")
     (should (= 0 (call-process "rg" nil nil nil "--version"))))

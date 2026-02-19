@@ -305,13 +305,13 @@
 (use-package nix-ts-mode :ensure t :mode "\\.nix\\'")
 (use-package cmake-mode
   :ensure t
-  :defer t
-  :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
 (use-package mermaid-mode
   :ensure t
   :mode "\\.mermaid\\'"
   :custom
-  (mermaid-mmdc-location (executable-find "mmdc")))
+  (mermaid-mmdc-location (or (executable-find "mmdc")
+                             (executable-find "mermaid-cli")
+                             (executable-find "mermaid"))))
 (use-package yaml-mode
   :defer t
   )

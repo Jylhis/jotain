@@ -46,7 +46,9 @@
   :ensure t
   :after org
   :config
-  (setq ob-mermaid-cli-path (executable-find "mmdc")))
+  (setq ob-mermaid-cli-path (or (executable-find "mmdc")
+                                (executable-find "mermaid-cli")
+                                (executable-find "mermaid"))))
 
 
 ;; Org exporters
