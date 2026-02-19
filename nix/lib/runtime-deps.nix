@@ -54,7 +54,15 @@ let
   # We now use all available grammars from nixpkgs via pkgs.tree-sitter.allGrammars.
   # No manual addition is needed.
 
-  treesitterGrammars = pkgs.tree-sitter.allGrammars;
+  treesitterGrammars =
+    let
+      # Some grammars in nixpkgs use mutable branch refs (e.g. "release") instead
+      # of pinned commits, causing hash mismatches when upstream pushes new content.
+      # Filter these out until they are fixed in nixpkgs.
+      broken = [ "tree-sitter-quint" ];
+      grammars = builtins.removeAttrs pkgs.tree-sitter.builtGrammars (broken ++ [ "recurseForDerivations" ]);
+    in
+    builtins.attrValues grammars;
 
   # ============================================================================
   # FONTS
