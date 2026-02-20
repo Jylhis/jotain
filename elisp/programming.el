@@ -311,6 +311,11 @@
 (use-package yaml-mode
   :defer t
   )
+
+(use-package jinja2-mode
+  :ensure t
+  :mode (("\\.j2\\'" . jinja2-mode)
+         ("\\.jinja2?\\'" . jinja2-mode)))
 (use-package csv-mode
   :ensure t
   :mode "\\.csv\\'"
