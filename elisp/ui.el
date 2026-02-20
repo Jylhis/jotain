@@ -19,6 +19,14 @@
   :type 'symbol
   :group 'jotain-ui)
 
+(defun jotain-ui--disable-all-themes (theme &optional _no-confirm no-enable)
+  "Disable all active themes before loading a new one, unless NO-ENABLE is non-nil.
+This prevents theme blending/stacking artifacts."
+  (unless no-enable
+    (mapc #'disable-theme custom-enabled-themes)))
+
+(advice-add 'load-theme :before #'jotain-ui--disable-all-themes)
+
 (use-package doom-themes
   :ensure t
   :demand t)
