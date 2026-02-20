@@ -348,5 +348,17 @@
   (should (member 'editorconfig-mode
                   (bound-and-true-p prog-mode-hook))))
 
+
+;;; Jinja2 Configuration
+
+(ert-deftest test-programming/jinja2-mode-registered ()
+  "Test that jinja2-mode is registered for .j2 and .jinja2 files."
+  :tags '(unit)
+  (should (assoc "\\.j2\\'" auto-mode-alist))
+  (should (assoc "\\.jinja2?\\'" auto-mode-alist))
+  (when (locate-library "jinja2-mode")
+     (require 'jinja2-mode)
+     (should (fboundp 'jinja2-mode))))
+
 (provide 'test-programming)
 ;;; test-programming.el ends here
