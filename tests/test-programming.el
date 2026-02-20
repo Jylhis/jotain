@@ -357,8 +357,8 @@
   (should (assoc "\\.j2\\'" auto-mode-alist))
   (should (assoc "\\.jinja2?\\'" auto-mode-alist))
   (when (locate-library "jinja2-mode")
-     (require 'jinja2-mode)
-     (should (fboundp 'jinja2-mode))))
+    (require 'jinja2-mode)
+    (should (fboundp 'jinja2-mode))))
 
 (provide 'test-programming)
 ;;; test-programming.el ends here
