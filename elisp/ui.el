@@ -14,12 +14,16 @@
   :type 'symbol
   :group 'jotain-ui)
 
-(defcustom jotain-theme-dark 'nord
+(defcustom jotain-theme-dark 'doom-nord
   "Theme to use when system is in dark mode."
   :type 'symbol
   :group 'jotain-ui)
 
-(defun jotain-ui--disable-all-themes (theme &optional _no-confirm no-enable)
+;; Trust all themes by default without prompting — must be set before
+;; theme packages are loaded with :demand t.
+(setq custom-safe-themes t)
+
+(defun jotain-ui--disable-all-themes (_theme &optional _no-confirm no-enable)
   "Disable all active themes before loading a new one, unless NO-ENABLE is non-nil.
 This prevents theme blending/stacking artifacts."
   (unless no-enable
@@ -35,21 +39,18 @@ This prevents theme blending/stacking artifacts."
   :ensure t
   :demand t)
 
-(defun jotain-ui-apply-theme (&optional _frame)
-  "Apply the configured themes.
-If FRAME is non-nil, apply it to that frame."
+(defun jotain-ui--preload-themes (&optional _frame)
+  "Preload both themes into memory without enabling either.
+auto-dark is the sole decider of which theme becomes active."
   (load-theme jotain-theme-light t t)
-  (load-theme jotain-theme-dark t))
+  (load-theme jotain-theme-dark t t))
 
 (use-package emacs
   :init
-  ;; Trust all themes by default without prompting
-  (setq custom-safe-themes t)
-
   ;; In daemon mode, themes must be loaded after a frame is created
   (if (daemonp)
-      (add-hook 'server-after-make-frame-hook #'jotain-ui-apply-theme)
-    (jotain-ui-apply-theme))
+      (add-hook 'server-after-make-frame-hook #'jotain-ui--preload-themes)
+    (jotain-ui--preload-themes))
 
   (tool-bar-mode -1)
   (scroll-bar-mode -1))
