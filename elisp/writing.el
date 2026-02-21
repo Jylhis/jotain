@@ -19,6 +19,11 @@
   ;; Set up dynamic agenda files
   (my/setup-org-agenda-files)
   
+  (org-babel-do-load-languages
+    'org-babel-load-languages
+    (append org-babel-load-languages
+           '((mermaid . t))))
+
   :hook ((org-mode . visual-line-mode)
          (org-mode . my/setup-org-fonts))
   :bind (
@@ -36,6 +41,15 @@
   :after org
   :hook
   (org-mode . global-org-modern-mode))
+
+(use-package ob-mermaid
+  :ensure t
+  :after org
+  :config
+  (setq ob-mermaid-cli-path (or (executable-find "mmdc")
+                                (executable-find "mermaid-cli")
+                                (executable-find "mermaid"))))
+
 
 ;; Org exporters
 (use-package ox-slack
