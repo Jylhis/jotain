@@ -13,6 +13,7 @@
   (magit-diff-refine-ignore-whitespace t "Ignore whitespace changes in word-granularity differences")
   (magit-diff-hide-trailing-cr-characters t "Hide trailing ^M")
   (magit-diff-context-lines 5 "Show more context lines for better understanding")
+  (magit-repository-directories '(("~/Developer" . 1)))
   :config
   ;; Show worktrees section in status buffer if multiple worktrees exist
   (add-hook 'magit-status-sections-hook 'magit-insert-worktrees t))
