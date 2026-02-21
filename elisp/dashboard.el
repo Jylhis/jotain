@@ -5,31 +5,25 @@
 
 ;;; Code:
 
-(defun my-dashboard/open-downloads ()
-  "Open the user's downloads directory in dired."
-  (interactive)
-  (let ((downloads-dir
-         (if (and (eq system-type 'gnu/linux) (require 'xdg nil t))
-             (or (xdg-user-dir "DOWNLOAD") "~/Downloads")
-           "~/Downloads")))
-    (dired downloads-dir)))
-
 (use-package enlight
   :ensure t
+  :init
+  (setopt initial-buffer-choice #'enlight)
   :custom
-  (initial-buffer-choice #'enlight)
-  :config
-  (setq enlight-content
-        (concat
-         (propertize "MENU" 'face 'highlight)
-         "\n"
-         (enlight-menu
-          '(("Org Mode"
-             ("Org-Agenda (current day)" (org-agenda nil "a") "a"))
-            ("Downloads"
-             ("Downloads folder" my-dashboard/open-downloads "d"))
-            ("Other"
-             ("Projects" project-switch-project "p")))))))
+  (enlight-content
+   (concat
+    (propertize "MENU" 'face 'highlight)
+    "\n"
+    (enlight-menu
+     '(("Org Mode"
+        ("Org-Agenda (current day)" (org-agenda nil "a") "a"))
+       ("Files"
+        ("Find file" find-file "f")
+        ("Recent files" recentf-open-files "r")
+        ("Developer projects" (dired "~/Developer") "D"))
+       ("Projects"
+        ("Switch project" project-switch-project "p")
+        ("Magit repositories" magit-list-repositories "m")))))))
 
 (provide 'dashboard)
 ;;; dashboard.el ends here
