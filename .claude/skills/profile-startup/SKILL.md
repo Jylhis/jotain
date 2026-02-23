@@ -1,6 +1,6 @@
 ---
 name: profile-startup
-description: Profile Emacs startup time and identify slow packages.
+description: Profile Emacs startup time and identify slow packages. Triggers on: "slow startup", "startup time", "emacs-init-time", "startup slow", "loading slow", "lazy loading", "defer packages", "startup performance".
 disable-model-invocation: true
 context: fork
 allowed-tools: Bash, Read, Grep, Glob
