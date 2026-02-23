@@ -114,77 +114,11 @@ let
     exec ${jotainEmacs}/bin/emacs --init-directory="$XDG_CONFIG_HOME/emacs" "$@"
   '';
 
-  # MCP server packages built from GitHub sources
-  mcpServerLib = pkgs.emacsPackages.trivialBuild {
-    pname = "mcp-server-lib";
-    version = "unstable";
-    src = pkgs.fetchFromGitHub {
-      owner = "laurynas-biveinis";
-      repo = "mcp-server-lib.el";
-      rev = "8c494fbb79cc7aba789d5ca583e3736345b39a15";
-      hash = "sha256-zagpSpsXzxsWxEx3PW9SyuXfy1nWhivvPUzkeN8a2AE=";
-    };
-    postPatch = ''
-      rm -f mcp-server-lib-test.el mcp-server-lib-ert.el mcp-server-lib-bytecode-handler-test.el
-    '';
-  };
-
-  orgMcp = pkgs.emacsPackages.trivialBuild {
-    pname = "org-mcp";
-    version = "unstable";
-    src = pkgs.fetchFromGitHub {
-      owner = "laurynas-biveinis";
-      repo = "org-mcp";
-      rev = "536a24325ce2417e109e698de705abac1a0c7f79";
-      hash = "sha256-OYcBLNEtUjc6J2mG/kRX/SJz19R17fqbgOu4KNI/Vkw=";
-    };
-    packageRequires = [ mcpServerLib ];
-    postPatch = ''
-      rm -f org-mcp-test.el
-    '';
-  };
-
-  emacsWithOrgMcp = pkgs.emacsWithPackages (_: [ mcpServerLib orgMcp ]);
-
   # mcp-language-server pre-configured for Nix with nil LSP
   mcpLanguageServerNix = pkgs.writeShellScriptBin "mcp-language-server-nix" ''
     exec ${pkgs.mcp-language-server}/bin/mcp-language-server \
       --workspace "$PWD" \
       --lsp "${pkgs.nil}/bin/nil"
-  '';
-
-  # org-mcp stdio bridge: starts a minimal Emacs daemon, bridges MCP stdio
-  orgMcpServer = pkgs.writeShellScriptBin "org-mcp-stdio" ''
-    set -euo pipefail
-
-    SOCKET=$(mktemp -u "/tmp/org-mcp-XXXXXX")
-
-    cleanup() {
-      ${emacsWithOrgMcp}/bin/emacsclient -s "''${SOCKET}" --no-wait \
-        -e "(kill-emacs)" >/dev/null 2>&1 || true
-      rm -f "''${SOCKET}"
-    }
-    trap cleanup EXIT INT TERM
-
-    ${emacsWithOrgMcp}/bin/emacs --daemon="''${SOCKET}" >/dev/null 2>&1 &
-
-    for _i in $(seq 1 30); do
-      [ -S "''${SOCKET}" ] && break
-      sleep 0.1
-    done
-    [ -S "''${SOCKET}" ] || { echo "org-mcp: emacs daemon failed to start" >&2; exit 1; }
-
-    ${emacsWithOrgMcp}/bin/emacsclient -s "''${SOCKET}" \
-      -e "(progn (require 'mcp-server-lib) (require 'org-mcp) (org-mcp-enable) (mcp-server-lib-start))" \
-      >/dev/null 2>&1
-
-    while IFS= read -r line; do
-      b64=$(printf '%s' "$line" | base64 -w0)
-      expr="(base64-encode-string (encode-coding-string (or (mcp-server-lib-process-jsonrpc (base64-decode-string \"''${b64}\") \"org-mcp\") \"\") 'utf-8 t) t)"
-      resp=$(${emacsWithOrgMcp}/bin/emacsclient -s "''${SOCKET}" -e "''${expr}" 2>/dev/null)
-      out=$(printf '%s' "''${resp}" | sed 's/^"//;s/"$//' | base64 -d 2>/dev/null) || true
-      [ -n "''${out}" ] && printf '%s\n' "''${out}"
-    done
   '';
 
   # LSP servers and development tools
@@ -230,7 +164,6 @@ pkgs.mkShell {
 
     # MCP server wrappers
     mcpLanguageServerNix
-    orgMcpServer
   ] ++ devTools;
 
   shellHook = ''
