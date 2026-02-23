@@ -8,7 +8,7 @@ Jotain is a modular Emacs distribution managed with Nix Flakes. All Emacs packag
 
 ## Commands
 
-All commands are run via `just` (see `justfile`). Nix must be available.
+All commands are run via `just` (see `justfile`). Enter the dev shell with `nix develop` to get all project tools.
 
 ### Testing
 
@@ -16,11 +16,16 @@ All commands are run via `just` (see `justfile`). Nix must be available.
 just test-smoke          # Ultra-fast smoke tests (< 1s)
 just test-fast           # Fast unit tests (< 5s)
 just test                # Full ERT test suite via Nix
+just test-tag TAG        # Run ERT tests by tag (smoke, fast, unit, integration)
 just test-all            # All checks except VM runtime (formatting + smoke + fast + NMT)
 just test-all-plus-runtime  # Includes VM nixosTest (CI only)
-just test-tag TAG        # Run ERT tests by tag: smoke, fast, unit, integration
 just test-nmt            # NMT home-manager module integration tests
 just test-runtime        # VM-based runtime validation (slow)
+```
+
+To run a specific NMT check directly:
+```bash
+nix build .#checks.x86_64-linux.test-module-enabled --print-build-logs
 ```
 
 ### Building & Checking
@@ -29,7 +34,8 @@ just test-runtime        # VM-based runtime validation (slow)
 just build               # Build Emacs package with Nix
 just compile             # Byte-compile all .el files directly (no Nix)
 just check               # Syntax check via Nix dry-run
-just format              # Format Nix files (nixfmt)
+just format              # Format all files (nixfmt, yamlfmt, actionlint, deadnix, statix)
+just check-parallel      # Run all checks in parallel (faster on multi-core)
 ```
 
 ### Development
@@ -80,13 +86,24 @@ Each file covers a functional domain and is loaded by `init.el` in order:
 ```
 flake.nix
 ├── emacs.nix              # Builds Emacs 30 (PGTK) with all packages + runtime deps
-│   ├── nix/lib/dependencies.nix   # Auto-extracts packages from use-package :ensure t
+│   ├── nix/lib/dependencies.nix   # Auto-extracts packages from use-package declarations
 │   └── nix/lib/runtime-deps.nix  # LSP servers, fonts, CLI tools, tree-sitter grammars
+├── nix/overlays/          # nixpkgs overlays (includes emacs-overlay)
 ├── default.nix            # jotain package (config files only)
 └── nix/modules/home/default.nix  # Home Manager module (programs.jotain options)
 ```
 
-**Key property**: `nix/lib/dependencies.nix` scans all `.el` files and automatically maps `use-package` declarations to nixpkgs package names. When adding a new package with `:ensure t`, it is picked up automatically if the name maps correctly; otherwise add a manual mapping in that file.
+**Key property**: `nix/lib/dependencies.nix` scans all `.el` files and automatically maps `use-package` declarations to nixpkgs package names. When adding a new package with `:ensure t`, it is picked up automatically if the name maps correctly; otherwise add a manual mapping in that file. Use `:nodep` in a `use-package` form to suppress auto-extraction for a specific package.
+
+### Adding packages
+
+1. Add a `use-package` configuration in the appropriate `elisp/*.el` file (auto-extracted if name matches)
+2. For name mismatches, add a manual mapping in `nix/lib/dependencies.nix`
+3. For runtime tools (LSP servers, CLI tools, fonts, tree-sitter grammars), add to `nix/lib/runtime-deps.nix`
+
+### User customization
+
+`~/.config/emacs/custom.el` is auto-loaded if it exists and persists across rebuilds.
 
 ### Tree-sitter
 
@@ -106,6 +123,7 @@ Grammar paths are set in `early-init.el` from the `TREE_SITTER_DIR` environment 
 - Tests run in an isolated home (`HOME=.dev-home`) to avoid contaminating user config
 - NMT integration tests live in `nmt-tests/` and validate the Home Manager module
 - The VM runtime test (`test-emacs-runtime`) only runs when `CI=1`
+- `specs/` holds speckit feature specifications (spec.md, plan.md, tasks.md per feature)
 
 ### Home Manager module options
 
@@ -115,3 +133,11 @@ Grammar paths are set in `early-init.el` from the `TREE_SITTER_DIR` environment 
 | `programs.jotain.enableDaemon` | `true` | Run Emacs as systemd/launchd service |
 | `programs.jotain.includeRuntimeDeps` | `true` | Install LSP servers, fonts, CLI tools |
 | `programs.jotain.extraPackages` | `epkgs: []` | Add extra Emacs packages |
+
+## Active Technologies
+- Emacs Lisp (Emacs 30+, PGTK build), Nix (Flakes) + use-package, Vertico, Corfu, Consult, (001-baseline)
+- N/A (configuration files only; no persistent data storage) (001-baseline)
+- Markdown (prose edits only) + None (002-fix-baseline-spec)
+
+## Recent Changes
+- 001-baseline: Added Emacs Lisp (Emacs 30+, PGTK build), Nix (Flakes) + use-package, Vertico, Corfu, Consult,
