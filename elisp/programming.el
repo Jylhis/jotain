@@ -386,9 +386,12 @@
         tooltip-recent-seconds 1
         tooltip-hide-delay 10))
 
-;; Future enhancement options (commented out - packages not in nixpkgs):
-;; For even better diagnostic display, consider these packages via straight.el or melpa:
-;; - flymake-diagnostic-at-point: Shows diagnostics in minibuffer/tooltip
+(use-package claude-code-ide
+  :ensure t
+  :defer t
+  :bind ("C-c C-'" . claude-code-ide-menu)
+  :config
+  (claude-code-ide-emacs-tools-setup))
 
 (provide 'programming)
 ;;; programming.el ends here

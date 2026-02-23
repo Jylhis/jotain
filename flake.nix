@@ -51,6 +51,7 @@
             emacs-overlay.overlays.default
             self.overlays.default
           ];
+          config.allowUnfree = true;
         };
 
         packages = {

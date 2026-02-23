@@ -204,6 +204,10 @@ let
       # Used by: elisp/programming.el (markdown-mode)
       (optionalPackage "multimarkdown")
 
+      # Claude Code CLI
+      # Used by: elisp/programming.el (claude-code-ide)
+      pkgs.claude-code
+
       # Additional tools (uncomment as needed):
       # pkgs.sqlite  # Used by org-roam, forge
       # pkgs.graphviz  # Used by org-mode diagrams
