@@ -66,6 +66,16 @@
 
     (setq result nil)
     (platform-unless t (setq result 'failure))
+    (should (null result))
+
+    ;; platform-cond should work like cond
+    (setq result (platform-cond (t 'cond-success)))
+    (should (eq result 'cond-success))
+
+    (setq result (platform-cond (nil 'should-not-reach) (t 'second-clause)))
+    (should (eq result 'second-clause))
+
+    (setq result (platform-cond (nil 'not-this)))
     (should (null result))))
 
 (ert-deftest test-platform-android-detection ()

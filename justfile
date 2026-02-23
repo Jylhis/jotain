@@ -21,19 +21,19 @@ check:
 [group('check')]
 test-smoke:
     @echo "Running smoke tests (<  1 second)..."
-    nix build .#checks.{{system}}.smoke-test --print-build-logs
+    nix build .#checks.{{system}}.smoke-test --no-link --print-build-logs
 
 # Run fast unit tests (< 5 seconds, excludes slow filesystem tests)
 [group('check')]
 test-fast:
     @echo "Running fast unit tests (< 5 seconds)..."
-    nix build .#checks.{{system}}.fast-tests --print-build-logs
+    nix build .#checks.{{system}}.fast-tests --no-link --print-build-logs
 
 # Run ERT unit tests via Nix (full suite including slow tests)
 [group('check')]
 test:
     @echo "Running full ERT test suite..."
-    nix build .#checks.{{system}}.tests --print-build-logs
+    nix build .#checks.{{system}}.tests --no-link --print-build-logs
 
 # Run all fast checks (formatting + smoke + fast tests + NMT, excludes VM)
 [group('check')]
@@ -70,14 +70,14 @@ check-parallel:
 check-instant:
     @echo "Running instant checks (< 10 seconds)..."
     nix build .#checks.{{system}}.formatting --print-build-logs
-    nix build .#checks.{{system}}.smoke-test --print-build-logs
+    nix build .#checks.{{system}}.smoke-test --no-link --print-build-logs
 
 # Fast validation (< 1 minute)
 [group('check')]
 check-fast:
     @echo "Running fast validation (< 1 minute)..."
     @just check-instant
-    nix build .#checks.{{system}}.fast-tests --print-build-logs
+    nix build .#checks.{{system}}.fast-tests --no-link --print-build-logs
 
 # Full local testing (< 5 minutes, excludes VM)
 [group('check')]
@@ -91,14 +91,20 @@ check-all:
     @echo "Running complete validation (includes VM)..."
     @just test-all-plus-runtime
 
-# Run NMT home-manager module tests
+# Run NMT home-manager module tests (all 5 cases)
 [group('check')]
 test-nmt:
     @echo "Running NMT home-manager module tests..."
     @echo "Running: test-module-enabled (comprehensive module integration test)"
-    nix build .#checks.{{system}}.test-module-enabled --print-build-logs
+    nix build .#checks.{{system}}.test-module-enabled --no-link --print-build-logs
     @echo "Running: test-module-disabled"
-    nix build .#checks.{{system}}.test-module-disabled --print-build-logs
+    nix build .#checks.{{system}}.test-module-disabled --no-link --print-build-logs
+    @echo "Running: test-runtime-deps-enabled"
+    nix build .#checks.{{system}}.test-runtime-deps-enabled --no-link --print-build-logs
+    @echo "Running: test-runtime-deps-disabled"
+    nix build .#checks.{{system}}.test-runtime-deps-disabled --no-link --print-build-logs
+    @echo "Running: test-daemon-disabled"
+    nix build .#checks.{{system}}.test-daemon-disabled --no-link --print-build-logs
 
 # Run runtime validation test (nixosTest with VM - slow but comprehensive)
 [group('check')]
@@ -141,10 +147,21 @@ build:
 compile:
     #!/usr/bin/env bash
     set -euo pipefail
-    find "{{config_dir}}" -name "*.el" -not -path "*/.*" | while read -r file; do
+    # Compile in dependency order: early-init and platform first, then remaining modules
+    for file in "{{config_dir}}/early-init.el" "{{config_dir}}/elisp/platform.el"; do
         echo "Compiling: $file"
         emacs -Q --batch -L "{{config_dir}}" -L "{{config_dir}}/elisp" -f batch-byte-compile "$file"
     done
+    find "{{config_dir}}/elisp" -name "*.el" -not -name "platform.el" | sort | while read -r file; do
+        echo "Compiling: $file"
+        emacs -Q --batch -L "{{config_dir}}" -L "{{config_dir}}/elisp" \
+              --load "{{config_dir}}/elisp/platform.el" \
+              -f batch-byte-compile "$file"
+    done
+    echo "Compiling: {{config_dir}}/init.el"
+    emacs -Q --batch -L "{{config_dir}}" -L "{{config_dir}}/elisp" \
+          --load "{{config_dir}}/elisp/platform.el" \
+          -f batch-byte-compile "{{config_dir}}/init.el"
 
 # Maintenance and Cleanup
 # ======================
