@@ -32,6 +32,7 @@
 (require 'dashboard)   ; Startup dashboard
 (require 'completion)  ; Modern completion framework
 (require 'programming) ; Programming and development tools
+(require 'ai)          ; AI coding assistants
 (require 'per-project) ; Thing to help with project specific setups
 (require 'writing)     ; Org-mode and documentation
 (require 'git)         ; Git and version control
