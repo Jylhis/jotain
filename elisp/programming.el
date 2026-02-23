@@ -386,12 +386,5 @@
         tooltip-recent-seconds 1
         tooltip-hide-delay 10))
 
-(use-package claude-code-ide
-  :ensure t
-  :defer t
-  :bind ("C-c C-'" . claude-code-ide-menu)
-  :config
-  (claude-code-ide-emacs-tools-setup))
-
 (provide 'programming)
 ;;; programming.el ends here
