@@ -19,5 +19,19 @@ final: prev: {
       # first alphabetically. Native compilation will JIT-compile at runtime.
       buildPhase = ":";
     };
+
+    # Claude Code IDE integration (not yet in nixpkgs)
+    # https://github.com/manzaltu/claude-code-ide.el
+    claude-code-ide = efinal.trivialBuild {
+      pname = "claude-code-ide";
+      version = "0.2.6";
+      src = final.fetchFromGitHub {
+        owner = "manzaltu";
+        repo = "claude-code-ide.el";
+        rev = "5f12e60c6d2d1802c8c1b7944bbdf935d5db1364";
+        sha256 = "148xcrqff6khpwf8nnadcyvz8h6mk45xz1498k0wbzy80yzd2axn";
+      };
+      packageRequires = with efinal; [ websocket transient web-server ];
+    };
   });
 }
