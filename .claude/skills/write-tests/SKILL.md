@@ -1,6 +1,6 @@
 ---
 name: write-tests
-description: Write ERT tests for jotain Emacs modules. Use when adding test coverage, regression tests, or implementing TDD.
+description: Write ERT tests for jotain Emacs modules. Use when adding test coverage, regression tests, or implementing TDD. Triggers on: "write test", "add test", "test coverage", "ert-deftest", "regression test", "test fails", "TDD", "unit test", "missing test".
 argument-hint: "[module-name or function-name]"
 ---
 
