@@ -1,6 +1,6 @@
 ---
 name: check-config
-description: Validate jotain Emacs configuration - byte-compilation, load order, and common issues.
+description: Validate jotain Emacs configuration - byte-compilation, load order, and common issues. Triggers on: "validate config", "check config", "lint config", "broken config", "config broken", "before commit", "is config valid", "verify setup".
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob
 ---

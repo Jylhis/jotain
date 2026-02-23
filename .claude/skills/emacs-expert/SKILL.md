@@ -98,7 +98,7 @@ This project uses Nix for all package management. When adding a new package:
 
 ## Integration Stack
 
-- **Completion**: Everything routes through Vertico/Consult/Corfu/Orderless
+- **Completion**: Vertico/Consult/Corfu/Orderless — see `references/integration-stack.md` for detailed patterns
 - **LSP**: Eglot (built-in), configured in `programming.el`
 - **Git**: Magit in `git.el`
 - **Projects**: Built-in `project.el`
