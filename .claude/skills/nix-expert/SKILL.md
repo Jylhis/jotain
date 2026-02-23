@@ -22,12 +22,14 @@ flake.nix
 
 ## Key Mechanism: Auto-Extraction
 
-`nix/lib/dependencies.nix` scans all `elisp/*.el` files and automatically maps `use-package` declarations to nixpkgs package names. This means:
+`nix/lib/dependencies.nix` scans all `elisp/*.el` files and automatically maps `use-package` declarations to nixpkgs package names:
 
 - Adding `(use-package foo :ensure)` in elisp automatically includes `foo` from nixpkgs
 - Name mismatches require a manual mapping in `dependencies.nix`
-- Use `:nodep` in a `use-package` form to suppress auto-extraction
+- Use `:nodep` to suppress auto-extraction; `:ensure nil` for built-in packages
 - Runtime tools (LSP servers, CLI tools, fonts, tree-sitter grammars) go in `runtime-deps.nix`
+
+See `references/dependencies.md` for manual mapping patterns, `:nodep` usage, and NMT test structure.
 
 ## Home Manager Module
 

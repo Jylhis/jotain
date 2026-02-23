@@ -1,6 +1,6 @@
 ---
 name: debug-elisp
-description: Diagnose and fix Elisp errors, performance issues, slow startup, memory problems, or byte-compilation warnings. Use when encountering errors, backtraces, or performance regressions.
+description: Diagnose and fix Elisp errors, performance issues, slow startup, memory problems, or byte-compilation warnings. Use when encountering errors, backtraces, or performance regressions. Triggers on: "backtrace", "wrong-type-argument", "void-function", "void-variable", "byte-compile error", "performance regression", "memory leak", "slow", "debug elisp", "elisp error".
 ---
 
 # Debug Elisp Issue

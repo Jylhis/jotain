@@ -1,6 +1,6 @@
 ---
 name: add-package
-description: Add a new Emacs package to the jotain distribution with proper use-package config and Nix integration.
+description: Add a new Emacs package to the jotain distribution with proper use-package config and Nix integration. Triggers on: "install package", "add package", "new package", "use-package", "missing package", "enable package", "integrate package".
 argument-hint: "[package-name]"
 disable-model-invocation: true
 ---
