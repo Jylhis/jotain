@@ -5,10 +5,18 @@
 
 ;;; Code:
 
+(defun jotain-dashboard-initial-buffer ()
+  "Return enlight dashboard unless file-visiting buffers already exist.
+When Emacs is launched with file arguments, those buffers are
+visited before this function runs, so we skip the dashboard."
+  (if (seq-some #'buffer-file-name (buffer-list))
+      (seq-find #'buffer-file-name (buffer-list))
+    (enlight)))
+
 (use-package enlight
   :ensure t
   :init
-  (setopt initial-buffer-choice #'enlight)
+  (setopt initial-buffer-choice #'jotain-dashboard-initial-buffer)
   :custom
   (enlight-content
    (concat
