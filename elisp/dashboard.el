@@ -9,9 +9,10 @@
   "Return enlight dashboard unless file-visiting buffers already exist.
 When Emacs is launched with file arguments, those buffers are
 visited before this function runs, so we skip the dashboard."
-  (if (seq-some #'buffer-file-name (buffer-list))
-      (seq-find #'buffer-file-name (buffer-list))
-    (enlight)))
+  (let ((file-buffer (seq-find #'buffer-file-name (buffer-list))))
+    (if file-buffer
+        file-buffer
+      (enlight))))
 
 (use-package enlight
   :ensure t
