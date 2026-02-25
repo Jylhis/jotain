@@ -29,7 +29,15 @@
   :tags '(smoke unit fast)
   (require 'dashboard nil t)
   (when (featurep 'enlight)
-    (should (functionp initial-buffer-choice))))
+    (should (functionp initial-buffer-choice))
+    (should (eq initial-buffer-choice #'jotain-dashboard-initial-buffer))))
+
+(ert-deftest test-dashboard/conditional-open ()
+  "Dashboard helper returns enlight when no file buffers exist."
+  :tags '(unit fast)
+  (require 'dashboard nil t)
+  (when (featurep 'enlight)
+    (should (fboundp 'jotain-dashboard-initial-buffer))))
 
 ;;; help.el
 
