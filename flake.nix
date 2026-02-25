@@ -150,7 +150,7 @@
 
         treefmt = {
           programs.nixpkgs-fmt.enable = true;
-
+          programs.shellcheck.enable = true;
           programs.shfmt = {
             enable = true;
             indent_size = 2;
