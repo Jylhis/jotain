@@ -206,7 +206,7 @@ let
 
       # Claude Code CLI
       # Used by: elisp/programming.el (claude-code-ide)
-      pkgs.claude-code
+      # pkgs.claude-code
 
       # Additional tools (uncomment as needed):
       # pkgs.sqlite  # Used by org-roam, forge
