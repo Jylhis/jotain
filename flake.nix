@@ -2,7 +2,7 @@
   description = "Jotain - A NixOS-native Emacs distribution with automatic dependency management";
 
   inputs = {
-    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.*";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     emacs-overlay = {
       url = "github:nix-community/emacs-overlay";
