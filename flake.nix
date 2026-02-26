@@ -1,6 +1,17 @@
 {
   description = "Jotain - A NixOS-native Emacs distribution with automatic dependency management";
 
+  nixConfig = {
+    extra-substituters = [
+      "https://jylhis.cachix.org"
+      "https://nix-community.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "jylhis.cachix.org-1:SIAw5iWjXRhLAmejqPy0PGuqH6bjCHIFVF9CiHmHRpE="
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+    ];
+  };
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -9,17 +20,17 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    flake-parts.url = "https://flakehub.com/f/hercules-ci/flake-parts/0.1.*";
+    flake-parts.url = "github:hercules-ci/flake-parts";
 
     systems.url = "github:nix-systems/default-linux";
 
     treefmt-nix = {
-      url = "https://flakehub.com/f/numtide/treefmt-nix/0.1.*";
+      url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     home-manager = {
-      url = "https://flakehub.com/f/nix-community/home-manager/0.1.*";
+      url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
