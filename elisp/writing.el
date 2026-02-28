@@ -37,6 +37,18 @@
   :hook
   (org-mode . global-org-modern-mode))
 
+(use-package ob-mermaid
+  :ensure t
+  :after org
+  :config
+  (setq ob-mermaid-cli-path (or (executable-find "mmdc")
+                                (executable-find "mermaid-cli")
+                                (executable-find "mermaid")))
+  (org-babel-do-load-languages
+    'org-babel-load-languages
+    (append org-babel-load-languages
+            '((mermaid . t)))))
+
 ;; Org exporters
 (use-package ox-slack
   :ensure t
