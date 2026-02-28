@@ -307,7 +307,13 @@
   :ensure t
   :defer t
   :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
-(use-package mermaid-mode)
+(use-package mermaid-mode
+  :ensure t
+  :mode "\\.mermaid\\'"
+  :custom
+  (mermaid-mmdc-location (or (executable-find "mmdc")
+                             (executable-find "mermaid-cli")
+                             (executable-find "mermaid"))))
 (use-package yaml-mode
   :defer t
   )
