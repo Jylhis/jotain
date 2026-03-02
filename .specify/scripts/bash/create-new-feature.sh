@@ -165,10 +165,13 @@ sanitize_for_path() {
 # Resolve through linked worktrees to the actual main repo root
 get_main_repo_root() {
   local git_common_dir
-  git_common_dir=$(git rev-parse --git-common-dir 2>/dev/null) || { git rev-parse --show-toplevel; return; }
-  if [[ "$git_common_dir" == ".git" ]]; then
+  git_common_dir=$(git rev-parse --git-common-dir 2>/dev/null) || {
     git rev-parse --show-toplevel
-  elif [[ "$git_common_dir" == */.git ]]; then
+    return
+  }
+  if [[ $git_common_dir == ".git" ]]; then
+    git rev-parse --show-toplevel
+  elif [[ $git_common_dir == */.git ]]; then
     echo "${git_common_dir%/.git}"
   else
     dirname "$git_common_dir"
