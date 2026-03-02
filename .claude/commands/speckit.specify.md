@@ -65,7 +65,8 @@ Given that feature description, do this:
    - If no existing branches/directories found with this short-name, start with number 1
    - You must only ever run this script once per feature
    - The JSON is provided in the terminal as output - always refer to it to get the actual content you're looking for
-   - The JSON output will contain BRANCH_NAME and SPEC_FILE paths
+   - The JSON output will contain `BRANCH_NAME`, `SPEC_FILE`, `FEATURE_NUM`, `WORKTREE_PATH`, and `WORKTREE_METHOD` fields
+   - `WORKTREE_PATH` is non-empty when a worktree was created; `WORKTREE_METHOD` is one of `wt`, `git-worktree`, `checkout`, or `none`
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot")
 
 3. Load `.specify/templates/spec-template.md` to understand required sections.
@@ -192,7 +193,15 @@ Given that feature description, do this:
 
 7. Report completion with branch name, spec file path, checklist results, and readiness for the next phase (`/speckit.clarify` or `/speckit.plan`).
 
-**NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
+   If `WORKTREE_PATH` in the JSON output is non-empty, prominently report the worktree location:
+
+   ```
+   Worktree created at: <WORKTREE_PATH>  (method: <WORKTREE_METHOD>)
+   Run subsequent speckit commands from within that directory:
+     cd <WORKTREE_PATH>
+   ```
+
+**NOTE:** The script creates the new branch and initializes the spec file before writing. It uses a worktree cascade: first attempts `wt switch --create` (worktrunk), then `git worktree add ~/Developer/worktrees/<repo>/<branch>`, and falls back to `git checkout -b` if both fail. When a worktree is created, the spec file lives inside the worktree rather than the current working directory.
 
 ## General Guidelines
 

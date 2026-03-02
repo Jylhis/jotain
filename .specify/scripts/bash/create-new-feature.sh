@@ -157,6 +157,104 @@ clean_branch_name() {
   echo "$name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\+/-/g' | sed 's/^-//' | sed 's/-$//'
 }
 
+# Convert slashes to hyphens in branch names (mirrors wt's path sanitization)
+sanitize_for_path() {
+  echo "$1" | tr '/' '-'
+}
+
+# Resolve through linked worktrees to the actual main repo root
+get_main_repo_root() {
+  local git_common_dir
+  git_common_dir=$(git rev-parse --git-common-dir 2>/dev/null) || { git rev-parse --show-toplevel; return; }
+  if [[ "$git_common_dir" == ".git" ]]; then
+    git rev-parse --show-toplevel
+  elif [[ "$git_common_dir" == */.git ]]; then
+    echo "${git_common_dir%/.git}"
+  else
+    dirname "$git_common_dir"
+  fi
+}
+
+# Create a worktree (or branch) for the feature using a cascade:
+#   Tier 1: wt switch --create (worktrunk)
+#   Tier 2: git worktree add
+#   Tier 3: git checkout -b (original behavior)
+# Sets globals WORKTREE_PATH and WORKTREE_METHOD
+create_worktree_cascade() {
+  local branch="$1"
+  WORKTREE_PATH=""
+  WORKTREE_METHOD="checkout"
+
+  # Tier 1: try wt (worktrunk)
+  if command -v wt >/dev/null 2>&1; then
+    >&2 echo "[specify] Trying wt switch --create $branch ..."
+    if wt switch --create "$branch" --yes --no-cd >/dev/null 2>&1; then
+      # Determine worktree path: try JSON parse first, then fall back to convention
+      local wt_path=""
+      if command -v python3 >/dev/null 2>&1; then
+        wt_path=$(wt list --format=json 2>/dev/null | python3 -c "
+import json, sys
+branch = sys.argv[1] if len(sys.argv) > 1 else ''
+try:
+    data = json.load(sys.stdin)
+    items = data if isinstance(data, list) else data.get('worktrees', data.get('items', []))
+    for item in items:
+        b = item.get('branch', item.get('name', item.get('branch_name', '')))
+        if b == branch or b.endswith('/' + branch):
+            path = item.get('path', item.get('worktree', item.get('location', '')))
+            if path:
+                print(path)
+                break
+except Exception:
+    pass
+" "$branch" 2>/dev/null || echo "")
+      fi
+      # Fallback: use wt convention (~/Developer/worktrees/<repo>/<branch>)
+      if [ -z "$wt_path" ] || [ ! -d "$wt_path" ]; then
+        local main_root
+        main_root=$(get_main_repo_root 2>/dev/null) || main_root="$REPO_ROOT"
+        local repo_name
+        repo_name=$(basename "$main_root")
+        local safe_branch
+        safe_branch=$(sanitize_for_path "$branch")
+        wt_path="$HOME/Developer/worktrees/$repo_name/$safe_branch"
+      fi
+      if [ -d "$wt_path" ]; then
+        WORKTREE_PATH="$wt_path"
+        WORKTREE_METHOD="wt"
+        >&2 echo "[specify] Created worktree via wt at: $WORKTREE_PATH"
+        return 0
+      fi
+      >&2 echo "[specify] wt succeeded but worktree path not found; falling back..."
+    else
+      >&2 echo "[specify] wt failed, falling back to git worktree..."
+    fi
+  fi
+
+  # Tier 2: try git worktree add
+  local main_root
+  main_root=$(get_main_repo_root 2>/dev/null) || main_root="$REPO_ROOT"
+  local repo_name
+  repo_name=$(basename "$main_root")
+  local safe_branch
+  safe_branch=$(sanitize_for_path "$branch")
+  local worktree_path="$HOME/Developer/worktrees/$repo_name/$safe_branch"
+
+  >&2 echo "[specify] Trying git worktree add $worktree_path ..."
+  if git worktree add "$worktree_path" -b "$branch" >/dev/null 2>&1; then
+    WORKTREE_PATH="$worktree_path"
+    WORKTREE_METHOD="git-worktree"
+    >&2 echo "[specify] Created worktree via git at: $WORKTREE_PATH"
+    return 0
+  fi
+  >&2 echo "[specify] git worktree add failed, falling back to checkout..."
+
+  # Tier 3: git checkout -b (original behavior)
+  git checkout -b "$branch"
+  WORKTREE_METHOD="checkout"
+  return 0
+}
+
 # Resolve repository root. Prefer git information when available, but fall back
 # to searching for repository markers so the workflow still functions in repositories that
 # were initialised with --no-git.
@@ -275,13 +373,23 @@ if [ ${#BRANCH_NAME} -gt $MAX_BRANCH_LENGTH ]; then
   >&2 echo "[specify] Truncated to: $BRANCH_NAME (${#BRANCH_NAME} bytes)"
 fi
 
+WORKTREE_PATH=""
+WORKTREE_METHOD="none"
+
 if [ "$HAS_GIT" = true ]; then
-  git checkout -b "$BRANCH_NAME"
+  create_worktree_cascade "$BRANCH_NAME"
 else
   >&2 echo "[specify] Warning: Git repository not detected; skipped branch creation for $BRANCH_NAME"
 fi
 
-FEATURE_DIR="$SPECS_DIR/$BRANCH_NAME"
+# Determine effective root: use worktree if one was created, else current repo root
+if [ -n "$WORKTREE_PATH" ]; then
+  EFFECTIVE_ROOT="$WORKTREE_PATH"
+else
+  EFFECTIVE_ROOT="$REPO_ROOT"
+fi
+
+FEATURE_DIR="$EFFECTIVE_ROOT/specs/$BRANCH_NAME"
 mkdir -p "$FEATURE_DIR"
 
 TEMPLATE="$REPO_ROOT/.specify/templates/spec-template.md"
@@ -292,10 +400,14 @@ if [ -f "$TEMPLATE" ]; then cp "$TEMPLATE" "$SPEC_FILE"; else touch "$SPEC_FILE"
 export SPECIFY_FEATURE="$BRANCH_NAME"
 
 if $JSON_MODE; then
-  printf '{"BRANCH_NAME":"%s","SPEC_FILE":"%s","FEATURE_NUM":"%s"}\n' "$BRANCH_NAME" "$SPEC_FILE" "$FEATURE_NUM"
+  printf '{"BRANCH_NAME":"%s","SPEC_FILE":"%s","FEATURE_NUM":"%s","WORKTREE_PATH":"%s","WORKTREE_METHOD":"%s"}\n' "$BRANCH_NAME" "$SPEC_FILE" "$FEATURE_NUM" "$WORKTREE_PATH" "$WORKTREE_METHOD"
 else
   echo "BRANCH_NAME: $BRANCH_NAME"
   echo "SPEC_FILE: $SPEC_FILE"
   echo "FEATURE_NUM: $FEATURE_NUM"
   echo "SPECIFY_FEATURE environment variable set to: $BRANCH_NAME"
+  if [ -n "$WORKTREE_PATH" ]; then
+    echo "WORKTREE_PATH: $WORKTREE_PATH"
+    echo "WORKTREE_METHOD: $WORKTREE_METHOD"
+  fi
 fi
