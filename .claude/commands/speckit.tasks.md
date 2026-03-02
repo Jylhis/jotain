@@ -1,9 +1,13 @@
 ---
 description: Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts.
-handoffs: 
+handoffs:
   - label: Analyze For Consistency
     agent: speckit.analyze
     prompt: Run a project analysis for consistency
+    send: true
+  - label: Track in Beads
+    agent: speckit.taskstoissues
+    prompt: Create beads issues for all tasks with dependencies
     send: true
   - label: Implement Project
     agent: speckit.implement
