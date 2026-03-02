@@ -65,6 +65,14 @@ has_git() {
   git rev-parse --show-toplevel >/dev/null 2>&1
 }
 
+# Check if running inside a linked git worktree (not the main worktree)
+is_inside_worktree() {
+  local git_dir git_common_dir
+  git_dir=$(git rev-parse --git-dir 2>/dev/null) || return 1
+  git_common_dir=$(git rev-parse --git-common-dir 2>/dev/null) || return 1
+  [[ "$git_dir" != "$git_common_dir" ]]
+}
+
 check_feature_branch() {
   local branch="$1"
   local has_git_repo="$2"
