@@ -124,6 +124,13 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Provide clear error messages with context for debugging
    - Suggest next steps if implementation cannot proceed
    - **IMPORTANT** For completed tasks, make sure to mark the task off as [X] in the tasks file.
+   - **BEADS SYNC**: After marking a task `[X]`, check whether the task line contains a `<!-- bd:BD_ID -->` trailing comment. If it does, close the corresponding beads issue:
+
+     ```bash
+     bd close BD_ID
+     ```
+
+     Where `BD_ID` is the value from the `<!-- bd:BD_ID -->` comment (e.g. `bd-043`). This keeps beads in sync with actual task completion without requiring a separate sync step.
 
 9. Completion validation:
    - Verify all required tasks are completed
@@ -133,3 +140,5 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Report final status with summary of completed work
 
 Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/speckit.tasks` first to regenerate the task list.
+
+After all tasks are complete, run `bd sync` to push any remaining beads status updates to the remote. If tasks.md has no `<!-- bd:BD_ID -->` annotations, skip the beads steps — they are optional (present only when `/speckit.taskstoissues` was run beforehand).
