@@ -137,7 +137,7 @@ A visual appearance configuration.
 | ID | Emacs Theme | Variable | Toggle |
 |----|-------------|----------|--------|
 | light | `doom-nord-light` | `jotain-theme-light` | `C-c t` |
-| dark | `doom-nord` | `jotain-theme-dark` | `C-c t` |
+| dark | `nord` | `jotain-theme-dark` | `C-c t` |
 
 **Relationships**:
 - Managed by `ui.el` module

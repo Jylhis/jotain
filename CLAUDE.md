@@ -173,7 +173,6 @@ bd sync               # Sync with git
 ## Active Technologies
 - Emacs Lisp (Emacs 30+, PGTK build), Nix (Flakes) + use-package, Vertico, Corfu, Consult, (001-baseline)
 - N/A (configuration files only; no persistent data storage) (001-baseline)
-- Markdown (prose edits only) + None (002-fix-baseline-spec)
 
 ## Recent Changes
 - 001-baseline: Added Emacs Lisp (Emacs 30+, PGTK build), Nix (Flakes) + use-package, Vertico, Corfu, Consult,
