@@ -39,6 +39,8 @@ Each directory will be searched recursively for .org files."
           (push (file-truename file) files)))
       (nreverse files))))
 
+(defvar org-agenda-files)
+
 (defun my/update-org-agenda-files (&optional directories)
   "Update org-agenda-files to include all .org files from multiple directories.
 If DIRECTORIES is provided, search those directories.
@@ -61,13 +63,53 @@ Otherwise, use `my/org-agenda-directories'."
              (length org-files)
              valid-dir-count)))
 
+(defvar org-agenda-files)
+
+(defun my/update-org-agenda-files-async
+
+
+    (&optional directories)
+  "Update org-agenda-files asynchronously using `find' if available.
+If DIRECTORIES is provided, search those directories.
+Otherwise, use `my/org-agenda-directories'.
+Falls back to synchronous `my/update-org-agenda-files' if `find' is unavailable."
+  (let* ((directories (or directories my/org-agenda-directories))
+         (valid-dirs '()))
+    (dolist (dir directories)
+      (let ((expanded-dir (expand-file-name dir)))
+        (when (file-exists-p expanded-dir)
+          (push expanded-dir valid-dirs))))
+    (setq valid-dirs (nreverse valid-dirs))
+    (if (and valid-dirs (executable-find "find"))
+        (let ((output-buffer (generate-new-buffer " *org-agenda-find*"))
+              (valid-dir-count (length valid-dirs)))
+          (make-process
+           :name "org-agenda-find"
+           :buffer output-buffer
+           :command `("find" "-L" ,@valid-dirs
+                      "-type" "d" "-name" ".*" "-prune"
+                      "-o" "-type" "f" "-name" "*.org" "-print")
+           :sentinel `(lambda (process event)
+                        (when (string-match-p "finished" event)
+                          (let ((output (with-current-buffer ,output-buffer (buffer-string))))
+                            (kill-buffer ,output-buffer)
+                            (let* ((files (split-string output "\n" t))
+                                   (unique-files (delete-dups (mapcar #'file-truename files))))
+                              (when unique-files
+                                (setq org-agenda-files unique-files))
+                              (message "Updated org-agenda-files async: %d files found across %d directories"
+                                       (length unique-files)
+                                       ,valid-dir-count)))))))
+      (my/update-org-agenda-files directories))))
+
+
 (defun my/setup-org-agenda-files ()
   "Set up dynamic org agenda files updating."
   ;; Initial update
   (my/update-org-agenda-files)
 
   ;; Update agenda files periodically instead of on every agenda access
-  (run-with-idle-timer 300 t #'my/update-org-agenda-files))
+  (run-with-idle-timer 300 t #'my/update-org-agenda-files-async))
 
 ;; Window management utilities
 ;;;###autoload
