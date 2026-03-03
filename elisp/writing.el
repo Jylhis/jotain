@@ -91,5 +91,11 @@
 (when (facep 'jotain-fonts-serif)
   (set-face-attribute 'jotain-fonts-serif nil :family "Source Serif Pro"))
 
+
+;; PDF viewing
+(use-package pdf-tools
+  :ensure t
+  :mode ("\\.pdf\\'" . pdf-view-mode))
+
 (provide 'writing)
 ;;; writing.el ends here
