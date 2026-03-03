@@ -21,7 +21,7 @@
 (use-package magit-todos
   :ensure t
   :after magit
-  :commands (magit-todos-mode)
+  :commands (magit-todos-mode global-magit-todos-mode)
   :custom
   (magit-todos-depth 1 "Limit scanning depth to improve performance on large repositories"))
 
