@@ -1,27 +1,31 @@
 <!--
   Sync Impact Report
   ===========================================================================
-  Version change: 0.0.0 → 1.0.0 (initial ratification)
+  Version change: 1.0.0 → 1.1.0 (MINOR — new principles added)
 
-  Modified principles: N/A (all new)
+  Modified principles: none (all existing principles unchanged)
 
   Added sections:
-    - Core Principles (7 principles)
-    - Technical Constraints
-    - Development Workflow
-    - Governance
+    - Principle VIII. Discoverability
+    - Principle IX. Built-in First
+    - Technical Constraint: Per-Project Configuration
 
-  Removed sections: N/A
+  Removed sections: none
 
   Templates requiring updates:
-    - .specify/templates/plan-template.md          ✅ compatible (no changes needed)
-    - .specify/templates/spec-template.md           ✅ compatible (no changes needed)
-    - .specify/templates/tasks-template.md          ✅ compatible (no changes needed)
-    - .specify/templates/checklist-template.md      ✅ compatible (no changes needed)
-    - .specify/templates/constitution-template.md   ✅ source template (unchanged)
-    - .claude/commands/speckit.*.md                 ✅ no outdated references
+    - .specify/templates/plan-template.md          ✅ compatible (Constitution
+      Check gate reads principles dynamically)
+    - .specify/templates/spec-template.md           ✅ compatible (no new
+      mandatory spec sections)
+    - .specify/templates/tasks-template.md          ✅ compatible (no new
+      task categories)
+    - .specify/templates/checklist-template.md      ✅ compatible (no changes)
+    - .specify/templates/constitution-template.md   ✅ source template
+      (unchanged)
 
-  Follow-up TODOs: none
+  Follow-up TODOs:
+    - CLAUDE.md should be reviewed to reference the new principles
+      (Discoverability, Built-in First, Per-Project Configuration)
   ===========================================================================
 -->
 
@@ -165,6 +169,60 @@ add abstractions, features, or configuration options speculatively.
 Every abstraction carries a comprehension cost that must be earned
 by repeated, concrete use.
 
+### VIII. Discoverability
+
+All keybindings, options, and features provided by Jotain MUST be
+easily discoverable and accessible. Users MUST NOT need to read
+source code to find available functionality.
+
+- Custom keybindings MUST use consistent, memorable prefixes
+  (e.g., `C-c` for user commands, `M-g` for navigation).
+- All custom interactive commands MUST have descriptive names
+  suitable for `M-x` discovery via the completion stack.
+- Custom commands and functions MUST have docstrings so they
+  appear correctly in `describe-function` and `describe-key`.
+- `which-key` (built-in Emacs 30) MUST remain enabled to show
+  available keybindings after partial key sequences.
+- Complex command hierarchies SHOULD use `transient` menus for
+  guided interaction.
+- Keybinding conflicts with widely-used built-in bindings are
+  prohibited.
+
+**Rationale**: Emacs is powerful but opaque. Discoverability reduces
+the learning curve and helps users find features without consulting
+external documentation.
+
+### IX. Built-in First
+
+Built-in Emacs features MUST be preferred over third-party packages
+unless the third-party option provides clear, demonstrable value.
+When third-party packages are used, they MUST integrate with
+standard Emacs interfaces rather than creating parallel systems.
+
+- Before adding a new third-party package, the contributor MUST
+  verify that no built-in Emacs feature covers the use case
+  adequately.
+- Third-party packages MUST hook into standard Emacs interfaces
+  where applicable: `completing-read`, `completion-at-point`,
+  `eldoc`, `xref`, `imenu`, `flymake`, `project.el`, and
+  `compile`.
+- Packages that create parallel systems (e.g., a proprietary
+  completion framework instead of `completing-read`) are
+  prohibited unless no standard interface exists for the
+  capability.
+- New third-party additions MUST document their justification
+  over built-in alternatives in the commit message or PR
+  description.
+- Existing sanctioned third-party packages listed in Technical
+  Constraints have been evaluated against this principle and
+  retained for demonstrated value; this principle governs all
+  future additions.
+
+**Rationale**: Built-in features are maintained by the Emacs core
+team, guaranteed available on every installation, and integrate
+seamlessly with the rest of Emacs. Third-party dependencies add
+maintenance burden and risk of abandonment.
+
 ## Technical Constraints
 
 - **Emacs Version**: Emacs 30+ (PGTK build) is required. Features
@@ -186,12 +244,27 @@ by repeated, concrete use.
   compilation handles JIT optimization at runtime.
 - **Completion Stack**: Vertico, Corfu, Consult, Orderless, and
   Embark form the completion ecosystem. Replacing any component
-  requires a constitution amendment.
+  requires a constitution amendment. These packages were evaluated
+  against Principle IX and retained: built-in alternatives
+  (`icomplete-vertical-mode`, `fido-mode`) do not reach feature
+  parity, and this stack integrates via standard `completing-read`
+  and `completion-at-point` interfaces.
 - **LSP**: Eglot is the LSP client. Lsp-mode is not permitted
   unless Eglot is formally deprecated upstream.
 - **Theme System**: `doom-themes` (doom-nord-light) and `nord-theme`
   (nord) are the sanctioned themes. `auto-dark` handles system
-  theme detection. Theme additions require review.
+  theme detection. Theme additions require review. These themes
+  were evaluated against Principle IX; `modus-themes` (built-in)
+  is a viable alternative but the Nord aesthetic was retained as
+  a deliberate design choice.
+- **Per-Project Configuration**: Projects MUST be configurable via
+  standard Emacs mechanisms. `.dir-locals.el` (committed to VCS)
+  provides shared project settings. `.dir-locals-2.el` (gitignored,
+  personal) provides individual developer overrides. New features
+  that accept project-level settings MUST support configuration
+  through dir-locals variables. Custom variables intended for
+  per-project use MUST be declared safe via `safe-local-variable`
+  with an appropriate predicate.
 
 ## Development Workflow
 
@@ -256,4 +329,4 @@ decisions and development practices in the Jotain project.
   development guidance file and MUST remain consistent with
   this constitution.
 
-**Version**: 1.0.0 | **Ratified**: 2026-02-22 | **Last Amended**: 2026-02-22
+**Version**: 1.1.0 | **Ratified**: 2026-02-22 | **Last Amended**: 2026-03-04
