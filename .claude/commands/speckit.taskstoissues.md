@@ -12,6 +12,19 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Outline
 
+### 0. Validate beads availability
+
+Before running any `bd` commands, verify that beads issue tracking is functional:
+
+```bash
+source .specify/scripts/bash/common.sh && check_beads
+```
+
+**If this check fails** (non-zero exit): **STOP immediately** and display the diagnostic message to the user. Do not proceed with issue creation. Suggest:
+- Run `bd doctor` to diagnose the problem
+- Run `bd init` if beads hasn't been set up yet
+- Ensure `bd` is available in your development shell (`nix develop`)
+
 ### 1. Setup
 
 Run the following two commands in parallel:

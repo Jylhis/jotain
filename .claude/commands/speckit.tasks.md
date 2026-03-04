@@ -64,6 +64,16 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Suggested MVP scope (typically just User Story 1)
    - Format validation: Confirm ALL tasks follow the checklist format (checkbox, ID, labels, file paths)
 
+6. **Auto-create beads issues** (if beads is available):
+
+   Check beads availability:
+   ```bash
+   source .specify/scripts/bash/common.sh && check_beads
+   ```
+
+   - **If beads is available** (exit 0): Automatically invoke the `/speckit.taskstoissues` workflow inline — create the epic, create issues for all tasks, and wire dependencies. This ensures tasks are tracked in beads by default without requiring a separate manual step.
+   - **If beads is unavailable** (exit non-zero): Include a note in the report: "Tasks are tracked in tasks.md only. Run `bd init` and then `/speckit.taskstoissues` to enable multi-session tracking with beads."
+
 Context for task generation: $ARGUMENTS
 
 The tasks.md should be immediately executable - each task must be specific enough that an LLM can complete it without additional context.
