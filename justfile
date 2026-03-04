@@ -69,7 +69,7 @@ check-parallel:
 [group('check')]
 check-instant:
     @echo "Running instant checks (< 10 seconds)..."
-    nix build .#checks.{{system}}.formatting --print-build-logs
+    nix build .#checks.{{system}}.formatting --no-link --print-build-logs
     nix build .#checks.{{system}}.smoke-test --no-link --print-build-logs
 
 # Fast validation (< 1 minute)
