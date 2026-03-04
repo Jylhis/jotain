@@ -45,7 +45,16 @@ You **MUST** consider the user input before proceeding (if not empty).
      - Display the table showing all checklists passed
      - Automatically proceed to step 3
 
-3. Load and analyze the implementation context:
+3. **Check beads availability and ensure issue tracking**:
+
+   ```bash
+   source .specify/scripts/bash/common.sh && check_beads
+   ```
+
+   - **If beads is available** (exit 0): Check whether tasks.md contains any `<!-- bd: -->` annotations. If no annotations are found, run the `/speckit.taskstoissues` workflow inline first to create beads issues before proceeding with implementation.
+   - **If beads is unavailable** (exit non-zero): Skip all beads-related steps (issue closing, syncing) throughout this workflow. Note in output: "Beads unavailable — skipping issue tracking."
+
+4. Load and analyze the implementation context:
    - **REQUIRED**: Read tasks.md for the complete task list and execution plan
    - **REQUIRED**: Read plan.md for tech stack, architecture, and file structure
    - **IF EXISTS**: Read data-model.md for entities and relationships
@@ -53,7 +62,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **IF EXISTS**: Read research.md for technical decisions and constraints
    - **IF EXISTS**: Read quickstart.md for integration scenarios
 
-4. **Project Setup Verification**:
+5. **Project Setup Verification**:
    - **REQUIRED**: Create/verify ignore files based on actual project setup:
 
    **Detection & Creation Logic**:
@@ -97,42 +106,42 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **Terraform**: `.terraform/`, `*.tfstate*`, `*.tfvars`, `.terraform.lock.hcl`
    - **Kubernetes/k8s**: `*.secret.yaml`, `secrets/`, `.kube/`, `kubeconfig*`, `*.key`, `*.crt`
 
-5. Parse tasks.md structure and extract:
+6. Parse tasks.md structure and extract:
    - **Task phases**: Setup, Tests, Core, Integration, Polish
    - **Task dependencies**: Sequential vs parallel execution rules
    - **Task details**: ID, description, file paths, parallel markers [P]
    - **Execution flow**: Order and dependency requirements
 
-6. Execute implementation following the task plan:
+7. Execute implementation following the task plan:
    - **Phase-by-phase execution**: Complete each phase before moving to the next
    - **Respect dependencies**: Run sequential tasks in order, parallel tasks [P] can run together  
    - **Follow TDD approach**: Execute test tasks before their corresponding implementation tasks
    - **File-based coordination**: Tasks affecting the same files must run sequentially
    - **Validation checkpoints**: Verify each phase completion before proceeding
 
-7. Implementation execution rules:
+8. Implementation execution rules:
    - **Setup first**: Initialize project structure, dependencies, configuration
    - **Tests before code**: If you need to write tests for contracts, entities, and integration scenarios
    - **Core development**: Implement models, services, CLI commands, endpoints
    - **Integration work**: Database connections, middleware, logging, external services
    - **Polish and validation**: Unit tests, performance optimization, documentation
 
-8. Progress tracking and error handling:
+9. Progress tracking and error handling:
    - Report progress after each completed task
    - Halt execution if any non-parallel task fails
    - For parallel tasks [P], continue with successful tasks, report failed ones
    - Provide clear error messages with context for debugging
    - Suggest next steps if implementation cannot proceed
    - **IMPORTANT** For completed tasks, make sure to mark the task off as [X] in the tasks file.
-   - **BEADS SYNC**: After marking a task `[X]`, check whether the task line contains a `<!-- bd:BD_ID -->` trailing comment. If it does, close the corresponding beads issue:
+   - **BEADS SYNC** (only if beads was available in step 3): After marking a task `[X]`, check whether the task line contains a `<!-- bd:BD_ID -->` trailing comment. If it does, close the corresponding beads issue:
 
      ```bash
      bd close BD_ID
      ```
 
-     Where `BD_ID` is the value from the `<!-- bd:BD_ID -->` comment (e.g. `bd-043`). This keeps beads in sync with actual task completion without requiring a separate sync step.
+     Where `BD_ID` is the value from the `<!-- bd:BD_ID -->` comment (e.g. `bd-043`). This keeps beads in sync with actual task completion without requiring a separate sync step. If beads was determined unavailable in step 3, skip this entirely.
 
-9. Completion validation:
+10. Completion validation:
    - Verify all required tasks are completed
    - Check that implemented features match the original specification
    - Validate that tests pass and coverage meets requirements
@@ -141,4 +150,4 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/speckit.tasks` first to regenerate the task list.
 
-After all tasks are complete, run `bd sync` to push any remaining beads status updates to the remote. If tasks.md has no `<!-- bd:BD_ID -->` annotations, skip the beads steps — they are optional (present only when `/speckit.taskstoissues` was run beforehand).
+After all tasks are complete, if beads was available in step 3, run `bd sync` to push any remaining beads status updates. If beads was unavailable, skip this entirely.
