@@ -209,5 +209,46 @@ auto-dark is the sole decider of which theme becomes active."
   :config
   (global-kkp-mode +1))
 
+(use-package doom-modeline
+  :ensure t
+  :demand t
+  :custom
+  (doom-modeline-height 25)
+  (doom-modeline-bar-width 3)
+  (doom-modeline-lsp t)
+  (doom-modeline-github nil)
+  :config
+  (doom-modeline-mode 1))
+
+(use-package indent-bars
+  :ensure t
+  :custom
+  (indent-bars-treesit-support t)
+  :hook (prog-mode . indent-bars-mode))
+
+(use-package pulsar
+  :ensure t
+  :demand t
+  :custom
+  (pulsar-pulse-functions '(recenter-top-bottom
+                            move-to-window-line-top-bottom
+                            reposition-window
+                            bookmark-jump
+                            other-window
+                            delete-window
+                            delete-other-windows
+                            forward-page
+                            backward-page
+                            scroll-up-command
+                            scroll-down-command
+                            xref-find-definitions
+                            xref-find-references
+                            xref-go-back
+                            consult-line
+                            consult-goto-line
+                            imenu))
+  :config
+  (pulsar-global-mode 1))
+
 (provide 'ui)
 ;;; ui.el ends here

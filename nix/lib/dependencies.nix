@@ -80,6 +80,9 @@ let
     "project" = null; # Built-in to Emacs 30+
     "diff-mode" = null; # Built-in to Emacs
     "xt-mouse" = null; # Built-in to Emacs
+
+    # Name mismatches: use-package name → nixpkgs emacsPackages attr
+    "minuet-ai" = "minuet"; # elisp feature is 'minuet', nixpkgs attr is 'minuet'
   };
 
   # Map elisp package name to nixpkgs name
