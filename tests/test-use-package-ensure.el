@@ -6,13 +6,15 @@
 ;; Convention (Emacs 30+):
 ;; - External packages: Use explicit `:ensure t` for documentation
 ;; - Built-in packages: Use `:ensure nil` to mark as built-in
-;; - Packages are pre-installed by Nix, :ensure t does not trigger installation
-;;   when `use-package-always-ensure` is nil
+;; - Packages are pre-installed by Nix; `use-package-ensure-function` is set to
+;;   `ignore` so `:ensure t` is purely documentary and never calls package-install
 ;;
 ;; Context:
 ;; - early-init.el sets (setq use-package-always-ensure nil)
-;; - This prevents use-package from auto-installing packages
-;; - Individual :ensure t with nil global setting is a no-op (just documentation)
+;; - early-init.el sets (setq use-package-ensure-function 'ignore)
+;; - The ensure-function setting is what makes :ensure t truly a no-op
+;; - Without it, explicit :ensure t still triggers package-install even when
+;;   use-package-always-ensure is nil
 ;; - Built-in packages (Emacs 30+): which-key, editorconfig, use-package
 ;;
 ;; This test suite validates consistent :ensure usage patterns.
@@ -30,6 +32,14 @@ This is the critical setting that prevents runtime package installation."
   :tags '(fast unit critical)
   (should (boundp 'use-package-always-ensure))
   (should (null use-package-always-ensure)))
+
+(ert-deftest test-use-package-ensure/ensure-function-is-ignore ()
+  "Test that use-package-ensure-function is set to `ignore'.
+This neutralizes :ensure t so it never calls package-install, even when
+explicitly set on individual use-package declarations."
+  :tags '(fast unit critical)
+  (should (boundp 'use-package-ensure-function))
+  (should (eq use-package-ensure-function 'ignore)))
 
 (ert-deftest test-use-package-ensure/early-init-sets-nil ()
   "Test that early-init.el explicitly sets use-package-always-ensure to nil.
@@ -143,10 +153,13 @@ This integration test mocks package-install to catch any installation attempts."
                   (setq package-install-called t)
                   (signal 'error (list "Unexpected package-install call" args))))
 
-          ;; Load a configuration module that had :ensure t
-          ;; Use eval-buffer to simulate real loading
+          ;; Load use-package forms with and without :ensure t
+          ;; The ensure-function being `ignore' means neither should call package-install
           (with-temp-buffer
-            (insert "(use-package some-package)") ; Without :ensure
+            (insert "(use-package some-package)")   ; Without :ensure
+            (eval-buffer))
+          (with-temp-buffer
+            (insert "(use-package some-package :ensure t)")  ; With explicit :ensure t
             (eval-buffer))
 
           ;; Verify no installation attempt
@@ -166,7 +179,9 @@ This verifies that Nix-provided packages are properly accessible."
                         corfu
                         magit
                         eglot
-                        which-key)))
+                        which-key
+                        combobulate
+                        claude-code-ide)))
     (dolist (pkg nix-packages)
       ;; Check if package is available (locate-library finds .el or .elc)
       (should (or (featurep pkg)

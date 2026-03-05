@@ -208,8 +208,15 @@ let
       # Used by: elisp/programming.el (claude-code-ide)
       # pkgs.claude-code
 
+      # LSP JSON acceleration via bytecode pre-conversion
+      # Used by: elisp/programming.el (eglot-booster)
+      pkgs.emacs-lsp-booster
+
+      # SQLite database for emacsql (forge PR/issue storage)
+      # Used by: elisp/git.el (forge via emacsql-sqlite-builtin)
+      pkgs.sqlite
+
       # Additional tools (uncomment as needed):
-      # pkgs.sqlite  # Used by org-roam, forge
       # pkgs.graphviz  # Used by org-mode diagrams
       # pkgs.imagemagick  # Image manipulation for org-mode
       # pkgs.pandoc  # Universal document converter
