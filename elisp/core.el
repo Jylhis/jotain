@@ -9,6 +9,7 @@
   :init
   :custom
   (text-mode-ispell-word-completion nil "Emacs 30 and newer: Disable Ispell completion function.")
+  (fill-column 100 "Modern standard for line length")
   (use-short-answers t "life is too short to type yes or no")
   (create-lockfiles nil)
   (delete-by-moving-to-trash t "Delete by moving to trash in interactive mode")
@@ -88,6 +89,10 @@
   :config
   (line-number-mode 1)   ; Show line number in modeline
   (column-number-mode 1)) ; Show column number
+
+(use-package display-fill-column-indicator
+  :ensure nil
+  :hook (prog-mode . display-fill-column-indicator-mode))
 
 (use-package subword
   :ensure nil
