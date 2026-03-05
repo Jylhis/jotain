@@ -27,17 +27,33 @@
   (global-treesit-auto-mode))
 
 (use-package treesit-fold
-  :disabled
   :diminish
   :ensure t
   :hook (after-init . global-treesit-fold-indicators-mode)
   :init (setq treesit-fold-indicators-priority -1))
 
+(use-package combobulate
+  :ensure t
+  :custom
+  (combobulate-key-prefix "C-c o")
+  :hook ((python-ts-mode . combobulate-mode)
+         (typescript-ts-mode . combobulate-mode)
+         (tsx-ts-mode . combobulate-mode)
+         (js-ts-mode . combobulate-mode)
+         (json-ts-mode . combobulate-mode)
+         (yaml-ts-mode . combobulate-mode)
+         (html-ts-mode . combobulate-mode)
+         (css-ts-mode . combobulate-mode)
+         (go-ts-mode . combobulate-mode)
+         (rust-ts-mode . combobulate-mode)
+         (c-ts-mode . combobulate-mode)
+         (c++-ts-mode . combobulate-mode)))
+
 (use-package flymake
   :custom
   (flymake-fringe-indicator-position 'left-fringe)
   (flymake-suppress-zero-counters t)
-  ;; (flymake-show-diagnostics-at-end-of-line t) ; FIXME
+  (flymake-show-diagnostics-at-end-of-line t)
   (flymake-margin-indicators-string '((error "!" compilation-error)
                                       (warning "?" compilation-warning)
                                       (note "·" compilation-info)))
@@ -153,8 +169,12 @@
   (when (fboundp 'eglot-inlay-hints-mode)
     (add-hook 'eglot-managed-mode-hook
               (lambda ()
-                (when (member major-mode '(go-mode rust-mode typescript-mode python-mode))
+                (when (member major-mode '(go-mode go-ts-mode rust-mode rust-ts-mode
+						   typescript-mode typescript-ts-mode
+						   python-mode python-ts-mode))
                   (eglot-inlay-hints-mode 1)))))
+  ;; eglot-inlay-hints-mode is buffer-local and safe for .dir-locals.el:
+  ;; ((go-ts-mode . ((eglot-inlay-hints-mode . nil))))
 
   ;; Configure server-specific settings
   (add-to-list 'eglot-server-programs
@@ -182,6 +202,12 @@
   :defer t
   :after (consult eglot embark))
 
+(use-package eglot-booster
+  :ensure t
+  :after eglot
+  :config
+  (eglot-booster-mode))
+
 (use-package xref
   :ensure nil
   :init
@@ -201,13 +227,25 @@
   :hook (prog-mode . dtrt-indent-mode)
   )
 
-(use-package direnv
+(use-package envrc
   :ensure t
   :demand t
-  ;; Direnv is guaranteed to be available via Nix (see nix/lib/runtime-deps.nix)
+  ;; Direnv CLI is provided by Nix (see nix/lib/runtime-deps.nix)
+  ;; envrc provides buffer-local environment isolation (superior to direnv.el)
   :config
-  (direnv-mode)
-  (add-to-list 'warning-suppress-types '(direnv)))
+  (envrc-global-mode)
+  (add-to-list 'warning-suppress-types '(envrc)))
+
+(use-package inheritenv
+  :ensure t
+  :demand t)
+
+(use-package apheleia
+  :ensure t
+  :config
+  (apheleia-global-mode +1))
+
+(put 'apheleia-mode 'safe-local-variable #'booleanp)
 
 ;; Debugging
 (use-package gdb-mi
