@@ -2,7 +2,7 @@
 ;;; For more information see (info "(emacs) Directory Variables")
 
 ((nil
-  (fill-column . 80))
+  (fill-column . 100))
  (emacs-lisp-mode
   (sentence-end-double-space . t)
   (projection-commands-build-project . "just build")
