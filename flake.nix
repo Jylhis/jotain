@@ -113,6 +113,7 @@
           default = {
             type = "app";
             program = "${self'.packages.emacs-run}/bin/emacs-run";
+            meta.description = "Try Jotain Emacs in an isolated temporary environment";
           };
         };
 
