@@ -424,5 +424,9 @@
         tooltip-recent-seconds 1
         tooltip-hide-delay 10))
 
+(use-package vue-mode
+  :ensure t
+  :mode "\\.vue\\'")
+
 (provide 'programming)
 ;;; programming.el ends here
