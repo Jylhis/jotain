@@ -82,7 +82,7 @@ auto-dark is the sole decider of which theme becomes active."
   :custom
   (global-hl-line-sticky-flag t)
   :hook ((after-init . global-hl-line-mode)
-         ((dashboard-mode eshell-mode shell-mode term-mode vterm-mode org-mode) .
+         ((enlight-mode eshell-mode shell-mode term-mode vterm-mode org-mode) .
           (lambda () (setq-local global-hl-line-mode nil)))))
 
 (use-package rainbow-delimiters

@@ -1,5 +1,5 @@
 # Development shell with XDG isolation
-{ pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-25.05-small.tar.gz") { }
+{ pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-25.11-small.tar.gz") { }
 , jotainEmacs ? pkgs.callPackage ./emacs.nix { inherit pkgs; }
 , ...
 }:
