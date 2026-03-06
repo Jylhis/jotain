@@ -360,5 +360,20 @@
     (require 'jinja2-mode)
     (should (fboundp 'jinja2-mode))))
 
+
+;;; Vue Configuration
+
+(ert-deftest test-programming/vue-mode-registered ()
+  "Test that vue-mode is registered for .vue files."
+  :tags '(unit)
+  (should (assoc "\\.vue\\'" auto-mode-alist))
+  (when (locate-library "vue-mode")
+    (should (locate-library "vue-mode"))))
+
+(ert-deftest test-programming/vue-language-server-available ()
+  "Test that vue-language-server is available in PATH."
+  :tags '(integration)
+  (should (executable-find "vue-language-server")))
+
 (provide 'test-programming)
 ;;; test-programming.el ends here

@@ -145,6 +145,9 @@ let
     # Markdown
     pkgs.marksman # Markdown LSP server
 
+    # Vue
+    pkgs.vue-language-server # Vue LSP server
+
     # C/C++
     pkgs.clang-tools # Provides clangd LSP server
 
