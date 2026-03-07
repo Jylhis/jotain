@@ -204,6 +204,10 @@ let
       # Used by: elisp/programming.el (markdown-mode)
       (optionalPackage "multimarkdown")
 
+      # Mermaid diagram CLI
+      # Used by: elisp/writing.el (ob-mermaid), elisp/programming.el (mermaid-mode)
+      (optionalPackage "mermaid-cli")
+
       # Claude Code CLI
       # Used by: elisp/programming.el (claude-code-ide)
       # pkgs.claude-code
