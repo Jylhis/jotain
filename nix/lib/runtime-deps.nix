@@ -51,18 +51,40 @@ let
   # - Emacs 29+ built-in treesit
   #
   # How to add new grammars:
-  # We now use all available grammars from nixpkgs via pkgs.tree-sitter.allGrammars.
-  # No manual addition is needed.
+  # 1. Find grammar in nixpkgs: nix repl -> pkgs.tree-sitter.builtGrammars
+  # 2. Add to the list below
 
   treesitterGrammars =
     let
-      # Some grammars in nixpkgs use mutable branch refs (e.g. "release") instead
-      # of pinned commits, causing hash mismatches when upstream pushes new content.
-      # Filter these out until they are fixed in nixpkgs.
-      broken = [ "tree-sitter-quint" ];
-      grammars = builtins.removeAttrs pkgs.tree-sitter.builtGrammars (broken ++ [ "recurseForDerivations" ]);
+      # List of explicitly required grammars to keep closure size small.
+      # This avoids downloading/building ~270+ grammars from nixpkgs.
+      requiredGrammars = with pkgs.tree-sitter.builtGrammars; [
+        tree-sitter-bash
+        tree-sitter-c
+        tree-sitter-cmake
+        tree-sitter-cpp
+        tree-sitter-css
+        tree-sitter-dockerfile
+        tree-sitter-elisp
+        tree-sitter-go
+        tree-sitter-gomod
+        tree-sitter-gowork
+        tree-sitter-html
+        tree-sitter-javascript
+        tree-sitter-json
+        tree-sitter-make
+        tree-sitter-markdown
+        tree-sitter-markdown-inline
+        tree-sitter-nix
+        tree-sitter-python
+        tree-sitter-rust
+        tree-sitter-toml
+        tree-sitter-tsx
+        tree-sitter-typescript
+        tree-sitter-yaml
+      ];
     in
-    builtins.attrValues grammars;
+    requiredGrammars;
 
   # ============================================================================
   # FONTS
