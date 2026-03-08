@@ -360,6 +360,15 @@
   :hook (csv-mode . csv-align-mode)
   :custom
   (csv-separators '("," ";" "|" "\t")))
+
+(use-package typescript-ts-mode
+  :ensure nil
+  :mode (("\\.ts\\'" . typescript-ts-mode)
+         ("\\.tsx\\'" . tsx-ts-mode)
+         ("\\.jsx\\'" . tsx-ts-mode)))
+(use-package js
+  :ensure nil
+  :mode "\\.js\\'")
 (use-package modern-cpp-font-lock
   :ensure t
   :hook (c++-mode . modern-c++-font-lock-mode))
