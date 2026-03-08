@@ -361,14 +361,14 @@
   :custom
   (csv-separators '("," ";" "|" "\t")))
 
-(use-package typescript-ts-mode
+(use-package ts-mode
   :ensure nil
-  :mode (("\\.ts\\'" . typescript-ts-mode)
-         ("\\.tsx\\'" . tsx-ts-mode)
-         ("\\.jsx\\'" . tsx-ts-mode)))
+  :mode (("\\.ts\'" . typescript-ts-mode)
+         ("\\.tsx\'" . tsx-ts-mode)
+         ("\\.jsx\'" . tsx-ts-mode)))
 (use-package js
   :ensure nil
-  :mode "\\.js\\'")
+  :mode ("\\.js\'" . js-ts-mode))
 (use-package modern-cpp-font-lock
   :ensure t
   :hook (c++-mode . modern-c++-font-lock-mode))
