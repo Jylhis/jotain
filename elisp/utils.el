@@ -36,7 +36,7 @@ Each directory will be searched recursively for .org files."
                                                  (lambda (dir)
                                                    (not (string-match-p "\\(^\\|/\\)\\." (file-name-nondirectory dir))))))
         (when (file-regular-p file)
-          (push (file-truename file) files)))
+          (push file files)))
       (nreverse files))))
 
 (defun my/update-org-agenda-files (&optional directories)
