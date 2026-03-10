@@ -82,12 +82,12 @@ let
 
   fonts = [
 
-    pkgs.jetbrains-mono
-
-    pkgs.fira-code
-    pkgs.iosevka
-    pkgs.cascadia-code
-    pkgs.hack-font
+    pkgs.nerd-fonts.jetbrains-mono
+    pkgs.nerd-fonts.fira-code
+    pkgs.nerd-fonts.iosevka
+    pkgs.nerd-fonts.caskaydia-cove # Cascadia Code Nerd Font variant
+    pkgs.nerd-fonts.hack
+    pkgs.nerd-fonts.symbols-only # Provides "Symbols Nerd Font Mono" for nerd-icons
 
     # UI and variable-pitch fonts
     # Used by: elisp/fonts.el jotain-fonts-variable-family
