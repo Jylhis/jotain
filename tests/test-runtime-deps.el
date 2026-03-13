@@ -89,6 +89,11 @@
   :tags '(fast unit)
   (should (executable-find "direnv")))
 
+(ert-deftest test-runtime-deps/mermaid-available ()
+  "Test that mermaid-cli (mmdc) is available in PATH."
+  :tags '(fast unit)
+  (should (executable-find "mmdc")))
+
 (ert-deftest test-runtime-deps/cli-tools-functional ()
   "Test that CLI tools can actually execute."
   :tags '(unit)
