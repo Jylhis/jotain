@@ -35,6 +35,8 @@ just build               # Build Emacs package with Nix
 just compile             # Byte-compile all .el files directly (no Nix)
 just check               # Syntax check via Nix dry-run
 just format              # Format all files via treefmt-nix (nix fmt)
+just check-instant       # Formatting + smoke only (< 10s)
+just check-fast          # Above + fast unit tests (< 1min)
 just check-parallel      # Run all checks in parallel (faster on multi-core)
 ```
 
@@ -88,15 +90,18 @@ Not loaded by `init.el` directly: `utils.el` (required by `writing.el`), `collab
 ### Nix build system
 
 ```
-flake.nix                  # Entry point, uses flake-parts
+flake.nix                  # Entry point, uses flake-parts + emacs-overlay
 ├── emacs.nix              # Builds Emacs 30 (PGTK) with all packages + runtime deps
 │   ├── nix/lib/dependencies.nix   # Auto-extracts packages from use-package declarations
 │   └── nix/lib/runtime-deps.nix   # LSP servers, fonts, CLI tools, tree-sitter grammars
 ├── default.nix            # jotain package (copies init.el + early-init.el to share/jotain/)
 ├── shell.nix              # Dev shell (emacs-dev, jot wrappers, LSP servers, formatters)
 ├── nix/overlays/default.nix  # Overlay: builds jotain-modules Emacs package from elisp/
-└── nix/modules/home/default.nix  # Home Manager module (programs.jotain options)
+├── nix/modules/home/default.nix  # Home Manager module (programs.jotain options)
+└── nix/modules/nixos/             # NixOS module (nixosModules.default)
 ```
+
+The flake uses `nix-community/emacs-overlay` for bleeding-edge Emacs builds and packages. The overlay in `nix/overlays/default.nix` composes on top of it.
 
 **Critical flow**: The overlay in `nix/overlays/default.nix` builds `elisp/` as an Emacs package called `jotain-modules` via `trivialBuild`. This package is included as a core dependency in `emacs.nix`. Custom Emacs packages not in nixpkgs (e.g., `claude-code-ide`) are also defined here.
 
@@ -144,7 +149,7 @@ Grammar paths are set in `early-init.el` from the `TREE_SITTER_DIR` environment 
 - `test-helpers.el` mirrors `early-init.el` settings (use-package, tree-sitter) since tests run with `-Q`
 - NMT integration tests live in `nmt-tests/` and validate the Home Manager module options
 - The VM runtime test (`test-emacs-runtime`) only runs when `CI=1`
-- `specs/` holds speckit feature specifications (spec.md, plan.md, tasks.md per feature)
+- `specs/` holds speckit feature specifications (spec.md, plan.md, tasks.md per feature), organized as `specs/NNN-feature-name/`
 
 ### Home Manager module options
 
