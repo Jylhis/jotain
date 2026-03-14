@@ -8,7 +8,7 @@ Jotain is a modular Emacs distribution managed with Nix Flakes. All Emacs packag
 
 ## Commands
 
-All commands are run via `just` (see `justfile`). Enter the dev shell with `nix develop` to get all project tools.
+All commands are run via `just` (see `justfile`). Enter the dev shell with `nix develop --no-pure-eval` (or `direnv allow` via devenv/nix-direnv) to get all project tools.
 
 ### Testing
 
@@ -90,16 +90,17 @@ Not loaded by `init.el` directly: `utils.el` (required by `writing.el`), `collab
 ### Nix build system
 
 ```
-flake.nix                  # Entry point, uses flake-parts + emacs-overlay
+flake.nix                  # Entry point, uses flake-parts + emacs-overlay + devenv
 ├── emacs.nix              # Builds Emacs 30 (PGTK) with all packages + runtime deps
 │   ├── nix/lib/dependencies.nix   # Auto-extracts packages from use-package declarations
 │   └── nix/lib/runtime-deps.nix   # LSP servers, fonts, CLI tools, tree-sitter grammars
 ├── default.nix            # jotain package (copies init.el + early-init.el to share/jotain/)
-├── shell.nix              # Dev shell (emacs-dev, jot wrappers, LSP servers, formatters)
 ├── nix/overlays/default.nix  # Overlay: builds jotain-modules Emacs package from elisp/
 ├── nix/modules/home/default.nix  # Home Manager module (programs.jotain options)
 └── nix/modules/nixos/             # NixOS module (nixosModules.default)
 ```
+
+The dev shell is defined inline in `flake.nix` via `devenv.shells.default` (devenv flake-parts module). It includes emacs-dev, jot/emacs-dev wrapper scripts, LSP servers, formatters, and git pre-commit hooks (shellcheck + treefmt). Use `nix develop --no-pure-eval` for manual shell entry.
 
 The flake uses `nix-community/emacs-overlay` for bleeding-edge Emacs builds and packages. The overlay in `nix/overlays/default.nix` composes on top of it.
 
@@ -163,7 +164,9 @@ Grammar paths are set in `early-init.el` from the `TREE_SITTER_DIR` environment 
 
 ### CI
 
-GitHub Actions runs on push to main and PRs. Uses cachix (`jylhis` + `nix-community`) for binary caching. The workflow builds the default package and runs `nix flake check`.
+GitHub Actions runs on push to main and PRs. Uses cachix (`jylhis` + `nix-community` + `devenv`) for binary caching. The workflow builds the default package and runs `nix flake check`.
+
+Git pre-commit hooks (shellcheck + treefmt) are configured via `devenv.shells.default.git-hooks` and activated when entering the dev shell.
 
 ## Issue Tracking (beads / bd)
 
