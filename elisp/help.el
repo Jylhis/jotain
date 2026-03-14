@@ -5,6 +5,11 @@
 
 ;;; Code:
 
+(use-package help
+  :ensure nil
+  :custom
+  (help-window-select t "Automatically select the help window for immediate reading and dismissing."))
+
 (use-package help-at-pt
   :ensure nil
   :custom
