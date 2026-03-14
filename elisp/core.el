@@ -90,6 +90,11 @@
   (line-number-mode 1)   ; Show line number in modeline
   (column-number-mode 1)) ; Show column number
 
+(use-package fancy-fill-paragraph
+  :ensure t
+  :bind
+  ([remap fill-paragraph] . fancy-fill-paragraph))
+
 (use-package display-fill-column-indicator
   :ensure nil
   :hook (prog-mode . display-fill-column-indicator-mode))
