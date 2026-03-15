@@ -27,7 +27,7 @@
   "Disable all active themes before loading a new one, unless NO-ENABLE is non-nil.
 This prevents theme blending/stacking artifacts."
   (unless no-enable
-    (mapc #'disable-theme custom-enabled-themes)))
+    (mapc #'disable-theme (copy-sequence custom-enabled-themes))))
 
 (advice-add 'load-theme :before #'jotain-ui--disable-all-themes)
 
