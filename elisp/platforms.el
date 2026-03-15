@@ -126,6 +126,7 @@
       (set-face-attribute 'default nil
                           :font available-font
                           :height height)
+      (set-frame-font (font-spec :name available-font :size (/ height 10.0)) nil t)
       (message "Platform: Using font %s at height %d" available-font height)
       available-font)))
 
