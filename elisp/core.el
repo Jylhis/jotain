@@ -199,5 +199,16 @@
                      (float-time (time-subtract after-init-time before-init-time))
                      gcs-done)))
 
+
+;; World clock configuration
+(use-package time
+  :ensure nil
+  :custom
+  (world-clock-list
+   '(("Europe/Zurich" "Zurich")
+     ("Europe/Helsinki" "Helsinki")
+     ("Asia/Bangkok" "Bangkok")
+     ("Asia/Shanghai" "Shanghai"))))
+
 (provide 'core)
 ;;; core.el ends here
