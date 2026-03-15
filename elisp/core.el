@@ -167,9 +167,9 @@
   :bind ("C-x u" . vundo)
   :config (setq vundo-glyph-alist vundo-unicode-symbols))
 
-(use-package expand-region
+(use-package expreg
   :ensure t
-  :bind ("C-=" . er/expand-region))
+  :bind ("C-=" . expreg-expand))
 
 (use-package multiple-cursors
   :ensure t
