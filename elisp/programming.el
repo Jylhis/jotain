@@ -27,7 +27,6 @@
   (global-treesit-auto-mode))
 
 (use-package treesit-fold
-  :diminish
   :ensure t
   :hook (after-init . global-treesit-fold-indicators-mode)
   :init (setq treesit-fold-indicators-priority -1))
@@ -223,7 +222,6 @@
 
 (use-package dtrt-indent
   :defer t
-  :diminish
   :hook (prog-mode . dtrt-indent-mode)
   )
 
@@ -405,7 +403,6 @@
 (use-package editorconfig
   :ensure nil  ; Built-in since Emacs 30
   :defer t
-  :diminish
   :hook (prog-mode . editorconfig-mode))
 
 ;; Enhanced error display using built-in features
