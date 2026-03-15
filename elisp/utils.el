@@ -106,3 +106,10 @@ If there are not exactly 2 windows, display an error message."
 
 (provide 'utils)
 ;;; utils.el ends here
+
+;;;###autoload
+(defun my/auto-create-missing-dirs ()
+  "Automatically create missing directories when finding a file."
+  (let ((target-dir (if buffer-file-name (file-name-directory buffer-file-name))))
+    (when (and target-dir (not (file-exists-p target-dir)))
+      (make-directory target-dir t))))

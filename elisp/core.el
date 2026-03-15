@@ -52,6 +52,8 @@
   :ensure nil
   :hook
   (after-save . executable-make-buffer-file-executable-if-script-p)
+  :config
+  (add-to-list 'find-file-not-found-functions #'my/auto-create-missing-dirs)
   :custom
   ;; Disable autosave and backups
   (auto-save-default nil "Disable separate autosave files")
