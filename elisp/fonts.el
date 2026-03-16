@@ -76,6 +76,8 @@ Returns (font-name . height) or nil if none found."
       (set-face-attribute face nil
                           :family font-name
                           :height font-height)
+      (when (eq face 'default)
+        (set-frame-font (font-spec :family font-name :size (/ font-height 10.0)) nil t))
       (message "jotain-fonts: Set %s to %s (height %d)" 
                face font-name font-height)
       font-spec)))
