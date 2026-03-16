@@ -102,7 +102,7 @@ ABORT: Plan phase failed. Fix the error above, then resume with:
 
 **Skip if**: `--from` is set to analyze or implement.
 
-Run the `/speckit.tasks` workflow inline (this also auto-runs `taskstoissues` if beads is available).
+Run the `/speckit.tasks` workflow inline.
 
 If this phase fails, abort with:
 ```
@@ -141,7 +141,6 @@ Run the `/speckit.implement` workflow inline.
 This phase:
 - Checks checklists (if any exist in FEATURE_DIR/checklists/)
 - Executes tasks phase-by-phase per tasks.md
-- Closes beads issues as tasks complete
 - Runs the project's test suite after each phase
 
 If implementation halts mid-way, report:
@@ -161,12 +160,10 @@ Workflow Complete
 Feature:      <FEATURE_DIR>
 Branch:       <BRANCH_NAME>
 Phases run:   specify → clarify → plan → tasks → analyze → implement
-Beads sync:   <ran / skipped>
 
 Next steps:
   git push                    # Push feature branch
   gh pr create                # Open pull request (if applicable)
-  bd sync                     # Ensure beads is synced to remote
 ```
 
 ## Error Recovery
@@ -183,6 +180,6 @@ The `--from` flag reads existing artifacts from the current feature directory de
 ## Notes
 
 - This command is a **coordinator**: it does not duplicate the logic of individual commands. Each phase runs the actual slash command workflow inline.
-- All quality gates from individual commands remain active (checklists, beads sync, test-gate hooks).
+- All quality gates from individual commands remain active (checklists, test-gate hooks).
 - `--auto` does not bypass quality gates — it only skips human confirmation prompts between phases.
 - For debugging, run individual phase commands (`/speckit.specify`, `/speckit.plan`, etc.) to isolate failures.
