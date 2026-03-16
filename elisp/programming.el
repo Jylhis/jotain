@@ -146,8 +146,8 @@
 	 ;; (eglot-mode . sideline-mode)
 	 )
   :init
-  (setq eglot-send-changes-idle-time 0.5)
-  (setq eglot-autoshutdown t)
+  (setopt eglot-send-changes-idle-time 0.5)
+  (setopt eglot-autoshutdown t)
   (setq eglot-events-buffer-size 0) ; Disable event logging for performance
   :custom
   (eglot-report-progress nil "Prevent Eglot minibuffer spam")
@@ -212,7 +212,7 @@
   :ensure nil
   :init
   ;; Ripgrep is guaranteed to be available via Nix (see nix/lib/runtime-deps.nix)
-  (setq xref-search-program 'ripgrep))
+  (setopt xref-search-program 'ripgrep))
 
 (use-package elisp-lint
   :defer t
@@ -419,7 +419,7 @@
 ;; Enhanced tooltip support for better diagnostic display
 (when (display-graphic-p)
   (tooltip-mode 1)
-  (setq tooltip-delay 0.5
+  (setopt tooltip-delay 0.5
         tooltip-short-delay 0.1
         tooltip-recent-seconds 1
         tooltip-hide-delay 10))
