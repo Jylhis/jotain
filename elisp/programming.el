@@ -148,7 +148,7 @@
   :init
   (setopt eglot-send-changes-idle-time 0.5)
   (setopt eglot-autoshutdown t)
-  (setq eglot-events-buffer-size 0) ; Disable event logging for performance
+  (setopt eglot-events-buffer-size 0) ; Disable event logging for performance
   :custom
   (eglot-report-progress nil "Prevent Eglot minibuffer spam")
   (eglot-extend-to-xref t "Activate Eglot in cross-referenced non-project files")
