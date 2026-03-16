@@ -11,7 +11,7 @@
   (text-mode-ispell-word-completion nil "Emacs 30 and newer: Disable Ispell completion function.")
   (fill-column 100 "Modern standard for line length")
   (use-short-answers t "life is too short to type yes or no")
-  (use-dialog-box nil "Disable dialog boxes for a consistent experience")
+  (use-dialog-box nil "Disable dialog boxes to complement use-short-answers")
   (create-lockfiles nil)
   (delete-by-moving-to-trash t "Delete by moving to trash in interactive mode")
   (sentence-end-double-space nil "Disable the obsolete practice of end-of-line spacing from the typewriter era.")
