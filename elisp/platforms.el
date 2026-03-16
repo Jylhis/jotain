@@ -22,14 +22,14 @@
 		 "List of packages to disable on Android.")
 
 	       ;; Android-specific settings
-	       (setq create-lockfiles nil)
-	       (setq make-backup-files nil)
-	       (setq auto-save-default nil)
+	       (setopt create-lockfiles nil)
+	       (setopt make-backup-files nil)
+	       (setopt auto-save-default nil)
 
 	       ;; Optimize for touch input and smaller screens
-	       (setq mouse-wheel-scroll-amount '(3 ((shift) . 1)))
-	       (setq scroll-margin 2)
-	       (setq scroll-conservatively 10000)
+	       (setopt mouse-wheel-scroll-amount '(3 ((shift) . 1)))
+	       (setopt scroll-margin 2)
+	       (setopt scroll-conservatively 10000)
 
 	       ;; Termux-specific paths - use environment variables when available
 	       (when (getenv "EXTERNAL_STORAGE")
@@ -74,7 +74,7 @@
 	       (global-set-key (kbd "s-q") 'save-buffers-kill-emacs)
 
 	       ;; Use macOS trash
-	       (setq trash-directory "~/.Trash"))
+	       (setopt trash-directory "~/.Trash"))
 
 ;;; Linux-specific configuration
 (platform-when platform-linux-p
@@ -87,7 +87,7 @@
 	       ;; (setq select-enable-clipboard t) ; NOTE: `t` should be the default
 
 	       ;; Linux-specific settings
-	       (setq browse-url-browser-function 'browse-url-xdg-open))
+	       (setopt browse-url-browser-function 'browse-url-xdg-open))
 
 ;;; Windows-specific configuration
 (platform-when platform-windows-p
