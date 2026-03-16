@@ -150,3 +150,10 @@
           (my/auto-create-missing-dirs)
           (should (file-directory-p nested-dir)))
       (delete-directory temp-dir t))))
+
+(ert-deftest test-utils/auto-create-missing-dirs-nil-buffer-file-name ()
+  "Test that my/auto-create-missing-dirs does not crash when buffer-file-name is nil."
+  :tags '(unit utils)
+  (let ((buffer-file-name nil))
+    (my/auto-create-missing-dirs)
+    (should t)))
