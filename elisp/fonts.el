@@ -114,10 +114,10 @@ Returns (font-name . height) or nil if none found."
   (setq inhibit-compacting-font-caches t)
   
   ;; Enable font scaling
-  (setq scalable-fonts-allowed t)
+  (setopt scalable-fonts-allowed t)
   
   ;; Reduce font rendering overhead
-  (setq font-use-system-font t)
+  (setopt font-use-system-font t)
   
   ;; Better Unicode handling
   (set-fontset-font t 'unicode (font-spec :name "Noto Color Emoji") nil 'prepend))
