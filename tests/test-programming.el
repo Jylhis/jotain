@@ -101,6 +101,14 @@
   (should (fboundp 'jsonrpc--log-event))
   (should (eq (symbol-function 'jsonrpc--log-event) #'ignore)))
 
+;;; Compilation Configuration
+
+(ert-deftest test-programming/compile-auto-scroll-configured ()
+  "Test that compilation output auto-scrolling is configured."
+  :tags '(fast unit)
+  (require 'compile)
+  (should (eq compilation-scroll-output 'first-error)))
+
 ;;; Xref Configuration
 
 (ert-deftest test-programming/xref-uses-ripgrep ()
