@@ -9,6 +9,11 @@
   :hook
   (prog-mode . display-line-numbers-mode))
 
+(use-package compile
+  :ensure nil
+  :custom
+  (compilation-scroll-output 'first-error))
+
 (use-package treesit
   :ensure nil
   :custom
