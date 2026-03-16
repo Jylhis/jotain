@@ -104,16 +104,5 @@ If there are not exactly 2 windows, display an error message."
           (if this-win-2nd (other-window 1))))
     (user-error "Can only toggle split with exactly 2 windows")))
 
-
-;; World clock configuration
-(use-package time
-  :ensure nil
-  :custom
-  (world-clock-list
-   '(("Europe/Zurich" "Zurich")
-     ("Europe/Helsinki" "Helsinki")
-     ("Asia/Bangkok" "Bangkok")
-     ("Asia/Shanghai" "Shanghai"))))
-
 (provide 'utils)
 ;;; utils.el ends here
