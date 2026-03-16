@@ -139,7 +139,7 @@
   :init
   ;; Use Consult to select xref locations with preview
   (setopt xref-show-xrefs-function #'consult-xref
-        xref-show-definitions-function #'consult-xref)
+          xref-show-definitions-function #'consult-xref)
   ;; Emacs 30: Sort completions by minibuffer history
   (setopt completions-sort 'historical))
 

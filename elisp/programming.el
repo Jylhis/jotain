@@ -420,9 +420,9 @@
 (when (display-graphic-p)
   (tooltip-mode 1)
   (setopt tooltip-delay 0.5
-        tooltip-short-delay 0.1
-        tooltip-recent-seconds 1
-        tooltip-hide-delay 10))
+          tooltip-short-delay 0.1
+          tooltip-recent-seconds 1
+          tooltip-hide-delay 10))
 
 (use-package vue-mode
   :ensure t
