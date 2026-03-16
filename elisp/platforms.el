@@ -123,11 +123,8 @@
                                     (find-font (font-spec :name font)))
                                   font-list)))
     (when available-font
-      (set-face-attribute 'default nil
-                          :font available-font
-                          :height height)
-      (set-frame-font (font-spec :name available-font :size (/ height 10.0)) nil t)
-      (message "Platform: Using font %s at height %d" available-font height)
+      (require 'fonts)
+      (jotain-fonts--set-face-font 'default (cons available-font height))
       available-font)))
 
 (defun platform-configure-ui ()
