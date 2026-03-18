@@ -49,6 +49,11 @@
          (c-ts-mode . combobulate-mode)
          (c++-ts-mode . combobulate-mode)))
 
+(use-package compile
+  :ensure nil
+  :custom
+  (compilation-scroll-output 'first-error))
+
 (use-package flymake
   :custom
   (flymake-fringe-indicator-position 'left-fringe)
