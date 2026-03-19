@@ -1,0 +1,3 @@
+## 2023-10-24 - Uniquify Buffer Names
+**Learning:** In a codebase or environment with many identically-named files (e.g., `index.js` or `__init__.py`), relying on plain buffer names leads to severe navigation friction. Native `uniquify` solves this by seamlessly appending directory contexts.
+**Action:** Always enable `uniquify` with forward slash style for duplicate buffers to reduce friction without cluttering the UI.
