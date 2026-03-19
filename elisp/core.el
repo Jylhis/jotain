@@ -82,6 +82,14 @@
   :init
   (savehist-mode))
 
+(use-package uniquify
+  :ensure nil
+  :custom
+  (uniquify-buffer-name-style 'forward "Use forward slash style for duplicate buffer names")
+  (uniquify-separator "/" "Separator for uniquify buffer names")
+  (uniquify-after-kill-buffer-p t "Rename buffers after killing to keep names unique")
+  (uniquify-ignore-buffers-re "^\\*" "Ignore special buffers"))
+
 (use-package simple
   :ensure nil
   :custom
