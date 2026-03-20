@@ -63,36 +63,30 @@
               ("C-c ! l" . flymake-show-buffer-diagnostics)
               ("C-c ! p" . flymake-show-project-diagnostics))
   :config
-  ;; Show diagnostics in echo area when cursor is on an error
-  (defun jotain/flymake-show-diagnostic-at-point ()
-    "Display flymake diagnostic at point in echo area."
-    (when (and flymake-mode (not (minibufferp)))
+  ;; Show diagnostics in echo area using Eldoc
+  (defun jotain/flymake-eldoc-function (report-doc &rest _)
+    "Document flymake diagnostics at point using Eldoc.
+Intended for `eldoc-documentation-functions', calls REPORT-DOC with the docstring."
+    (when (and (bound-and-true-p flymake-mode) (not (minibufferp)))
       (let ((diagnostics (flymake-diagnostics (point))))
         (when diagnostics
-          (let ((diagnostic (car diagnostics)))
-            (message "%s: %s"
-                     (propertize (upcase (symbol-name (flymake-diagnostic-type diagnostic)))
-                                 'face (pcase (flymake-diagnostic-type diagnostic)
-                                         (:error 'error)
-                                         (:warning 'warning)
-                                         (_ 'default)))
-                     (flymake-diagnostic-text diagnostic)))))))
+          (let* ((diagnostic (car diagnostics))
+                 (text (format "%s: %s"
+                               (propertize (upcase (symbol-name (flymake-diagnostic-type diagnostic)))
+                                           'face (pcase (flymake-diagnostic-type diagnostic)
+                                                   (:error 'error)
+                                                   (:warning 'warning)
+                                                   (_ 'default)))
+                               (flymake-diagnostic-text diagnostic))))
+            (funcall report-doc text))))))
 
-  ;; Show diagnostic after a short delay
-  (defvar-local jotain/flymake-diagnostic-timer nil)
-  (defun jotain/flymake-show-diagnostic-delayed ()
-    "Show diagnostic after a delay."
-    (when flymake-mode
-      (when jotain/flymake-diagnostic-timer
-        (cancel-timer jotain/flymake-diagnostic-timer))
-      (setq jotain/flymake-diagnostic-timer
-            (run-with-timer 0.5 nil #'jotain/flymake-show-diagnostic-at-point))))
+  (defun jotain/flymake-setup-eldoc ()
+    "Setup Eldoc to show Flymake diagnostics."
+    (if flymake-mode
+        (add-hook 'eldoc-documentation-functions #'jotain/flymake-eldoc-function nil t)
+      (remove-hook 'eldoc-documentation-functions #'jotain/flymake-eldoc-function t)))
 
-  (add-hook 'flymake-mode-hook
-            (lambda ()
-              (if flymake-mode
-                  (add-hook 'post-command-hook #'jotain/flymake-show-diagnostic-delayed nil t)
-                (remove-hook 'post-command-hook #'jotain/flymake-show-diagnostic-delayed t))))
+  (add-hook 'flymake-mode-hook #'jotain/flymake-setup-eldoc)
 
   ;; Configure elisp-flymake-byte-compile to trust local configuration files
   (with-eval-after-load 'elisp-mode
