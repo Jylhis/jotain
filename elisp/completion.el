@@ -55,7 +55,8 @@
   :config
   (global-corfu-mode)
   (require 'corfu-history)
-  (corfu-history-mode))
+  (corfu-history-mode)
+  (corfu-popupinfo-mode))
 
 
 (use-package cape
