@@ -76,6 +76,8 @@ Returns (font-name . height) or nil if none found."
       (set-face-attribute face nil
                           :family font-name
                           :height font-height)
+      (when (eq face 'default)
+        (set-frame-font (font-spec :family font-name :size (/ font-height 10.0)) nil t))
       (message "jotain-fonts: Set %s to %s (height %d)" 
                face font-name font-height)
       font-spec)))
@@ -114,10 +116,10 @@ Returns (font-name . height) or nil if none found."
   (setq inhibit-compacting-font-caches t)
   
   ;; Enable font scaling
-  (setq scalable-fonts-allowed t)
+  (setopt scalable-fonts-allowed t)
   
   ;; Reduce font rendering overhead
-  (setq font-use-system-font t)
+  (setopt font-use-system-font t)
   
   ;; Better Unicode handling
   (set-fontset-font t 'unicode (font-spec :name "Noto Color Emoji") nil 'prepend))

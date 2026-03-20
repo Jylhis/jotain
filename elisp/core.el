@@ -11,6 +11,7 @@
   (text-mode-ispell-word-completion nil "Emacs 30 and newer: Disable Ispell completion function.")
   (fill-column 100 "Modern standard for line length")
   (use-short-answers t "life is too short to type yes or no")
+  (use-dialog-box nil "Disable dialog boxes to complement use-short-answers")
   (create-lockfiles nil)
   (delete-by-moving-to-trash t "Delete by moving to trash in interactive mode")
   (sentence-end-double-space nil "Disable the obsolete practice of end-of-line spacing from the typewriter era.")
@@ -52,6 +53,8 @@
   :ensure nil
   :hook
   (after-save . executable-make-buffer-file-executable-if-script-p)
+  :config
+  (add-to-list 'find-file-not-found-functions #'my/auto-create-missing-dirs)
   :custom
   ;; Disable autosave and backups
   (auto-save-default nil "Disable separate autosave files")
@@ -167,9 +170,9 @@
   :bind ("C-x u" . vundo)
   :config (setq vundo-glyph-alist vundo-unicode-symbols))
 
-(use-package expand-region
+(use-package expreg
   :ensure t
-  :bind ("C-=" . er/expand-region))
+  :bind ("C-=" . expreg-expand))
 
 (use-package multiple-cursors
   :ensure t
@@ -196,6 +199,17 @@
             (message "Emacs loaded in %.2f seconds with %d garbage collections."
                      (float-time (time-subtract after-init-time before-init-time))
                      gcs-done)))
+
+
+;; World clock configuration
+(use-package time
+  :ensure nil
+  :custom
+  (world-clock-list
+   '(("Europe/Zurich" "Zurich")
+     ("Europe/Helsinki" "Helsinki")
+     ("Asia/Bangkok" "Bangkok")
+     ("Asia/Shanghai" "Shanghai"))))
 
 (provide 'core)
 ;;; core.el ends here

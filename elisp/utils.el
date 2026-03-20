@@ -48,11 +48,11 @@ Otherwise, use `my/org-agenda-directories'."
          (valid-dir-count 0))
     ;; Collect org files from all directories that exist
     (dolist (dir directories)
-      (let ((expanded-dir (expand-file-name dir)))
-        (when (file-exists-p expanded-dir)
+      (let* ((expanded-dir (expand-file-name dir))
+             (files (my/find-org-files-recursively expanded-dir)))
+        (when files
           (setq valid-dir-count (1+ valid-dir-count))
-          (setq org-files (nconc org-files
-                                 (my/find-org-files-recursively expanded-dir))))))
+          (setq org-files (nconc org-files files)))))
     ;; Remove duplicates (in case of symlinks or overlapping paths)
     (setq org-files (delete-dups org-files))
     (when org-files
@@ -106,3 +106,10 @@ If there are not exactly 2 windows, display an error message."
 
 (provide 'utils)
 ;;; utils.el ends here
+
+;;;###autoload
+(defun my/auto-create-missing-dirs ()
+  "Automatically create missing directories when finding a file."
+  (let ((target-dir (if buffer-file-name (file-name-directory buffer-file-name))))
+    (when (and target-dir (not (file-exists-p target-dir)))
+      (make-directory target-dir t))))

@@ -34,13 +34,17 @@
   "Test that advice disables all themes when NO-ENABLE is nil."
   :tags '(unit ui fast)
   (let ((disabled-themes nil)
-        (custom-enabled-themes '(theme-a theme-b)))
+        (custom-enabled-themes (list 'theme-a 'theme-b 'theme-c)))
     (cl-letf (((symbol-function 'disable-theme)
-               (lambda (theme) (push theme disabled-themes))))
+               (lambda (theme)
+                 (push theme disabled-themes)
+                 (setq custom-enabled-themes (delq theme custom-enabled-themes)))))
       (jotain-ui--disable-all-themes 'some-theme nil nil)
       (should (member 'theme-a disabled-themes))
       (should (member 'theme-b disabled-themes))
-      (should (= (length disabled-themes) 2)))))
+      (should (member 'theme-c disabled-themes))
+      (should (= (length disabled-themes) 3))
+      (should (null custom-enabled-themes)))))
 
 (ert-deftest test-ui-preload-themes-defined ()
   "Test that jotain-ui--preload-themes is defined."
