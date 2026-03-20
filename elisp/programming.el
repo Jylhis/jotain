@@ -370,7 +370,7 @@
 
 (use-package js
   :ensure nil
-  :mode ("\\.js\'" . js-ts-mode))
+  :mode ("\\.js\\'" . js-ts-mode))
 (use-package modern-cpp-font-lock
   :ensure t
   :hook (c++-mode . modern-c++-font-lock-mode))
