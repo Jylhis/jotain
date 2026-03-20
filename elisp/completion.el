@@ -56,6 +56,7 @@
   (global-corfu-mode)
   (require 'corfu-history)
   (corfu-history-mode)
+  (require 'corfu-popupinfo)
   (corfu-popupinfo-mode))
 
 
