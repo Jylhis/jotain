@@ -30,11 +30,11 @@
   (memq system-type '(cygwin windows-nt ms-dos))
   "Non-nil if running on Windows.")
 
-(defun platform-gui-p ()
+(defsubst platform-gui-p ()
   "Non-nil if running in GUI mode."
   (display-graphic-p))
 
-(defun platform-terminal-p ()
+(defsubst platform-terminal-p ()
   "Non-nil if running in terminal mode."
   (not (display-graphic-p)))
 
