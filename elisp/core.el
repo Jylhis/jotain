@@ -29,6 +29,8 @@
   (read-buffer-completion-ignore-case t "Ignore case when reading buffer name")
   (read-file-name-completion-ignore-case t "Ignore case for file completion")
   (load-prefer-newer t "Always load newer compiled files")
+  (network-security-level 'high "Enable high network security level for TLS connections")
+  (gnutls-verify-error t "Reject invalid TLS certificates")
   :config
   ;; Enable modes
   (context-menu-mode 1)           ; Enable context menu for vertico
