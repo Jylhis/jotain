@@ -1,0 +1,3 @@
+## 2024-05-18 - [Add documentation popups to completion]
+**Learning:** Adding `corfu-popupinfo-mode` improves UX significantly by surfacing documentation directly during completion, preventing users from needing to switch buffers or manually look up symbols. A small delay (`corfu-popupinfo-delay`) is crucial to avoid flashing popups on every keystroke.
+**Action:** When adding completion tools, always consider whether inline documentation can be enabled gracefully with a delay.
