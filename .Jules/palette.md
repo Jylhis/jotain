@@ -1,0 +1,3 @@
+## 2024-05-24 - Contextual documentation for completions without UI jitter
+**Learning:** Displaying documentation popups alongside completion candidates (`corfu-popupinfo-mode`) significantly improves UX by eliminating the need to manually open help buffers. However, instantaneous popups cause disruptive UI flashing when typing quickly.
+**Action:** Always implement a slight initial delay (e.g., `(corfu-popupinfo-delay '(0.5 . 0.2))`) for completion popups to balance immediate contextual help with a smooth, jitter-free typing experience.
