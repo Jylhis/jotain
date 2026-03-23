@@ -1,0 +1,3 @@
+## 2025-02-23 - Enable in-editor documentation popups for completion candidates
+**Learning:** Adding `corfu-popupinfo` to the `corfu` completion system significantly improves the developer experience by providing immediate, context-aware documentation without breaking the user's flow. It serves as an accessibility and UX enhancement by reducing the cognitive load of switching buffers or running explicit help commands. Setting a slight delay (e.g. `(0.5 . 0.2)`) ensures the popup doesn't flash distractingly for quick completions.
+**Action:** When implementing or refining completion UI (like `corfu` or `company`), always ensure inline documentation popups are enabled with sensible display delays.
