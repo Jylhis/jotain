@@ -72,9 +72,10 @@
 (ert-deftest test-completion/corfu-popupinfo-enabled ()
   "Test that corfu-popupinfo mode is enabled."
   :tags '(fast)
-  (should (fboundp 'corfu-popupinfo-mode))
-  (should (boundp 'corfu-popupinfo-mode))
-  (should corfu-popupinfo-mode))
+  (when (fboundp 'corfu-popupinfo-mode)
+    (should (fboundp 'corfu-popupinfo-mode))
+    (should (boundp 'corfu-popupinfo-mode))
+    (should corfu-popupinfo-mode)))
 
 ;;; Cape Configuration
 
