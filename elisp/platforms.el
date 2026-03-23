@@ -14,51 +14,8 @@
 
 (require 'platform)
 
-;;; Android-specific configuration
-(platform-when platform-android-p
-	       ;; Packages that don't work well on Android
-	       (defvar platform-disabled-packages
-		 '(vterm pdf-tools exwm magit-delta all-the-icons-dired)
-		 "List of packages to disable on Android.")
-
-	       ;; Android-specific settings
-	       (setopt create-lockfiles nil)
-	       (setopt make-backup-files nil)
-	       (setopt auto-save-default nil)
-
-	       ;; Optimize for touch input and smaller screens
-	       (setopt mouse-wheel-scroll-amount '(3 ((shift) . 1)))
-	       (setopt scroll-margin 2)
-	       (setopt scroll-conservatively 10000)
-
-	       ;; Termux-specific paths - use environment variables when available
-	       (when (getenv "EXTERNAL_STORAGE")
-		 (setq org-directory (expand-file-name "Documents/org" (getenv "EXTERNAL_STORAGE"))))
-
-	       ;; Simpler modeline for performance
-	       (setq-default mode-line-format
-			     '("%e" mode-line-front-space
-			       mode-line-buffer-identification " "
-			       mode-line-position " "
-			       (:eval (propertize "%m" 'face 'mode-line-buffer-id))
-			       mode-line-end-spaces))
-
-	       ;; Android-specific keybindings
-	       (global-set-key (kbd "C-<tab>") 'other-window)
-	       (global-set-key (kbd "C-S-<tab>") (lambda () (interactive) (other-window -1)))
-
-	       ;; Hardware key bindings for common Android keyboards
-	       (when (getenv "TERMUX_VERSION")
-		 (global-set-key (kbd "<volume-up>") 'scroll-down-command)
-		 (global-set-key (kbd "<volume-down>") 'scroll-up-command)))
-
 ;;; macOS-specific configuration
 (platform-when platform-macos-p
-	       ;; macOS-specific packages
-	       (defvar platform-preferred-packages
-		 '(osx-dictionary osx-trash reveal-in-osx-finder)
-		 "List of packages preferred on macOS.")
-
 	       ;; Proper macOS key handling
 	       (setq mac-command-modifier 'meta)
 	       (setq mac-option-modifier 'super)
@@ -78,11 +35,6 @@
 
 ;;; Linux-specific configuration
 (platform-when platform-linux-p
-	       ;; Linux-specific packages
-	       (defvar platform-preferred-packages
-		 '(exwm pinentry mu4e)
-		 "List of packages preferred on Linux.")
-
 	       ;; X11 clipboard integration
 	       ;; (setq select-enable-clipboard t) ; NOTE: `t` should be the default
 
@@ -91,11 +43,6 @@
 
 ;;; Windows-specific configuration
 (platform-when platform-windows-p
-	       ;; Windows-specific packages
-	       (defvar platform-disabled-packages
-		 '(vterm magit-delta)
-		 "List of packages to disable on Windows.")
-	       
 	       ;; Windows-specific settings
 	       (setq w32-pass-lwindow-to-system nil)
 	       (setq w32-pass-rwindow-to-system nil)
@@ -104,17 +51,6 @@
 	       
 	       ;; Use Windows-style line endings when appropriate
 	       (setq-default buffer-file-coding-system 'utf-8-unix))
-
-;;; Platform-aware package management utilities
-(defun platform-package-enabled-p (package)
-  "Check if PACKAGE should be enabled on current platform."
-  (not (memq package (bound-and-true-p platform-disabled-packages))))
-
-(defmacro platform-use-package (name &rest args)
-  "Use package NAME with platform-specific conditions."
-  (declare (indent 1))
-  `(when (platform-package-enabled-p ',name)
-     (use-package ,name ,@args)))
 
 ;;; Font fallback system
 (defun platform-set-font-with-fallback (font-list height)
