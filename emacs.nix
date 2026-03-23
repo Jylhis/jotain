@@ -24,12 +24,14 @@ let
     let
       lispDir = ./lisp;
       modulesDir = ./modules;
-      lispPkgs = if builtins.pathExists lispDir then
-        jotainLib.dependencies.getPackagesForDirectory lispDir epkgs
-      else [ ];
-      modulesPkgs = if builtins.pathExists modulesDir then
-        jotainLib.dependencies.getPackagesForDirectory modulesDir epkgs
-      else [ ];
+      lispPkgs =
+        if builtins.pathExists lispDir then
+          jotainLib.dependencies.getPackagesForDirectory lispDir epkgs
+        else [ ];
+      modulesPkgs =
+        if builtins.pathExists modulesDir then
+          jotainLib.dependencies.getPackagesForDirectory modulesDir epkgs
+        else [ ];
     in
     lispPkgs ++ modulesPkgs;
 

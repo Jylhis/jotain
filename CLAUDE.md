@@ -10,7 +10,17 @@ Jotain is a modular Emacs configuration managed with Nix Flakes. All Emacs packa
 
 ## Commands
 
-All commands are run via `just` (see `justfile`). The dev shell is managed by [devenv](https://devenv.sh/) — enter it via `nix develop` or direnv.
+All commands are run via `just` (see `justfile`) or `devenv`. The dev shell is managed by [devenv](https://devenv.sh/) — enter it via `devenv shell` or direnv.
+
+### Devenv
+
+```bash
+devenv shell             # Enter dev shell
+devenv test              # Run formatting checks (git-hooks) + ERT tests
+devenv build             # Build all outputs (jotain, emacs, emacs-dev)
+devenv lsp               # Start nixd language server (pre-configured)
+devenv mcp               # Start devenv MCP server
+```
 
 ### Testing
 
@@ -45,7 +55,7 @@ just clean               # Remove .elc, caches, and .dev-home
 ### Nix
 
 ```bash
-nix develop              # Enter dev shell
+nix develop              # Enter dev shell (alternative to devenv shell)
 nix run                  # Try Jotain in an isolated temp environment
 nix flake update         # Update all flake inputs
 ```
@@ -65,10 +75,13 @@ Two directories, each file covers a functional domain:
 
 ```
 flake.nix                  # Entry point, uses flake-parts + emacs-overlay + devenv
-├── devenv.nix             # Dev shell config (packages, scripts, env)
+├── devenv.nix             # Dev shell config (languages, treefmt, tests, outputs, MCP)
 ├── emacs.nix              # Builds Emacs 30 (PGTK) with all packages + runtime deps
 ├── nix/
 │   ├── package.nix        # jotain package (copies init.el + early-init.el, defines test targets)
+│   ├── treefmt.nix        # Shared treefmt config (used by both flake.nix and devenv.nix)
+│   ├── devenv/
+│   │   └── emacs-lisp.nix # Custom devenv language module (languages.emacs-lisp)
 │   ├── lib/
 │   │   ├── default.nix    # Lib entry point (exposes dependencies + runtimeDeps)
 │   │   ├── dependencies.nix   # Auto-extracts packages from use-package declarations
@@ -95,7 +108,7 @@ flake.nix                  # Entry point, uses flake-parts + emacs-overlay + dev
 
 ### Formatting
 
-`treefmt-nix` configured in `flake.nix`:
+`treefmt-nix` configured in `nix/treefmt.nix` (shared between `flake.nix` and `devenv.nix`):
 - `nixpkgs-fmt` for `.nix` files
 - `shfmt` + `shellcheck` for shell scripts
 - Emacs built-in `indent-region` for `.el` files

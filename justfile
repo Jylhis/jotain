@@ -149,42 +149,10 @@ clean-all:
 # Development Tools
 # ================
 
-# Start Emacs with project config in isolated environment (safe for testing)
+# Start Emacs with project config in isolated environment (delegates to devenv script)
 [group('dev')]
-emacs-dev:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    # Create isolated environment
-    mkdir -p "{{dev_home}}"/{.config,.cache,.local/share}
-    # Run Emacs with project config in isolation
-    HOME="{{dev_home}}" \
-    XDG_CONFIG_HOME="{{dev_home}}/.config" \
-    XDG_CACHE_HOME="{{dev_home}}/.cache" \
-    XDG_DATA_HOME="{{dev_home}}/.local/share" \
-    emacs -Q \
-        --eval "(progn \
-                  (setq user-emacs-directory \"{{config_dir}}/\") \
-                  (add-to-list 'load-path \"{{config_dir}}/lisp\") \
-                  (load-file \"{{config_dir}}/init.el\"))"
-
-# Start Emacs for interactive testing with project config (isolated)
-[group('dev')]
-emacs-test-interactive:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    mkdir -p "{{dev_home}}"/{.config,.cache,.local/share}
-    echo "Starting Emacs in isolated test environment..."
-    echo "HOME is temporarily set to: {{dev_home}}"
-    echo "Your personal config is safe!"
-    HOME="{{dev_home}}" \
-    XDG_CONFIG_HOME="{{dev_home}}/.config" \
-    XDG_CACHE_HOME="{{dev_home}}/.cache" \
-    XDG_DATA_HOME="{{dev_home}}/.local/share" \
-    emacs -Q \
-        --eval "(progn \
-                  (setq user-emacs-directory \"{{config_dir}}/\") \
-                  (add-to-list 'load-path \"{{config_dir}}/lisp\") \
-                  (load-file \"{{config_dir}}/init.el\"))"
+emacs-dev *ARGS:
+    emacs-dev {{ARGS}}
 
 # Start Emacs with clean configuration (no packages, no isolation - USE WITH CAUTION)
 [group('dev')]

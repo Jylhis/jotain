@@ -1,12 +1,38 @@
-;;; early-init.el --- Early Emacs initialization -*- lexical-binding: t; -*-
-
+;;; early-init.el --- Jotain Emacs Configuration --- Early Init -*- lexical-binding: t; -*-
+;;
 ;; Author: Markus Jylhänkangas <markus@jylhis.com>
+;; URL: https://github.com/Jylhis/jotain
+;; Package-Requires: ((emacs "30.2"))
+;; Keywords: config
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;;; Commentary:
-;; Early initialization file for Emacs 30+.
-;; This file is loaded before package initialization and GUI setup.
+;; Early initialization file for Jotain Emacs
+;; 
 
 ;;; Code:
+
+
+;;; From emacs-solo
+;; https://github.com/LionyxML/emacs-solo/blob/98bef4f1241980a8d268e5c286b1f3a05df7d425/early-init.el
+;; TODO: Benchmark
+
+;; Delay garbage collection while Emacs is booting
+(setq gc-cons-threshold most-positive-fixnum
+      gc-cons-percentage 0.6)
+;; Schedule garbage collection sensible defaults for after booting
+(add-hook 'after-init-hook
+          (lambda ()
+            (setq gc-cons-threshold (* 100 1024 1024)
+                  gc-cons-percentage 0.1)))
+
+;; Single VC backend inscreases booting speed
+(setq vc-handled-backends '(Git))
+
+;; Do not native compile if on battery power
+(setopt native-comp-async-on-battery-power nil) ; EMACS-31
+
+;;; end emacs-solo
 
 
 ;; In noninteractive sessions, prioritize non-byte-compiled source files to
@@ -23,7 +49,6 @@
 ;; Package management — conditional on Nix environment
 ;; Under Nix: disable package.el entirely (packages provided by Nix store)
 ;; Without Nix: allow package.el to bootstrap packages on first launch
-;; The full archive configuration happens in jotain-platform.el (init.el)
 (if (getenv "NIX_PROFILES")
     (progn
       (setq package-enable-at-startup nil)
@@ -53,9 +78,17 @@
 
 ;; UI optimizations - disable UI elements before frame creation
 ;; Faster to disable these here (before they've been initialized)
-(push '(menu-bar-lines . 0) default-frame-alist)
-(push '(tool-bar-lines . 0) default-frame-alist)
-(push '(vertical-scroll-bars) default-frame-alist)
+;; Disables unused UI Elements
+(if (fboundp 'menu-bar-mode) (menu-bar-mode -1))
+(if (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
+(if (fboundp 'tool-bar-mode) (tool-bar-mode -1))
+(if (fboundp 'tooltip-mode) (tooltip-mode -1))
+(if (fboundp 'fringe-mode) (fringe-mode -1))
+;; TODO: what is the difference between one below and up?
+;; (push '(menu-bar-lines . 0) default-frame-alist)
+;; (push '(tool-bar-lines . 0) default-frame-alist)
+;; (push '(vertical-scroll-bars) default-frame-alist)
+
 (when (featurep 'ns)
   (push '(ns-transparent-titlebar . t) default-frame-alist)
   (push '(ns-appearance . dark) default-frame-alist))
@@ -66,9 +99,17 @@
       inhibit-startup-echo-area-message user-login-name
       initial-scratch-message nil)
 
+
+;; TODO: What is this?
 ;; (setq mode-line-format nil)
 
 ;; Prevent unwanted runtime compilation for performance
 (setq byte-compile-warnings '(not obsolete))
 
+;; Avoid raising the *Messages* buffer if anything is still without
+;; lexical bindings
+(setq warning-minimum-level :error)
+(setq warning-suppress-types '((lexical-binding)))
+
+(provide 'early-init)
 ;;; early-init.el ends here
