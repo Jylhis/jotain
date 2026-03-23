@@ -69,6 +69,13 @@
   (should (boundp 'corfu-history-mode))
   (should corfu-history-mode))
 
+(ert-deftest test-completion/corfu-popupinfo-enabled ()
+  "Test that corfu-popupinfo mode is enabled."
+  :tags '(fast)
+  (should (fboundp 'corfu-popupinfo-mode))
+  (should (boundp 'corfu-popupinfo-mode))
+  (should corfu-popupinfo-mode))
+
 ;;; Cape Configuration
 
 (ert-deftest test-completion/cape-completers-registered ()
