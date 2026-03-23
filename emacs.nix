@@ -12,18 +12,26 @@ let
   # Core packages always needed
   corePackages = epkgs: with epkgs; [
     use-package
+    # Justification (FR-010): no-littering redirects package data files out of
+    # user-emacs-directory into var/ and etc/ subdirectories, preventing the config
+    # directory from accumulating dozens of scattered state files. No built-in
+    # Emacs feature provides centralized path management for all packages.
     no-littering
   ];
 
-  # Get packages from elisp directory if it exists
+  # Get packages from lisp/ and modules/ directories if they exist
   autoPackages = epkgs:
     let
-      elispDir = ./elisp;
+      lispDir = ./lisp;
+      modulesDir = ./modules;
+      lispPkgs = if builtins.pathExists lispDir then
+        jotainLib.dependencies.getPackagesForDirectory lispDir epkgs
+      else [ ];
+      modulesPkgs = if builtins.pathExists modulesDir then
+        jotainLib.dependencies.getPackagesForDirectory modulesDir epkgs
+      else [ ];
     in
-    if builtins.pathExists elispDir then
-      jotainLib.dependencies.getPackagesForDirectory elispDir epkgs
-    else
-      [ ];
+    lispPkgs ++ modulesPkgs;
 
   # Development-only packages
   devPackages = epkgs: with epkgs; [

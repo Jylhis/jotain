@@ -12,9 +12,9 @@
 ;;; Emacs Environment
 
 (ert-deftest test-smoke/emacs-version-minimum ()
-  "Test that Emacs version meets minimum requirement (29.1+)."
+  "Test that Emacs version meets minimum requirement (30+)."
   :tags '(smoke critical)
-  (should (version<= "29.1" emacs-version)))
+  (should (version<= "30" emacs-version)))
 
 (ert-deftest test-smoke/lexical-binding ()
   "Test lexical binding is enabled."
@@ -23,11 +23,17 @@
 
 ;;; Directory Structure (no I/O, just checks)
 
-(ert-deftest test-smoke/elisp-directory-exists ()
-  "Test that elisp/ directory exists."
+(ert-deftest test-smoke/lisp-directory-exists ()
+  "Test that lisp/ directory exists."
   :tags '(smoke critical)
-  (let ((elisp-dir (expand-file-name "elisp" user-emacs-directory)))
-    (should (file-directory-p elisp-dir))))
+  (let ((lisp-dir (expand-file-name "lisp" user-emacs-directory)))
+    (should (file-directory-p lisp-dir))))
+
+(ert-deftest test-smoke/modules-directory-exists ()
+  "Test that modules/ directory exists."
+  :tags '(smoke critical)
+  (let ((modules-dir (expand-file-name "modules" user-emacs-directory)))
+    (should (file-directory-p modules-dir))))
 
 ;;; Core Files Exist (stat calls only, no loading)
 
@@ -50,6 +56,20 @@
     (should (bufferp (current-buffer)))
     (insert "test")
     (should (= (point-max) 5))))
+
+;;; Module Features Present
+
+(ert-deftest test-smoke/jotain-defaults-loadable ()
+  "Test that jotain-defaults module can be loaded."
+  :tags '(smoke)
+  (require 'jotain-defaults)
+  (should (featurep 'jotain-defaults)))
+
+(ert-deftest test-smoke/jotain-platform-loadable ()
+  "Test that jotain-platform module can be loaded."
+  :tags '(smoke)
+  (require 'jotain-platform)
+  (should (featurep 'jotain-platform)))
 
 ;;; Runtime Dependencies (Critical)
 

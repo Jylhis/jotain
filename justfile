@@ -82,7 +82,7 @@ check-full:
 test-tag TAG:
     @echo "Running tests tagged with: {{TAG}}"
     emacs -Q --batch \
-        --eval "(progn (add-to-list 'load-path \"{{config_dir}}/elisp\") (add-to-list 'load-path \"{{config_dir}}/tests\"))" \
+        --eval "(progn (add-to-list 'load-path \"{{config_dir}}/lisp\") (add-to-list 'load-path \"{{config_dir}}/modules\") (add-to-list 'load-path \"{{config_dir}}/tests\"))" \
         --eval "(require 'ert)" \
         --eval "(require 'cl-lib)" \
         --eval "(setq user-emacs-directory \"{{config_dir}}/\")" \
@@ -112,14 +112,14 @@ build:
 compile:
     #!/usr/bin/env bash
     set -euo pipefail
-    emacs -Q --batch -L "{{config_dir}}" -L "{{config_dir}}/elisp" \
+    emacs -Q --batch -L "{{config_dir}}" -L "{{config_dir}}/lisp" \
           -f batch-byte-compile "{{config_dir}}/early-init.el"
-    find "{{config_dir}}/elisp" -name "*.el" | sort | while read -r file; do
+    find "{{config_dir}}/lisp" -name "*.el" | sort | while read -r file; do
         echo "Compiling: $file"
-        emacs -Q --batch -L "{{config_dir}}" -L "{{config_dir}}/elisp" \
+        emacs -Q --batch -L "{{config_dir}}" -L "{{config_dir}}/lisp" \
               -f batch-byte-compile "$file"
     done
-    emacs -Q --batch -L "{{config_dir}}" -L "{{config_dir}}/elisp" \
+    emacs -Q --batch -L "{{config_dir}}" -L "{{config_dir}}/lisp" \
           -f batch-byte-compile "{{config_dir}}/init.el"
 
 # Maintenance and Cleanup
@@ -164,7 +164,7 @@ emacs-dev:
     emacs -Q \
         --eval "(progn \
                   (setq user-emacs-directory \"{{config_dir}}/\") \
-                  (add-to-list 'load-path \"{{config_dir}}/elisp\") \
+                  (add-to-list 'load-path \"{{config_dir}}/lisp\") \
                   (load-file \"{{config_dir}}/init.el\"))"
 
 # Start Emacs for interactive testing with project config (isolated)
@@ -183,7 +183,7 @@ emacs-test-interactive:
     emacs -Q \
         --eval "(progn \
                   (setq user-emacs-directory \"{{config_dir}}/\") \
-                  (add-to-list 'load-path \"{{config_dir}}/elisp\") \
+                  (add-to-list 'load-path \"{{config_dir}}/lisp\") \
                   (load-file \"{{config_dir}}/init.el\"))"
 
 # Start Emacs with clean configuration (no packages, no isolation - USE WITH CAUTION)
@@ -191,7 +191,7 @@ emacs-test-interactive:
 emacs-clean:
     @echo "⚠️  Warning: This runs without isolation!"
     @echo "Consider using 'just emacs-dev' instead for safe testing"
-    emacs -Q --eval "(progn (add-to-list 'load-path \"{{config_dir}}/elisp\") (load-file \"{{config_dir}}/init.el\"))"
+    emacs -Q --eval "(progn (add-to-list 'load-path \"{{config_dir}}/lisp\") (load-file \"{{config_dir}}/init.el\"))"
 
 # Show configuration status
 [group('info')]
@@ -206,7 +206,7 @@ info:
     @echo "  Main files:"
     @ls -la "{{config_dir}}"/*.el 2>/dev/null || echo "    No main .el files found"
     @echo "  Elisp modules:"
-    @ls -1 "{{config_dir}}/elisp/"*.el 2>/dev/null | sed 's|.*/||; s|\.el$||' | xargs -I {} echo "    {}" || echo "    No elisp modules found"
+    @ls -1 "{{config_dir}}/lisp/"*.el 2>/dev/null | sed 's|.*/||; s|\.el$||' | xargs -I {} echo "    {}" || echo "    No lisp modules found"
 
 # Show available Nix flake outputs
 [group('info')]
