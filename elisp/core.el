@@ -5,6 +5,8 @@
 
 ;;; Code:
 
+(require 'utils)
+
 (use-package emacs
   :init
   :custom
@@ -28,7 +30,6 @@
   (completion-ignore-case t "Don't consider case significant in completion")
   (read-buffer-completion-ignore-case t "Ignore case when reading buffer name")
   (read-file-name-completion-ignore-case t "Ignore case for file completion")
-  (load-prefer-newer t "Always load newer compiled files")
   :config
   ;; Enable modes
   (context-menu-mode 1)           ; Enable context menu for vertico
@@ -43,7 +44,7 @@
 
 (use-package window
   :ensure nil
-  :bind ("C-x j" . my/toggle-window-split)
+  :bind ("C-x j" . jotain-utils-toggle-window-split)
   :custom
   ;; Prefer side by side splitting
   (split-width-threshold 170)
@@ -54,7 +55,7 @@
   :hook
   (after-save . executable-make-buffer-file-executable-if-script-p)
   :config
-  (add-to-list 'find-file-not-found-functions #'my/auto-create-missing-dirs)
+  (add-to-list 'find-file-not-found-functions #'jotain-utils-auto-create-missing-dirs)
   :custom
   ;; Disable autosave and backups
   (auto-save-default nil "Disable separate autosave files")
