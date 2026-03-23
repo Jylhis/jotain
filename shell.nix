@@ -25,7 +25,7 @@ let
     export JOTAIN_ROOT="$PROJECT_ROOT"
     export JOTAIN_ELISP_DIR="$PROJECT_ROOT/elisp"
 
-    # Prepend local elisp so local files shadow the Nix-built jotain-modules
+    # Prepend local elisp so live edits are picked up without a Nix rebuild
     EMACSLOADPATH="$PROJECT_ROOT/elisp:''${EMACSLOADPATH:-}"
     export EMACSLOADPATH
 
