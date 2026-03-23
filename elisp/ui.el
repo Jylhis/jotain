@@ -21,7 +21,7 @@
 
 ;; Trust all themes by default without prompting — must be set before
 ;; theme packages are loaded with :demand t.
-(setq custom-safe-themes t)
+(setopt custom-safe-themes t)
 
 (defun jotain-ui--disable-all-themes (_theme &optional _no-confirm no-enable)
   "Disable all active themes before loading a new one, unless NO-ENABLE is non-nil.
@@ -168,16 +168,15 @@ auto-dark is the sole decider of which theme becomes active."
 
 (use-package pixel-scroll
   :ensure nil
-  :when (display-graphic-p)
   :init
-  (pixel-scroll-precision-mode 1)
-  :config
-  ;; Enable for graphical frames when using server-client
-  (add-hook 'after-make-frame-functions
-            (lambda (frame)
-              (when (display-graphic-p frame)
-                (with-selected-frame frame
-                  (pixel-scroll-precision-mode 1))))))
+  (if (daemonp)
+      (add-hook 'after-make-frame-functions
+                (lambda (frame)
+                  (when (display-graphic-p frame)
+                    (with-selected-frame frame
+                      (pixel-scroll-precision-mode 1)))))
+    (when (display-graphic-p)
+      (pixel-scroll-precision-mode 1))))
 
 (use-package emojify
   :ensure t
