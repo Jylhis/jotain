@@ -114,8 +114,10 @@ in
       })
     ];
 
-    # XDG configuration
+    # XDG configuration — init files and module directories
     xdg.configFile."emacs/early-init.el".source = "${cfg.package}/share/jotain/early-init.el";
     xdg.configFile."emacs/init.el".source = "${cfg.package}/share/jotain/init.el";
+    xdg.configFile."emacs/lisp".source = "${cfg.package}/share/jotain/lisp";
+    xdg.configFile."emacs/modules".source = "${cfg.package}/share/jotain/modules";
   };
 }
