@@ -1,12 +1,12 @@
 { pkgs, lib, stdenv, ... }:
 let
-  jotainEmacs = pkgs.callPackage ./emacs.nix { devMode = false; };
+  jotainEmacs = pkgs.callPackage ../emacs.nix { devMode = false; };
 in
 stdenv.mkDerivation {
   pname = "jotain";
   version = "0.1.0";
 
-  src = lib.cleanSource ./.;
+  src = lib.cleanSource ./..;
 
   buildInputs = [ jotainEmacs ];
 
@@ -16,6 +16,10 @@ stdenv.mkDerivation {
     # Install init files (used by home-manager module and emacs-run wrapper)
     cp init.el $out/share/jotain/
     cp early-init.el $out/share/jotain/
+
+    # Install module directories
+    cp -r lisp $out/share/jotain/
+    cp -r modules $out/share/jotain/
   '';
 
   meta = with lib; {
@@ -31,12 +35,13 @@ stdenv.mkDerivation {
 
     # Test sources (shared across all test targets)
     testSources = pkgs.lib.fileset.toSource {
-      root = ./.;
+      root = ./..;
       fileset = pkgs.lib.fileset.unions [
-        ./init.el
-        ./early-init.el
-        ./elisp
-        ./tests
+        ./../init.el
+        ./../early-init.el
+        ./../lisp
+        ./../modules
+        ./../tests
       ];
     };
 
@@ -46,19 +51,21 @@ stdenv.mkDerivation {
     smoke-test =
       let
         testSources = pkgs.lib.fileset.toSource {
-          root = ./.;
+          root = ./..;
           fileset = pkgs.lib.fileset.unions [
-            ./init.el
-            ./early-init.el
-            ./elisp
-            ./tests
+            ./../init.el
+            ./../early-init.el
+            ./../lisp
+            ./../modules
+            ./../tests
           ];
         };
       in
       pkgs.runCommand "emacs-smoke-tests" { } ''
         ${jotainEmacs}/bin/emacs -Q --batch \
           --eval "(setq user-emacs-directory \"${testSources}/\")" \
-          --eval "(add-to-list 'load-path \"${testSources}/elisp\")" \
+          --eval "(add-to-list 'load-path \"${testSources}/lisp\")" \
+          --eval "(add-to-list 'load-path \"${testSources}/modules\")" \
           --eval "(add-to-list 'load-path \"${testSources}/tests\")" \
           --eval "(require 'ert)" \
           --load "${testSources}/tests/test-helpers.el" \
@@ -71,19 +78,21 @@ stdenv.mkDerivation {
     fast-tests =
       let
         testSources = pkgs.lib.fileset.toSource {
-          root = ./.;
+          root = ./..;
           fileset = pkgs.lib.fileset.unions [
-            ./init.el
-            ./early-init.el
-            ./elisp
-            ./tests
+            ./../init.el
+            ./../early-init.el
+            ./../lisp
+            ./../modules
+            ./../tests
           ];
         };
       in
       pkgs.runCommand "emacs-fast-tests" { } ''
         ${jotainEmacs}/bin/emacs -Q --batch \
           --eval "(setq user-emacs-directory \"${testSources}/\")" \
-          --eval "(add-to-list 'load-path \"${testSources}/elisp\")" \
+          --eval "(add-to-list 'load-path \"${testSources}/lisp\")" \
+          --eval "(add-to-list 'load-path \"${testSources}/modules\")" \
           --eval "(add-to-list 'load-path \"${testSources}/tests\")" \
           --eval "(require 'ert)" \
           --load "${testSources}/tests/test-helpers.el" \
@@ -97,12 +106,13 @@ stdenv.mkDerivation {
       let
         # Only include files needed for ERT tests (improves caching)
         testSources = pkgs.lib.fileset.toSource {
-          root = ./.;
+          root = ./..;
           fileset = pkgs.lib.fileset.unions [
-            ./init.el
-            ./early-init.el
-            ./elisp
-            ./tests
+            ./../init.el
+            ./../early-init.el
+            ./../lisp
+            ./../modules
+            ./../tests
           ];
         };
       in
@@ -132,7 +142,8 @@ stdenv.mkDerivation {
                       (fset 'yes-or-no-p (lambda (&rest _) t)) \
                       (fset 'y-or-n-p (lambda (&rest _) t)) \
                       (fset 'package-vc-install-from-checkout (lambda (&rest _) nil)) \
-                      (add-to-list 'load-path (expand-file-name \"elisp\" user-emacs-directory)) \
+                      (add-to-list 'load-path (expand-file-name \"lisp\" user-emacs-directory)) \
+                      (add-to-list 'load-path (expand-file-name \"modules\" user-emacs-directory)) \
                       (add-to-list 'load-path (expand-file-name \"tests\" user-emacs-directory)))" \
             --eval "(require 'ert)" \
             --eval "(require 'cl-lib)" \
