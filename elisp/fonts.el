@@ -55,9 +55,12 @@ Each entry is (font-name . height-in-points*10)."
   "Cache of available font families to avoid repeated system calls.")
 
 (defun jotain-fonts--get-available-families ()
-  "Get list of available font families, cached for performance."
+  "Get list of available font families, cached as a hash table for O(1) lookups."
   (unless jotain-fonts--available-cache
-    (setq jotain-fonts--available-cache (font-family-list)))
+    (let ((cache (make-hash-table :test 'equal)))
+      (dolist (font (font-family-list))
+        (puthash font t cache))
+      (setq jotain-fonts--available-cache cache)))
   jotain-fonts--available-cache)
 
 (defun jotain-fonts--find-first-available (font-list)
@@ -65,7 +68,7 @@ Each entry is (font-name . height-in-points*10)."
 Returns (font-name . height) or nil if none found."
   (let ((available-fonts (jotain-fonts--get-available-families)))
     (seq-find (lambda (font-spec)
-                (member (car font-spec) available-fonts))
+                (gethash (car font-spec) available-fonts))
               font-list)))
 
 (defun jotain-fonts--set-face-font (face font-spec)
@@ -210,7 +213,7 @@ This ensures consistent fonts across daemon and client sessions."
   (let ((default-font (face-attribute 'default :family))
         (default-height (face-attribute 'default :height))
         (variable-font (face-attribute 'variable-pitch :family))
-        (available-count (length (jotain-fonts--get-available-families))))
+        (available-count (hash-table-count (jotain-fonts--get-available-families))))
     (message "Font: %s (height %d), Variable: %s, Available fonts: %d"
              default-font default-height variable-font available-count)))
 

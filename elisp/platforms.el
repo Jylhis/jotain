@@ -176,7 +176,7 @@
           (princ "Font: (default)\n")))
       (when (display-graphic-p)
         (if (bound-and-true-p jotain-fonts--available-cache)
-            (princ (format "Available fonts: %d\n" (length jotain-fonts--available-cache)))
+            (princ (format "Available fonts: %d\n" (hash-table-count jotain-fonts--available-cache)))
           (princ "Available fonts: (uncached)\n")))
       (princ "\n=== Environment ===\n")
       (when platform-android-p
