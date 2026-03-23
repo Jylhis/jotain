@@ -22,24 +22,6 @@
 { lib, pkgs }:
 
 let
-  # Helper to check if package exists in pkgs and is not unfree
-  # Returns the package or null if not found or unfree
-  optionalPackage = name:
-    let
-      pkg = pkgs.${name} or null;
-      # Try to evaluate the package, catching unfree errors
-      evalResult = builtins.tryEval (
-        if pkg == null then
-          { success = false; value = null; }
-        else
-          { success = true; value = pkg.outPath; }
-      );
-    in
-    if evalResult.success && pkg != null then
-      pkg
-    else
-      null;
-
   # ============================================================================
   # TREE-SITTER GRAMMARS
   # ============================================================================
@@ -81,26 +63,8 @@ let
   # 3. Update elisp/fonts.el with font preferences if needed
 
   fonts = [
-
     pkgs.nerd-fonts.jetbrains-mono
-    pkgs.nerd-fonts.fira-code
-    pkgs.nerd-fonts.iosevka
-    pkgs.nerd-fonts.caskaydia-cove # Cascadia Code Nerd Font variant
-    pkgs.nerd-fonts.hack
-    pkgs.nerd-fonts.symbols-only # Provides "Symbols Nerd Font Mono" for nerd-icons
-
-    # UI and variable-pitch fonts
-    # Used by: elisp/fonts.el jotain-fonts-variable-family
-    pkgs.inter # Modern UI font (primary)
-
-    # Serif fonts for formal writing
-    # Used by: elisp/fonts.el jotain-fonts-serif-family, elisp/writing.el
-    pkgs.source-serif-pro
-    pkgs.liberation_ttf # Contains Liberation Serif
-
-    # Emoji support
-    # Used by: elisp/fonts.el jotain-fonts-setup-performance
-    pkgs.noto-fonts-color-emoji
+    pkgs.nerd-fonts.symbols-only
   ];
 
   # ============================================================================
@@ -117,47 +81,7 @@ let
   # 3. Configure in elisp/programming.el if custom settings needed
 
   lspServers = builtins.filter (x: x != null) [
-    # Nix
-    pkgs.nil # Nix LSP server (used for .nix files)
-
-    # Go
-    pkgs.gopls # Official Go LSP server
-
-    # Python (optional - uncomment if using Python development)
-    # pkgs.python3Packages.python-lsp-server
-    # pkgs.pyright  # Microsoft's Python LSP (alternative)
-
-    # Rust (optional - usually handled by rustup)
-    # pkgs.rust-analyzer
-
-    # TypeScript/JavaScript
-    pkgs.nodePackages.typescript-language-server
-
-    # YAML
-    pkgs.yaml-language-server
-
-    # Docker
-    pkgs.dockerfile-language-server # Docker language server for Dockerfiles
-
-    # JSON
-    # pkgs.nodePackages.vscode-langservers-extracted  # Provides jsonls
-
-    # Markdown
-    pkgs.marksman # Markdown LSP server
-
-    # Vue
-    pkgs.vue-language-server # Vue LSP server
-
-    # C/C++
-    pkgs.clang-tools # Provides clangd LSP server
-
-    # SonarLint (multi-language code analysis)
-    # pkgs.sonarlint-ls # SonarLint language server for code quality analysis (broken build)
-
-    # Additional LSP servers (add as needed):
-    # pkgs.terraform-ls  # Terraform
-    # pkgs.haskell-language-server  # Haskell
-    # pkgs.lua-language-server  # Lua
+    pkgs.nil # Nix LSP server
   ];
 
   # ============================================================================
@@ -171,69 +95,11 @@ let
   # 2. Find package in nixpkgs: nix search nixpkgs <tool-name>
   # 3. Add to list below with comment indicating which package uses it
 
-  cliTools = builtins.filter (x: x != null) (
-    [
-      # Search and navigation tools
-      # Used by: elisp/completion.el (consult-ripgrep, consult-fd)
-      # Used by: elisp/programming.el (xref-search-program)
-      pkgs.ripgrep # Fast recursive grep (rg command)
-      pkgs.fd # Fast find alternative (fd command)
-
-      # Version control
-      # Used by: elisp/git.el (magit, diff-hl)
-      # NOTE: git is NOT included here - it's a system-level dependency that users
-      # should manage separately (e.g., via programs.git.enable or home.packages).
-      # Including it causes conflicts when users have custom git configurations
-      # (git-with-svn, git-full, etc.). Magit will find git via PATH.
-
-      # Directory environment management
-      # Used by: elisp/programming.el (direnv-mode)
-      pkgs.direnv
-
-      # File navigation with frecency
-      # Used by: elisp/completion.el (zoxide package)
-      (optionalPackage "zoxide")
-
-      # Secrets management
-      # Used by: elisp/systems.el (sops package)
-      (optionalPackage "sops")
-
-      # 1Password CLI integration
-      # Used by: elisp/systems.el (auth-source-1password)
-      # NOTE: Commented out because it's unfree. Install manually if needed.
-      # (optionalPackage "_1password-cli") # Provides 'op' command
-
-      # Markdown rendering
-      # Used by: elisp/programming.el (markdown-mode)
-      (optionalPackage "multimarkdown")
-
-      # Claude Code CLI
-      # Used by: elisp/programming.el (claude-code-ide)
-      # pkgs.claude-code
-
-      # LSP JSON acceleration via bytecode pre-conversion
-      # Used by: elisp/programming.el (eglot-booster)
-      pkgs.emacs-lsp-booster
-
-      # SQLite database for emacsql (forge PR/issue storage)
-      # Used by: elisp/git.el (forge via emacsql-sqlite-builtin)
-      pkgs.sqlite
-
-      # Additional tools (uncomment as needed):
-      # pkgs.graphviz  # Used by org-mode diagrams
-      # pkgs.imagemagick  # Image manipulation for org-mode
-      # pkgs.pandoc  # Universal document converter
-      # pkgs.aspell  # Spell checker (or hunspell)
-      # pkgs.hunspell  # Alternative spell checker
-      # pkgs.dictionaries  # For flyspell dictionaries
-    ]
-    # Terminal emulator dependencies (Linux only)
-    # Used by: elisp/programming.el (vterm package)
-    # Note: libvterm is not available on Darwin (macOS) systems
-    ++ lib.optionals pkgs.stdenv.isLinux [
-      pkgs.libvterm # Required by emacs-vterm
-    ]
-  );
+  cliTools = builtins.filter (x: x != null) [
+    pkgs.ripgrep
+    pkgs.fd
+    pkgs.direnv
+  ];
 
   # ============================================================================
   # CONVENIENCE AGGREGATES
