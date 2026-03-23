@@ -1,27 +1,35 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib, config, ... }:
 
 let
   jotainEmacs = pkgs.callPackage ./emacs.nix { devMode = true; };
 in
 {
+  imports = [
+    ./nix/devenv/emacs-lisp.nix
+  ];
+
+  # Languages
+  languages = {
+    nix.enable = true;
+    emacs-lisp = {
+      enable = true;
+      package = jotainEmacs;
+    };
+  };
+
+  # Formatting (shared config with flake.nix)
+  treefmt = {
+    enable = true;
+    config = import ./nix/treefmt.nix { inherit pkgs; };
+  };
+
+  # Git hooks — treefmt runs as pre-commit during `devenv test`
+  git-hooks.hooks.treefmt.enable = true;
+
   packages = [
-    # Emacs with all dependencies
-    jotainEmacs
-
-    # LSP servers
-    pkgs.nil
-    pkgs.bash-language-server
-
     # MCP servers
     pkgs.mcp-nixos
     pkgs.mcp-language-server
-
-    # Formatters
-    pkgs.nixpkgs-fmt
-    pkgs.shfmt
-
-    # Linters
-    pkgs.shellcheck
 
     # Tools
     pkgs.ripgrep
@@ -35,8 +43,50 @@ in
     pkgs.just
   ];
 
+  cachix.pull = [ "jylhis" ];
+
   # Disable container features (we don't need nix2container/mk-shell-bin)
   containers = lib.mkForce { };
+
+  # Tests — run with `devenv test`
+  enterTest = ''
+    echo "Running ERT smoke and fast tests..."
+    emacs -Q --batch \
+      --eval "(progn \
+        (add-to-list 'load-path \"$DEVENV_ROOT/lisp\") \
+        (add-to-list 'load-path \"$DEVENV_ROOT/modules\") \
+        (add-to-list 'load-path \"$DEVENV_ROOT/tests\"))" \
+      --eval "(setq user-emacs-directory \"$DEVENV_ROOT/\")" \
+      --eval "(require 'ert)" \
+      --eval "(require 'cl-lib)" \
+      --load "$DEVENV_ROOT/tests/test-helpers.el" \
+      --load "$DEVENV_ROOT/tests/test-all.el" \
+      --eval "(ert-run-tests-batch-and-exit '(or (tag smoke) (tag fast)))"
+    echo "Tests passed!"
+  '';
+
+  # Flake output packages — build with `devenv build`
+  outputs = {
+    jotain = pkgs.callPackage ./nix/package.nix { };
+    emacs = pkgs.callPackage ./emacs.nix { devMode = false; };
+    emacs-dev = jotainEmacs;
+  };
+
+  # Claude Code integration
+  claude.code = {
+    enable = true;
+    mcpServers = {
+      # Local devenv MCP server
+      devenv = {
+        type = "stdio";
+        command = "devenv";
+        args = [ "mcp" ];
+        env = {
+          DEVENV_ROOT = config.devenv.root;
+        };
+      };
+    };
+  };
 
   env = {
     JOTAIN_DEV_MODE = "1";
@@ -94,12 +144,6 @@ in
     exec ${jotainEmacs}/bin/emacs --init-directory="$XDG_CONFIG_HOME/emacs" "$@"
   '';
 
-  # mcp-language-server pre-configured for Nix with nil LSP
-  scripts.mcp-language-server-nix.exec = ''
-    exec ${pkgs.mcp-language-server}/bin/mcp-language-server \
-      --workspace "$PWD" \
-      --lsp "${pkgs.nil}/bin/nil"
-  '';
 
   enterShell = ''
     export JOTAIN_ROOT="$PWD"
