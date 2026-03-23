@@ -12,12 +12,7 @@
 
 ;; Load only fast test files
 (let ((test-dir (file-name-directory (or load-file-name buffer-file-name))))
-  (load (expand-file-name "test-smoke.el" test-dir) nil t)
-  (load (expand-file-name "test-platform.el" test-dir) nil t)
-  (load (expand-file-name "test-auth-source-1password.el" test-dir) nil t)
-  (load (expand-file-name "test-ui.el" test-dir) nil t)
-  ;; Note: test-utils.el has both fast and slow tests, load selectively
-  (load (expand-file-name "test-utils.el" test-dir) nil t))
+  (load (expand-file-name "test-smoke.el" test-dir) nil t))
 
 ;; Run only tests tagged 'fast' or 'smoke'
 (defun run-fast-tests ()
