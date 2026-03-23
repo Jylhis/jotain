@@ -20,16 +20,23 @@
 (when-let ((ts-dir (getenv "TREE_SITTER_DIR")))
   (setq treesit-extra-load-path (list ts-dir)))
 
-;; Disable package.el in favor of Nix package management
-;; TODO: We might still want to allow non-nix management in the future
-(setq package-enable-at-startup nil)
-(setq package-check-signature nil)       ; Disable GPG signature checks (no remote packages)
+;; Package management — conditional on Nix environment
+;; Under Nix: disable package.el entirely (packages provided by Nix store)
+;; Without Nix: allow package.el to bootstrap packages on first launch
+;; The full archive configuration happens in jotain-platform.el (init.el)
+(if (getenv "NIX_PROFILES")
+    (progn
+      (setq package-enable-at-startup nil)
+      (setq package-check-signature nil))
+  (setq package-enable-at-startup t))
 
 ;; `use-package' is builtin since 29.
 ;; It must be set before loading `use-package'.
 (setq use-package-enable-imenu-support t)
-(setq use-package-always-ensure nil)     ; CRITICAL: Never auto-install packages
-(setq use-package-ensure-function 'ignore)  ; Packages provided by Nix, not package.el
+;; Default to nil; jotain-platform.el sets to t when not under Nix
+(setq use-package-always-ensure nil)
+(when (getenv "NIX_PROFILES")
+  (setq use-package-ensure-function 'ignore))
 
 ;; Native compilation settings (Emacs 30+)
 (when (and (fboundp 'native-comp-available-p)
