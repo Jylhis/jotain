@@ -17,6 +17,12 @@
 
 (require 'platform)
 
+;;; Font Customization Group
+
+(defgroup jotain-fonts nil
+  "Font configuration for Jotain."
+  :group 'jotain-ui)
+
 ;;; Font Configuration Variables
 
 (defcustom jotain-fonts-default-family
@@ -64,23 +70,23 @@ Each entry is (font-name . height-in-points*10)."
   "Find first available font from FONT-LIST preference list.
 Returns (font-name . height) or nil if none found."
   (let ((available-fonts (jotain-fonts--get-available-families)))
-    (seq-find (lambda (font-spec)
-                (member (car font-spec) available-fonts))
+    (seq-find (lambda (font-entry)
+                (member (car font-entry) available-fonts))
               font-list)))
 
-(defun jotain-fonts--set-face-font (face font-spec)
-  "Set FACE to use FONT-SPEC (font-name . height)."
-  (when font-spec
-    (let ((font-name (car font-spec))
-          (font-height (cdr font-spec)))
+(defun jotain-fonts--set-face-font (face font-entry)
+  "Set FACE to use FONT-ENTRY (font-name . height)."
+  (when font-entry
+    (let ((font-name (car font-entry))
+          (font-height (cdr font-entry)))
       (set-face-attribute face nil
                           :family font-name
                           :height font-height)
       (when (eq face 'default)
         (set-frame-font (font-spec :family font-name :size (/ font-height 10.0)) nil t))
-      (message "jotain-fonts: Set %s to %s (height %d)" 
+      (message "jotain-fonts: Set %s to %s (height %d)"
                face font-name font-height)
-      font-spec)))
+      font-entry)))
 
 ;;; Core Font Setup Functions
 
@@ -101,19 +107,19 @@ Returns (font-name . height) or nil if none found."
   "Setup serif font for formal reading."
   (let ((font (jotain-fonts--find-first-available jotain-fonts-serif-family)))
     (when font
-      ;; Create a custom serif face for org-mode and similar
-      (unless (facep 'jotain-fonts-serif)
-        (defface jotain-fonts-serif
-          '((t :inherit variable-pitch))
-          "Serif font face for formal text."))
       (jotain-fonts--set-face-font 'jotain-fonts-serif font))))
+
+(defface jotain-fonts-serif
+  '((t :inherit variable-pitch))
+  "Serif font face for formal text."
+  :group 'jotain-fonts)
 
 ;;; Performance Optimizations
 
 (defun jotain-fonts-setup-performance ()
   "Apply font-related performance optimizations."
   ;; Prevent font cache compaction during GC
-  (setq inhibit-compacting-font-caches t)
+  (setopt inhibit-compacting-font-caches t)
   
   ;; Enable font scaling
   (setopt scalable-fonts-allowed t)
@@ -181,11 +187,12 @@ This ensures consistent fonts across daemon and client sessions."
   ;; Setup fonts for current frame
   (jotain-fonts--setup-frame)
   
+  ;; Ensure theme changes reapply font faces
+  (add-hook 'after-load-theme-hook #'jotain-fonts-setup-theme-faces)
+
   ;; Ensure new frames get font setup (critical for daemon/client)
-  (if (daemonp)
-      (add-hook 'after-make-frame-functions #'jotain-fonts--setup-frame)
-    ;; For non-daemon, ensure theme changes reapply fonts
-    (add-hook 'after-load-theme-hook #'jotain-fonts-setup-theme-faces)))
+  (when (daemonp)
+    (add-hook 'after-make-frame-functions #'jotain-fonts--setup-frame)))
 
 ;;; Interactive Commands
 
