@@ -50,6 +50,7 @@
          (c++-ts-mode . combobulate-mode)))
 
 (use-package flymake
+  :ensure nil
   :custom
   (flymake-fringe-indicator-position 'left-fringe)
   (flymake-suppress-zero-counters t)
@@ -64,7 +65,7 @@
               ("C-c ! p" . flymake-show-project-diagnostics))
   :config
   ;; Show diagnostics in echo area when cursor is on an error
-  (defun jotain/flymake-show-diagnostic-at-point ()
+  (defun jotain-flymake-show-diagnostic-at-point ()
     "Display flymake diagnostic at point in echo area."
     (when (and flymake-mode (not (minibufferp)))
       (let ((diagnostics (flymake-diagnostics (point))))
@@ -79,20 +80,20 @@
                      (flymake-diagnostic-text diagnostic)))))))
 
   ;; Show diagnostic after a short delay
-  (defvar-local jotain/flymake-diagnostic-timer nil)
-  (defun jotain/flymake-show-diagnostic-delayed ()
+  (defvar-local jotain-flymake--diagnostic-timer nil)
+  (defun jotain-flymake-show-diagnostic-delayed ()
     "Show diagnostic after a delay."
     (when flymake-mode
-      (when jotain/flymake-diagnostic-timer
-        (cancel-timer jotain/flymake-diagnostic-timer))
-      (setq jotain/flymake-diagnostic-timer
-            (run-with-timer 0.5 nil #'jotain/flymake-show-diagnostic-at-point))))
+      (when jotain-flymake--diagnostic-timer
+        (cancel-timer jotain-flymake--diagnostic-timer))
+      (setq jotain-flymake--diagnostic-timer
+            (run-with-timer 0.5 nil #'jotain-flymake-show-diagnostic-at-point))))
 
   (add-hook 'flymake-mode-hook
             (lambda ()
               (if flymake-mode
-                  (add-hook 'post-command-hook #'jotain/flymake-show-diagnostic-delayed nil t)
-                (remove-hook 'post-command-hook #'jotain/flymake-show-diagnostic-delayed t))))
+                  (add-hook 'post-command-hook #'jotain-flymake-show-diagnostic-delayed nil t)
+                (remove-hook 'post-command-hook #'jotain-flymake-show-diagnostic-delayed t))))
 
   ;; Configure elisp-flymake-byte-compile to trust local configuration files
   (with-eval-after-load 'elisp-mode
@@ -101,7 +102,7 @@
           (append elisp-flymake-byte-compile-load-path (list user-emacs-directory)))
 
     ;; Add hook to trust local config files
-    (defun jotain/trust-local-elisp-files ()
+    (defun jotain-trust-local-elisp-files ()
       "Trust elisp files in the current Emacs configuration directory."
       (when (and buffer-file-name
                  (string-prefix-p (expand-file-name user-emacs-directory)
@@ -111,7 +112,7 @@
                     (append safe-local-variable-values
                             '((elisp-flymake-byte-compile . t))))))
 
-    (add-hook 'emacs-lisp-mode-hook #'jotain/trust-local-elisp-files))
+    (add-hook 'emacs-lisp-mode-hook #'jotain-trust-local-elisp-files))
 
   ;; Disable flymake during smerge mode
   ;; (add-hook 'smerge-mode-hook
@@ -139,6 +140,7 @@
   :after (consult flyspell))
 
 (use-package eglot
+  :ensure nil ; Built-in to Emacs 29+
   :hook ((prog-mode . (lambda ()
                         (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
                           (eglot-ensure))))
@@ -264,10 +266,9 @@
   (dape-info-hide-mode-line nil)
   (dape-inlay-hints t "Showing inlay hints")
 
-  :init
-  (with-eval-after-load 'dape
-    (dape-breakpoint-global-mode)
-    (add-hook 'dape-compile-hook 'kill-buffer)))
+  :config
+  (dape-breakpoint-global-mode)
+  (add-hook 'dape-compile-hook 'kill-buffer))
 
 (use-package wgrep
   :ensure t
@@ -282,7 +283,6 @@
   :mode ("\\.plt\\'" . gnuplot-mode))
 
 (use-package markdown-mode
-  :after dash
   :ensure t
   :defer t
   :mode (("README\\.md\\'" . gfm-mode)
@@ -296,7 +296,6 @@
 (use-package cc-mode
   :ensure nil
   :custom
-  (c-basic-indent 5)
   (c-basic-offset 5)
   (c-default-style '((c-mode . "stroustrup")
                      (c++-mode . "stroustrup")
