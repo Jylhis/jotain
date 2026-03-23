@@ -89,6 +89,9 @@
 		 (pixel-scroll-precision-mode 1))
 
   ;;; Storage Integration
+	       ;; Reduce unnecessary disk writes (lock files cause issues on Android storage)
+	       (setopt create-lockfiles nil)
+
 	       ;; Set up org directory to use external storage
 	       (let ((external-storage (getenv "EXTERNAL_STORAGE")))
 		 (when external-storage
