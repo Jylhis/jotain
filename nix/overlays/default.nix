@@ -15,7 +15,7 @@ final: prev: {
   ];
 
   # Add jotain configuration package to pkgs
-  jotain = final.callPackage ../.. { };
+  jotain = final.callPackage ../package.nix { };
 
   # Add jotain Emacs package (Emacs with all dependencies)
   jotainEmacs = final.callPackage ../../emacs.nix { devMode = false; };

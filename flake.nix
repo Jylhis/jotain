@@ -5,10 +5,12 @@
     extra-substituters = [
       "https://jylhis.cachix.org"
       "https://nix-community.cachix.org"
+      "https://devenv.cachix.org"
     ];
     extra-trusted-public-keys = [
       "jylhis.cachix.org-1:SIAw5iWjXRhLAmejqPy0PGuqH6bjCHIFVF9CiHmHRpE="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw="
     ];
   };
 
@@ -33,12 +35,23 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    devenv = {
+      url = "github:cachix/devenv";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    devenv-root = {
+      url = "file+file:///dev/null";
+      flake = false;
+    };
   };
 
-  outputs = inputs @ { self, nixpkgs, emacs-overlay, flake-parts, systems, treefmt-nix, home-manager, ... }:
+  outputs = inputs @ { self, nixpkgs, emacs-overlay, flake-parts, systems, treefmt-nix, home-manager, devenv, devenv-root, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         treefmt-nix.flakeModule
+        devenv.flakeModule
       ];
 
       systems = import systems;
@@ -67,7 +80,7 @@
 
         packages = {
           default = self'.packages.jotain;
-          jotain = pkgs.callPackage ./default.nix { };
+          jotain = pkgs.callPackage ./nix/package.nix { };
 
           emacs-dev = pkgs.callPackage ./emacs.nix {
             devMode = true;
@@ -103,10 +116,14 @@
           };
         };
 
-        devShells = {
-          default = pkgs.callPackage ./shell.nix {
-            jotainEmacs = self'.packages.emacs-dev;
-          };
+        devenv.shells.default = {
+          devenv.root =
+            let
+              devenvRootFileContent = builtins.readFile devenv-root.outPath;
+            in
+            pkgs.lib.mkIf (devenvRootFileContent != "") devenvRootFileContent;
+
+          imports = [ ./devenv.nix ];
         };
 
         apps = {
