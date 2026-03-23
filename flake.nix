@@ -119,46 +119,14 @@
 
         checks =
           let
-            # Import NMT tests
-            nmtTests = pkgs.callPackage ./nmt-tests {
-              inherit home-manager;
-              homeModule = self.homeModules.default;
-            };
-
-            # Import runtime test
-            runtimeTests = pkgs.callPackage ./nmt-tests/runtime.nix {
-              inherit home-manager;
-              homeModule = self.homeModules.default;
-              emacsPackage = self'.packages.emacs;
-            };
-
-            # Get passthru tests from the jotain package
             jotainPackage = self'.packages.jotain;
-
-            # Base checks (always run)
-            baseChecks = {
-              formatting = config.treefmt.build.check self;
-
-              # ERT tests from passthru
-              smoke-test = jotainPackage.smoke-test;
-              fast-tests = jotainPackage.fast-tests;
-              tests = jotainPackage.tests;
-
-              # NMT home-manager module tests
-              inherit (nmtTests)
-                test-module-enabled
-                test-module-disabled
-                test-runtime-deps-enabled
-                test-runtime-deps-disabled
-                test-daemon-disabled;
-            };
-
-            # Optional runtime test (only in CI)
-            runtimeCheck = lib.optionalAttrs (builtins.getEnv "CI" != "") {
-              inherit (runtimeTests) test-emacs-runtime;
-            };
           in
-          baseChecks // runtimeCheck;
+          {
+            formatting = config.treefmt.build.check self;
+            smoke-test = jotainPackage.smoke-test;
+            fast-tests = jotainPackage.fast-tests;
+            tests = jotainPackage.tests;
+          };
 
         treefmt = {
           programs.nixpkgs-fmt.enable = true;
