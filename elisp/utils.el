@@ -31,11 +31,12 @@ Each directory will be searched recursively for .org files."
   "Find all .org files recursively in DIRECTORY, ignoring hidden folders."
   (when (and directory (file-exists-p directory) (file-directory-p directory))
     (let ((files '()))
-      (dolist (file (directory-files-recursively directory "\\.org\\'" t
+      ;; PERFORMANCE OPTIMIZATION: Pass `nil` for INCLUDE-DIRECTORIES
+      ;; to natively filter out directories without the overhead of `file-regular-p` stats
+      (dolist (file (directory-files-recursively directory "\\.org\\'" nil
                                                  (lambda (dir)
                                                    (not (string-match-p "\\(^\\|/\\)\\." (file-name-nondirectory dir))))))
-        (when (file-regular-p file)
-          (push (file-truename file) files)))
+        (push (file-truename file) files))
       (nreverse files))))
 
 (defun jotain-utils-update-org-agenda-files (&optional directories)
