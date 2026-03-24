@@ -154,6 +154,14 @@
   :custom
   (ffap-machine-p-known 'reject)) ; Don't attempt to ping unknown hostnames
 
+(use-package uniquify
+  :ensure nil
+  :custom
+  (uniquify-buffer-name-style 'forward "Use directory names to disambiguate buffers (e.g. dir/file.txt)")
+  (uniquify-separator "/" "Use a slash to separate directory and file name")
+  (uniquify-after-kill-buffer-p t "Rename buffers when conflicts are resolved")
+  (uniquify-ignore-buffers-re "^\\*" "Ignore internal buffers"))
+
 ;;; Essential packages
 (use-package super-save
   :ensure t
