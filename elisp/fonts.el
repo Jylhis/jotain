@@ -63,8 +63,9 @@ Each entry is (font-name . height-in-points*10)."
 (defun jotain-fonts--get-available-families ()
   "Get hash table of available font families, cached for performance."
   (unless jotain-fonts--available-cache
-    (let ((cache (make-hash-table :test 'equal :size 1000)))
-      (dolist (font (font-family-list))
+    (let* ((fonts (font-family-list))
+           (cache (make-hash-table :test 'equal :size (length fonts))))
+      (dolist (font fonts)
         (puthash font t cache))
       (setq jotain-fonts--available-cache cache)))
   jotain-fonts--available-cache)
