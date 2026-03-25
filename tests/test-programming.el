@@ -53,8 +53,8 @@
   "Test that custom flymake functions are defined."
   :tags '(unit)
   (require 'flymake)
-  (should (fboundp 'jotain/flymake-show-diagnostic-at-point))
-  (should (fboundp 'jotain/flymake-show-diagnostic-delayed))
+  (should (fboundp 'jotain/flymake-eldoc-function))
+  (should (fboundp 'jotain/flymake-setup-eldoc))
   (should (fboundp 'jotain/trust-local-elisp-files)))
 
 (ert-deftest test-programming/flymake-elisp-trust-config ()
