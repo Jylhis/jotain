@@ -105,8 +105,7 @@
     (defun jotain-trust-local-elisp-files ()
       "Trust elisp files in the current Emacs configuration directory."
       (when (and buffer-file-name
-                 (string-prefix-p (expand-file-name user-emacs-directory)
-                                  (expand-file-name buffer-file-name)))
+                 (file-in-directory-p buffer-file-name user-emacs-directory))
         ;; Mark buffer as safe for byte-compilation
         (setq-local safe-local-variable-values
                     (append safe-local-variable-values
