@@ -51,7 +51,7 @@
 (add-hook 'minibuffer-setup-hook
           (lambda () (setq gc-cons-threshold most-positive-fixnum)))
 (add-hook 'minibuffer-exit-hook
-          (lambda () (setq gc-cons-threshold (* 50 1024 1024))))
+          (lambda () (setq gc-cons-threshold jotain/gc-threshold-default)))
 
 (provide 'init)
 ;;; init.el ends here
