@@ -101,8 +101,7 @@ just test-tag <TAG>      # specific tag
 ## Adding a New Test File
 
 1. Create `tests/test-<module>.el` following the template above.
-2. Add `(require 'test-<module>)` to `tests/test-all.el`.
-3. Run `just test` to verify.
+2. Run `just test` to verify. The new test file will be auto-loaded.
 
 ## Collaboration
 
