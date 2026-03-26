@@ -6,6 +6,7 @@
 ;;; Code:
 
 (use-package org-jira
+  :ensure nil
   :after org
   :config
   ;; The user needs to configure JIRA access.
