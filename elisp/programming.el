@@ -105,8 +105,7 @@
     (defun jotain-trust-local-elisp-files ()
       "Trust elisp files in the current Emacs configuration directory."
       (when (and buffer-file-name
-                 (string-prefix-p (expand-file-name user-emacs-directory)
-                                  (expand-file-name buffer-file-name)))
+                 (file-in-directory-p buffer-file-name user-emacs-directory))
         ;; Mark buffer as safe for byte-compilation
         (setq-local safe-local-variable-values
                     (append safe-local-variable-values
@@ -359,6 +358,17 @@
   :hook (csv-mode . csv-align-mode)
   :custom
   (csv-separators '("," ";" "|" "\t")))
+
+
+(use-package typescript-ts-mode
+  :ensure nil
+  :mode (("\\.ts\\'" . typescript-ts-mode)
+         ("\\.tsx\\'" . tsx-ts-mode)
+         ("\\.jsx\\'" . tsx-ts-mode)))
+
+(use-package js
+  :ensure nil
+  :mode ("\\.js\\'" . js-ts-mode))
 (use-package modern-cpp-font-lock
   :ensure t
   :hook (c++-mode . modern-c++-font-lock-mode))
