@@ -68,9 +68,9 @@ nix flake check   # run all checks
 ```nix
 programs.jotain = {
   enable = true;
-  enableDaemon = true;
-  includeRuntimeDeps = true;
-  extraPackages = epkgs: [];
+  enableDaemon = true;           # systemd/launchd service (default: true)
+  includeRuntimeDeps = true;     # LSP servers, fonts, CLI tools (default: true)
+  extraPackages = epkgs: [];     # Additional Emacs packages
 };
 ```
 
