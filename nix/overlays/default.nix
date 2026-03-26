@@ -2,6 +2,18 @@
 { inputs, ... }:
 
 final: prev: {
+  # Workaround for https://github.com/NixOS/nixpkgs/issues/493679
+  # jetbrains-mono depends on picosvg, whose test suite has floating-point
+  # precision failures in v0.22.3 that block the build. Disable its checks
+  # until the fix propagates to the nixpkgs revision we track.
+  pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+    (_python-final: python-prev: {
+      picosvg = python-prev.picosvg.overridePythonAttrs (_oldAttrs: {
+        doCheck = false;
+      });
+    })
+  ];
+
   # Add jotain configuration package to pkgs
   jotain = final.callPackage ../.. { };
 
@@ -18,6 +30,34 @@ final: prev: {
       # Skip byte-compilation: android.el requires platform.el but comes
       # first alphabetically. Native compilation will JIT-compile at runtime.
       buildPhase = ":";
+    };
+
+    # Claude Code IDE integration (not yet in nixpkgs)
+    # https://github.com/manzaltu/claude-code-ide.el
+    claude-code-ide = efinal.trivialBuild {
+      pname = "claude-code-ide";
+      version = "0.2.6";
+      src = final.fetchFromGitHub {
+        owner = "manzaltu";
+        repo = "claude-code-ide.el";
+        rev = "5f12e60c6d2d1802c8c1b7944bbdf935d5db1364";
+        sha256 = "148xcrqff6khpwf8nnadcyvz8h6mk45xz1498k0wbzy80yzd2axn";
+      };
+      packageRequires = with efinal; [ websocket transient web-server ];
+    };
+
+    # Combobulate: AST-aware structural editing via tree-sitter (not in nixpkgs)
+    # https://github.com/mickeynp/combobulate
+    combobulate = efinal.trivialBuild {
+      pname = "combobulate";
+      version = "0-unstable-2026-01-26";
+      src = final.fetchFromGitHub {
+        owner = "mickeynp";
+        repo = "combobulate";
+        rev = "38773810b5e532f25d11c6d1af02c3a8dffeacd7";
+        sha256 = "0j647m17bwj4hia32nq650z7bpnxcg5bflk0z8r867qzmg8j6vc1";
+      };
+      # All dependencies (seq, map, treesit) are built-in to Emacs 30+
     };
   });
 }

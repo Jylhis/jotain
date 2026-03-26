@@ -1,6 +1,17 @@
 {
   description = "Jotain - A NixOS-native Emacs distribution with automatic dependency management";
 
+  nixConfig = {
+    extra-substituters = [
+      "https://jylhis.cachix.org"
+      "https://nix-community.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "jylhis.cachix.org-1:SIAw5iWjXRhLAmejqPy0PGuqH6bjCHIFVF9CiHmHRpE="
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+    ];
+  };
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -51,6 +62,7 @@
             emacs-overlay.overlays.default
             self.overlays.default
           ];
+          config.allowUnfree = true;
         };
 
         packages = {
@@ -101,6 +113,7 @@
           default = {
             type = "app";
             program = "${self'.packages.emacs-run}/bin/emacs-run";
+            meta.description = "Try Jotain Emacs in an isolated temporary environment";
           };
         };
 
@@ -149,7 +162,7 @@
 
         treefmt = {
           programs.nixpkgs-fmt.enable = true;
-
+          programs.shellcheck.enable = true;
           programs.shfmt = {
             enable = true;
             indent_size = 2;

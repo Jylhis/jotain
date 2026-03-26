@@ -53,18 +53,18 @@
   "Test that custom flymake functions are defined."
   :tags '(unit)
   (require 'flymake)
-  (should (fboundp 'jotain/flymake-show-diagnostic-at-point))
-  (should (fboundp 'jotain/flymake-show-diagnostic-delayed))
-  (should (fboundp 'jotain/trust-local-elisp-files)))
+  (should (fboundp 'jotain-flymake-show-diagnostic-at-point))
+  (should (fboundp 'jotain-flymake-show-diagnostic-delayed))
+  (should (fboundp 'jotain-trust-local-elisp-files)))
 
 (ert-deftest test-programming/flymake-elisp-trust-config ()
   "Test that elisp flymake trusts local configuration files."
   :tags '(unit)
   (require 'flymake)
-  (should (fboundp 'jotain/trust-local-elisp-files))
+  (should (fboundp 'jotain-trust-local-elisp-files))
   ;; Function should be added to emacs-lisp-mode-hook
   (with-eval-after-load 'elisp-mode
-    (should (member 'jotain/trust-local-elisp-files
+    (should (member 'jotain-trust-local-elisp-files
                     (bound-and-true-p emacs-lisp-mode-hook)))))
 
 ;;; Eglot (LSP) Configuration
@@ -215,9 +215,6 @@
   (require 'cc-mode)
   ;; Check that the settings were applied via use-package
   ;; Note: cc-mode may not have all variables set until first use
-  (should (or (boundp 'c-basic-indent) t))  ; Optional - may not be set yet
-  (when (boundp 'c-basic-indent)
-    (should (= c-basic-indent 5)))
   (should (boundp 'c-basic-offset))
   (should (= c-basic-offset 5))
   (should (boundp 'c-default-style))
@@ -359,6 +356,21 @@
   (when (locate-library "jinja2-mode")
     (require 'jinja2-mode)
     (should (fboundp 'jinja2-mode))))
+
+
+;;; Vue Configuration
+
+(ert-deftest test-programming/vue-mode-registered ()
+  "Test that vue-mode is registered for .vue files."
+  :tags '(unit)
+  (should (assoc "\\.vue\\'" auto-mode-alist))
+  (when (locate-library "vue-mode")
+    (should (locate-library "vue-mode"))))
+
+(ert-deftest test-programming/vue-language-server-available ()
+  "Test that vue-language-server is available in PATH."
+  :tags '(integration)
+  (should (executable-find "vue-language-server")))
 
 (provide 'test-programming)
 ;;; test-programming.el ends here

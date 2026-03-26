@@ -77,6 +77,7 @@ let
   # Most packages work automatically via the `or pkgName` fallback in mapToNixpkgsName
   packageNameMap = {
     # Built-in packages (exclude from installation)
+    "emacs" = null; # Pseudo-package for configuring Emacs itself
     "project" = null; # Built-in to Emacs 30+
     "diff-mode" = null; # Built-in to Emacs
     "xt-mouse" = null; # Built-in to Emacs
@@ -112,7 +113,12 @@ let
   listPackageNames = elispDir:
     let
       packageNames = scanDirectory elispDir;
-      mapped = map (name: "${name} -> ${mapToNixpkgsName name}") packageNames;
+      mapped = map
+        (name:
+          let nixName = mapToNixpkgsName name;
+          in "${name} -> ${if nixName == null then "(built-in)" else nixName}"
+        )
+        packageNames;
     in
     lib.concatStringsSep "\n" mapped;
 
