@@ -20,7 +20,7 @@ Expert in ERT (Emacs Regression Testing) and test automation for the Jotain conf
 
 | Location | Contents |
 |----------|----------|
-| `tests/test-all.el` | Test suite loader — new files must be `require`d here |
+| `tests/test-all.el` | Test suite loader — auto-loads all `test-*.el` files |
 | `tests/test-helpers.el` | Shared test utilities |
 | `tests/test-suite-smoke.el` | Smoke tests (< 1s) |
 | `tests/test-suite-fast.el` | Fast unit tests (< 5s) |
