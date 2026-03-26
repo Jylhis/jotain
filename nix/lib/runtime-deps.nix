@@ -82,12 +82,12 @@ let
 
   fonts = [
 
-    pkgs.jetbrains-mono
-
-    pkgs.fira-code
-    pkgs.iosevka
-    pkgs.cascadia-code
-    pkgs.hack-font
+    pkgs.nerd-fonts.jetbrains-mono
+    pkgs.nerd-fonts.fira-code
+    pkgs.nerd-fonts.iosevka
+    pkgs.nerd-fonts.caskaydia-cove # Cascadia Code Nerd Font variant
+    pkgs.nerd-fonts.hack
+    pkgs.nerd-fonts.symbols-only # Provides "Symbols Nerd Font Mono" for nerd-icons
 
     # UI and variable-pitch fonts
     # Used by: elisp/fonts.el jotain-fonts-variable-family
@@ -144,6 +144,9 @@ let
 
     # Markdown
     pkgs.marksman # Markdown LSP server
+
+    # Vue
+    pkgs.vue-language-server # Vue LSP server
 
     # C/C++
     pkgs.clang-tools # Provides clangd LSP server
@@ -212,8 +215,15 @@ let
       # Used by: elisp/programming.el (claude-code-ide)
       # pkgs.claude-code
 
+      # LSP JSON acceleration via bytecode pre-conversion
+      # Used by: elisp/programming.el (eglot-booster)
+      pkgs.emacs-lsp-booster
+
+      # SQLite database for emacsql (forge PR/issue storage)
+      # Used by: elisp/git.el (forge via emacsql-sqlite-builtin)
+      pkgs.sqlite
+
       # Additional tools (uncomment as needed):
-      # pkgs.sqlite  # Used by org-roam, forge
       # pkgs.graphviz  # Used by org-mode diagrams
       # pkgs.imagemagick  # Image manipulation for org-mode
       # pkgs.pandoc  # Universal document converter

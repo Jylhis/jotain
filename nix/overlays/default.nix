@@ -45,5 +45,19 @@ final: prev: {
       };
       packageRequires = with efinal; [ websocket transient web-server ];
     };
+
+    # Combobulate: AST-aware structural editing via tree-sitter (not in nixpkgs)
+    # https://github.com/mickeynp/combobulate
+    combobulate = efinal.trivialBuild {
+      pname = "combobulate";
+      version = "0-unstable-2026-01-26";
+      src = final.fetchFromGitHub {
+        owner = "mickeynp";
+        repo = "combobulate";
+        rev = "38773810b5e532f25d11c6d1af02c3a8dffeacd7";
+        sha256 = "0j647m17bwj4hia32nq650z7bpnxcg5bflk0z8r867qzmg8j6vc1";
+      };
+      # All dependencies (seq, map, treesit) are built-in to Emacs 30+
+    };
   });
 }

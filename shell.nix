@@ -1,65 +1,10 @@
 # Development shell with XDG isolation
-{ pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-25.05-small.tar.gz") { }
+{ pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-25.11-small.tar.gz") { }
 , jotainEmacs ? pkgs.callPackage ./emacs.nix { inherit pkgs; }
 , ...
 }:
 
 let
-  # Use toString to get the actual path, not the Nix store derivation
-  projectRoot = toString ../..;
-
-  # Development wrapper for jot CLI that uses local sources
-  devJot = pkgs.writeShellScriptBin "jot" ''
-    #!/usr/bin/env bash
-
-    # Dynamically find project root (look for flake.nix)
-    PROJECT_ROOT="$PWD"
-    while [ ! -f "$PROJECT_ROOT/flake.nix" ] && [ "$PROJECT_ROOT" != "/" ]; do
-      PROJECT_ROOT="$(dirname "$PROJECT_ROOT")"
-    done
-
-    if [ ! -f "$PROJECT_ROOT/flake.nix" ]; then
-      echo "Error: Could not find project root (no flake.nix found)"
-      exit 1
-    fi
-
-    # Use local sources
-    export JOTAIN_DEV_MODE=1
-    export JOTAIN_ROOT="$PROJECT_ROOT"
-    export JOTAIN_ELISP_DIR="$PROJECT_ROOT/elisp"
-    export JOTAIN_CLI_DIR="$PROJECT_ROOT/cli"
-
-    # Prepend local elisp so local files shadow the Nix-built jotain-modules
-    EMACSLOADPATH="$PROJECT_ROOT/elisp:''${EMACSLOADPATH:-}"
-    export EMACSLOADPATH
-
-    # Isolated user directory
-    export JOTAIN_DEV_HOME="$PROJECT_ROOT/.dev-home"
-    mkdir -p "$JOTAIN_DEV_HOME"
-
-    # Override XDG paths to isolate from system
-    export XDG_CONFIG_HOME="$JOTAIN_DEV_HOME/.config"
-    export XDG_DATA_HOME="$JOTAIN_DEV_HOME/.local/share"
-    export XDG_CACHE_HOME="$JOTAIN_DEV_HOME/.cache"
-    export XDG_STATE_HOME="$JOTAIN_DEV_HOME/.local/state"
-
-    mkdir -p "$XDG_CONFIG_HOME/emacs"
-    mkdir -p "$XDG_DATA_HOME/emacs"
-    mkdir -p "$XDG_CACHE_HOME/emacs"
-    mkdir -p "$XDG_STATE_HOME/emacs"
-
-    # Use development Emacs
-    export PATH="${jotainEmacs}/bin:$PATH"
-
-    # Run local CLI script if it exists, otherwise show help
-    if [ -f "$PROJECT_ROOT/cli/jot" ]; then
-      exec bash "$PROJECT_ROOT/cli/jot" "$@"
-    else
-      echo "CLI not yet created. Use 'emacs' to launch development Emacs."
-      exit 1
-    fi
-  '';
-
   # Development wrapper for emacs that uses local sources
   devEmacsWrapper = pkgs.writeShellScriptBin "emacs-dev" ''
     #!/usr/bin/env bash
@@ -107,8 +52,6 @@ let
 
     # Create symlink for elisp directory so template's user-emacs-directory paths work
     ln -sfn "$PROJECT_ROOT/elisp" "$XDG_CONFIG_HOME/emacs/elisp"
-    ln -sfn "$PROJECT_ROOT/config" "$XDG_CONFIG_HOME/emacs/config"
-
 
     # Run Emacs with explicit init directory to ensure XDG location is used
     exec ${jotainEmacs}/bin/emacs --init-directory="$XDG_CONFIG_HOME/emacs" "$@"
@@ -159,7 +102,6 @@ pkgs.mkShell {
     jotainEmacs
 
     # Development wrappers
-    devJot
     devEmacsWrapper
 
     # MCP server wrappers
@@ -175,7 +117,6 @@ pkgs.mkShell {
     echo ""
     echo "Commands:"
     echo "  emacs-dev        - Run Emacs (isolated, local sources)"
-    echo "  jot              - Run Jotain CLI (local sources)"
     echo "  just test        - Run tests"
     echo "  just build       - Build package"
     echo "  just check       - Run flake checks"
@@ -184,17 +125,13 @@ pkgs.mkShell {
     echo "  User dir: .dev-home/ (isolated from system)"
     echo "  Sources:  $PWD/elisp"
     echo ""
-    echo "Changes to elisp/ and cli/ take effect immediately!"
+    echo "Changes to elisp/ take effect immediately!"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     # Set up development environment
     export JOTAIN_DEV_MODE=1
     export JOTAIN_ROOT="$PWD"
     export JOTAIN_ELISP_DIR="$PWD/elisp"
-    export JOTAIN_CLI_DIR="$PWD/cli"
-
-    # Prepend local CLI to PATH for direct access
-    export PATH="$PWD/cli:$PATH"
 
     # Add .dev-home to .gitignore if not already there
     if [ -f .gitignore ] && ! grep -q "^\.dev-home" .gitignore 2>/dev/null; then

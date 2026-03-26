@@ -5,11 +5,15 @@
 
 ;;; Code:
 
+(require 'utils)
+
 (use-package emacs
   :init
   :custom
   (text-mode-ispell-word-completion nil "Emacs 30 and newer: Disable Ispell completion function.")
+  (fill-column 100 "Modern standard for line length")
   (use-short-answers t "life is too short to type yes or no")
+  (use-dialog-box nil "Disable dialog boxes to complement use-short-answers")
   (create-lockfiles nil)
   (delete-by-moving-to-trash t "Delete by moving to trash in interactive mode")
   (sentence-end-double-space nil "Disable the obsolete practice of end-of-line spacing from the typewriter era.")
@@ -26,7 +30,6 @@
   (completion-ignore-case t "Don't consider case significant in completion")
   (read-buffer-completion-ignore-case t "Ignore case when reading buffer name")
   (read-file-name-completion-ignore-case t "Ignore case for file completion")
-  (load-prefer-newer t "Always load newer compiled files")
   :config
   ;; Enable modes
   (context-menu-mode 1)           ; Enable context menu for vertico
@@ -41,7 +44,7 @@
 
 (use-package window
   :ensure nil
-  :bind ("C-x j" . my/toggle-window-split)
+  :bind ("C-x j" . jotain-utils-toggle-window-split)
   :custom
   ;; Prefer side by side splitting
   (split-width-threshold 170)
@@ -51,6 +54,8 @@
   :ensure nil
   :hook
   (after-save . executable-make-buffer-file-executable-if-script-p)
+  :config
+  (add-to-list 'find-file-not-found-functions #'jotain-utils-auto-create-missing-dirs)
   :custom
   ;; Disable autosave and backups
   (auto-save-default nil "Disable separate autosave files")
@@ -88,6 +93,10 @@
   :config
   (line-number-mode 1)   ; Show line number in modeline
   (column-number-mode 1)) ; Show column number
+
+(use-package display-fill-column-indicator
+  :ensure nil
+  :hook (prog-mode . display-fill-column-indicator-mode))
 
 (use-package subword
   :ensure nil
@@ -145,6 +154,11 @@
   :custom
   (ffap-machine-p-known 'reject)) ; Don't attempt to ping unknown hostnames
 
+(use-package uniquify
+  :ensure nil
+  :custom
+  (uniquify-buffer-name-style 'forward "Prefix identical buffer names with their directory path"))
+
 ;;; Essential packages
 (use-package super-save
   :ensure t
@@ -162,9 +176,9 @@
   :bind ("C-x u" . vundo)
   :config (setq vundo-glyph-alist vundo-unicode-symbols))
 
-(use-package expand-region
+(use-package expreg
   :ensure t
-  :bind ("C-=" . er/expand-region))
+  :bind ("C-=" . expreg-expand))
 
 (use-package multiple-cursors
   :ensure t
@@ -191,6 +205,17 @@
             (message "Emacs loaded in %.2f seconds with %d garbage collections."
                      (float-time (time-subtract after-init-time before-init-time))
                      gcs-done)))
+
+
+;; World clock configuration
+(use-package time
+  :ensure nil
+  :custom
+  (world-clock-list
+   '(("Europe/Zurich" "Zurich")
+     ("Europe/Helsinki" "Helsinki")
+     ("Asia/Bangkok" "Bangkok")
+     ("Asia/Shanghai" "Shanghai"))))
 
 (provide 'core)
 ;;; core.el ends here

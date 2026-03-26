@@ -21,13 +21,13 @@
 
 ;; Trust all themes by default without prompting — must be set before
 ;; theme packages are loaded with :demand t.
-(setq custom-safe-themes t)
+(setopt custom-safe-themes t)
 
 (defun jotain-ui--disable-all-themes (_theme &optional _no-confirm no-enable)
   "Disable all active themes before loading a new one, unless NO-ENABLE is non-nil.
 This prevents theme blending/stacking artifacts."
   (unless no-enable
-    (mapc #'disable-theme custom-enabled-themes)))
+    (mapc #'disable-theme (copy-sequence custom-enabled-themes))))
 
 (advice-add 'load-theme :before #'jotain-ui--disable-all-themes)
 
@@ -82,7 +82,7 @@ auto-dark is the sole decider of which theme becomes active."
   :custom
   (global-hl-line-sticky-flag t)
   :hook ((after-init . global-hl-line-mode)
-         ((dashboard-mode eshell-mode shell-mode term-mode vterm-mode org-mode) .
+         ((enlight-mode eshell-mode shell-mode term-mode vterm-mode org-mode) .
           (lambda () (setq-local global-hl-line-mode nil)))))
 
 (use-package rainbow-delimiters
@@ -94,7 +94,7 @@ auto-dark is the sole decider of which theme becomes active."
   :config
   (copy-face 'font-lock-constant-face 'calendar-iso-week-face)
   (set-face-attribute 'calendar-iso-week-face nil :height 0.7)
-  (setq calendar-week-start-day 1)
+  (setopt calendar-week-start-day 1)
   (setq calendar-intermonth-text
         '(propertize (format "%2d" (car (calendar-iso-from-absolute
                                          (calendar-absolute-from-gregorian (list month day year)))))
@@ -168,16 +168,15 @@ auto-dark is the sole decider of which theme becomes active."
 
 (use-package pixel-scroll
   :ensure nil
-  :when (display-graphic-p)
   :init
-  (pixel-scroll-precision-mode 1)
-  :config
-  ;; Enable for graphical frames when using server-client
-  (add-hook 'after-make-frame-functions
-            (lambda (frame)
-              (when (display-graphic-p frame)
-                (with-selected-frame frame
-                  (pixel-scroll-precision-mode 1))))))
+  (if (daemonp)
+      (add-hook 'after-make-frame-functions
+                (lambda (frame)
+                  (when (display-graphic-p frame)
+                    (with-selected-frame frame
+                      (pixel-scroll-precision-mode 1)))))
+    (when (display-graphic-p)
+      (pixel-scroll-precision-mode 1))))
 
 (use-package emojify
   :ensure t
@@ -208,6 +207,47 @@ auto-dark is the sole decider of which theme becomes active."
   :ensure t
   :config
   (global-kkp-mode +1))
+
+(use-package doom-modeline
+  :ensure t
+  :demand t
+  :custom
+  (doom-modeline-height 25)
+  (doom-modeline-bar-width 3)
+  (doom-modeline-lsp t)
+  (doom-modeline-github nil)
+  :config
+  (doom-modeline-mode 1))
+
+(use-package indent-bars
+  :ensure t
+  :custom
+  (indent-bars-treesit-support t)
+  :hook (prog-mode . indent-bars-mode))
+
+(use-package pulsar
+  :ensure t
+  :demand t
+  :custom
+  (pulsar-pulse-functions '(recenter-top-bottom
+                            move-to-window-line-top-bottom
+                            reposition-window
+                            bookmark-jump
+                            other-window
+                            delete-window
+                            delete-other-windows
+                            forward-page
+                            backward-page
+                            scroll-up-command
+                            scroll-down-command
+                            xref-find-definitions
+                            xref-find-references
+                            xref-go-back
+                            consult-line
+                            consult-goto-line
+                            imenu))
+  :config
+  (pulsar-global-mode 1))
 
 (provide 'ui)
 ;;; ui.el ends here

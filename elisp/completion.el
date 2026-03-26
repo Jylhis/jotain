@@ -57,16 +57,6 @@
   (require 'corfu-history)
   (corfu-history-mode))
 
-(use-package kind-icon
-  :ensure t
-  :after corfu
-  :custom
-  (kind-icon-default-face 'corfu-default)  ; Match corfu's face
-  (kind-icon-blend-background nil)         ; Use distinct icon colors
-  (kind-icon-blend-frac 0.08)              ; Slight background blending
-  :config
-  ;; Add icon support to corfu
-  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
 
 (use-package cape
   :ensure t
@@ -148,10 +138,10 @@
          ("M-r" . consult-history))                ;; orig. previous-matching-history-element
   :init
   ;; Use Consult to select xref locations with preview
-  (setq xref-show-xrefs-function #'consult-xref
-        xref-show-definitions-function #'consult-xref)
+  (setopt xref-show-xrefs-function #'consult-xref
+          xref-show-definitions-function #'consult-xref)
   ;; Emacs 30: Sort completions by minibuffer history
-  (setq completions-sort 'historical))
+  (setopt completions-sort 'historical))
 
 ;; prescient?
 ;; https://github.com/Takishima/emacs-config/blob/main/.emacs_lisp/init-emacs.el#L253C14-L253C31

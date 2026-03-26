@@ -29,6 +29,7 @@
 ;; It must be set before loading `use-package'.
 (setq use-package-enable-imenu-support t)
 (setq use-package-always-ensure nil)     ; CRITICAL: Never auto-install packages
+(setq use-package-ensure-function 'ignore)  ; Packages provided by Nix, not package.el
 
 ;; Native compilation settings (Emacs 30+)
 (when (and (fboundp 'native-comp-available-p)

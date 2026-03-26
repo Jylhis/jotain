@@ -89,6 +89,9 @@
 		 (pixel-scroll-precision-mode 1))
 
   ;;; Storage Integration
+	       ;; Reduce unnecessary disk writes (lock files cause issues on Android storage)
+	       (setopt create-lockfiles nil)
+
 	       ;; Set up org directory to use external storage
 	       (let ((external-storage (getenv "EXTERNAL_STORAGE")))
 		 (when external-storage
@@ -138,9 +141,9 @@
 	       ;; Configure remaining packages for Android
 	       (with-eval-after-load 'org
 		 ;; Simpler org setup for mobile
-		 (setq org-startup-folded 'content)
-		 (setq org-image-actual-width '(400)) ; Smaller images
-		 (setq org-hide-emphasis-markers t))
+		 (setopt org-startup-folded 'content)
+		 (setopt org-image-actual-width '(400)) ; Smaller images
+		 (setopt org-hide-emphasis-markers t))
 
 	       (with-eval-after-load 'magit
 		 ;; Simpler magit interface

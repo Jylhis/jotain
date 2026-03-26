@@ -7,7 +7,6 @@
 
 (use-package magit
   :ensure t
-  :bind (("C-c g" . magit-status))
   :custom
   (magit-diff-refine-hunk t "Show word-granularity differences within diff hunks")
   (magit-diff-refine-ignore-whitespace t "Ignore whitespace changes in word-granularity differences")
@@ -21,9 +20,9 @@
 (use-package magit-todos
   :ensure t
   :after magit
-  :demand t
-  :config
-  (magit-todos-mode 1))
+  :commands (magit-todos-mode global-magit-todos-mode)
+  :custom
+  (magit-todos-depth 1 "Limit scanning depth to improve performance on large repositories"))
 
 (use-package gited
   :ensure t
@@ -76,7 +75,27 @@
           (menu-bar-lines . 0)
           (tool-bar-lines . 0))))
 
+;; Git prefix keymap: C-c g is a prefix for all git commands
+(defvar-keymap jotain-git-prefix-map
+  :doc "Prefix keymap for git commands."
+  "s" #'magit-status
+  "t" #'git-timemachine)
+(keymap-global-set "C-c g" jotain-git-prefix-map)
 
+;; Forge: GitHub/GitLab/etc. integration for Magit
+;; Authentication: configure auth-source with a GitHub token.
+;; Add to ~/.authinfo.gpg:
+;;   machine api.github.com login YOUR_USERNAME^forge password ghp_YOUR_TOKEN
+;; See https://magit.vc/manual/forge/Token-Creation.html
+(use-package forge
+  :ensure t
+  :after magit
+  :custom
+  (forge-database-connector 'emacsql-sqlite-builtin "Use Emacs 30 built-in SQLite for forge database"))
+
+(use-package git-timemachine
+  :ensure t
+  :defer t)
 
 (provide 'git)
 ;;; git.el ends here
