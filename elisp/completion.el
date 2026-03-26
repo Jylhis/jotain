@@ -52,8 +52,12 @@
 (use-package corfu
   :ensure t
   :demand t
+  :custom
+  (corfu-popupinfo-delay '(0.5 . 0.2))
   :config
   (global-corfu-mode)
+  (require 'corfu-popupinfo)
+  (corfu-popupinfo-mode)
   (require 'corfu-history)
   (corfu-history-mode))
 
