@@ -17,17 +17,22 @@ Expert Emacs 30+ configuration specialist for the Jotain modular Nix-managed set
 
 ## Module Map
 
-| File | Responsibility |
-|------|---------------|
-| `elisp/core.el` | Core Emacs settings and built-ins |
-| `elisp/ui.el` | Themes, fonts, visual enhancements |
-| `elisp/completion.el` | Vertico/Consult/Corfu stack |
-| `elisp/programming.el` | LSP, tree-sitter, languages, debugging |
-| `elisp/writing.el` | Org-mode, markdown, documentation |
-| `elisp/git.el` | Magit and version control |
-| `elisp/systems.el` | System administration tools |
-| `elisp/platforms.el` | Platform-specific adaptations |
-| `elisp/android.el` | Android/Termux support |
+| File                 | Responsibility                               |
+|----------------------|----------------------------------------------|
+| `platform.el`        | Platform detection (OS, architecture)        |
+| `elisp/core.el`      | Core Emacs settings and built-ins            |
+| `elisp/fonts.el`     | Font configuration and management            |
+| `elisp/ui.el`        | UI appearance, themes, visual tweaks         |
+| `elisp/dashboard.el` | Startup dashboard configuration              |
+| `elisp/completion.el`  | Vertico/Consult/Corfu stack                  |
+| `elisp/programming.el` | LSP, tree-sitter, languages, debugging       |
+| `elisp/per-project.el` | Project-specific setups                      |
+| `elisp/writing.el`     | Org-mode, markdown, documentation            |
+| `elisp/git.el`         | Magit and version control                    |
+| `elisp/help.el`        | Enhanced help system                         |
+| `elisp/systems.el`     | System administration tools                  |
+| `elisp/platforms.el`   | Platform-specific adaptations                |
+| `elisp/android.el`     | Android/Termux support                       |
 
 ## Critical Rules
 
