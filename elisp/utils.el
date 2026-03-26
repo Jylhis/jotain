@@ -7,8 +7,7 @@
 
 (require 'ansi-color)
 
-;;;###autoload
-(defun my/display-ansi-colors ()
+(defun jotain-utils-display-ansi-colors ()
   "Apply ANSI color codes to the current buffer.
 This function processes the entire buffer and interprets any ANSI
 escape sequences, rendering the corresponding colors in the buffer.
@@ -19,7 +18,7 @@ color codes."
   (ansi-color-apply-on-region (point-min) (point-max)))
 
 ;; Org-mode utilities
-(defcustom my/org-agenda-directories
+(defcustom jotain-utils-org-agenda-directories
   '("~/Documents/Notes"
     "~/Dropbox/Notes"
     "~/Dropbox/Documents/Notes")
@@ -28,7 +27,7 @@ Each directory will be searched recursively for .org files."
   :type '(repeat directory)
   :group 'org-agenda)
 
-(defun my/find-org-files-recursively (directory)
+(defun jotain-utils-find-org-files-recursively (directory)
   "Find all .org files recursively in DIRECTORY, ignoring hidden folders."
   (when (and directory (file-exists-p directory) (file-directory-p directory))
     (let ((files '()))
@@ -39,17 +38,17 @@ Each directory will be searched recursively for .org files."
           (push (file-truename file) files)))
       (nreverse files))))
 
-(defun my/update-org-agenda-files (&optional directories)
+(defun jotain-utils-update-org-agenda-files (&optional directories)
   "Update org-agenda-files to include all .org files from multiple directories.
 If DIRECTORIES is provided, search those directories.
-Otherwise, use `my/org-agenda-directories'."
-  (let* ((directories (or directories my/org-agenda-directories))
+Otherwise, use `jotain-utils-org-agenda-directories'."
+  (let* ((directories (or directories jotain-utils-org-agenda-directories))
          (org-files '())
          (valid-dir-count 0))
     ;; Collect org files from all directories that exist
     (dolist (dir directories)
       (let* ((expanded-dir (expand-file-name dir))
-             (files (my/find-org-files-recursively expanded-dir)))
+             (files (jotain-utils-find-org-files-recursively expanded-dir)))
         (when files
           (setq valid-dir-count (1+ valid-dir-count))
           (setq org-files (nconc org-files files)))))
@@ -61,17 +60,16 @@ Otherwise, use `my/org-agenda-directories'."
              (length org-files)
              valid-dir-count)))
 
-(defun my/setup-org-agenda-files ()
+(defun jotain-utils-setup-org-agenda-files ()
   "Set up dynamic org agenda files updating."
   ;; Initial update
-  (my/update-org-agenda-files)
+  (jotain-utils-update-org-agenda-files)
 
   ;; Update agenda files periodically instead of on every agenda access
-  (run-with-idle-timer 300 t #'my/update-org-agenda-files))
+  (run-with-idle-timer 300 t #'jotain-utils-update-org-agenda-files))
 
 ;; Window management utilities
-;;;###autoload
-(defun my/toggle-window-split ()
+(defun jotain-utils-toggle-window-split ()
   "Toggle between horizontal and vertical window split.
 When there are exactly 2 windows, switch their layout orientation:
   - Horizontal split (side-by-side) becomes vertical (stacked)
@@ -103,6 +101,12 @@ If there are not exactly 2 windows, display an error message."
           (select-window first-win)
           (if this-win-2nd (other-window 1))))
     (user-error "Can only toggle split with exactly 2 windows")))
+
+(defun jotain-utils-auto-create-missing-dirs ()
+  "Automatically create missing directories when finding a file."
+  (let ((target-dir (if buffer-file-name (file-name-directory buffer-file-name))))
+    (when (and target-dir (not (file-exists-p target-dir)))
+      (make-directory target-dir t))))
 
 (provide 'utils)
 ;;; utils.el ends here

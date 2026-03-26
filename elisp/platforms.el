@@ -14,51 +14,8 @@
 
 (require 'platform)
 
-;;; Android-specific configuration
-(platform-when platform-android-p
-	       ;; Packages that don't work well on Android
-	       (defvar platform-disabled-packages
-		 '(vterm pdf-tools exwm magit-delta all-the-icons-dired)
-		 "List of packages to disable on Android.")
-
-	       ;; Android-specific settings
-	       (setq create-lockfiles nil)
-	       (setq make-backup-files nil)
-	       (setq auto-save-default nil)
-
-	       ;; Optimize for touch input and smaller screens
-	       (setq mouse-wheel-scroll-amount '(3 ((shift) . 1)))
-	       (setq scroll-margin 2)
-	       (setq scroll-conservatively 10000)
-
-	       ;; Termux-specific paths - use environment variables when available
-	       (when (getenv "EXTERNAL_STORAGE")
-		 (setq org-directory (expand-file-name "Documents/org" (getenv "EXTERNAL_STORAGE"))))
-
-	       ;; Simpler modeline for performance
-	       (setq-default mode-line-format
-			     '("%e" mode-line-front-space
-			       mode-line-buffer-identification " "
-			       mode-line-position " "
-			       (:eval (propertize "%m" 'face 'mode-line-buffer-id))
-			       mode-line-end-spaces))
-
-	       ;; Android-specific keybindings
-	       (global-set-key (kbd "C-<tab>") 'other-window)
-	       (global-set-key (kbd "C-S-<tab>") (lambda () (interactive) (other-window -1)))
-
-	       ;; Hardware key bindings for common Android keyboards
-	       (when (getenv "TERMUX_VERSION")
-		 (global-set-key (kbd "<volume-up>") 'scroll-down-command)
-		 (global-set-key (kbd "<volume-down>") 'scroll-up-command)))
-
 ;;; macOS-specific configuration
 (platform-when platform-macos-p
-	       ;; macOS-specific packages
-	       (defvar platform-preferred-packages
-		 '(osx-dictionary osx-trash reveal-in-osx-finder)
-		 "List of packages preferred on macOS.")
-
 	       ;; Proper macOS key handling
 	       (setq mac-command-modifier 'meta)
 	       (setq mac-option-modifier 'super)
@@ -74,28 +31,18 @@
 	       (global-set-key (kbd "s-q") 'save-buffers-kill-emacs)
 
 	       ;; Use macOS trash
-	       (setq trash-directory "~/.Trash"))
+	       (setopt trash-directory "~/.Trash"))
 
 ;;; Linux-specific configuration
 (platform-when platform-linux-p
-	       ;; Linux-specific packages
-	       (defvar platform-preferred-packages
-		 '(exwm pinentry mu4e)
-		 "List of packages preferred on Linux.")
-
 	       ;; X11 clipboard integration
 	       ;; (setq select-enable-clipboard t) ; NOTE: `t` should be the default
 
 	       ;; Linux-specific settings
-	       (setq browse-url-browser-function 'browse-url-xdg-open))
+	       (setopt browse-url-browser-function 'browse-url-xdg-open))
 
 ;;; Windows-specific configuration
 (platform-when platform-windows-p
-	       ;; Windows-specific packages
-	       (defvar platform-disabled-packages
-		 '(vterm magit-delta)
-		 "List of packages to disable on Windows.")
-	       
 	       ;; Windows-specific settings
 	       (setq w32-pass-lwindow-to-system nil)
 	       (setq w32-pass-rwindow-to-system nil)
@@ -105,28 +52,16 @@
 	       ;; Use Windows-style line endings when appropriate
 	       (setq-default buffer-file-coding-system 'utf-8-unix))
 
-;;; Platform-aware package management utilities
-(defun platform-package-enabled-p (package)
-  "Check if PACKAGE should be enabled on current platform."
-  (not (memq package (bound-and-true-p platform-disabled-packages))))
-
-(defmacro platform-use-package (name &rest args)
-  "Use package NAME with platform-specific conditions."
-  (declare (indent 1))
-  `(when (platform-package-enabled-p ',name)
-     (use-package ,name ,@args)))
-
 ;;; Font fallback system
 (defun platform-set-font-with-fallback (font-list height)
   "Set font from FONT-LIST with HEIGHT, using first available font."
-  (let ((available-font (seq-find (lambda (font)
-                                    (find-font (font-spec :name font)))
-                                  font-list)))
+  (require 'fonts)
+  (let* ((available-fonts (jotain-fonts--get-available-families))
+         (available-font (seq-find (lambda (font)
+                                     (gethash font available-fonts))
+                                   font-list)))
     (when available-font
-      (set-face-attribute 'default nil
-                          :font available-font
-                          :height height)
-      (message "Platform: Using font %s at height %d" available-font height)
+      (jotain-fonts--set-face-font 'default (cons available-font height))
       available-font)))
 
 (defun platform-configure-ui ()
@@ -178,7 +113,7 @@
           (princ "Font: (default)\n")))
       (when (display-graphic-p)
         (if (bound-and-true-p jotain-fonts--available-cache)
-            (princ (format "Available fonts: %d\n" (length jotain-fonts--available-cache)))
+            (princ (format "Available fonts: %d\n" (hash-table-count jotain-fonts--available-cache)))
           (princ "Available fonts: (uncached)\n")))
       (princ "\n=== Environment ===\n")
       (when platform-android-p

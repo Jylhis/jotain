@@ -13,7 +13,7 @@
 ;;   gptel            C-c RET       Quick LLM queries and inline rewrites.
 ;;                    C-c M-RET     Full gptel menu (model, backend, options).
 ;;
-;;   minuet           C-c a s       Toggle inline completion suggestions
+;;   minuet           C-c A s       Toggle inline completion suggestions
 ;;                                  (off by default, Claude backend).
 ;;
 ;;   mcp              M-x mcp-connect-server + gptel-mcp-connect
@@ -61,7 +61,7 @@
 (use-package minuet
   :ensure t
   :defer t
-  :bind ("C-c a s" . minuet-auto-suggestion-mode)
+  :bind ("C-c A s" . minuet-auto-suggestion-mode)
   :custom
   (minuet-provider 'claude)
   (minuet-auto-suggestion-debounce-delay 0.4))
