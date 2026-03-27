@@ -62,7 +62,7 @@
   (ediff-custom-diff-options "-u")
   (ediff-merge-revisions-with-ancestor t)
   :config
-  (setq ediff-control-frame-parameters
+  (setopt ediff-control-frame-parameters
         '((name . "Ediff Control")
           (width . 60)
           (height . 14)
