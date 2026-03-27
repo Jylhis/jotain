@@ -34,14 +34,14 @@
   :config
   ;; Anthropic (Claude) — primary backend
   (setopt gptel-backend
-        (gptel-make-anthropic "Claude"
-			      :stream t
-			      :key (lambda ()
-				     (or (getenv "ANTHROPIC_API_KEY")
-					 (auth-source-pick-first-password
-					  :host "api.anthropic.com"
-					  :user "apikey"))))
-        gptel-model 'claude-sonnet-4-20250514)
+          (gptel-make-anthropic "Claude"
+				:stream t
+				:key (lambda ()
+				       (or (getenv "ANTHROPIC_API_KEY")
+					   (auth-source-pick-first-password
+					    :host "api.anthropic.com"
+					    :user "apikey"))))
+          gptel-model 'claude-sonnet-4-20250514)
 
   ;; Google Gemini — secondary backend
   (gptel-make-gemini "Gemini"

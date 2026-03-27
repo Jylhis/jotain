@@ -96,9 +96,9 @@ auto-dark is the sole decider of which theme becomes active."
   (set-face-attribute 'calendar-iso-week-face nil :height 0.7)
   (setopt calendar-week-start-day 1)
   (setopt calendar-intermonth-text
-        '(propertize (format "%2d" (car (calendar-iso-from-absolute
-                                         (calendar-absolute-from-gregorian (list month day year)))))
-                     'font-lock-face 'calendar-iso-week-face)))
+          '(propertize (format "%2d" (car (calendar-iso-from-absolute
+                                           (calendar-absolute-from-gregorian (list month day year)))))
+                       'font-lock-face 'calendar-iso-week-face)))
 
 (use-package breadcrumb
   :ensure t
