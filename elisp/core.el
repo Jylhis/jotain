@@ -174,7 +174,7 @@
 (use-package vundo
   :ensure t
   :bind ("C-x u" . vundo)
-  :config (setq vundo-glyph-alist vundo-unicode-symbols))
+  :config (setopt vundo-glyph-alist vundo-unicode-symbols))
 
 (use-package expreg
   :ensure t

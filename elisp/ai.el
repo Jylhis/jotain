@@ -33,7 +33,7 @@
          ("C-c M-RET" . gptel-menu))
   :config
   ;; Anthropic (Claude) — primary backend
-  (setq gptel-backend
+  (setopt gptel-backend
         (gptel-make-anthropic "Claude"
 			      :stream t
 			      :key (lambda ()
