@@ -29,14 +29,14 @@ Each directory will be searched recursively for .org files."
 
 (defun jotain-utils-find-org-files-recursively (directory)
   "Find all .org files recursively in DIRECTORY, ignoring hidden folders."
+  ;; Optimization: set INCLUDE-DIRECTORIES to nil to let Emacs natively filter out
+  ;; directories (avoiding `file-regular-p` stats loop) and use `string-prefix-p`
+  ;; instead of `string-match-p` overhead for hidden folder checks.
   (when (and directory (file-exists-p directory) (file-directory-p directory))
-    (let ((files '()))
-      (dolist (file (directory-files-recursively directory "\\.org\\'" t
-                                                 (lambda (dir)
-                                                   (not (string-match-p "\\(^\\|/\\)\\." (file-name-nondirectory dir))))))
-        (when (file-regular-p file)
-          (push (file-truename file) files)))
-      (nreverse files))))
+    (mapcar #'file-truename
+            (directory-files-recursively directory "\\.org\\'" nil
+                                         (lambda (dir)
+                                           (not (string-prefix-p "." (file-name-nondirectory dir))))))))
 
 (defun jotain-utils-update-org-agenda-files (&optional directories)
   "Update org-agenda-files to include all .org files from multiple directories.
