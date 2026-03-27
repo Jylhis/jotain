@@ -63,17 +63,17 @@
   (ediff-merge-revisions-with-ancestor t)
   :config
   (setopt ediff-control-frame-parameters
-        '((name . "Ediff Control")
-          (width . 60)
-          (height . 14)
-          (left . 200)
-          (top . 200)
-          (minibuffer . nil)
-          (user-position . t)
-          (vertical-scroll-bars . nil)
-          (scrollbar-width . 0)
-          (menu-bar-lines . 0)
-          (tool-bar-lines . 0))))
+          '((name . "Ediff Control")
+            (width . 60)
+            (height . 14)
+            (left . 200)
+            (top . 200)
+            (minibuffer . nil)
+            (user-position . t)
+            (vertical-scroll-bars . nil)
+            (scrollbar-width . 0)
+            (menu-bar-lines . 0)
+            (tool-bar-lines . 0))))
 
 ;; Git prefix keymap: C-c g is a prefix for all git commands
 (defvar-keymap jotain-git-prefix-map
