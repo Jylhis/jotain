@@ -149,8 +149,8 @@
   :init
   (setopt eglot-send-changes-idle-time 0.5)
   (setopt eglot-autoshutdown t)
-  (setopt eglot-events-buffer-size 0) ; Disable event logging for performance
   :custom
+  (eglot-events-buffer-config '(:size 0 :format short) "Disable event logging for performance")
   (eglot-report-progress nil "Prevent Eglot minibuffer spam")
   (eglot-extend-to-xref t "Activate Eglot in cross-referenced non-project files")
   (eglot-confirm-server-initiated-edits nil) ; Auto-accept server edits

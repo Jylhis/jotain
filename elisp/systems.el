@@ -46,7 +46,7 @@
   (auth-source-1password-enable)
   ;; Add custom search behavior for better matching
   ;; This helps when searching for credentials by host/service
-  (setq auth-source-1password-search-fields '("title" "website" "url")))
+  (setopt auth-source-1password-search-fields '("title" "website" "url")))
 
 (provide 'systems)
 ;;; systems.el ends here

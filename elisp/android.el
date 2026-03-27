@@ -95,12 +95,12 @@
 	       ;; Set up org directory to use external storage
 	       (let ((external-storage (getenv "EXTERNAL_STORAGE")))
 		 (when external-storage
-		   (setq org-directory 
-			 (expand-file-name "Documents/syncthing" external-storage))
+		   (setopt org-directory
+			   (expand-file-name "Documents/syncthing" external-storage))
 		   ;; Alternative path structure for different setups
 		   (unless (file-directory-p org-directory)
-		     (setq org-directory
-			   "/storage/emulated/0/Documents/syncthing"))))
+		     (setopt org-directory
+			     "/storage/emulated/0/Documents/syncthing"))))
 
   ;;; Performance Optimizations
 	       ;; Reduce GC pressure on mobile devices
@@ -147,8 +147,8 @@
 
 	       (with-eval-after-load 'magit
 		 ;; Simpler magit interface
-		 (setq magit-diff-refine-hunk nil) ; Disable for performance
-		 (setq magit-revision-show-gravatars nil))
+		 (setopt magit-diff-refine-hunk nil) ; Disable for performance
+		 (setopt magit-revision-show-gravatars nil))
 
   ;;; Helper Functions
 	       (defun android-restart-emacs ()

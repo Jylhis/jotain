@@ -55,7 +55,7 @@
 (use-package compile-multi
   :ensure t
   :config
-  (setq compile-multi-config
+  (setopt compile-multi-config
         '((go-mode . (("go test" . "go test ./...")
                       ("go test current" . "go test .")
                       ("go build" . "go build .")))
