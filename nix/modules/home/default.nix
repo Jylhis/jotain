@@ -111,8 +111,8 @@ in
     }
 
     # Configure fonts for fontconfig when runtime deps are included
-    (lib.mkIf (cfg.includeRuntimeDeps && options ? fonts.fontconfig) {
-      fonts.fontconfig.enable = true;
-    })
+    (lib.optionalAttrs (cfg.includeRuntimeDeps && options ? fonts.fontconfig) {
+  fonts.fontconfig.enable = true;
+})
   ]);
 }
