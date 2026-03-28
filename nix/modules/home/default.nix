@@ -1,4 +1,5 @@
-{ config, options, lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
+# ^ drop `options` from the args, no longer needed
 
 let
   cfg = config.programs.jotain;
@@ -68,14 +69,12 @@ in
 
   config = lib.mkIf cfg.enable (lib.mkMerge [
     {
-      # Install Emacs via the programs.emacs module
       programs.emacs = {
         enable = true;
         package = jotainEmacs;
         extraPackages = cfg.extraPackages;
       };
 
-      # Configure Emacs daemon service when enabled
       services.emacs = lib.mkIf cfg.enableDaemon {
         enable = true;
         socketActivation.enable = pkgs.stdenv.isLinux;
@@ -85,7 +84,6 @@ in
         };
       };
 
-      # Install configuration files and runtime dependencies
       home.packages = [ cfg.package ]
         ++ lib.optionals cfg.includeRuntimeDeps (
           lspServers
@@ -93,7 +91,6 @@ in
           ++ fonts
         );
 
-      # Set Emacs as default editor
       home.sessionVariables = lib.mkMerge [
         (lib.mkIf (!cfg.enableDaemon) {
           EDITOR = "emacs -nw";
@@ -105,14 +102,13 @@ in
         })
       ];
 
-      # XDG configuration
       xdg.configFile."emacs/early-init.el".source = "${cfg.package}/share/jotain/early-init.el";
       xdg.configFile."emacs/init.el".source = "${cfg.package}/share/jotain/init.el";
     }
 
-    # Configure fonts for fontconfig when runtime deps are included
-    (lib.optionalAttrs (cfg.includeRuntimeDeps && options ? fonts.fontconfig) {
-  fonts.fontconfig.enable = true;
-})
+    # fonts.fontconfig is Linux-only in home-manager; nix-darwin doesn't have it
+    (lib.optionalAttrs (cfg.includeRuntimeDeps && pkgs.stdenv.isLinux) {
+      fonts.fontconfig.enable = true;
+    })
   ]);
 }
