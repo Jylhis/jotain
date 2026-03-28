@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, options, lib, pkgs, ... }:
 
 let
   cfg = config.programs.jotain;
@@ -97,7 +97,9 @@ in
     );
 
     # Configure fonts for fontconfig when runtime deps are included
-    fonts.fontconfig.enable = lib.mkIf cfg.includeRuntimeDeps true;
+    (lib.optionalAttrs (cfg.includeRuntimeDeps && options ? fonts.fontconfig) {
+  fonts.fontconfig.enable = true;
+})
 
     # Set Emacs as default editor
     # Use emacsclient when daemon is enabled, direct emacs otherwise
