@@ -3,11 +3,8 @@
 let
   cfg = config.programs.jotain;
 
-  # Use jotainEmacs from overlay (which handles emacs.nix and dependencies)
   jotainEmacs = pkgs.jotainEmacs;
 
-  # Get runtime dependencies directly from passthru (exposed by emacs.nix)
-  # Provide defaults in case they're not available
   lspServers = jotainEmacs.lspServers or [ ];
   cliTools = jotainEmacs.cliTools or [ ];
   fonts = jotainEmacs.fonts or [ ];
@@ -69,55 +66,53 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    # Install Emacs via the programs.emacs module
-    programs.emacs = {
-      enable = true;
-      package = jotainEmacs;
-      extraPackages = cfg.extraPackages;
-    };
-
-    # Configure Emacs daemon service when enabled
-    services.emacs = lib.mkIf cfg.enableDaemon {
-      enable = true;
-      # package is inherited from programs.emacs.package automatically
-      socketActivation.enable = pkgs.stdenv.isLinux;
-      client = {
-        enable = true; # Only create desktop entry when daemon is enabled
-        arguments = [ "-c" "-a" "" ];
+  config = lib.mkIf cfg.enable (lib.mkMerge [
+    {
+      # Install Emacs via the programs.emacs module
+      programs.emacs = {
+        enable = true;
+        package = jotainEmacs;
+        extraPackages = cfg.extraPackages;
       };
-    };
 
-    # Install configuration files and runtime dependencies
-    home.packages = [ cfg.package ]
-      ++ lib.optionals cfg.includeRuntimeDeps (
-      lspServers
-        ++ cliTools
-        ++ fonts
-    );
+      # Configure Emacs daemon service when enabled
+      services.emacs = lib.mkIf cfg.enableDaemon {
+        enable = true;
+        socketActivation.enable = pkgs.stdenv.isLinux;
+        client = {
+          enable = true;
+          arguments = [ "-c" "-a" "" ];
+        };
+      };
+
+      # Install configuration files and runtime dependencies
+      home.packages = [ cfg.package ]
+        ++ lib.optionals cfg.includeRuntimeDeps (
+          lspServers
+          ++ cliTools
+          ++ fonts
+        );
+
+      # Set Emacs as default editor
+      home.sessionVariables = lib.mkMerge [
+        (lib.mkIf (!cfg.enableDaemon) {
+          EDITOR = "emacs -nw";
+          VISUAL = "emacs";
+        })
+        (lib.mkIf cfg.enableDaemon {
+          EDITOR = "emacsclient -t -a ''";
+          VISUAL = "emacsclient -c -a ''";
+        })
+      ];
+
+      # XDG configuration
+      xdg.configFile."emacs/early-init.el".source = "${cfg.package}/share/jotain/early-init.el";
+      xdg.configFile."emacs/init.el".source = "${cfg.package}/share/jotain/init.el";
+    }
 
     # Configure fonts for fontconfig when runtime deps are included
-    (lib.optionalAttrs (cfg.includeRuntimeDeps && options ? fonts.fontconfig) {
-  fonts.fontconfig.enable = true;
-})
-
-    # Set Emacs as default editor
-    # Use emacsclient when daemon is enabled, direct emacs otherwise
-    home.sessionVariables = lib.mkMerge [
-      # When daemon is disabled, use direct emacs
-      (lib.mkIf (!cfg.enableDaemon) {
-        EDITOR = "emacs -nw";
-        VISUAL = "emacs";
-      })
-      # When daemon is enabled, use emacsclient
-      (lib.mkIf cfg.enableDaemon {
-        EDITOR = "emacsclient -t -a ''";
-        VISUAL = "emacsclient -c -a ''";
-      })
-    ];
-
-    # XDG configuration
-    xdg.configFile."emacs/early-init.el".source = "${cfg.package}/share/jotain/early-init.el";
-    xdg.configFile."emacs/init.el".source = "${cfg.package}/share/jotain/init.el";
-  };
+    (lib.mkIf (cfg.includeRuntimeDeps && options ? fonts.fontconfig) {
+      fonts.fontconfig.enable = true;
+    })
+  ]);
 }
