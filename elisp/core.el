@@ -217,5 +217,10 @@
      ("Asia/Bangkok" "Bangkok")
      ("Asia/Shanghai" "Shanghai"))))
 
+(use-package network-stream
+  :ensure nil
+  :custom
+  (network-security-level 'high "Enhance network security for TLS/SSL connections"))
+
 (provide 'core)
 ;;; core.el ends here
