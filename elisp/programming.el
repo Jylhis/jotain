@@ -437,5 +437,10 @@
   :ensure t
   :mode "\\.vue\\'")
 
+(use-package compile
+  :ensure nil
+  :custom
+  (compilation-scroll-output 'first-error "Automatically scroll compilation buffers until first error"))
+
 (provide 'programming)
 ;;; programming.el ends here
