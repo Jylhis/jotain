@@ -16,7 +16,8 @@ final: prev: {
 
   # nss_wrapper is broken on x86_64-darwin, which breaks the
   # mailutils → emacs build chain. Disable mailutils in emacs on darwin.
-  emacs-30 = if prev.stdenv.isDarwin
+  emacs-30 =
+    if prev.stdenv.isDarwin
     then (prev.emacs-30 or prev.emacs).override { withMailutils = false; }
     else prev.emacs-30 or prev.emacs;
 

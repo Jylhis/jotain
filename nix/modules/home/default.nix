@@ -85,10 +85,10 @@ in
 
       home.packages = [ cfg.package ]
         ++ lib.optionals cfg.includeRuntimeDeps (
-          lspServers
+        lspServers
           ++ cliTools
           ++ fonts
-        );
+      );
 
       home.sessionVariables = lib.mkMerge [
         (lib.mkIf (!cfg.enableDaemon) {
