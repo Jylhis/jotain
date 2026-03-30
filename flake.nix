@@ -183,29 +183,29 @@
             baseChecks // runtimeCheck;
 
           treefmt = {
-              programs.nixpkgs-fmt.enable = true;
-              programs.shellcheck.enable = true;
-              programs.shfmt = {
-                enable = true;
-                indent_size = 2;
-              };
-
-              projectRootFile = "flake.nix";
-
-              settings.global.excludes = [
-                # Git
-                ".git/**"
-                # Nix build artifacts
-                "result"
-                "result-*"
-                # Development artifacts
-                ".dev-home/**"
-                # Test artifacts
-                "tests/.gitignore"
-                # Lock files
-                "flake.lock"
-              ];
+            programs.nixpkgs-fmt.enable = true;
+            programs.shellcheck.enable = true;
+            programs.shfmt = {
+              enable = true;
+              indent_size = 2;
             };
+
+            projectRootFile = "flake.nix";
+
+            settings.global.excludes = [
+              # Git
+              ".git/**"
+              # Nix build artifacts
+              "result"
+              "result-*"
+              # Development artifacts
+              ".dev-home/**"
+              # Test artifacts
+              "tests/.gitignore"
+              # Lock files
+              "flake.lock"
+            ];
+          };
 
           formatter = config.treefmt.build.wrapper;
         };
