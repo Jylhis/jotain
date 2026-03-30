@@ -4,6 +4,9 @@
 , ...
 }:
 let
+  isDarwin = pkgs.stdenv.isDarwin;
+  isLinux = pkgs.stdenv.isLinux;
+
   # Helper to build a home-manager configuration
   buildHomeConfig =
     modules:
@@ -14,7 +17,7 @@ let
         {
           home = {
             username = "test-user";
-            homeDirectory = "/home/test-user";
+            homeDirectory = if isDarwin then "/Users/test-user" else "/home/test-user";
             stateVersion = "24.11";
           };
         }
@@ -101,41 +104,57 @@ let
 
       echo "=== Testing Emacs Daemon Service ==="
 
-      # Check for systemd service files (daemon enabled by default)
-      if [ -d "$homeConfig/home-files/.config/systemd/user" ]; then
-        echo "PASS: Systemd user directory exists"
+      ${if isLinux then ''
+        # Check for systemd service files (daemon enabled by default)
+        if [ -d "$homeConfig/home-files/.config/systemd/user" ]; then
+          echo "PASS: Systemd user directory exists"
 
-        # Check for emacs.service
-        if [ -f "$homeConfig/home-files/.config/systemd/user/emacs.service" ]; then
-          echo "PASS: emacs.service file exists"
+          # Check for emacs.service
+          if [ -f "$homeConfig/home-files/.config/systemd/user/emacs.service" ]; then
+            echo "PASS: emacs.service file exists"
+          else
+            echo "FAIL: emacs.service not found"
+            echo "Available service files:"
+            ls -1 "$homeConfig/home-files/.config/systemd/user/" || true
+            exit 1
+          fi
+
+          # Check for socket activation
+          if [ -f "$homeConfig/home-files/.config/systemd/user/emacs.socket" ]; then
+            echo "PASS: emacs.socket file exists (socket activation enabled)"
+          else
+            echo "FAIL: emacs.socket not found"
+            exit 1
+          fi
         else
-          echo "FAIL: emacs.service not found"
-          echo "Available service files:"
-          ls -1 "$homeConfig/home-files/.config/systemd/user/" || true
+          echo "FAIL: Systemd user directory not found"
+          echo "Daemon should be enabled by default"
           exit 1
         fi
 
-        # Check for socket activation (Linux only)
-        if [ -f "$homeConfig/home-files/.config/systemd/user/emacs.socket" ]; then
-          echo "PASS: emacs.socket file exists (socket activation enabled)"
+        # Check for emacsclient desktop entry (Linux only)
+        if [ -f "$homeConfig/home-path/share/applications/emacsclient.desktop" ]; then
+          echo "PASS: emacsclient.desktop entry exists"
         else
-          echo "INFO: emacs.socket not found (may be non-Linux or socket activation disabled)"
+          echo "FAIL: emacsclient.desktop not found"
+          echo "Available desktop entries in home-path:"
+          ls -1 "$homeConfig/home-path/share/applications/" 2>/dev/null || echo "No applications directory in home-path"
+          exit 1
         fi
-      else
-        echo "FAIL: Systemd user directory not found"
-        echo "Daemon should be enabled by default"
-        exit 1
-      fi
-
-      # Check for emacsclient desktop entry (added via home.packages)
-      if [ -f "$homeConfig/home-path/share/applications/emacsclient.desktop" ]; then
-        echo "PASS: emacsclient.desktop entry exists"
-      else
-        echo "FAIL: emacsclient.desktop not found"
-        echo "Available desktop entries in home-path:"
-        ls -1 "$homeConfig/home-path/share/applications/" 2>/dev/null || echo "No applications directory in home-path"
-        exit 1
-      fi
+      '' else ''
+        # macOS: check for launchd agent plist (daemon enabled by default)
+        # Home Manager stores LaunchAgents at the top level of the activation package
+        emacsPlist="$homeConfig/LaunchAgents/org.nix-community.home.emacs.plist"
+        if [ -e "$emacsPlist" ]; then
+          echo "PASS: Emacs launchd plist exists ($emacsPlist)"
+        else
+          echo "FAIL: Emacs launchd plist not found"
+          echo "Expected: $emacsPlist"
+          echo "Available LaunchAgents:"
+          ls -1 "$homeConfig/LaunchAgents/" 2>/dev/null || echo "No LaunchAgents directory"
+          exit 1
+        fi
+      ''}
 
       echo "=== Testing Environment Variables ==="
 
@@ -396,40 +415,51 @@ let
         exit 1
       fi
 
-      # Check that systemd service files are NOT created
-      if [ -f "$homeConfig/home-files/.config/systemd/user/emacs.service" ]; then
-        echo "FAIL: emacs.service exists when daemon is disabled"
-        exit 1
-      else
-        echo "PASS: emacs.service not created (daemon disabled)"
-      fi
-
-      if [ -f "$homeConfig/home-files/.config/systemd/user/emacs.socket" ]; then
-        echo "FAIL: emacs.socket exists when daemon is disabled"
-        exit 1
-      else
-        echo "PASS: emacs.socket not created (daemon disabled)"
-      fi
-
-      # Check emacsclient desktop entry
-      # Note: emacsclient.desktop will exist from the base Emacs package,
-      # but when daemon is disabled, it should NOT be overridden by services.emacs
-      # We verify this by checking that it comes from the Emacs package path
-      if [ -L "$homeConfig/home-path/share/applications/emacsclient.desktop" ]; then
-        desktopTarget=$(readlink "$homeConfig/home-path/share/applications/emacsclient.desktop")
-        echo "emacsclient.desktop is a symlink to: $desktopTarget"
-
-        # Should point to emacs package, not a custom writeTextDir package
-        if echo "$desktopTarget" | grep -q "emacs-with.*packages"; then
-          echo "PASS: emacsclient.desktop from base Emacs package (daemon disabled correctly)"
-        else
-          echo "FAIL: emacsclient.desktop not from base Emacs package"
-          echo "Target: $desktopTarget"
+      ${if isLinux then ''
+        # Check that systemd service files are NOT created
+        if [ -f "$homeConfig/home-files/.config/systemd/user/emacs.service" ]; then
+          echo "FAIL: emacs.service exists when daemon is disabled"
           exit 1
+        else
+          echo "PASS: emacs.service not created (daemon disabled)"
         fi
-      else
-        echo "INFO: emacsclient.desktop not found (acceptable when daemon disabled)"
-      fi
+
+        if [ -f "$homeConfig/home-files/.config/systemd/user/emacs.socket" ]; then
+          echo "FAIL: emacs.socket exists when daemon is disabled"
+          exit 1
+        else
+          echo "PASS: emacs.socket not created (daemon disabled)"
+        fi
+
+        # Check emacsclient desktop entry
+        # Note: emacsclient.desktop will exist from the base Emacs package,
+        # but when daemon is disabled, it should NOT be overridden by services.emacs
+        # We verify this by checking that it comes from the Emacs package path
+        if [ -L "$homeConfig/home-path/share/applications/emacsclient.desktop" ]; then
+          desktopTarget=$(readlink "$homeConfig/home-path/share/applications/emacsclient.desktop")
+          echo "emacsclient.desktop is a symlink to: $desktopTarget"
+
+          # Should point to emacs package, not a custom writeTextDir package
+          if echo "$desktopTarget" | grep -q "emacs-with.*packages"; then
+            echo "PASS: emacsclient.desktop from base Emacs package (daemon disabled correctly)"
+          else
+            echo "FAIL: emacsclient.desktop not from base Emacs package"
+            echo "Target: $desktopTarget"
+            exit 1
+          fi
+        else
+          echo "INFO: emacsclient.desktop not found (acceptable when daemon disabled)"
+        fi
+      '' else ''
+        # macOS: check that launchd agent plist is NOT created
+        emacsPlist="$homeConfig/LaunchAgents/org.nix-community.home.emacs.plist"
+        if [ -e "$emacsPlist" ]; then
+          echo "FAIL: Emacs launchd plist exists when daemon is disabled"
+          exit 1
+        else
+          echo "PASS: No emacs launchd plist (daemon disabled)"
+        fi
+      ''}
 
       # Check that EDITOR and VISUAL use direct emacs (not emacsclient)
       # Session variables are in home-path/etc/profile.d/hm-session-vars.sh
