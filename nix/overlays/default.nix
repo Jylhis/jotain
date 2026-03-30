@@ -14,6 +14,12 @@ final: prev: {
     })
   ];
 
+  # nss_wrapper is broken on x86_64-darwin, which breaks the
+  # mailutils → emacs build chain. Disable mailutils in emacs on darwin.
+  emacs-30 = (prev.emacs-30 or prev.emacs).override (prev.lib.optionalAttrs prev.stdenv.isDarwin {
+    withMailutils = false;
+  });
+
   # Add jotain configuration package to pkgs
   jotain = final.callPackage ../.. { };
 
