@@ -1,5 +1,4 @@
 { config, lib, pkgs, ... }:
-# ^ drop `options` from the args, no longer needed
 
 let
   cfg = config.programs.jotain;
@@ -86,10 +85,10 @@ in
 
       home.packages = [ cfg.package ]
         ++ lib.optionals cfg.includeRuntimeDeps (
-        lspServers
+          lspServers
           ++ cliTools
           ++ fonts
-      );
+        );
 
       home.sessionVariables = lib.mkMerge [
         (lib.mkIf (!cfg.enableDaemon) {
