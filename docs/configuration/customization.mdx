@@ -1,0 +1,72 @@
+---
+title: User Customization
+description: Add your own Emacs configuration on top of Jotain
+---
+
+## Custom Elisp
+
+Place personal configuration in `~/.config/emacs/custom.el`. This file is automatically loaded if present and is **not managed by Jotain** — it persists across rebuilds.
+
+```elisp
+;; ~/.config/emacs/custom.el
+
+;; Set your preferred font size
+(set-face-attribute 'default nil :height 140)
+
+;; Add custom keybindings
+(global-set-key (kbd "C-c n") #'org-capture)
+
+;; Configure org-roam if installed via extraPackages
+(use-package org-roam
+  :ensure nil  ; already installed via Nix
+  :custom
+  (org-roam-directory "~/notes/"))
+```
+
+<Warning>
+  Use `:ensure nil` in `use-package` forms inside `custom.el` since all packages are managed by Nix, not by Emacs package managers.
+</Warning>
+
+## Extra packages
+
+Add Emacs packages via the `extraPackages` Home Manager option:
+
+```nix
+programs.jotain = {
+  enable = true;
+  extraPackages = epkgs: [
+    epkgs.pdf-tools
+    epkgs.org-roam
+    epkgs.elfeed
+  ];
+};
+```
+
+These packages are installed via Nix alongside Jotain's built-in packages and are available immediately in your `custom.el`.
+
+## Font configuration
+
+Jotain auto-detects available fonts and selects the best match. The font preference order is:
+
+1. **Monospace**: JetBrainsMono Nerd Font, FiraCode Nerd Font, Iosevka Nerd Font, CascadiaCode Nerd Font, Hack Nerd Font
+2. **Variable pitch**: Inter, Source Serif Pro
+3. **Emoji**: Noto Color Emoji
+
+Font size keybindings:
+
+| Key | Action |
+|-----|--------|
+| `C-+` | Increase font size |
+| `C--` | Decrease font size |
+| `C-0` | Reset font size |
+| `C-c f i` | Show font configuration info |
+
+## Theme system
+
+Jotain uses a Nord-based theme system:
+
+- **Light theme**: `doom-nord-light`
+- **Dark theme**: `nord`
+- **Toggle**: `C-c t`
+
+The theme system prevents theme blending by disabling all active themes before loading a new one.
