@@ -1,0 +1,86 @@
+---
+title: Runtime Dependencies
+description: LSP servers, fonts, CLI tools, and tree-sitter grammars managed by Nix
+---
+
+`nix/lib/runtime-deps.nix` centralizes all external runtime dependencies that Jotain needs beyond Emacs packages.
+
+## Categories
+
+### Tree-sitter grammars
+
+Language grammars for tree-sitter syntax highlighting. All available grammars from nixpkgs are included automatically.
+
+**Languages**: Bash, C, C++, CSS, Go, Go modules, HTML, JavaScript, JSON, Lua, Markdown, Nix, Python, Rust, TSX, TypeScript, YAML
+
+### LSP servers
+
+Language servers used by Eglot:
+
+| Server | Language |
+|--------|----------|
+| `nil` | Nix |
+| `gopls` | Go |
+| `bash-language-server` | Bash |
+| `typescript-language-server` | TypeScript / JavaScript |
+| `yaml-language-server` | YAML |
+| `marksman` | Markdown |
+| `clang-tools` | C / C++ |
+
+### Fonts
+
+| Package | Contents |
+|---------|----------|
+| Nerd Fonts | JetBrainsMono, FiraCode, Iosevka, CascadiaCode, Hack |
+| Inter | UI / variable pitch font |
+| Source Serif Pro | Serif font |
+| Noto Color Emoji | Emoji support |
+| DejaVu | Fallback fonts |
+| Liberation | Metric-compatible serif fonts |
+
+### CLI tools
+
+| Tool | Used by |
+|------|---------|
+| `ripgrep` | consult-ripgrep, xref |
+| `fd` | consult-fd |
+| `git` | Magit, diff-hl |
+| `direnv` | direnv-mode |
+| `zoxide` | Smart directory navigation |
+| `sops` | Secrets management |
+| `1password-cli` | 1Password integration |
+| `multimarkdown` | Markdown rendering |
+| `libvterm` | Terminal emulator backend |
+
+## Convenience aggregates
+
+| Aggregate | Includes | Use case |
+|-----------|----------|----------|
+| `allRuntimeDeps` | CLI tools + LSP servers | `home.packages` |
+| `allWithFonts` | All deps + fonts | Complete install |
+| `devEnv` | LSP servers + dev tools | Dev shells, CI |
+
+## Adding dependencies
+
+### Tree-sitter grammar
+
+1. Find it: `nix search nixpkgs tree-sitter-grammars`
+2. Add to `treesitterGrammars` in `runtime-deps.nix`
+
+### Font
+
+1. Find it: `nix search nixpkgs <font-name>`
+2. Add to `fonts` in `runtime-deps.nix`
+3. Update `elisp/fonts.el` if Emacs should prefer it
+
+### LSP server
+
+1. Find it: `nix search nixpkgs <language>-lsp`
+2. Add to `lspServers` in `runtime-deps.nix`
+3. Configure in `elisp/programming.el` if custom Eglot settings are needed
+
+### CLI tool
+
+1. Verify usage: `grep -r "executable-find.*tool-name" elisp/`
+2. Find it: `nix search nixpkgs <tool-name>`
+3. Add to `cliTools` in `runtime-deps.nix`
