@@ -182,17 +182,7 @@
             in
             baseChecks // runtimeCheck;
 
-          treefmt =
-            let
-              # Use vanilla nixpkgs for formatter (avoids emacs-overlay dependencies)
-              vanillaPkgs = import nixpkgs {
-                inherit system;
-                config.problems.handlers = {
-                  arrow-cpp.broken = "warn";
-                };
-              };
-            in
-            {
+          treefmt = {
               programs.nixpkgs-fmt.enable = true;
               programs.shellcheck.enable = true;
               programs.shfmt = {
@@ -215,23 +205,6 @@
                 # Lock files
                 "flake.lock"
               ];
-
-              # # Custom formatters
-              # settings.formatter = {
-              #   # Emacs Lisp formatter using Emacs built-in indentation
-              #   elisp = {
-              #     command = vanillaPkgs.writeShellScriptBin "format-elisp" ''
-              #       for file in "$@"; do
-              #         ${vanillaPkgs.emacs-nox}/bin/emacs --batch \
-              #           -l elisp-mode \
-              #           "$file" \
-              #           --eval '(indent-region (point-min) (point-max))' \
-              #           -f save-buffer 2>/dev/null
-              #       done
-              #     '';
-              #     includes = [ "*.el" ];
-              #   };
-              # };
             };
 
           formatter = config.treefmt.build.wrapper;
