@@ -190,7 +190,7 @@
             elisp = {
               command = pkgs.writeShellScriptBin "format-elisp" ''
                 for file in "$@"; do
-                  ${pkgs.emacs}/bin/emacs --batch \
+                  ${pkgs.emacs-nox}/bin/emacs --batch \
                     -l elisp-mode \
                     "$file" \
                     --eval '(indent-region (point-min) (point-max))' \
