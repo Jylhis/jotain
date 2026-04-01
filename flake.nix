@@ -49,14 +49,14 @@
       systems = import systems;
 
       flake = {
-        overlays.default = import ./nix/overlays { inherit inputs; };
+        overlays.default = import ./nix/overlays;
 
         nixosModules = {
-          default = import ./nix/modules/nixos;
+          default = import ./nix/modules/nixos/module.nix { jotainSelf = self; };
         };
 
         homeModules = {
-          default = import ./nix/modules/home;
+          default = import ./nix/modules/home/module.nix { jotainSelf = self; };
         };
       };
 
