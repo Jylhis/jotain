@@ -1,27 +1,3 @@
-{ config, lib, pkgs, ... }:
-
-let
-  cfg = config.programs.jotain;
-
-in
-{
-  options.programs.jotain = {
-    enable = lib.mkEnableOption "Jotain Emacs distribution system-wide";
-
-    package = lib.mkOption {
-      type = lib.types.package;
-      default = pkgs.jotain;
-      description = "The Jotain package to use";
-    };
-  };
-
-  config = lib.mkIf cfg.enable {
-    environment.systemPackages = [ cfg.package ];
-
-    # System fonts for Emacs
-    fonts.packages = with pkgs; [
-      nerd-fonts.fira-code
-      nerd-fonts.jetbrains-mono
-    ];
-  };
-}
+# Non-flake entry point: builds packages from source tree.
+# Requires emacs-overlay + jotain overlay applied to pkgs.
+import ./module.nix { }

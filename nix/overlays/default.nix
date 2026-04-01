@@ -1,6 +1,12 @@
 # Jotain overlays
-{ inputs, ... }:
-
+#
+# Provides:
+# - emacsPackagesFor override (jotain-modules, claude-code-ide, combobulate)
+# - picosvg test workaround
+# - emacs-30 darwin mailutils fix
+#
+# Does NOT provide pkgs.jotain or pkgs.jotainEmacs — use the home-manager
+# module (which builds or receives them) or the flake's packages output.
 final: prev: {
   # Workaround for https://github.com/NixOS/nixpkgs/issues/493679
   # jetbrains-mono depends on picosvg, whose test suite has floating-point
@@ -20,12 +26,6 @@ final: prev: {
     if prev.stdenv.isDarwin
     then (prev.emacs-30 or prev.emacs).override { withMailutils = false; }
     else prev.emacs-30 or prev.emacs;
-
-  # Add jotain configuration package to pkgs
-  jotain = final.callPackage ../.. { };
-
-  # Add jotain Emacs package (Emacs with all dependencies)
-  jotainEmacs = final.callPackage ../../emacs.nix { devMode = false; };
 
   # Custom Emacs package overrides
   emacsPackagesFor = emacs: (prev.emacsPackagesFor emacs).overrideScope (efinal: esuper: {
