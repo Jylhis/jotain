@@ -1,5 +1,8 @@
 # emacs.nix — Build GNU Emacs from source with all build options exposed.
 #
+# This file builds a bare Emacs binary. For the full distribution with
+# tree-sitter grammars and packages, use default.nix instead.
+#
 # Usage:
 #   nix-build emacs.nix                                            # Emacs 30.2 (uses binary cache)
 #   nix-build emacs.nix --arg noGui true                           # terminal-only
