@@ -60,7 +60,7 @@
                                       # --with-native-compilation (libgccjit AOT)
 , withCompressInstall ? true          # --with-compress-install (gzip .el files)
 , withCsrc ? true                     # install C sources for find-function-C-source
-, srcRepo ? (variant == "git" || variant == "unstable" || variant == "igc")
+, srcRepo ? (variant == "git" || variant == "unstable" || variant == "igc" || variant == "macport")
                                       # source is a git checkout (runs autoreconf)
 
   # ── Image formats ────────────────────────────────────────────────
