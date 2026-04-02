@@ -15,6 +15,8 @@ Introduced in **Emacs 29**. Preferred for all `defcustom` variables in your init
 
 **Caveat:** slower than `setq` because it goes through the Customize machinery. Don't use it for regular variables in hot paths.
 
+**Works in early-init.el:** `setopt` is autoloaded (via `loaddefs.el`, which is part of the Emacs dump), so it is available during `early-init.el`. The first use triggers loading `cus-edit.el` slightly earlier than normal — negligible overhead for a few variables.
+
 ## Use `setq` for regular variables
 
 The standard way to set any variable. Use for internal/non-customizable variables.
