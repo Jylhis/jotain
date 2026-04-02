@@ -38,6 +38,14 @@ macos-macport:
 android:
   nix-build --arg noGui true --argstr system aarch64-linux default.nix
 
+# ── Dev tools ──────────────────────────────────────────────────────
+
+ellsp:
+  nix-build -E 'with import <nixpkgs> {}; callPackage ./nix/ellsp.nix {}'
+
+elsa:
+  nix-build -E 'with import <nixpkgs> {}; callPackage ./nix/elsa.nix { emacs = emacs-nox; }'
+
 # ── Run & clean ────────────────────────────────────────────────────
 
 run *ARGS:
