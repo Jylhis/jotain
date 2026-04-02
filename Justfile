@@ -18,4 +18,4 @@ run:
   ./result/bin/emacs --debug-init --init-directory='{{justfile_directory()}}'
 
 clean:
-  rm -r eln-cache result
+  rm -rf eln-cache result custom.el transient elpa auto-save-list
