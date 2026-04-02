@@ -1,4 +1,4 @@
-;;; Init.el --- Jotain Emacs Config -*- lexical-binding:t; -*-
+;9u;;; Init.el --- Jotain Emacs Config -*- lexical-binding:t; -*-
 
 
 ;;; Commentary:
@@ -12,7 +12,8 @@
 (setq custom-file (locate-user-emacs-file "custom.el"))
 (when (file-exists-p custom-file) (load custom-file))
 
-(load-theme 'modus-operandi-tritanopia t)
+;;(load-theme 'modus-operandi-tritanopia t)
+(load-theme 'modus-vivendi-tritanopia t)
 
 (use-package emacs
   :custom
