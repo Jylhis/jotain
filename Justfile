@@ -2,7 +2,7 @@ linux:
   nix-build --arg withPgtk true --argstr system x86_64-linux default.nix
 
 macos:
-  nix-build --arg variant '"macport"' --argstr system aarch64-darwin default.nix
+  nix-build --arg variant '"macport"' --argstr system x86_64-darwin default.nix
 
 android:
   nix-build --arg noGui true --argstr system aarch64-linux default.nix
