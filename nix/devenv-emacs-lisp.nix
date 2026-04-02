@@ -22,8 +22,8 @@ in
 
       package = lib.mkOption {
         type = lib.types.package;
-        default = pkgs.callPackage ./ellsp.nix { };
-        defaultText = lib.literalExpression "pkgs.callPackage ./ellsp.nix { }";
+        default = pkgs.callPackage ./ellsp.nix { emacs = cfg.package; };
+        defaultText = lib.literalExpression "pkgs.callPackage ./ellsp.nix { emacs = cfg.package; }";
         description = "The Emacs Lisp language server package to use.";
       };
     };
@@ -43,12 +43,11 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    packages =
-      [
-        cfg.package
-        pkgs.eask-cli
-      ]
-      ++ lib.optional cfg.lsp.enable cfg.lsp.package
-      ++ lib.optional cfg.elsa.enable cfg.elsa.package;
+    packages = [
+      cfg.package
+      pkgs.eask-cli
+    ]
+    ++ lib.optional cfg.lsp.enable cfg.lsp.package
+    ++ lib.optional cfg.elsa.enable cfg.elsa.package;
   };
 }
