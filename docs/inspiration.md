@@ -20,3 +20,7 @@ Source: git://git.sv.gnu.org/emacs.git
 - https://sourceforge.net/projects/android-ports-for-gnu-emacs/files/
 - https://github.com/mariusk/android-with-emacs
 - https://github.com/zakkak/android-emacs-toolkit
+
+
+# Nix
+- https://wiki.nixos.org/wiki/Emacs
