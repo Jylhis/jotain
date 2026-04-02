@@ -51,7 +51,9 @@
                                       # X11 (Linux default)
 , withToolkitScrollBars ? true        # --with-toolkit-scroll-bars
 , withXinput2 ? withX                 # --with-xinput2 (smooth scrolling on X)
-, withXwidgets ? false                # --with-xwidgets (embedded webkit widgets)
+, withXwidgets ? !noGui && (withGTK3 || withPgtk || withNS || variant == "macport")
+                  && pkgs.stdenv.hostPlatform.isDarwin
+                                      # --with-xwidgets (embedded webkit widgets)
 
   # ── Compilation ──────────────────────────────────────────────────
 , withNativeCompilation ? (pkgs.stdenv.buildPlatform.canExecute pkgs.stdenv.hostPlatform)
