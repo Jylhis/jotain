@@ -1,0 +1,72 @@
+# Setting Variables in Emacs Lisp
+
+Quick reference for choosing the right way to set variables in your init file.
+
+## Use `setopt` for user options (defcustom)
+
+Introduced in **Emacs 29**. Preferred for all `defcustom` variables in your init file.
+
+```elisp
+(setopt display-line-numbers-type 'relative)
+(setopt copilot-idle-delay 0.5)
+```
+
+**Why:** `setopt` runs the `:set` callback defined by `defcustom` and validates the value against its `:type`. Using `setq` on a `defcustom` variable bypasses both, which can silently break packages that depend on the setter to update internal state.
+
+**Caveat:** slower than `setq` because it goes through the Customize machinery. Don't use it for regular variables in hot paths.
+
+## Use `setq` for regular variables
+
+The standard way to set any variable. Use for internal/non-customizable variables.
+
+```elisp
+(setq gc-cons-threshold (* 50 1000 1000))
+(setq x 1
+      y 2)
+```
+
+**Note:** `setq` sets the current binding (lexical or dynamic). Inside a `let`, it modifies the local binding, not the global one.
+
+## Use `setq-default` for buffer-local defaults
+
+Sets the default value for buffer-local variables. The value applies to buffers that haven't set their own local value.
+
+```elisp
+(setq-default indent-tabs-mode nil)
+(setq-default fill-column 80)
+```
+
+## Use `setq-local` for buffer-local values
+
+Sets a variable's value in the current buffer only.
+
+```elisp
+(add-hook 'org-mode-hook
+  (lambda () (setq-local fill-column 100)))
+```
+
+## Use `set` when the variable name is computed
+
+A function (not a special form) -- evaluates its first argument to get the symbol to set.
+
+```elisp
+(set 'my-var 42)          ; equivalent to (setq my-var 42)
+(set (intern name) value)  ; dynamic symbol lookup
+```
+
+Rarely needed in init files.
+
+## Quick decision table
+
+| Variable kind             | Use         |
+|---------------------------|-------------|
+| `defcustom` user option   | `setopt`    |
+| Regular variable          | `setq`      |
+| Buffer-local default      | `setq-default` |
+| Buffer-local (this buffer)| `setq-local`   |
+| Dynamic symbol name       | `set`       |
+
+## Sources
+
+- [GNU Elisp Manual -- Setting Variables](https://www.gnu.org/software/emacs/manual/html_node/elisp/Setting-Variables.html)
+- [Emacs Redux -- Goodbye setq, Hello setopt](https://emacsredux.com/blog/2025/04/06/goodbye-setq-hello-setopt/)
