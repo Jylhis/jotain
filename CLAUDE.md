@@ -52,4 +52,4 @@ For git/unstable/igc variants, the first build will fail and report the correct 
 
 - Emacs Lisp files use `lexical-binding: t`.
 - The `next` branch is used for active development; `main` is the stable branch.
-- **Journal** — Update `journal/YYYY-MM-DD.md` when making configuration changes to keep a running log of what was done each day.
+- **Journal** — Update `journal/YYYY-MM-DD.md` when making configuration changes to keep a running log of what was done each day. Always append context, what was done, and the thinking process behind decisions to the current date's journal entry.
