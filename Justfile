@@ -1,3 +1,7 @@
+[private]
+default:
+  @just --list
+
 # ── x86_64-linux variants (all binary-cached) ──────────────────────
 
 linux:
@@ -36,7 +40,7 @@ android:
 
 # ── Run & clean ────────────────────────────────────────────────────
 
-run:
+run *ARGS:
   #!/usr/bin/env bash
   set -euo pipefail
   platform="$(uname -s)-$(uname -m)"
@@ -50,7 +54,7 @@ run:
   just "$target"
   echo "Build output: $(readlink result)"
   echo "Launching Emacs..."
-  ./result/bin/emacs --debug-init --eval '(setq debug-on-error t)' --init-directory='{{justfile_directory()}}'
+  ./result/bin/emacs --debug-init --eval '(setq debug-on-error t)' --init-directory='{{justfile_directory()}}' {{ARGS}}
 
 clean:
   rm -rf eln-cache result custom.el transient elpa auto-save-list
