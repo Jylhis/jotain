@@ -9,13 +9,19 @@ android:
 
 run:
   #!/usr/bin/env bash
-  set -e
-  case "$(uname -s)-$(uname -m)" in
-    Darwin-*) just macos ;;
-    Linux-aarch64) just android ;;
-    *) just linux ;;
+  set -euo pipefail
+  platform="$(uname -s)-$(uname -m)"
+  echo "Platform: $platform"
+  case "$platform" in
+    Darwin-*) target=macos ;;
+    Linux-aarch64) target=android ;;
+    *) target=linux ;;
   esac
-  ./result/bin/emacs --debug-init --init-directory='{{justfile_directory()}}'
+  echo "Building target: $target"
+  just "$target"
+  echo "Build output: $(readlink result)"
+  echo "Launching Emacs..."
+  ./result/bin/emacs --debug-init --eval '(setq debug-on-error t)' --init-directory='{{justfile_directory()}}'
 
 clean:
   rm -rf eln-cache result custom.el transient elpa auto-save-list
