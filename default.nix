@@ -11,12 +11,12 @@
 #   nix-build --arg variant '"git"'                    # git master + grammars
 #   nix-build --arg noGui true                         # terminal-only + grammars
 {
-  system ? builtins.currentSystem
-, pkgs ? import <nixpkgs> { inherit system; }
-, withTreeSitterGrammars ? true
+  system ? builtins.currentSystem,
+  pkgs ? import <nixpkgs> { inherit system; },
+  withTreeSitterGrammars ? true,
   # All other arguments are forwarded to emacs.nix
-, ...
-} @ args:
+  ...
+}@args:
 
 let
   lib = pkgs.lib;
@@ -28,15 +28,16 @@ let
   # All tree-sitter grammars for Emacs (275 grammars from nixpkgs)
   # Uses the NixOS-recommended emacsPackages.treesit-grammars mechanism:
   # https://wiki.nixos.org/wiki/Emacs
-  allTreeSitterGrammars = epkgs:
-    epkgs.treesit-grammars.with-grammars (grammars:
-      builtins.attrValues
-        (lib.filterAttrs (n: _: lib.hasPrefix "tree-sitter-" n) grammars)
+  allTreeSitterGrammars =
+    epkgs:
+    epkgs.treesit-grammars.with-grammars (
+      grammars: builtins.attrValues (lib.filterAttrs (n: _: lib.hasPrefix "tree-sitter-" n) grammars)
     );
 
 in
-  if withTreeSitterGrammars
-  then (pkgs.emacsPackagesFor emacs).withPackages (epkgs: [
+if withTreeSitterGrammars then
+  (pkgs.emacsPackagesFor emacs).withPackages (epkgs: [
     (allTreeSitterGrammars epkgs)
   ])
-  else emacs
+else
+  emacs
