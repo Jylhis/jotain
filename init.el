@@ -31,5 +31,12 @@
   :ensure t
   :mode "\\.nix\\'")
 
+(use-package jotain-telemetry
+  :load-path "."
+  :custom
+  (jotain-telemetry-enabled t)
+  :config
+  (jotain-telemetry-mode 1))
+
 (provide 'init)
 ;;; init.el ends here
