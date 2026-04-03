@@ -43,6 +43,10 @@ The environment variable POSTHOG_API_KEY takes precedence."
   "Seconds between automatic event flushes."
   :type 'integer)
 
+(defcustom jotain-telemetry-debug nil
+  "When non-nil, log telemetry events to the *jotain-telemetry* buffer."
+  :type 'boolean)
+
 ;;;; Internal variables
 
 (defvar jotain-telemetry--queue nil
@@ -81,6 +85,9 @@ The environment variable POSTHOG_API_KEY takes precedence."
 (defvar jotain-telemetry--buffers-created 0
   "Count of buffers created during this session.")
 
+(defvar jotain-telemetry--known-buffer-count 0
+  "Buffer count at last check, used to detect new buffer creation.")
+
 (defvar jotain-telemetry--id-file
   (expand-file-name "posthog-id" (expand-file-name "jotain" (or (getenv "XDG_CONFIG_HOME")
                                                                  "~/.config")))
@@ -99,23 +106,20 @@ The environment variable POSTHOG_API_KEY takes precedence."
 
 (defun jotain-telemetry--get-distinct-id ()
   "Load or create the persistent distinct ID."
-  (if (and (file-exists-p jotain-telemetry--id-file)
-           (not (string-empty-p
-                 (string-trim
-                  (with-temp-buffer
-                    (insert-file-contents jotain-telemetry--id-file)
-                    (buffer-string))))))
-      (string-trim
-       (with-temp-buffer
-         (insert-file-contents jotain-telemetry--id-file)
-         (buffer-string)))
-    (let ((id (jotain-telemetry--generate-uuid))
-          (dir (file-name-directory jotain-telemetry--id-file)))
-      (unless (file-directory-p dir)
-        (make-directory dir t))
-      (with-temp-file jotain-telemetry--id-file
-        (insert id))
-      id)))
+  (let ((existing (and (file-exists-p jotain-telemetry--id-file)
+                       (string-trim
+                        (with-temp-buffer
+                          (insert-file-contents jotain-telemetry--id-file)
+                          (buffer-string))))))
+    (if (and existing (not (string-empty-p existing)))
+        existing
+      (let ((id (jotain-telemetry--generate-uuid))
+            (dir (file-name-directory jotain-telemetry--id-file)))
+        (unless (file-directory-p dir)
+          (make-directory dir t))
+        (with-temp-file jotain-telemetry--id-file
+          (insert id))
+        id))))
 
 ;;;; API key resolution
 
@@ -135,11 +139,30 @@ The environment variable POSTHOG_API_KEY takes precedence."
   "Return current time as ISO 8601 string."
   (format-time-string "%FT%T%z" nil t))
 
+;;;; Debug logging
+
+(defvar jotain-telemetry--debug-buffer-max 100000
+  "Maximum size in characters for the debug log buffer.")
+
+(defun jotain-telemetry--debug-log (event-name properties)
+  "Log EVENT-NAME with PROPERTIES to the *jotain-telemetry* buffer."
+  (when jotain-telemetry-debug
+    (with-current-buffer (get-buffer-create "*jotain-telemetry*")
+      (goto-char (point-max))
+      (insert (format "[%s] %s\n" (jotain-telemetry--iso8601) event-name))
+      (dolist (prop properties)
+        (insert (format "  %s: %S\n" (car prop) (cdr prop))))
+      (insert "\n")
+      (when (> (buffer-size) jotain-telemetry--debug-buffer-max)
+        (delete-region (point-min)
+                       (- (buffer-size) (/ jotain-telemetry--debug-buffer-max 2)))))))
+
 ;;;; Event queue
 
 (defun jotain-telemetry--enqueue (event-name properties)
   "Add an event with EVENT-NAME and PROPERTIES alist to the queue."
   (when (jotain-telemetry--active-p)
+    (jotain-telemetry--debug-log event-name properties)
     (push `((event . ,event-name)
             (distinct_id . ,jotain-telemetry--distinct-id)
             (timestamp . ,(jotain-telemetry--iso8601))
@@ -150,11 +173,10 @@ The environment variable POSTHOG_API_KEY takes precedence."
 
 ;;;; HTTP flush
 
-(defun jotain-telemetry-flush ()
-  "Send queued events to PostHog.  Safe to call interactively."
-  (interactive)
+(defun jotain-telemetry--send-batch (synchronous)
+  "Drain the queue and POST events to PostHog.
+When SYNCHRONOUS is non-nil, block until the request completes."
   (when (and (jotain-telemetry--active-p) jotain-telemetry--queue)
-    ;; Finalize accumulated mode times and command counts before flushing.
     (jotain-telemetry--flush-mode-times)
     (jotain-telemetry--flush-command-counts)
     (let* ((events (nreverse jotain-telemetry--queue))
@@ -167,13 +189,23 @@ The environment variable POSTHOG_API_KEY takes precedence."
            (url-request-data (encode-coding-string payload 'utf-8))
            (endpoint (concat jotain-telemetry-host "/batch/")))
       (setq jotain-telemetry--queue nil)
-      (url-retrieve endpoint
-                    (lambda (status)
-                      (when-let* ((err (plist-get status :error)))
-                        (message "jotain-telemetry: flush error %S" err))
-                      (when (buffer-live-p (current-buffer))
-                        (kill-buffer (current-buffer))))
-                    nil t t))))
+      (if synchronous
+          (ignore-errors
+            (let ((buf (url-retrieve-synchronously endpoint t nil 5)))
+              (when (buffer-live-p buf)
+                (kill-buffer buf))))
+        (url-retrieve endpoint
+                      (lambda (status)
+                        (when-let* ((err (plist-get status :error)))
+                          (message "jotain-telemetry: flush error %S" err))
+                        (when (buffer-live-p (current-buffer))
+                          (kill-buffer (current-buffer))))
+                      nil t t)))))
+
+(defun jotain-telemetry-flush ()
+  "Send queued events to PostHog.  Safe to call interactively."
+  (interactive)
+  (jotain-telemetry--send-batch nil))
 
 ;;;; Hook functions
 
@@ -194,25 +226,7 @@ The environment variable POSTHOG_API_KEY takes precedence."
    `((duration_seconds . ,(round (- (float-time) jotain-telemetry--session-start)))
      (buffers_created . ,jotain-telemetry--buffers-created)
      (commands_executed . ,jotain-telemetry--command-total)))
-  ;; Flush synchronously on exit — url-retrieve is async, so use
-  ;; url-retrieve-synchronously to ensure the request completes.
-  (when (and (jotain-telemetry--active-p) jotain-telemetry--queue)
-    (jotain-telemetry--flush-mode-times)
-    (jotain-telemetry--flush-command-counts)
-    (let* ((events (nreverse jotain-telemetry--queue))
-           (api-key (jotain-telemetry--api-key))
-           (payload (json-serialize
-                     `((api_key . ,api-key)
-                       (batch . ,(vconcat events)))))
-           (url-request-method "POST")
-           (url-request-extra-headers '(("Content-Type" . "application/json")))
-           (url-request-data (encode-coding-string payload 'utf-8))
-           (endpoint (concat jotain-telemetry-host "/batch/")))
-      (setq jotain-telemetry--queue nil)
-      (ignore-errors
-        (let ((buf (url-retrieve-synchronously endpoint t nil 5)))
-          (when (buffer-live-p buf)
-            (kill-buffer buf)))))))
+  (jotain-telemetry--send-batch t))
 
 ;; --- Command tracking ---
 
@@ -232,10 +246,7 @@ The environment variable POSTHOG_API_KEY takes precedence."
       (setq sorted (seq-take (sort sorted (lambda (a b) (> (cdr a) (cdr b)))) 20))
       (jotain-telemetry--enqueue
        "command_frequency"
-       `((commands . ,(vconcat (mapcar (lambda (pair)
-                                         `((command . ,(car pair))
-                                           (count . ,(cdr pair))))
-                                       sorted)))
+       `((commands . ,sorted)
          (total . ,jotain-telemetry--command-total))))
     (clrhash jotain-telemetry--command-counts)))
 
@@ -308,8 +319,12 @@ Debounced to at most once per 10 seconds."
 ;; --- Buffer tracking ---
 
 (defun jotain-telemetry--track-buffer-create ()
-  "Increment buffer creation counter."
-  (cl-incf jotain-telemetry--buffers-created))
+  "Increment buffer creation counter when a new buffer actually appears."
+  (let ((current (length (buffer-list))))
+    (when (> current jotain-telemetry--known-buffer-count)
+      (cl-incf jotain-telemetry--buffers-created
+               (- current jotain-telemetry--known-buffer-count)))
+    (setq jotain-telemetry--known-buffer-count current)))
 
 ;;;; Minor mode
 
@@ -322,6 +337,7 @@ Debounced to at most once per 10 seconds."
         jotain-telemetry--mode-times (make-hash-table :test #'eq)
         jotain-telemetry--command-total 0
         jotain-telemetry--buffers-created 0
+        jotain-telemetry--known-buffer-count (length (buffer-list))
         jotain-telemetry--current-mode major-mode
         jotain-telemetry--last-mode-change (float-time)
         jotain-telemetry--last-error-time 0

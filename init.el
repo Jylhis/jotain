@@ -1,4 +1,4 @@
-;9u;;; Init.el --- Jotain Emacs Config -*- lexical-binding:t; -*-
+;;; Init.el --- Jotain Emacs Config -*- lexical-binding:t; -*-
 
 
 ;;; Commentary:
@@ -6,6 +6,8 @@
 ;;; Code:
 
 (message "Start of Jotain")
+
+(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 
 ;; Store automatic customization options elsewhere
 ;; TODO: Where should this go?
@@ -32,7 +34,6 @@
   :mode "\\.nix\\'")
 
 (use-package jotain-telemetry
-  :load-path "."
   :custom
   (jotain-telemetry-enabled t)
   :config
