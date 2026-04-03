@@ -14,7 +14,12 @@
     nix = {
       enable = true;
     };
-    emacs-lisp.enable = true;
+    emacs-lisp = {
+
+      enable = true;
+      lsp.enable = false;
+      elsa.enable = false;
+    };
   };
   treefmt = {
     enable = true;
