@@ -30,8 +30,8 @@
 Telemetry is still silently disabled if no API key is configured."
   :type 'boolean)
 
-(defcustom jotain-telemetry-api-key nil
-  "PostHog project API key.
+(defcustom jotain-telemetry-api-key "phc_IKKkL2DWB3zpFreX1quIuHNI7MBnaUOkA8HUpTP5taX"
+  "PostHog project API key (write-only).
 The environment variable POSTHOG_API_KEY takes precedence."
   :type '(choice (const :tag "None" nil) string))
 
