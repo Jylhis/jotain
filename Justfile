@@ -66,3 +66,8 @@ run *ARGS:
 
 clean:
   rm -rf eln-cache result custom.el transient elpa auto-save-list
+
+# ── Tests ──────────────────────────────────────────────────────────
+
+test:
+  emacs --batch -L lisp -L test -l test/jotain-telemetry-test.el -f ert-run-tests-batch-and-exit
