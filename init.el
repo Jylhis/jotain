@@ -7,6 +7,11 @@
 
 (message "Start of Jotain")
 
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+
+(package-initialize)
+
+
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 
 ;; Store automatic customization options elsewhere
@@ -29,9 +34,15 @@
    ("M-o" . other-window))
   )
 
-(use-package nix-mode
+(use-package nix-ts-mode
   :ensure t
   :mode "\\.nix\\'")
+
+(use-package markdown-mode
+  :ensure t
+    :mode ("README\\.md\\'" . gfm-mode)
+
+  )
 
 (use-package jotain-telemetry
   :custom
