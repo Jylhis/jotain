@@ -11,26 +11,33 @@
 ;;;; State isolation
 
 (defmacro jotain-telemetry-test--with-clean-state (&rest body)
-  "Run BODY with all telemetry state variables locally bound to clean defaults."
+  "Run BODY with all telemetry state variables locally bound to clean defaults.
+Also neutralizes the POSTHOG_API_KEY env var to prevent environment leakage."
   (declare (indent 0) (debug t))
-  `(let ((jotain-telemetry-enabled t)
-         (jotain-telemetry-api-key "phc_test_key")
-         (jotain-telemetry-host "https://test.posthog.invalid")
-         (jotain-telemetry-debug nil)
-         (jotain-telemetry--queue nil)
-         (jotain-telemetry--session-id "test-session-id")
-         (jotain-telemetry--distinct-id "test-distinct-id")
-         (jotain-telemetry--session-start (float-time))
-         (jotain-telemetry--command-counts (make-hash-table :test #'eq))
-         (jotain-telemetry--command-total 0)
-         (jotain-telemetry--mode-times (make-hash-table :test #'eq))
-         (jotain-telemetry--current-mode nil)
-         (jotain-telemetry--last-mode-change nil)
-         (jotain-telemetry--flush-timer nil)
-         (jotain-telemetry--last-error-time 0)
-         (jotain-telemetry--buffers-created 0)
-         (jotain-telemetry--known-buffer-count 0))
-     ,@body))
+  (let ((orig (gensym "orig-env")))
+    `(let ((,orig (getenv "POSTHOG_API_KEY")))
+       (unwind-protect
+           (progn
+             (setenv "POSTHOG_API_KEY" nil)
+             (let ((jotain-telemetry-enabled t)
+                   (jotain-telemetry-api-key "phc_test_key")
+                   (jotain-telemetry-host "https://test.posthog.invalid")
+                   (jotain-telemetry-debug nil)
+                   (jotain-telemetry--queue nil)
+                   (jotain-telemetry--session-id "test-session-id")
+                   (jotain-telemetry--distinct-id "test-distinct-id")
+                   (jotain-telemetry--session-start (float-time))
+                   (jotain-telemetry--command-counts (make-hash-table :test #'eq))
+                   (jotain-telemetry--command-total 0)
+                   (jotain-telemetry--mode-times (make-hash-table :test #'eq))
+                   (jotain-telemetry--current-mode nil)
+                   (jotain-telemetry--last-mode-change nil)
+                   (jotain-telemetry--flush-timer nil)
+                   (jotain-telemetry--last-error-time 0)
+                   (jotain-telemetry--buffers-created 0)
+                   (jotain-telemetry--known-buffer-count 0))
+               ,@body))
+         (setenv "POSTHOG_API_KEY" ,orig)))))
 
 (defmacro jotain-telemetry-test--with-env (key value &rest body)
   "Run BODY with environment variable KEY set to VALUE, restoring afterward."
@@ -480,8 +487,8 @@
 (ert-deftest jotain-telemetry-test-teardown-preserves-foreign-error-function ()
   "teardown does not overwrite a non-telemetry command-error-function."
   (jotain-telemetry-test--with-clean-state
-    (let ((custom-fn (lambda (data context caller) nil)))
-      (setq command-error-function custom-fn)
+    (let* ((custom-fn (lambda (_data _context _caller) nil))
+           (command-error-function custom-fn))
       (jotain-telemetry--teardown)
       (should (eq command-error-function custom-fn)))))
 
