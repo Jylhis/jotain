@@ -58,7 +58,6 @@ auto-dark is the sole decider of which theme becomes active."
 (use-package auto-dark
   :ensure t
   :demand t
-  :diminish
   :bind ("C-c t" . auto-dark-toggle-appearance)
   :after nord-theme doom-themes
   :custom
@@ -70,11 +69,11 @@ auto-dark is the sole decider of which theme becomes active."
               (when (display-graphic-p frame)
                 (with-selected-frame frame (auto-dark-mode 1))))))
 
-(use-package diminish)
+
+(setq mode-line-collapse-minor-modes '(subword-mode super-save-mode drag-stuff-mode helpful-mode treesit-fold-indicators-mode dtrt-indent-mode editorconfig-mode auto-dark-mode which-key-mode))
 
 (use-package which-key
   :ensure nil  ; Built-in since Emacs 30
-  :diminish
   :hook (after-init . which-key-mode))
 
 (use-package hl-line

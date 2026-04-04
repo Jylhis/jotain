@@ -100,7 +100,6 @@
 
 (use-package subword
   :ensure nil
-  :diminish
   :hook ((prog-mode . subword-mode)
          (minibuffer-setup . subword-mode)))
 
@@ -162,7 +161,6 @@
 ;;; Essential packages
 (use-package super-save
   :ensure t
-  :diminish
   :custom
   (super-save-auto-save-when-idle t)
   (super-save-remote-files nil)
@@ -188,7 +186,6 @@
 
 (use-package drag-stuff
   :ensure t
-  :diminish
   :autoload drag-stuff-define-keys
   :hook ((text-mode prog-mode) . drag-stuff-mode)
   :config

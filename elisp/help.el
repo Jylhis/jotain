@@ -17,7 +17,6 @@
 
 (use-package helpful
   :ensure t
-  :diminish
   :bind
   (("C-h f" . #'helpful-callable)
    ("C-h v" . #'helpful-variable)
