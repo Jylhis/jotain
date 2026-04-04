@@ -14,6 +14,9 @@
     nix = {
       enable = true;
     };
+    python = {
+      enable = true;
+    };
     emacs-lisp = {
 
       enable = true;
