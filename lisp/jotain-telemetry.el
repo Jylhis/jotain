@@ -15,6 +15,7 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'url)
 (require 'json)
 
@@ -241,7 +242,7 @@ When SYNCHRONOUS is non-nil, block until the request completes."
   (when (and jotain-telemetry--command-counts
              (> (hash-table-count jotain-telemetry--command-counts) 0))
     (let ((sorted nil))
-      (maphash (lambda (cmd count) (push (cons (symbol-name cmd) count) sorted))
+      (maphash (lambda (cmd count) (push (cons cmd count) sorted))
                jotain-telemetry--command-counts)
       (setq sorted (seq-take (sort sorted (lambda (a b) (> (cdr a) (cdr b)))) 20))
       (jotain-telemetry--enqueue
