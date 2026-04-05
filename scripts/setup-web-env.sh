@@ -50,18 +50,28 @@ if [ ! -f "$NIX_CONF" ] || ! grep -q "sandbox = false" "$NIX_CONF"; then
   cat > "$NIX_CONF" <<'NIXCONF'
 sandbox = false
 max-jobs = auto
-substituters = https://cache.nixos.org
-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
 experimental-features = nix-command
+
+# Binary caches — cache.nixos.org is always available; cachix.org caches
+# are included for environments where they are reachable (local dev) but
+# may be blocked by the Claude Code web egress proxy.
+substituters = https://cache.nixos.org https://nix-community.cachix.org https://devenv.cachix.org https://jylhis.cachix.org
+trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw= jylhis.cachix.org-1:H3THGMN5xOFJiFGuB2o3Su/aOcmgKMPBJ+OP/ECQHIM=
+
+# Fall back gracefully when a substituter is unreachable
+connect-timeout = 5
+fallback = true
 NIXCONF
 else
   echo "[setup] Nix config already present."
 fi
 
-# --- Section 4: Set up nixpkgs channel ---
-# Use channels.nixos.org (not nixos.org) since the bare domain is blocked
+# --- Section 4: Set up nixpkgs-unstable channel ---
+# Use channels.nixos.org (not nixos.org) — the bare domain is blocked by the
+# Claude Code web egress proxy, but *.nixos.org subdomains are allowed.
+# nixpkgs-unstable is required for latest packages (e.g. emacs30, devenv).
 if ! NIX_REMOTE="" nix-instantiate --eval -E '<nixpkgs>' &>/dev/null; then
-  echo "[setup] Adding nixpkgs channel..."
+  echo "[setup] Adding nixpkgs-unstable channel..."
   nix-channel --add https://channels.nixos.org/nixpkgs-unstable nixpkgs
   nix-channel --update
 else
