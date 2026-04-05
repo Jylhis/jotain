@@ -33,6 +33,12 @@
 
   claude.code = {
     enable = true;
+    hooks = {
+      setup-web-env = {
+        hookType = "SessionStart";
+        command = "bash ${config.devenv.root}/scripts/setup-web-env.sh";
+      };
+    };
     mcpServers = {
       devenv = {
         type = "stdio";
