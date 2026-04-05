@@ -22,6 +22,7 @@ fi
 
 if [ "$NEED_APT" = true ]; then
   echo "[setup] Installing packages from apt..."
+  export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq
   if ! command -v nix-instantiate &>/dev/null; then
     apt-get install -y -qq nix-bin
