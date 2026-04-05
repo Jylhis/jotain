@@ -1,0 +1,35 @@
+---
+title: Nix Build System
+description: How Jotain builds Emacs from source using Nix
+---
+
+# Nix Build System
+
+Jotain uses Nix for reproducible Emacs builds with fine-grained control over compile options.
+
+## Two-Layer Architecture
+
+### emacs.nix
+
+The core build expression that compiles GNU Emacs from source. It supports:
+
+- **Source variants**: mainline (30.2), git (master), unstable, macport, igc (incremental GC)
+- **GUI toolkits**: GTK3, pgtk (pure GTK/Wayland), NS (macOS), X11, or no GUI
+- **Native compilation**: Enabled by default for faster Elisp execution
+- **Tree-sitter**: Built-in support for syntax highlighting and structural editing
+
+The expression wraps the nixpkgs `emacs30` derivation using `override` and `overrideAttrs`.
+
+### default.nix
+
+The distribution layer that wraps `emacs.nix` output with `emacsPackagesFor`/`withPackages` to include tree-sitter grammars. It auto-generates a `site-start.el` that configures `treesit-extra-load-path` so all 275 grammars are available out of the box.
+
+## Build Options
+
+| Option | Default | Description |
+|---|---|---|
+| `variant` | `"mainline"` | Emacs source variant |
+| `withTreeSitterGrammars` | `true` | Include all tree-sitter grammars |
+| `noGui` | `false` | Build without GUI support |
+| `withPgtk` | `false` | Use pure GTK (Wayland) |
+| `hash` | `""` | Source hash for non-mainline variants |
