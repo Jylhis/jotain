@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# setup-web-env.sh — Bootstrap Nix + just for Claude Code Web containers
+# setup-web-env.sh — Bootstrap Nix + devenv + just for Claude Code Web containers
 # Idempotent: safe to re-run. Skips steps already completed.
 #
-# This script replaces devenv for the Claude Code web environment where
-# the Determinate Systems installer is network-blocked.
+# The Claude Code web environment (Ubuntu 24.04) has no Nix pre-installed and
+# the Determinate Systems installer is network-blocked. This script bootstraps
+# Nix via apt (single-user mode), then installs devenv and just so the full
+# devenv-based workflow works.
 set -euo pipefail
 
 # Force single-user Nix (no daemon) since the container lacks systemd
@@ -65,20 +67,33 @@ else
   echo "[setup] nixpkgs channel already available."
 fi
 
-# --- Section 5: Export NIX_REMOTE for the session ---
-# Persist NIX_REMOTE="" so all subsequent nix commands use single-user mode
+# --- Section 5: Install devenv from nixpkgs ---
+if ! command -v devenv &>/dev/null; then
+  echo "[setup] Installing devenv from nixpkgs..."
+  nix-env -iA nixpkgs.devenv 2>&1 | tail -1
+  export PATH="/root/.nix-profile/bin:$PATH"
+else
+  echo "[setup] devenv already installed."
+fi
+
+# --- Section 6: Export NIX_REMOTE and PATH for the session ---
+# Persist NIX_REMOTE and PATH so all subsequent commands use single-user Nix
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   if ! grep -q 'NIX_REMOTE' "$CLAUDE_ENV_FILE" 2>/dev/null; then
     echo 'export NIX_REMOTE=""' >> "$CLAUDE_ENV_FILE"
   fi
+  if ! grep -q 'nix-profile' "$CLAUDE_ENV_FILE" 2>/dev/null; then
+    echo 'export PATH="/root/.nix-profile/bin:$PATH"' >> "$CLAUDE_ENV_FILE"
+  fi
 fi
 
-# --- Section 6: Verify setup ---
+# --- Section 7: Verify setup ---
 echo "[setup] Verifying environment..."
 echo "  nix: $(nix-instantiate --version)"
 echo "  just: $(just --version)"
+echo "  devenv: $(devenv version 2>/dev/null || echo 'not found')"
 
-# --- Section 7: Validate project Nix expressions ---
+# --- Section 8: Validate project Nix expressions ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
