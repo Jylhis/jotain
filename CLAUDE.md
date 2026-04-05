@@ -22,6 +22,22 @@ just clean                # removes eln-cache/ and result/
 devenv shell              # enter the devenv shell (defined in devenv.nix)
 ```
 
+### Ad-hoc devenv environments
+
+When `devenv.nix` doesn't exist and a command/tool is missing, create an ad-hoc environment:
+
+```bash
+devenv -O languages.rust.enable:bool true -O packages:pkgs "mypackage mypackage2" shell -- cli args
+```
+
+When the setup becomes complex, create `devenv.nix` and run commands within:
+
+```bash
+devenv shell -- cli args
+```
+
+See <https://devenv.sh/ad-hoc-developer-environments/>.
+
 ### Building Emacs variants via Nix
 
 ```bash
