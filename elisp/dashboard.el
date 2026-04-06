@@ -11,7 +11,10 @@ When Emacs is launched with file arguments, those buffers are
 visited before this function runs, so we skip the dashboard."
   ;; Optimization: Use `or` with `seq-find` to avoid traversing the buffer list
   ;; twice (previously `seq-some` followed by `seq-find`).
-  (or (seq-find #'buffer-file-name (buffer-list))
+  (or (seq-find (lambda (b)
+                  (or (buffer-file-name b)
+                      (with-current-buffer b (bound-and-true-p dired-directory))))
+                (buffer-list))
       (enlight)))
 
 (use-package enlight
