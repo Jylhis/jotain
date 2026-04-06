@@ -50,5 +50,11 @@
   :config
   (jotain-telemetry-mode 1))
 
+(use-package magit
+  :ensure t
+  :custom
+    (magit-repository-directories '(("~/Developer" . 1)))
+  )
+
 (provide 'init)
 ;;; init.el ends here
