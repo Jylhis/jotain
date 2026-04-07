@@ -46,9 +46,7 @@
 
 (use-package jotain-telemetry
   :custom
-  (jotain-telemetry-enabled t)
-  :config
-  (jotain-telemetry-mode 1))
+  (jotain-telemetry-enabled nil))
 
 (use-package magit
   :ensure t
