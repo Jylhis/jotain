@@ -44,6 +44,8 @@
 
   )
 
+(use-package jotain-performance)
+
 (use-package jotain-telemetry
   :custom
   (jotain-telemetry-enabled nil))
