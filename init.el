@@ -55,6 +55,31 @@
    ("M-o" . other-window))
   )
 
+;;;; Terminal compatibility
+;;
+;; Improvements for running `emacs -nw' inside modern terminals (Ghostty,
+;; Kitty, WezTerm, Alacritty): mouse tracking, Kitty keyboard protocol so
+;; Emacs can distinguish C-i/TAB, C-m/RET, C-[/ESC, and OSC 52 clipboard
+;; sync that also works through SSH and tmux. See also `term-file-aliases'
+;; in early-init.el for the xterm-ghostty alias.
+
+(defun jotain-tty-setup ()
+  "Configure behavior for each new terminal (tty) frame."
+  (xterm-mouse-mode 1))
+
+(add-hook 'tty-setup-hook #'jotain-tty-setup)
+
+(use-package kkp
+  :ensure t
+  :config
+  ;; global-kkp-mode is a no-op on GUI frames, so it's safe to enable
+  ;; unconditionally and handles mixed GUI/tty daemon setups.
+  (global-kkp-mode 1))
+
+(use-package clipetty
+  :ensure t
+  :hook (after-init . global-clipetty-mode))
+
 (use-package nix-ts-mode
   :ensure t
   :mode "\\.nix\\'")
