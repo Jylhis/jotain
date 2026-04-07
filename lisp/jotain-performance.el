@@ -21,7 +21,7 @@
 ;; on every redisplay otherwise, which adds noticeable cost in large
 ;; files (multi-thousand-line JSON, log files).  Safe assuming the user
 ;; does not edit right-to-left scripts.
-(setq-default bidi-display-reordering 'left-to-right
+(setq-default bidi-display-reordering nil
               bidi-paragraph-direction 'left-to-right)
 (setopt bidi-inhibit-bpa t)
 
@@ -75,11 +75,23 @@
 
 ;; Recenter the buffer after `save-place-mode' restores the cursor —
 ;; otherwise reopening a file can leave point on the bottom line of
-;; the window, which is disorienting.
+;; the window, which is disorienting.  `save-place-find-file-hook'
+;; runs from `find-file-hook' before the new buffer has actually been
+;; displayed, so a direct `recenter' would act on the previously
+;; selected window.  Defer via a zero-delay timer until the window
+;; showing the buffer exists.
+(defun jotain-performance--recenter-buffer-window (buffer)
+  "Recenter the window currently displaying BUFFER, if any."
+  (when-let* ((win (get-buffer-window buffer)))
+    (with-selected-window win
+      (ignore-errors (recenter)))))
+
 (defun jotain-performance--recenter-after-save-place (&rest _)
-  "Recenter the window after `save-place-mode' restores point."
+  "Schedule a recenter after `save-place-mode' restores point."
   (when buffer-file-name
-    (ignore-errors (recenter))))
+    (run-with-timer 0 nil
+                    #'jotain-performance--recenter-buffer-window
+                    (current-buffer))))
 
 (with-eval-after-load 'saveplace
   (advice-add 'save-place-find-file-hook :after
@@ -94,8 +106,7 @@
 If only one window is visible and `winner-mode' has a previous
 configuration to restore, this command undoes the deletion instead."
   (interactive)
-  (if (and winner-mode
-           (eq (selected-window) (next-window)))
+  (if (and winner-mode (one-window-p))
       (winner-undo)
     (delete-other-windows)))
 
