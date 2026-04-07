@@ -85,7 +85,6 @@
   (keyfreq-autosave-mode 1))
 
 (use-package org-clock
-  :defer t
   :custom
   (org-clock-persist t)
   (org-clock-idle-time 15)
@@ -95,7 +94,7 @@
 
 (use-package org-clock-csv
   :ensure t
-  :after org-clock)
+  :defer t)
 
 (provide 'init)
 ;;; init.el ends here
