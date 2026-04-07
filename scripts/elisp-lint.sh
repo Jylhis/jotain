@@ -60,6 +60,35 @@ if grep -qn "(add-hook '.*-hook.*(lambda" "$FILE"; then
   WARNINGS=$((WARNINGS + 1))
 fi
 
+# 9. Real byte-compile pass — catches unbalanced parens, undefined
+# symbols, free variables, and obsolete functions that the regex checks
+# above can't see.  Errors fail; warnings are reported but don't fail.
+if command -v emacs >/dev/null 2>&1; then
+  bc_log=$(mktemp)
+  trap 'rm -f "$bc_log" "${FILE%.el}.elc"' EXIT
+  load_dir="$(dirname "$FILE")"
+  # When linting under test/, the sibling lisp/ holds the modules under
+  # test, so put it on the load path too.
+  extra_load_args=()
+  if [ -d "$(dirname "$FILE")/../lisp" ]; then
+    extra_load_args+=(-L "$(dirname "$FILE")/../lisp")
+  fi
+  if ! emacs -Q --batch \
+       -L "$load_dir" \
+       "${extra_load_args[@]}" \
+       --eval "(setq byte-compile-error-on-warn nil)" \
+       -f batch-byte-compile "$FILE" >"$bc_log" 2>&1; then
+    cat "$bc_log"
+    echo "ERROR [$FILE]: Byte-compile failed"
+    ERRORS=$((ERRORS + 1))
+  else
+    if grep -q "Warning" "$bc_log"; then
+      grep "Warning" "$bc_log" | head -10
+      WARNINGS=$((WARNINGS + 1))
+    fi
+  fi
+fi
+
 # Summary
 if [ $ERRORS -gt 0 ] || [ $WARNINGS -gt 0 ]; then
   echo "---"

@@ -31,6 +31,18 @@
     };
   };
 
+  # Pre-commit binary lives in the dev shell so contributors can
+  # `pre-commit install` once and let `.pre-commit-config.yaml` (in
+  # the repo root) drive the actual hooks.  This avoids pulling in
+  # the cachix/git-hooks.nix flake input.
+  packages = [ pkgs.pre-commit ];
+
+  enterShell = ''
+    if [ -d .git ] && [ ! -f .git/hooks/pre-commit ]; then
+      pre-commit install --install-hooks >/dev/null 2>&1 || true
+    fi
+  '';
+
   claude.code = {
     enable = true;
     mcpServers = {

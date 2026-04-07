@@ -67,7 +67,38 @@ run *ARGS:
 clean:
   rm -rf eln-cache result custom.el transient elpa auto-save-list
 
-# ── Tests ──────────────────────────────────────────────────────────
+# ── Tests / lint / check ───────────────────────────────────────────
 
+# Run the full ERT suite via the aggregate loader.  Prefers the
+# devenv-provided emacs when available so the recipe works on hosts
+# without a system emacs in PATH.
 test:
-  emacs --batch -L lisp -L test -l test/jotain-telemetry-test.el -f ert-run-tests-batch-and-exit
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if command -v emacs >/dev/null 2>&1; then
+    emacs --batch -L lisp -L test -l test/jotain-run-tests.el -f ert-run-tests-batch-and-exit
+  else
+    devenv shell -- emacs --batch -L lisp -L test -l test/jotain-run-tests.el -f ert-run-tests-batch-and-exit
+  fi
+
+# Lint every .el file under lisp/ and test/.
+lint:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  status=0
+  for f in lisp/*.el test/*.el; do
+    [ -e "$f" ] || continue
+    ./scripts/elisp-lint.sh "$f" || status=$?
+  done
+  exit "$status"
+
+# Format the tree via treefmt (provided by devenv).
+fmt:
+  treefmt
+
+# Verify nix expressions evaluate.
+nix-check:
+  ./scripts/nix-eval-check.sh
+
+# Run lint + nix-check + tests — the same gates CI runs.
+check: lint nix-check test
