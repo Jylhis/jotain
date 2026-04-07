@@ -31,6 +31,15 @@
     };
   };
 
+  packages = with pkgs; [
+    nerd-fonts.jetbrains-mono
+    nerd-fonts.fira-code
+    nerd-fonts.iosevka
+    nerd-fonts.caskaydia-cove
+    nerd-fonts.hack
+    dejavu_fonts
+  ];
+
   claude.code = {
     enable = true;
     mcpServers = {

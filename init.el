@@ -20,6 +20,25 @@
 (setq custom-file (locate-user-emacs-file "custom.el"))
 (when (file-exists-p custom-file) (load custom-file))
 
+;;;; Font configuration
+(defvar jotain-font-preferences
+  '(("JetBrainsMono Nerd Font" . 110)
+    ("FiraCode Nerd Font" . 110)
+    ("Iosevka Nerd Font" . 110)
+    ("CaskaydiaCove Nerd Font" . 110)
+    ("Hack Nerd Font" . 110)
+    ("DejaVu Sans Mono" . 100))
+  "Programming font preferences with fallbacks.")
+
+(defun jotain-set-preferred-font ()
+  "Set the first available font from `jotain-font-preferences'."
+  (cl-loop for (font . size) in jotain-font-preferences
+           when (find-font (font-spec :family font))
+           return (set-face-attribute 'default nil :family font :height size)))
+
+(jotain-set-preferred-font)
+(add-hook 'server-after-make-frame-hook #'jotain-set-preferred-font)
+
 (load-theme 'modus-operandi-tritanopia t)
 ;; (load-theme 'modus-vivendi-tritanopia t)
 
@@ -29,6 +48,7 @@
   (use-short-answers t)
   (use-dialog-boxes nil)
   (delete-by-moving-to-trash t)
+  (enable-recursive-minibuffers t)
   :bind
   (("C-z" . nil)
    ("C-x C-z" . nil)
@@ -136,7 +156,6 @@
          ("M-s G" . consult-git-grep)
          ("M-s r" . consult-ripgrep)
          ("M-s l" . consult-line)
-         ("C-s" . consult-line)
          ("M-s L" . consult-line-multi)
          ("M-s k" . consult-keep-lines)
          ("M-s u" . consult-focus-lines)
@@ -152,11 +171,24 @@
          ("M-s" . consult-history)                 ;; orig. next-matching-history-element
          ("M-r" . consult-history))                ;; orig. previous-matching-history-element
   :init
+  ;; Tweak register preview for consult-register-load/store
+  (advice-add #'register-preview :override #'consult-register-window)
+  (setopt register-preview-delay 0.5)
   ;; Use Consult to select xref locations with preview
   (setopt xref-show-xrefs-function #'consult-xref
           xref-show-definitions-function #'consult-xref)
   ;; Emacs 30: Sort completions by minibuffer history
-  (setopt completions-sort 'historical))
+  (setopt completions-sort 'historical)
+  :config
+  ;; Per-command preview-key debouncing
+  (consult-customize
+   consult-theme :preview-key '(:debounce 0.2 any)
+   consult-ripgrep consult-git-grep consult-grep consult-man
+   consult-bookmark consult-recent-file consult-xref
+   consult-source-bookmark consult-source-file-register
+   consult-source-recent-file consult-source-project-recent-file
+   :preview-key '(:debounce 0.4 any))
+  (setopt consult-narrow-key "<"))
 
 (provide 'init)
 ;;; init.el ends here
