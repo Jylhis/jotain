@@ -1,0 +1,157 @@
+---
+title: Moving lines and sexps with built-ins
+description: How to get the drag-stuff / move-text experience without an external package
+---
+
+<Note>
+Placeholder page. Jotain does not ship `drag-stuff` or `move-text`
+because their default bindings collide with `org-mode`, `windmove`,
+and various other modes. This guide catalogues the built-in ways to
+reorder text. It should grow into a full cheat sheet.
+</Note>
+
+## Why no drag-stuff?
+
+`drag-stuff` and `move-text` give you `M-<up>` / `M-<down>` to shove
+the current line or region up and down. The ergonomics are great but
+the chord cost is high:
+
+- `M-<arrows>` is the canonical `org-mode` binding for structural
+  edits — `drag-stuff` has to hardcode an exception list.
+- `M-<arrows>` is also what `windmove-default-keybindings` uses for
+  directional window navigation.
+- Any future package that reaches for `M-<up>` will collide silently.
+
+Emacs already has the pieces. They just aren't bound to `M-<arrows>`
+and they aren't marketed as "drag." This page maps the moves.
+
+## Moving lines
+
+### `transpose-lines` (`C-x C-t`)
+
+Exchanges the current line with the line *above* it, then advances
+point to the following line. Apply repeatedly to "drag" a line up or
+down.
+
+```
+; cursor on line 3
+C-x C-t          ; line 3 is now line 2
+C-p C-x C-t      ; drag it up once more
+```
+
+### Moving a line down
+
+`transpose-lines` only moves "up" relative to the line at point. To
+move *down*, transpose with the next line instead:
+
+```
+C-n C-x C-t      ; pull the next line above this one, i.e. this line
+                 ; moved down
+```
+
+Or with a prefix argument: `C-u -1 C-x C-t` moves the current line up
+one; `C-u 2 C-x C-t` moves it down one (after the two lines below).
+
+### A tiny repeatable helper (recommended pattern)
+
+If you want single-key drag semantics without a package, define
+wrappers and add them to a repeat map so you can hold the key:
+
+```elisp
+(defun jotain-move-line-up ()
+  "Move the current line up by one."
+  (interactive)
+  (transpose-lines 1)
+  (forward-line -2))
+
+(defun jotain-move-line-down ()
+  "Move the current line down by one."
+  (interactive)
+  (forward-line 1)
+  (transpose-lines 1)
+  (forward-line -1))
+
+(defvar-keymap jotain-move-line-repeat-map
+  :repeat t
+  "<up>"   #'jotain-move-line-up
+  "<down>" #'jotain-move-line-down)
+
+(global-set-key (kbd "C-c <up>")   #'jotain-move-line-up)
+(global-set-key (kbd "C-c <down>") #'jotain-move-line-down)
+```
+
+Pressing `C-c <up>` once and then repeatedly `<up>` (thanks to the
+repeat map) gives you the drag-stuff feel without claiming
+`M-<arrows>`.
+
+## Moving regions
+
+Rectangle mode + kill/yank does this natively:
+
+```
+C-SPC                 ; set mark
+                      ; … extend selection …
+C-w                   ; kill region
+C-n C-n               ; move to new spot
+C-y                   ; yank back
+```
+
+For true "drag a region up/down one line" semantics, the idiomatic
+built-in is `C-x C-t` with a region: when a region is active,
+`transpose-lines` respects it.
+
+## Moving sexps (lisp / structured code)
+
+This is where built-ins outshine drag-stuff, which treats everything
+as lines.
+
+### `transpose-sexps` (`C-M-t`)
+
+Exchanges the sexp before point with the sexp after point. Perfect for
+swapping two adjacent function arguments, two adjacent list elements,
+two adjacent `let` bindings. Respects structured code: swaps whole
+balanced expressions, not line fragments.
+
+```
+(foo bar baz)
+;     ^ point here
+C-M-t
+(bar foo baz)
+```
+
+### `transpose-words` (`M-t`)
+
+Same idea, word granularity. Swaps the word before point with the one
+after.
+
+### `transpose-chars` (`C-t`)
+
+Character level. The classic fix-a-typo binding.
+
+### Structured dragging in tree-sitter modes
+
+Tree-sitter modes expose `treesit-beginning-of-defun` /
+`treesit-end-of-defun` and structural navigation via
+`treesit-thing-at-point`. For dragging a function body up or down
+across another function, select the sexp / defun with
+`C-M-SPC` / `C-M-h` and then `C-w` / `C-y` at the new location. The
+sexp-aware kill does the right thing without needing a helper package.
+
+## Cheat sheet
+
+| Goal                              | Built-in binding |
+|-----------------------------------|------------------|
+| Swap line with one above          | `C-x C-t`        |
+| Swap line with one below          | `C-n C-x C-t`    |
+| Swap sexp before/after point      | `C-M-t`          |
+| Swap words before/after point     | `M-t`            |
+| Swap chars (typo fix)             | `C-t`            |
+| Kill+yank region to new position  | `C-w` … `C-y`    |
+| Mark a balanced sexp              | `C-M-SPC`        |
+| Mark a defun                      | `C-M-h`          |
+
+## References
+
+- `C-h i g (emacs) Transpose RET`
+- `C-h i g (emacs) Lists RET` for sexp motion.
+- `C-h f transpose-lines RET`, `C-h f transpose-sexps RET`.

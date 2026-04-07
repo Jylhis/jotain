@@ -1,0 +1,155 @@
+---
+title: Replacing multiple-cursors with built-ins
+description: How to get the 90% of multiple-cursors' value from plain Emacs
+---
+
+<Note>
+Placeholder page. Jotain intentionally does **not** ship the
+`multiple-cursors` package. This guide catalogues the built-in tools
+that cover most of its use cases and should grow into a full cheat
+sheet over time.
+</Note>
+
+## Why no multiple-cursors?
+
+`multiple-cursors.el` is a venerable package and muscle memory for many
+people coming from editors like Sublime Text or VS Code. In practice
+most of its use cases are already covered by Emacs built-ins (keyboard
+macros, rectangles, `query-replace`, `occur`) that compose better with
+the rest of the editor, avoid the package's edge cases around overlays
+and undo, and never collide with other minor modes on the same chord.
+
+The goal of this page is to teach the built-in idioms so you stop
+reaching for multi-cursor in the first place.
+
+## What multi-cursor is usually used for
+
+1. **Edit N occurrences of the same symbol at once.**
+2. **Edit the same column across N consecutive lines.**
+3. **Edit N selections that aren't aligned into a column.**
+4. **Insert an incrementing number on each of N lines.**
+
+Each of these has a built-in answer.
+
+## 1. Edit N occurrences of the same symbol
+
+This is what `mc/mark-all-like-this` / `mc/mark-next-like-this` does.
+The Emacs idioms:
+
+### `query-replace` (`M-%`) and `query-replace-regexp` (`C-M-%`)
+
+Interactive find-and-replace with per-occurrence `y`/`n` confirmation,
+`.` (replace this one and quit), `!` (replace all remaining), `,`
+(replace but don't move), and `q` (quit). Operates on the region when
+one is active, otherwise from point to end of buffer.
+
+```
+M-%  foo  RET  bar  RET
+```
+
+### `iedit-mode` from the `iedit` package (not currently bundled)
+
+Interactive simultaneous edit of all occurrences of the symbol at
+point. If you find you miss this and `query-replace` isn't enough,
+`iedit` is a much smaller package than `multiple-cursors` and worth
+evaluating before bringing multi-cursor back.
+
+### `occur` (`M-s o`)
+
+Opens a navigable buffer of every line that matches a regex. With
+`occur-edit-mode` (press `e` in the `*Occur*` buffer) you can edit the
+matches and the changes propagate back to the source buffers.
+
+```
+M-s o  my-symbol  RET   ; list every line
+e                        ; enter edit mode
+                         ; … make edits …
+C-c C-c                  ; commit
+```
+
+## 2. Edit the same column across N consecutive lines
+
+This is where `multiple-cursors` feels "natural" but rectangles are
+strictly better for aligned column edits.
+
+### Rectangle commands (`C-x r …` and `C-x SPC`)
+
+- `C-x SPC` — `rectangle-mark-mode`. Enter rectangle selection, move
+  point with normal motion keys to extend.
+- `C-x r t` — `string-rectangle`. Replace the rectangle on each line
+  with a string. Prompts once, applies to every line.
+- `C-x r k` — `kill-rectangle`. Cut the rectangle.
+- `C-x r y` — `yank-rectangle`. Paste a rectangle.
+- `C-x r o` — `open-rectangle`. Shift text right by the width of the
+  rectangle (i.e. insert blank space column).
+- `C-x r c` — `clear-rectangle`. Blank out the rectangle.
+- `C-x r N` — `rectangle-number-lines`. Insert incrementing numbers.
+
+The usual workflow to "type the same thing on N lines at column C" is:
+
+1. `C-x SPC` to start a rectangle at the starting column.
+2. `C-n` N times to extend down.
+3. `C-x r t` and type the replacement string.
+
+## 3. Edit N unaligned selections
+
+If the edits aren't aligned into a column, keyboard macros are the
+built-in answer.
+
+### Keyboard macros (`F3` / `F4`)
+
+- `F3` — `kmacro-start-macro`. Begin recording.
+- `F4` — `kmacro-end-or-call-macro`. End recording, or call the last
+  recorded macro.
+- `C-u F4` — execute the macro repeatedly until it fails (often used
+  to apply across a buffer).
+- `C-x C-k n` — `kmacro-name-last-macro`, to save a macro under a name.
+- `C-x C-k b` — bind the last macro to a key.
+
+A typical "rename all uses of this variable in this file" workflow:
+
+```
+F3                        ; start recording
+C-s old-name RET          ; find next occurrence
+M-d new-name              ; delete + insert new
+F4                        ; stop
+C-u 0 F4                  ; apply until end of buffer
+```
+
+This gives you full editing power inside the macro — search, motion,
+multi-character insert, conditional logic via `query-replace`.
+
+### `apply-macro-to-region-lines` (`C-x C-k r`)
+
+Runs the last keyboard macro once on each line of the active region.
+Equivalent to "place a cursor on each line and play the macro."
+
+## 4. Insert incrementing numbers
+
+- `C-x r N` — `rectangle-number-lines`. Inserts `1`, `2`, `3`, … at the
+  left edge of a rectangle.
+- Inside a keyboard macro, use a counter: `C-x C-k C-i`
+  (`kmacro-insert-counter`) inserts the current counter and
+  increments; `C-x C-k C-c` (`kmacro-set-counter`) resets it.
+
+## 5. Marking every occurrence of a symbol
+
+- `M-s .` — `isearch-forward-symbol-at-point`. Starts isearch with the
+  symbol at point as the query.
+- `M-s _` — `isearch-forward-symbol`. Starts symbol-only isearch.
+- In `*Occur*`, `e` to enter edit mode and rewrite every match.
+
+## When you'd actually want multiple-cursors back
+
+There's one workflow multiple-cursors handles better than any built-in:
+**N live cursors with independent command-by-command editing, where
+you preview the result on every keystroke**. If you rely on that
+specific ergonomic, `iedit` covers the common case; for anything more
+elaborate, use a keyboard macro and accept the one-shot nature.
+
+## References
+
+- `C-h i g (emacs) Keyboard Macros RET` — the manual chapter.
+- `C-h i g (emacs) Rectangles RET`
+- `C-h i g (emacs) Query Replace RET`
+- `C-h i g (emacs) Other Repeating Search RET` (for `occur`).
