@@ -56,5 +56,46 @@
     (magit-repository-directories '(("~/Developer" . 1)))
   )
 
+;;;; Activity tracking
+;;
+;; Editor instrumentation for the local-first self-tracking stack:
+;; - wakatime-mode      → heartbeats to a self-hosted Wakapi
+;; - activity-watch-mode → heartbeats to ActivityWatch
+;; - keyfreq            → command frequency stats
+;; - org-clock          → task time tracking with persistence
+;; - org-clock-csv      → export org-clock data for analysis
+
+(use-package wakatime-mode
+  :ensure t
+  :if (executable-find "wakatime-cli")
+  :custom
+  (wakatime-cli-path (executable-find "wakatime-cli"))
+  :config
+  (global-wakatime-mode))
+
+(use-package activity-watch-mode
+  :ensure t
+  :config
+  (global-activity-watch-mode))
+
+(use-package keyfreq
+  :ensure t
+  :config
+  (keyfreq-mode 1)
+  (keyfreq-autosave-mode 1))
+
+(use-package org-clock
+  :defer t
+  :custom
+  (org-clock-persist t)
+  (org-clock-idle-time 15)
+  (org-clock-into-drawer t)
+  :config
+  (org-clock-persistence-insinuate))
+
+(use-package org-clock-csv
+  :ensure t
+  :after org-clock)
+
 (provide 'init)
 ;;; init.el ends here
