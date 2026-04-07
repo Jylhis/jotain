@@ -17,6 +17,7 @@
 (setopt use-package-enable-imenu-support t)
 
 (tool-bar-mode -1)
+(scroll-bar-mode -1)
 
 (setopt inhibit-startup-screen t)
 
