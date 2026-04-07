@@ -2,19 +2,32 @@
 
 let
   sources = import ./npins;
+
+  # The npins-managed nixpkgs. Anything in this file that wants "the
+  # pinned nixpkgs" should use `pinned` instead of the ambient `pkgs`
+  # (which is whatever devenv resolved from devenv.yaml).
+  pinned = import sources.nixpkgs-unstable {
+    inherit (pkgs.stdenv.hostPlatform) system;
+    config.allowUnfree = true;
+  };
+
+  # Build Emacs from our local emacs.nix (the same builder the
+  # `just build` recipes use). This is what the devenv shell ships,
+  # so the editor in dev matches whatever the build flavours produce.
+  # For the full distribution including ~275 tree-sitter grammars,
+  # use `import ./default.nix { ... }` instead.
+  jotainEmacs = import ./emacs.nix {
+    inherit (pkgs.stdenv.hostPlatform) system;
+    pkgs = pinned;
+  };
 in
 {
   # The custom emacs-lisp language module lives in nix/. Importing it
   # adds `languages.emacs-lisp` to the option tree below.
   imports = [ ./nix/devenv-emacs-lisp.nix ];
 
-  # Expose the npins-managed nixpkgs to the rest of the config.
-  # Anything that wants "the pinned nixpkgs" should use `pinned` instead
-  # of the ambient `pkgs` (which is whatever devenv resolved from devenv.yaml).
-  _module.args.pinned = import sources.nixpkgs-unstable {
-    inherit (pkgs.stdenv.hostPlatform) system;
-    config.allowUnfree = true;
-  };
+  # Expose `pinned` to other modules that might want it.
+  _module.args.pinned = pinned;
 
   # https://devenv.sh/packages/
   packages = with pkgs; [
@@ -42,7 +55,9 @@ in
     # to `true' if you want them in your shell.
     emacs-lisp = {
       enable = true;
-      package = pkgs.emacs; # override the module's emacs-nox default
+      # Override the module's emacs-nox default with the local
+      # emacs.nix build, defined in the let-binding above.
+      package = jotainEmacs;
       lsp.enable = false;
       elsa.enable = false;
     };
