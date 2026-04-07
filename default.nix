@@ -25,6 +25,20 @@ let
   emacsArgs = builtins.removeAttrs args [ "withTreeSitterGrammars" ];
   emacs = import ./emacs.nix emacsArgs;
 
+  # MELPA / ELPA packages that init.el expects.  Provided via Nix so
+  # the wrapper is reproducible — :ensure t in init.el becomes a
+  # no-op because the packages are already on the load-path.
+  jotainEmacsPackages =
+    epkgs: with epkgs; [
+      magit
+      nix-ts-mode
+      markdown-mode
+      wakatime-mode
+      activity-watch-mode
+      keyfreq
+      org-clock-csv
+    ];
+
   # All tree-sitter grammars for Emacs (275 grammars from nixpkgs)
   # Uses the NixOS-recommended emacsPackages.treesit-grammars mechanism:
   # https://wiki.nixos.org/wiki/Emacs
@@ -35,9 +49,7 @@ let
     );
 
 in
-if withTreeSitterGrammars then
-  (pkgs.emacsPackagesFor emacs).withPackages (epkgs: [
-    (allTreeSitterGrammars epkgs)
-  ])
-else
-  emacs
+(pkgs.emacsPackagesFor emacs).withPackages (
+  epkgs:
+  (jotainEmacsPackages epkgs) ++ lib.optional withTreeSitterGrammars (allTreeSitterGrammars epkgs)
+)
