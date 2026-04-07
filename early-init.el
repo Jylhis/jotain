@@ -20,5 +20,13 @@
 
 (setopt inhibit-startup-screen t)
 
+;; Ghostty advertises TERM=xterm-ghostty but Emacs doesn't ship a matching
+;; term/xterm-ghostty.el, so it falls back to a minimal terminal setup and
+;; misses modifyOtherKeys, bracketed paste, focus events, and 24-bit color.
+;; Aliasing to xterm-256color makes term/xterm.el load instead.
+;; Set here (not in init.el) because `tty-run-terminal-initialization' runs
+;; before init.el is loaded for `emacs -nw'.
+(add-to-list 'term-file-aliases '("xterm-ghostty" . "xterm-256color"))
+
 (provide 'early-init)
 ;;; early-init.el ends here
