@@ -165,6 +165,25 @@ let
   basePackage = if variant == "macport" then pkgs.emacs30-macport else pkgs.emacs30;
 
   # ── Forward all boolean flags to nixpkgs make-emacs.nix ──────────
+  #
+  # CACHE-PARITY INVARIANT: every default in this file's argument list
+  # must match the corresponding default in upstream nixpkgs's
+  # make-emacs.nix. When that holds, calling
+  #
+  #     import ./emacs.nix {}                  # mainline variant
+  #     import ./emacs.nix { noGui = true; }   # any standard override
+  #
+  # produces the *exact* store path of `pkgs.emacs30(.override { ... })`,
+  # so the cachix.org / cache.nixos.org binary cache hits and we never
+  # rebuild Emacs from source. Only the git/unstable/igc/macport
+  # variants and the Darwin patch flags are expected to diverge — those
+  # paths run through `overrideAttrs` below and intentionally bust the
+  # cache.
+  #
+  # Verify after any change to defaults:
+  #     nix-instantiate --eval --strict -E \
+  #       '(import ./emacs.nix {}).outPath \
+  #          == (import (import ./npins).nixpkgs-unstable {}).emacs30.outPath'
   overridden = basePackage.override {
     inherit
       noGui
