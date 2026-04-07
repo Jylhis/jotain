@@ -7,6 +7,7 @@
 
 (message "Start of Jotain")
 
+(require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 
 (package-initialize)
@@ -19,8 +20,8 @@
 (setq custom-file (locate-user-emacs-file "custom.el"))
 (when (file-exists-p custom-file) (load custom-file))
 
-;;(load-theme 'modus-operandi-tritanopia t)
-(load-theme 'modus-vivendi-tritanopia t)
+(load-theme 'modus-operandi-tritanopia t)
+;; (load-theme 'modus-vivendi-tritanopia t)
 
 (use-package emacs
   :custom
