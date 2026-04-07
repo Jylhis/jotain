@@ -6,6 +6,10 @@
 
 config_dir := justfile_directory()
 
+# Emacs build flavours target the current system by default. Override
+# with `just system=x86_64-linux build-nox` etc.
+system := `nix eval --impure --raw --expr 'builtins.currentSystem'`
+
 # List available recipes.
 default:
     @just --list --justfile {{justfile()}}
@@ -79,6 +83,79 @@ test:
         -f ert-run-tests-batch-and-exit
 
 
+# ── Build (nix) ─────────────────────────────────────────────────────
+#
+# `default.nix' wraps `emacs.nix' with all tree-sitter grammars from
+# nixpkgs. `emacs.nix' alone builds a bare Emacs binary. Both default to
+# the npins-pinned nixpkgs-unstable channel; pass --arg pkgs '<nixpkgs>'
+# to use NIX_PATH instead.
+
+# Build the full distribution (Emacs + every grammar) for the current system.
+[group('build')]
+build:
+    nix-build --argstr system {{system}} default.nix
+
+# Build a bare Emacs (no tree-sitter grammars).
+[group('build')]
+build-bare:
+    nix-build --argstr system {{system}} emacs.nix
+
+# Build with --with-pgtk for Wayland.
+[group('build')]
+build-pgtk:
+    nix-build --arg withPgtk true --argstr system {{system}} default.nix
+
+# Build with --with-x-toolkit=gtk3 (X11 + GTK3).
+[group('build')]
+build-gtk3:
+    nix-build --arg withGTK3 true --argstr system {{system}} default.nix
+
+# Build a terminal-only Emacs (--without-x --without-ns).
+[group('build')]
+build-nox:
+    nix-build --arg noGui true --argstr system {{system}} default.nix
+
+# Build the macport variant (Darwin only).
+[group('build')]
+build-macport:
+    nix-build --arg variant '"macport"' --argstr system {{system}} default.nix
+
+# Build from current git master (first run will report a hash to fill in).
+[group('build')]
+build-git:
+    nix-build --arg variant '"git"' --argstr system {{system}} default.nix
+
+# Build the IGC (Memory Pool System GC) branch.
+[group('build')]
+build-igc:
+    nix-build --arg variant '"igc"' --argstr system {{system}} default.nix
+
+# Build for aarch64-linux nox (Termux/Android).
+[group('build')]
+build-android:
+    nix-build --arg noGui true --argstr system aarch64-linux default.nix
+
+# Auto-detect platform, build, then launch Emacs with this configuration.
+[group('build')]
+run-built *ARGS:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    platform="$(uname -s)-$(uname -m)"
+    case "$platform" in
+        Darwin-arm64)  target=build       ;;
+        Darwin-*)      target=build       ;;
+        Linux-aarch64) target=build-android ;;
+        *)             target=build       ;;
+    esac
+    echo "Platform: $platform → just $target"
+    just "$target"
+    echo "Build output: $(readlink result)"
+    echo "Launching Emacs from result/bin/emacs..."
+    ./result/bin/emacs --debug-init \
+        --eval '(setq debug-on-error t)' \
+        --init-directory={{config_dir}} {{ARGS}}
+
+
 # ── Format ──────────────────────────────────────────────────────────
 
 # Format Nix (and anything else treefmt knows about).
@@ -118,6 +195,7 @@ clean:
     find {{config_dir}} -name '.#*'   -type f -delete 2>/dev/null || true
     rm -rf {{config_dir}}/var/eln-cache 2>/dev/null || true
     rm -rf {{config_dir}}/eln-cache     2>/dev/null || true
+    rm -f  {{config_dir}}/result        2>/dev/null || true
     echo "Cleaned compiled artifacts."
 
 # Nuke installed packages and no-littering state — forces a full re-fetch.
