@@ -42,5 +42,64 @@
 (setq-default cursor-in-non-selected-windows nil)
 (setopt highlight-nonselected-windows nil)
 
+;;;; Ergonomic hacks
+
+;; Save the system clipboard into the kill ring before killing, so a
+;; URL copied from the browser isn't lost the moment you `C-k' a line
+;; in Emacs — `M-y' walks back to it.
+(setopt save-interprogram-paste-before-kill t)
+
+;; Killing the same text repeatedly should not waste slots in the
+;; kill ring.
+(setopt kill-do-not-save-duplicates t)
+
+;; Auto-chmod files with a `#!' shebang on save so freshly-written
+;; scripts are immediately executable.
+(add-hook 'after-save-hook
+          #'executable-make-buffer-file-executable-if-script-p)
+
+;; Stop `ffap' from pinging hostnames it spots under point — that
+;; freezes Emacs for several seconds on slow or firewalled networks.
+;; The defcustom only exists once `ffap' is loaded.
+(with-eval-after-load 'ffap
+  (setopt ffap-machine-p-known 'reject))
+
+;; Resize all sibling windows proportionally when splitting, instead
+;; of always halving the current window.  Keeps multi-window layouts
+;; balanced.
+(setopt window-combination-resize t)
+
+;; After `C-u C-SPC' once, allow plain `C-SPC' to keep popping the
+;; mark ring.  Makes mark-ring navigation much less awkward.
+(setopt set-mark-command-repeat-pop t)
+
+;; Recenter the buffer after `save-place-mode' restores the cursor —
+;; otherwise reopening a file can leave point on the bottom line of
+;; the window, which is disorienting.
+(defun jotain-performance--recenter-after-save-place (&rest _)
+  "Recenter the window after `save-place-mode' restores point."
+  (when buffer-file-name
+    (ignore-errors (recenter))))
+
+(with-eval-after-load 'saveplace
+  (advice-add 'save-place-find-file-hook :after
+              #'jotain-performance--recenter-after-save-place))
+
+;; Reversible `C-x 1': first press collapses the frame to a single
+;; window, second press restores the previous layout via `winner-mode'.
+(winner-mode 1)
+
+(defun jotain-performance-toggle-delete-other-windows ()
+  "Delete other windows in the frame, or restore the previous layout.
+If only one window is visible and `winner-mode' has a previous
+configuration to restore, this command undoes the deletion instead."
+  (interactive)
+  (if (and winner-mode
+           (eq (selected-window) (next-window)))
+      (winner-undo)
+    (delete-other-windows)))
+
+(keymap-global-set "C-x 1" #'jotain-performance-toggle-delete-other-windows)
+
 (provide 'jotain-performance)
 ;;; jotain-performance.el ends here
