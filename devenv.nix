@@ -4,6 +4,10 @@ let
   sources = import ./npins;
 in
 {
+  # The custom emacs-lisp language module lives in nix/. Importing it
+  # adds `languages.emacs-lisp` to the option tree below.
+  imports = [ ./nix/devenv-emacs-lisp.nix ];
+
   # Expose the npins-managed nixpkgs to the rest of the config.
   # Anything that wants "the pinned nixpkgs" should use `pinned` instead
   # of the ambient `pkgs` (which is whatever devenv resolved from devenv.yaml).
@@ -14,9 +18,6 @@ in
 
   # https://devenv.sh/packages/
   packages = with pkgs; [
-    # Editor — the whole point of the shell.
-    emacs
-
     # Pinning / input management
     npins
 
@@ -32,7 +33,20 @@ in
   ];
 
   # https://devenv.sh/languages/
-  languages.nix.enable = true;
+  languages = {
+    nix.enable = true;
+
+    # Provides emacs + eask-cli. lsp (ellsp) and elsa are off by
+    # default — both have `default = true' in the module's
+    # mkEnableOption, so we have to flip them off explicitly. Toggle
+    # to `true' if you want them in your shell.
+    emacs-lisp = {
+      enable = true;
+      package = pkgs.emacs; # override the module's emacs-nox default
+      lsp.enable = false;
+      elsa.enable = false;
+    };
+  };
 
   # https://devenv.sh/integrations/treefmt/
   treefmt = {
