@@ -139,8 +139,6 @@ in
   enterTest = ''
     set -euo pipefail
 
-    expected_emacs="${jotainEmacs}/bin/emacs"
-
     echo "[1/7] emacs on PATH must come from jotainEmacs"
     actual_emacs="$(command -v emacs)"
     real_emacs="$(readlink -f "$actual_emacs")"
@@ -182,8 +180,15 @@ in
       --eval '(princ (format "user-init-file=%S\n" user-init-file))' \
       --eval '(princ (format "user-emacs-directory=%S\n" user-emacs-directory))' \
       > "$isolated_home/out" 2> "$isolated_home/err"
-    if grep -E "$isolated_home|/home/|/Users/" "$isolated_home/out" "$isolated_home/err"; then
-      echo "FAIL: emacs touched a path outside the store"
+    # With HOME pointed at the temp dir, Emacs will naturally report
+    # user-emacs-directory *inside* $isolated_home — that's fine. What
+    # we're guarding against is any reference to a real user home
+    # (/home/... or /Users/...) that isn't the isolated temp dir.
+    host_leaks=$(grep -E "/home/|/Users/" "$isolated_home/out" "$isolated_home/err" \
+      | grep -v "$isolated_home" || true)
+    if [ -n "$host_leaks" ]; then
+      echo "FAIL: emacs touched a path outside the store:"
+      echo "$host_leaks"
       exit 1
     fi
     if [ -e "$isolated_home/.emacs.d" ] || [ -e "$isolated_home/.emacs" ]; then
