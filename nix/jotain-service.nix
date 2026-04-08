@@ -129,6 +129,7 @@ in
     };
 
     home.packages = [
+      cfg.package
       editorScript
     ]
     ++ lib.optional (cfg.client.enable && pkgs.stdenv.isLinux) (lib.hiPrio clientDesktopItem);
