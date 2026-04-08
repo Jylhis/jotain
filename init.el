@@ -39,6 +39,11 @@
 ;; `M-x customize' has somewhere to scribble without touching init.el.
 (setq custom-file (locate-user-emacs-file "var/custom.el"))
 
+;; After a clean install (`just clean-all'), the package archive index is
+;; empty. Refresh it so use-package / package-install can locate packages.
+(when (not package-archive-contents)
+  (package-refresh-contents))
+
 (require 'init-core)         ; GC, encoding, no-littering, sane defaults
 (require 'init-keys)         ; Global keymap and leader-key setup
 (require 'init-ui)           ; Theme, modeline, fonts, frame tweaks

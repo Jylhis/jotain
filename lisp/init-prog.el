@@ -46,8 +46,7 @@
 ;; Combobulate: structural editing via treesit. Loaded on demand only —
 ;; enable per buffer with `M-x combobulate-mode' or via .dir-locals.el.
 (use-package combobulate
-  :ensure nil ; Provided by Nix; :vc fallback for non-Nix installs
-  :vc (:url "https://github.com/mickeynp/combobulate")
+  :ensure nil ; Provided by Nix
   :defer t
   :commands combobulate-mode
   :custom (combobulate-key-prefix "C-c o"))
