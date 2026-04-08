@@ -21,6 +21,8 @@
 ;;; Code:
 
 (use-package claude-code-ide
+  :ensure nil ; Provided by Nix; :vc fallback for non-Nix installs
+  :vc (:url "https://github.com/manzaltu/claude-code-ide.el")
   :defer t
   :bind ("C-c C-'" . claude-code-ide-menu)
   :config
