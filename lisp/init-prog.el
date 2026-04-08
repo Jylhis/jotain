@@ -53,6 +53,10 @@
 
 ;;;; Eglot
 
+;; Modern LSP servers routinely send multi-megabyte responses.  Bumping
+;; the read buffer cuts the number of read(2) calls dramatically.
+(setopt read-process-output-max (* 4 1024 1024))
+
 (use-package eglot
   :ensure nil
   ;; Per-language modules add themselves to eglot-ensure in their own files.

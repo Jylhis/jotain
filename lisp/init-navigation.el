@@ -55,9 +55,26 @@
   :custom
   (project-vc-extra-root-markers '(".project" "package.json" "Cargo.toml" "pyproject.toml" "flake.nix")))
 
+;; Resize all sibling windows proportionally when splitting, instead
+;; of always halving the current window.
+(setopt window-combination-resize t)
+
 (use-package winner
   :ensure nil
   :config (winner-mode 1))
+
+;; Reversible `C-x 1': first press collapses to a single window,
+;; second press restores the previous layout via `winner-mode'.
+(defun jotain-nav-toggle-delete-other-windows ()
+  "Delete other windows, or restore the previous layout.
+If only one window is visible and `winner-mode' has a previous
+configuration, undo the deletion instead."
+  (interactive)
+  (if (and winner-mode (one-window-p))
+      (winner-undo)
+    (delete-other-windows)))
+
+(keymap-global-set "C-x 1" #'jotain-nav-toggle-delete-other-windows)
 
 (provide 'init-navigation)
 ;;; init-navigation.el ends here

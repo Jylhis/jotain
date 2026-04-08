@@ -16,6 +16,13 @@
 (setq gc-cons-threshold most-positive-fixnum
       gc-cons-percentage 0.6)
 
+;; Disable bidirectional text scanning for LTR-only usage.  Emacs runs
+;; the bidirectional parenthesis algorithm on every redisplay otherwise,
+;; which adds noticeable cost in large files.
+(setq-default bidi-display-reordering nil
+              bidi-paragraph-direction 'left-to-right)
+(setopt bidi-inhibit-bpa t)
+
 ;; Don't bother validating .elc mtimes at startup, except in batch sessions
 ;; where stale .elc files cause hard-to-debug surprises.
 (setq load-prefer-newer noninteractive)
