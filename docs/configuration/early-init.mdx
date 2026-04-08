@@ -39,12 +39,25 @@ Prefer newer source files to stale `.elc` in batch mode only. Interactive sessio
 `package.el` stays on and `package-quickstart` is enabled — Nix (and, in dev, devenv) already provides most packages via `load-path`, so startup is fast without any trickery. `use-package` is built in on Emacs 29+, so the only thing we configure before `init.el` loads is imenu support and `use-package-always-ensure`.
 
 ```elisp
-(setq package-quickstart t)
+(setq package-quickstart-file
+      (expand-file-name "var/package-quickstart.el" user-emacs-directory)
+      package-quickstart t)
 (setq use-package-enable-imenu-support t
       use-package-always-ensure t)
 ```
 
+`package-quickstart-file` **must** be pinned here, not in `init.el`: `startup.el` runs its automatic `package-activate-all` between `early-init.el` and `init.el`, and looks up the quickstart file at whatever path `package-quickstart-file` holds at that moment. Leaving it at its default puts the file outside `var/`, and Emacs never finds it on later startups — quickstart ends up paying its refresh + byte-compile cost on every `package-install` without providing any actual speedup.
+
 With `use-package-always-ensure` set to `t`, every `use-package` block defaults to "install if missing". Built-ins must opt out with `:ensure nil`.
+
+### Silencing a quickstart false-positive
+
+`package-quickstart-refresh` (called after every `package-install` via `package--quickstart-maybe-refresh`) internally re-calls `package-initialize`, which trips the "Unnecessary call to `package-initialize` in init file" warning even though the call is legitimate. Emacs's own code can't distinguish that internal self-call from a user one, so we suppress the warning type directly:
+
+```elisp
+(with-eval-after-load 'warnings
+  (add-to-list 'warning-suppress-log-types '(package reinitialization)))
+```
 
 ## Frame chrome
 

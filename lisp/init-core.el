@@ -1,13 +1,34 @@
-;;; init-core.el --- Sane defaults, GC, encoding, no-littering -*- lexical-binding: t; -*-
+;;; init-core.el --- Sane defaults, GC, encoding, var/ paths -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 
 ;; Settings that don't belong to any one feature: garbage collection,
-;; encoding, file-handling defaults, custom-file location, the
-;; "var/" directory used by no-littering. No third-party UI here, no
-;; completion, no programming-mode tweaks — those have their own files.
+;; encoding, file-handling defaults, custom-file location, and the
+;; `var/' directory used to hold persistent state (recentf, savehist,
+;; save-place, bookmarks, …). No third-party UI here, no completion,
+;; no programming-mode tweaks — those have their own files.
 
 ;;; Code:
+
+;;;; Persistent-state directory
+;;
+;; Jotain used to pull in `no-littering' to shepherd 200-odd variables
+;; into `var/'. The actual set of paths *this* config writes is small
+;; and stable, so we theme the relevant vars by hand from each module.
+;; `jotain-var-file' is the single helper they share.
+
+(defconst jotain-var-dir
+  (expand-file-name "var/" user-emacs-directory)
+  "Directory for Jotain's persistent state files.")
+
+(defun jotain-var-file (name)
+  "Return NAME expanded under `jotain-var-dir'.
+Ensures the directory exists so callers can use the path
+immediately for writes."
+  (make-directory jotain-var-dir t)
+  (expand-file-name name jotain-var-dir))
+
+(make-directory jotain-var-dir t)
 
 ;; Restore a sane GC threshold after the early-init.el bump. 16 MiB is the
 ;; common compromise: high enough that typing/scrolling never trips a GC,
@@ -61,6 +82,14 @@
   (read-file-name-completion-ignore-case t)
   :config
   (context-menu-mode 1)
+  (line-number-mode 1)
+  (column-number-mode 1)
+  (minibuffer-depth-indicate-mode 1))
+
+(use-package saveplace
+  :ensure nil
+  :custom (save-place-file (jotain-var-file "save-place.el"))
+  :config
   (save-place-mode 1)
 
   ;; Recenter the buffer after `save-place-mode' restores the cursor —
@@ -80,13 +109,8 @@
                       #'jotain-core--recenter-buffer-window
                       (current-buffer))))
 
-  (with-eval-after-load 'saveplace
-    (advice-add 'save-place-find-file-hook :after
-                #'jotain-core--recenter-after-save-place))
-
-  (line-number-mode 1)
-  (column-number-mode 1)
-  (minibuffer-depth-indicate-mode 1))
+  (advice-add 'save-place-find-file-hook :after
+              #'jotain-core--recenter-after-save-place))
 
 ;; Load diminish early so other use-package blocks can use `:diminish'
 ;; without producing macroexpansion errors.
@@ -97,6 +121,7 @@
   :ensure nil
   :custom
   (auto-save-default nil)
+  (auto-save-list-file-prefix (jotain-var-file "auto-save-list/saves-"))
   (make-backup-files nil)
   (confirm-kill-processes nil)
   :hook (after-save . executable-make-buffer-file-executable-if-script-p)
@@ -167,23 +192,21 @@
 
 (use-package recentf
   :ensure nil
-  :custom (recentf-max-saved-items 200)
-  :config (recentf-mode 1))
+  :custom
+  (recentf-save-file (jotain-var-file "recentf-save.el"))
+  (recentf-max-saved-items 200)
+  :config
+  (recentf-mode 1)
+  (add-to-list 'recentf-exclude jotain-var-dir))
 
 (use-package savehist
   :ensure nil
+  :custom (savehist-file (jotain-var-file "savehist.el"))
   :config (savehist-mode 1))
 
-;; no-littering keeps autosaves, backups, eln-cache, recentf, and friends
-;; under var/ and etc/ instead of scattering them across user-emacs-directory.
-;; Required *here* (not deferred) so every later module sees the redirected
-;; paths from the moment it loads.
-(use-package no-littering
-  :demand t
-  :config
-  (require 'recentf)
-  (add-to-list 'recentf-exclude no-littering-var-directory)
-  (add-to-list 'recentf-exclude no-littering-etc-directory))
+(use-package bookmark
+  :ensure nil
+  :custom (bookmark-default-file (jotain-var-file "bookmarks.el")))
 
 (provide 'init-core)
 ;;; init-core.el ends here

@@ -13,6 +13,9 @@
 ;; busiest commands. Tiny, no daemon, no network.
 (use-package keyfreq
   :diminish keyfreq-mode
+  :custom
+  (keyfreq-file (jotain-var-file "keyfreq.el"))
+  (keyfreq-file-lock (jotain-var-file "keyfreq.lock"))
   :config
   (keyfreq-mode 1)
   (keyfreq-autosave-mode 1))

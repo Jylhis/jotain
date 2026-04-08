@@ -49,6 +49,7 @@
 (use-package logview
   :defer t
   :custom
+  (logview-cache-filename (jotain-var-file "logview-cache"))
   (logview-additional-submodes
    '(("ROS2" (format . "[LEVEL] [TIMESTAMP] [NAME]:")
              (levels . "SLF4J")
