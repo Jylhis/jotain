@@ -1,0 +1,76 @@
+---
+title: init.el
+description: Main Emacs configuration entry point
+---
+
+# init.el
+
+`init.el` is deliberately tiny. Its only jobs are:
+
+1. Register MELPA, MELPA-stable, and NonGNU ELPA as fallback archives for anything Nix does not ship.
+2. Put `lisp/` on the load-path.
+3. Point `custom-file` at `var/custom.el` so `M-x customize` has somewhere to scribble.
+4. Handle the bootstrap guard for the first run after `just clean-all`.
+5. `require` each module in the right order.
+
+Everything else — GC, encoding, theme, modeline, keybindings, package configuration — lives in `early-init.el` or one of the `lisp/init-*.el` modules.
+
+## Package archives
+
+```elisp
+(require 'package)
+(add-to-list 'package-archives '("melpa"        . "https://melpa.org/packages/")        t)
+(add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+(add-to-list 'package-archives '("nongnu"       . "https://elpa.nongnu.org/nongnu/")    t)
+```
+
+Nix (or the devenv shell in development) provides most packages via `load-path`, so `use-package` finds them without touching the network. The archives above only come into play for packages that Nix does not ship.
+
+## Load path
+
+```elisp
+(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
+```
+
+## Custom file
+
+```elisp
+(setq custom-file (locate-user-emacs-file "var/custom.el"))
+```
+
+`custom.el` is write-only: Jotain never loads it back. The declarative config in git remains the single source of truth; the file exists only so `M-x customize` has somewhere to scribble without touching `init.el`.
+
+## Bootstrap guard
+
+After `just clean-all` removes `elpa/` and friends, the package-quickstart file can be absent or broken from a partially-completed prior bootstrap. `init.el` detects this with a simple heuristic (`diminish` not yet installed) and, on that run only, disables `package-quickstart`, wipes any stale `package-quickstart.el(c)`, runs `package-initialize` once, and regenerates the quickstart file at the end of startup.
+
+## Module loading
+
+`init.el` then `require`s each module in order. See [Modules](/architecture/modules) for what each file owns and the full load order.
+
+```elisp
+(require 'init-core)         ; GC, encoding, no-littering, sane defaults
+(require 'init-keys)         ; Global keymap and leader-key setup
+(require 'init-ui)           ; Theme, modeline, fonts, frame tweaks
+(require 'init-help)         ; helpful + built-in help tweaks
+(require 'init-editing)      ; Electric pairs, delsel, whitespace, region tools
+(require 'init-completion)   ; Vertico, marginalia, orderless, consult, corfu
+(require 'init-navigation)   ; Dired + dirvish, project, windmove, winner
+(require 'init-vc)           ; vc + magit + diff-hl + forge
+(require 'init-prog)         ; prog-mode, treesit, eglot, flymake, eldoc, compile
+(require 'init-project)      ; project + projection + compile-multi
+(require 'init-ai)           ; claude-code-ide, gptel, mcp
+(require 'init-shell)        ; eshell, vterm, comint
+(require 'init-systems)      ; sops, logview, auth-source-1password
+(require 'init-tracking)     ; keyfreq, wakatime, activity-watch
+(require 'init-writing)      ; jinx, markdown-mode, denote, pdf-tools
+(require 'init-org)          ; org, org-modern, capture templates
+
+(require 'init-lang-nix)
+(require 'init-lang-rust)
+(require 'init-lang-python)
+(require 'init-lang-web)
+(require 'init-lang-devops)
+(require 'init-lang-data)
+(require 'init-lang-systems)
+```
