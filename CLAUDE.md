@@ -29,7 +29,7 @@ All day-to-day work goes through the `Justfile`:
 - `just fmt` — `treefmt` (Nix formatting via `nixfmt-rfc-style`).
 - `just update-pins` / `just update-pin NAME` — refresh `npins/`.
 - `just clean` — remove `*.elc`, autosaves, `eln-cache`, `result` symlink.
-- `just clean-all` — additionally wipe `elpa/`, `var/`, `etc/`, forcing a full re-fetch. After this, the next `just run` goes through the `jotain--bootstrapping-p` branch in `init.el`.
+- `just clean-all` — additionally wipe `elpa/` and `var/`, forcing a full re-fetch. The next `just run` will hit every MELPA package fresh, so expect the first startup to be slow.
 
 Build recipes (all via `nix-build`, targeting current system by default; override with `just system=x86_64-linux …`):
 
@@ -44,9 +44,9 @@ There's also a `devenv-emacs-smoke` script (defined in `devenv.nix`) that byte-c
 
 ### Elisp layer — three parts
 
-1. **`early-init.el`** runs before `package.el`, before the first frame, before `init.el`. It sets the startup GC threshold to `most-positive-fixnum`, disables bidi reordering, sets `use-package-always-ensure = t` and `package-quickstart = t`, disables the menu/tool/scroll bars *before* the first frame draws, redirects `native-comp` eln-cache to `var/eln-cache/`, and aliases `xterm-ghostty` → `xterm-256color` for terminal Emacs under Ghostty.
+1. **`early-init.el`** runs before `package.el`, before the first frame, before `init.el`. It sets the startup GC threshold to `most-positive-fixnum`, disables bidi reordering, sets `use-package-always-ensure = t`, **pins `package-quickstart-file` to `var/package-quickstart.el`** so `startup.el`'s automatic `package-activate-all` actually finds it (the default path is outside `var/`, so without the pin quickstart never gets loaded), disables the menu/tool/scroll bars *before* the first frame draws, redirects `native-comp` eln-cache to `var/eln-cache/`, adds `(package reinitialization)` to `warning-suppress-log-types` to silence the false-positive warning emitted by `package-quickstart-refresh`, and aliases `xterm-ghostty` → `xterm-256color` for terminal Emacs under Ghostty.
 
-2. **`init.el`** is deliberately tiny. It registers MELPA/NonGNU as fallback archives, puts `lisp/` on `load-path`, points `custom-file` at `var/custom.el` (**write-only** — never loaded back, so the declarative config in git is the single source of truth), and `require`s each module in order. It also has a **bootstrap guard** (`jotain--bootstrapping-p`) that disables `package-quickstart` on the first run after `just clean-all` because a partially-written quickstart file prevents subsequent package installs from working.
+2. **`init.el`** is deliberately tiny. It registers MELPA/NonGNU as fallback archives, puts `lisp/` on `load-path`, points `custom-file` at `var/custom.el` (**write-only** — never loaded back, so the declarative config in git is the single source of truth), refreshes archive contents on first run, and `require`s each module in order.
 
 3. **`lisp/init-*.el`** — one file per concern. See load order and responsibilities in `docs/architecture/modules.mdx`.
 

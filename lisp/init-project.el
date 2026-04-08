@@ -23,6 +23,7 @@
 (use-package project
   :ensure nil
   :custom
+  (project-list-file (jotain-var-file "projects.el"))
   (project-buffers-viewer 'project-list-buffers-ibuffer)
   (project-vc-extra-root-markers
    '(".project" "package.json" "Cargo.toml" "pyproject.toml" "flake.nix")))

@@ -198,13 +198,12 @@ clean:
     rm -f  {{config_dir}}/result        2>/dev/null || true
     echo "Cleaned compiled artifacts."
 
-# Nuke installed packages and no-littering state — forces a full re-fetch.
+# Nuke installed packages and persistent state — forces a full re-fetch.
 [group('clean')]
 clean-all: clean
     #!/usr/bin/env bash
     set -euo pipefail
     rm -rf {{config_dir}}/elpa      2>/dev/null || true
     rm -rf {{config_dir}}/var       2>/dev/null || true
-    rm -rf {{config_dir}}/etc       2>/dev/null || true
     rm -rf {{config_dir}}/.dev-home 2>/dev/null || true
-    echo "Nuked elpa/, var/, etc/, .dev-home/."
+    echo "Nuked elpa/, var/, .dev-home/."

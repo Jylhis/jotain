@@ -10,8 +10,7 @@ description: Main Emacs configuration entry point
 1. Register MELPA, MELPA-stable, and NonGNU ELPA as fallback archives for anything Nix does not ship.
 2. Put `lisp/` on the load-path.
 3. Point `custom-file` at `var/custom.el` so `M-x customize` has somewhere to scribble.
-4. Handle the bootstrap guard for the first run after `just clean-all`.
-5. `require` each module in the right order.
+4. Refresh archive contents on first run, then `require` each module in the right order.
 
 Everything else — GC, encoding, theme, modeline, keybindings, package configuration — lives in `early-init.el` or one of the `lisp/init-*.el` modules.
 
@@ -40,16 +39,12 @@ Nix (or the devenv shell in development) provides most packages via `load-path`,
 
 `custom.el` is write-only: Jotain never loads it back. The declarative config in git remains the single source of truth; the file exists only so `M-x customize` has somewhere to scribble without touching `init.el`.
 
-## Bootstrap guard
-
-After `just clean-all` removes `elpa/` and friends, the package-quickstart file can be absent or broken from a partially-completed prior bootstrap. `init.el` detects this with a simple heuristic (`diminish` not yet installed) and, on that run only, disables `package-quickstart`, wipes any stale `package-quickstart.el(c)`, runs `package-initialize` once, and regenerates the quickstart file at the end of startup.
-
 ## Module loading
 
 `init.el` then `require`s each module in order. See [Modules](/architecture/modules) for what each file owns and the full load order.
 
 ```elisp
-(require 'init-core)         ; GC, encoding, no-littering, sane defaults
+(require 'init-core)         ; GC, encoding, var/ paths, sane defaults
 (require 'init-keys)         ; Global keymap and leader-key setup
 (require 'init-ui)           ; Theme, modeline, fonts, frame tweaks
 (require 'init-help)         ; helpful + built-in help tweaks

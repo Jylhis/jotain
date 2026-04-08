@@ -31,7 +31,25 @@
 ;; packages via load-path, so they load instantly without touching the
 ;; network. Anything Nix doesn't ship falls through to MELPA at install
 ;; time — see init.el for the archive list.
-(setq package-quickstart t)
+;;
+;; `package-quickstart-file' must be pinned HERE, before `startup.el' runs
+;; its automatic `package-activate-all'. Without this pin the file ends up
+;; at its default `<user-emacs-directory>/package-quickstart.el' path,
+;; which is outside `var/' and never gets loaded — quickstart then pays
+;; its refresh + byte-compile cost on every `package-install' without
+;; providing any startup speedup.
+(setq package-quickstart-file
+      (expand-file-name "var/package-quickstart.el" user-emacs-directory)
+      package-quickstart t)
+
+;; `package-quickstart-refresh' (called after every `package-install' via
+;; `package--quickstart-maybe-refresh') internally re-calls
+;; `package-initialize', which trips the user-facing "Unnecessary call to
+;; `package-initialize' in init file" warning as a false positive. There
+;; is no way to distinguish the legitimate internal call from a user one,
+;; so suppress the warning type directly.
+(with-eval-after-load 'warnings
+  (add-to-list 'warning-suppress-log-types '(package reinitialization)))
 
 ;; use-package is built in since Emacs 29; configure it before init.el
 ;; loads any `use-package` form. `always-ensure' means every block defaults

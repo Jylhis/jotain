@@ -52,8 +52,19 @@
 (use-package forge
   :after magit
   :custom
+  (forge-database-file (jotain-var-file "forge/database.sqlite"))
+  (forge-post-directory (jotain-var-file "forge/posts/"))
   ;; Use the built-in sqlite (Emacs 30+) instead of the external emacsql.
   (forge-database-connector 'emacsql-sqlite-builtin))
+
+;; transient is the menu system magit/forge are built on. Theme its
+;; three state files under var/ so they don't drop at the repo root.
+(use-package transient
+  :ensure nil
+  :custom
+  (transient-history-file (jotain-var-file "transient/history.el"))
+  (transient-values-file  (jotain-var-file "transient/values.el"))
+  (transient-levels-file  (jotain-var-file "transient/levels.el")))
 
 (use-package diff-hl
   :after magit
