@@ -39,9 +39,22 @@
 ;; `M-x customize' has somewhere to scribble without touching init.el.
 (setq custom-file (locate-user-emacs-file "var/custom.el"))
 
-;; After a clean install (`just clean-all'), the package archive index is
-;; empty. Refresh it so use-package / package-install can locate packages.
-(when (not package-archive-contents)
+;; Bootstrap guard: after `just clean-all' the quickstart file may be absent
+;; or broken from a partially-completed prior bootstrap. Disable quickstart
+;; during bootstrap so each package-install doesn't regenerate a broken
+;; quickstart file that prevents subsequent installs from working.
+(defvar jotain--bootstrapping-p (not (package-installed-p 'diminish))
+  "Non-nil during the first successful run after `just clean-all'.")
+
+(when jotain--bootstrapping-p
+  (setq package-quickstart nil)
+  (let ((qs (locate-user-emacs-file "package-quickstart.el"))
+        (qsc (locate-user-emacs-file "package-quickstart.elc")))
+    (when (file-exists-p qs)  (delete-file qs))
+    (when (file-exists-p qsc) (delete-file qsc)))
+  (package-initialize))
+
+(unless package-archive-contents
   (package-refresh-contents))
 
 (require 'init-core)         ; GC, encoding, no-littering, sane defaults
@@ -71,6 +84,12 @@
 (require 'init-lang-devops)    ; Dockerfile, terraform, just, ansible
 (require 'init-lang-data)      ; yaml, csv, sql, jinja2, gnuplot
 (require 'init-lang-systems)   ; Go, C/C++, CMake, Haskell
+
+;; After a successful bootstrap, re-enable quickstart and generate a valid
+;; file so subsequent startups are fast again.
+(when jotain--bootstrapping-p
+  (setq package-quickstart t)
+  (package-quickstart-refresh))
 
 (provide 'init)
 ;;; init.el ends here
