@@ -52,6 +52,18 @@ let
     }
   );
 
+  # Path the Jotain config is installed to via xdg.configFile below.
+  # Pinning --init-directory to this location prevents Emacs from
+  # falling back to a stray ~/.emacs.d/ on the user's machine.
+  initDirectory = "${config.xdg.configHome}/emacs";
+
+  # Wrapper around `emacs` that always passes --init-directory, so the
+  # daemon and any interactive `emacs` invocation pick up Jotain
+  # regardless of Emacs's user-emacs-directory discovery order.
+  emacsWrapper = pkgs.writeShellScriptBin "emacs" ''
+    exec ${emacsBinPath}/emacs --init-directory=${lib.escapeShellArg initDirectory} "$@"
+  '';
+
   # Wrapper script that launches emacsclient with a sensible default
   # (--create-frame) when invoked without arguments.
   editorScript = pkgs.writeShellScriptBin "jotain-editor" ''
@@ -131,8 +143,19 @@ in
     home.packages = [
       cfg.package
       editorScript
+      # hiPrio so the wrapped `emacs` shadows the unwrapped binary
+      # that ships inside cfg.package.
+      (lib.hiPrio emacsWrapper)
     ]
     ++ lib.optional (cfg.client.enable && pkgs.stdenv.isLinux) (lib.hiPrio clientDesktopItem);
+
+    # Install the Jotain Emacs configuration into ~/.config/emacs so the
+    # daemon picks up early-init.el, init.el and the lisp/ modules.
+    xdg.configFile = {
+      "emacs/early-init.el".source = ./early-init.el;
+      "emacs/init.el".source = ./init.el;
+      "emacs/lisp".source = ./lisp;
+    };
 
     systemd.user.services.jotain = {
       Unit = {
@@ -154,7 +177,7 @@ in
 
         # Wrap in a login shell so Emacs inherits the user's
         # environment ($PATH, $NIX_PROFILES, etc.).
-        ExecStart = ''${pkgs.runtimeShell} -l -c "${emacsBinPath}/emacs --fg-daemon${lib.optionalString cfg.socketActivation.enable "=${lib.escapeShellArg socketPath}"} ${lib.escapeShellArgs cfg.extraOptions}"'';
+        ExecStart = ''${pkgs.runtimeShell} -l -c "${emacsWrapper}/bin/emacs --fg-daemon${lib.optionalString cfg.socketActivation.enable "=${lib.escapeShellArg socketPath}"} ${lib.escapeShellArgs cfg.extraOptions}"'';
 
         # Emacs exits with status 15 after SIGTERM.
         SuccessExitStatus = 15;
@@ -201,7 +224,7 @@ in
       enable = true;
       config = {
         ProgramArguments = [
-          "${cfg.package}/bin/emacs"
+          "${emacsWrapper}/bin/emacs"
           "--fg-daemon"
         ]
         ++ cfg.extraOptions;
