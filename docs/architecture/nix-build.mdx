@@ -1,0 +1,73 @@
+---
+title: Nix Build System
+description: How Jotain builds Emacs from source using Nix
+---
+
+# Nix Build System
+
+Jotain uses Nix for reproducible Emacs builds with fine-grained control over compile options. The source of nixpkgs is the npins-pinned `nixpkgs-unstable` channel by default; pass `--arg pkgs '<nixpkgs>'` or override `pkgs` to use a different one.
+
+## Two-Layer Architecture
+
+### emacs.nix
+
+The core build expression. It takes `pkgs.emacs30` (or `pkgs.emacs30-macport` for the macport variant) and calls `.override { ... }` with every upstream build flag exposed as a file-level argument.
+
+Supported:
+
+- **Source variants**: `mainline` (Emacs 30 release, default, binary-cached), `git` (bleeding-edge master from git.savannah.gnu.org), `unstable` (latest release tag built from git source), `macport` (jdtsmith/emacs-mac fork), `igc` (feature/igc3 — the Memory Pool System incremental GC branch).
+- **GUI toolkits**: GTK3, pgtk (pure GTK for Wayland), NS (Cocoa/NeXTstep on macOS), Motif, Athena, X11, or no GUI at all (`noGui = true`).
+- **Compilation**: native compilation (libgccjit AOT, default when the build platform can execute the host), compressed install, C sources for `find-function-C-source`, `srcRepo` (run autoreconf on git-based sources).
+- **Image formats**: WebP (default), Cairo (X11 default), optionally ImageMagick.
+- **Libraries**: tree-sitter, SQLite3, Jansson (off — Emacs 30+ ships JSON), dbus, selinux, gpm, ALSA, ACL, mailutils, systemd, GLib networking.
+- **Darwin patches**: optional `system-appearance`, `round-undecorated-frame`, and `fix-window-role` patches fetched from `nix-giant/nix-darwin-emacs`, applied via `overrideAttrs`.
+
+### Cache-parity invariant
+
+`emacs.nix` is written so that every argument default matches the corresponding default in upstream nixpkgs' `make-emacs.nix`. As long as that holds,
+
+```nix
+import ./emacs.nix {}                  # mainline
+import ./emacs.nix { noGui = true; }   # any standard override
+```
+
+produces the *exact* store path of `pkgs.emacs30(.override { ... })`, so the public binary cache hits and nothing recompiles from source. Only the `git` / `unstable` / `igc` / `macport` variants and the Darwin patch flags are expected to diverge — those paths run through `overrideAttrs` and intentionally bust the cache.
+
+Verify after any change to defaults:
+
+```bash
+nix-instantiate --eval --strict -E \
+  '(import ./emacs.nix {}).outPath
+     == (import (import ./npins).nixpkgs-unstable {}).emacs30.outPath'
+```
+
+### default.nix
+
+The distribution layer. It imports `emacs.nix` (forwarding every argument it does not consume itself) and, when `withTreeSitterGrammars` is `true` (default), wraps the result with `emacsPackagesFor emacs |> withPackages (epkgs: [ epkgs.treesit-grammars.with-all-grammars ])`. The resulting Emacs loads all ~275 grammars out of the box; `early-init.el` wires them in via `TREE_SITTER_DIR` / `treesit-extra-load-path`.
+
+## Key Build Options
+
+| Option | Default | Description |
+|---|---|---|
+| `variant` | `"mainline"` | Emacs source variant — `mainline` / `git` / `unstable` / `macport` / `igc` |
+| `withTreeSitterGrammars` | `true` | (default.nix) include all tree-sitter grammars |
+| `noGui` | `false` | Terminal only — `--without-x --without-ns` |
+| `withPgtk` | `false` | Pure GTK (Wayland) — `--with-pgtk` |
+| `withGTK3` | `withPgtk && !noGui` | GTK3 toolkit — `--with-x-toolkit=gtk3` |
+| `withNativeCompilation` | auto | libgccjit AOT compilation |
+| `withTreeSitter` | `true` | Built-in tree-sitter support |
+| `withSystemd` | Linux | `--with-systemd` (journal support) |
+| `withSystemAppearancePatch` | `false` | (Darwin) add `ns-system-appearance` hooks |
+| `withRoundUndecoratedFramePatch` | `false` | (Darwin) rounded borderless frames |
+| `withFixWindowRolePatch` | `false` | (Darwin, Emacs 30 only) fix NSAccessibility role for tiling WMs |
+| `rev` / `hash` | `null` | Pin a specific commit for `git` / `unstable` / `igc` / `macport` variants |
+
+See `emacs.nix` for the complete argument list and defaults.
+
+## IGC Variant
+
+The `igc` variant builds Emacs's `feature/igc3` branch, which replaces the default mark-and-sweep garbage collector with the [Memory Pool System](https://memory-pool-system.readthedocs.io). `emacs.nix` adds `--with-mps=yes` to `configureFlags` and `pkgs.mps` to `buildInputs` when `variant = "igc"`, so the only manual step is providing the source hash on first build.
+
+## Git Variants
+
+For `git`, `unstable`, and `igc`, `emacs.nix` fetches from `https://git.savannah.gnu.org/git/emacs.git` via `fetchgit`. The first build reports the correct hash; re-run with `--argstr hash "sha256-..."` (or edit the `gitMeta` attrset). `postPatch` substitutes the recorded revision into `lisp/loadup.el` so `emacs-repository-get-version` returns the expected value without a `.git` directory in the build tree. On `aarch64-linux`, git builds automatically get `--enable-check-lisp-object-type` added to avoid segfaults.

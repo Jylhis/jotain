@@ -1,0 +1,53 @@
+---
+title: Packages
+description: How packages are managed in Jotain
+---
+
+# Packages
+
+Jotain is a "use-package + Nix" configuration: Nix (or, in development, the devenv shell) provides most packages on `load-path`, so `use-package` finds them without touching the network; anything Nix does not ship falls through to MELPA at install time.
+
+## Provenance
+
+- **Built-in to Emacs 30+** — always opt out of installation with `:ensure nil`.
+- **Provided by Nix** — built through `emacsPackagesFor` in `devenv.nix` (e.g. `claude-code-ide`, `combobulate`, the tree-sitter grammars). These also use `:ensure nil` because Nix already put them on the load path.
+- **MELPA / NonGNU ELPA fallback** — every other `use-package` block. `use-package-always-ensure` is `t` (set in `early-init.el`), so these default to "install if missing" without any extra boilerplate. Archives are registered in `init.el`:
+
+  ```elisp
+  (add-to-list 'package-archives '("melpa"        . "https://melpa.org/packages/")        t)
+  (add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+  (add-to-list 'package-archives '("nongnu"       . "https://elpa.nongnu.org/nongnu/")    t)
+  ```
+
+## Tree-sitter grammars
+
+When built with `default.nix` (the full distribution — `just build` and friends), Jotain ships *every* tree-sitter grammar in nixpkgs via `emacsPackagesFor emacs |> withPackages (epkgs: [ epkgs.treesit-grammars.with-all-grammars ])`. The grammar bundle is exposed through `TREE_SITTER_DIR`; `early-init.el` picks that up and adds it to `treesit-extra-load-path` so every built-in `*-ts-mode` finds its grammar out of the box.
+
+## Packages that live in Nix
+
+`devenv.nix` defines a small set of Elisp packages that are not on any archive (MELPA, GNU ELPA, NonGNU ELPA), so Nix builds them directly and puts them on `load-path`:
+
+- **`claude-code-ide`** — fetched from `manzaltu/claude-code-ide.el`, built with `websocket` and `web-server` as runtime dependencies (`transient` is built in to Emacs 30+).
+- **`combobulate`** — fetched from `mickeynp/combobulate`; all its dependencies (`seq`, `map`, `treesit`) are built in to Emacs 30+.
+
+Both are consumed by `use-package ... :ensure nil` blocks in the relevant `init-*.el` module.
+
+## The devenv shell
+
+Running inside `devenv shell` (or via `direnv` / `.envrc`) gives you the same Emacs that `just build-bare` produces, plus `claude-code-ide`, `combobulate`, and all tree-sitter grammars. `devenv.nix` enables the custom `languages.emacs-lisp` module (from `nix/devenv-emacs-lisp.nix`) which also provides `eask-cli`; `ellsp` (LSP) and `elsa` (static analyser) are off by default — toggle them in `devenv.nix` if you want them.
+
+## Adding a new package
+
+Most of the time you just need a `use-package` block in the appropriate `init-*.el` module — `:ensure t` is implicit thanks to `use-package-always-ensure`:
+
+```elisp
+(use-package some-package
+  :mode "\\.ext\\'"
+  :custom
+  (some-package-option t)
+  :config
+  ;; configuration here
+  )
+```
+
+If the package is not on any archive, add it to the `overrideScope` block in `devenv.nix` with `trivialBuild` so it is built from a pinned GitHub revision and available on `load-path`, then declare it with `:ensure nil` in the module.

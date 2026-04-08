@@ -1,0 +1,115 @@
+---
+title: early-init.el
+description: Pre-package, pre-GUI initialisation
+---
+
+# early-init.el
+
+`early-init.el` is loaded before `package.el` runs, before the first frame is drawn, and before `init.el` is evaluated. Anything that *must* happen that early lives here; everything else lives in `init.el` or one of the `lisp/init-*.el` modules.
+
+## Garbage collection
+
+The GC threshold is bumped to "effectively never" during startup; `init-core` restores a 16 MiB runtime value.
+
+```elisp
+(setq gc-cons-threshold most-positive-fixnum
+      gc-cons-percentage 0.6)
+```
+
+## Bidirectional text
+
+Jotain targets LTR-only usage, so disable the bidirectional reordering and parenthesis algorithms — they otherwise run on every redisplay and are measurable on large files.
+
+```elisp
+(setq-default bidi-display-reordering nil
+              bidi-paragraph-direction 'left-to-right)
+(setopt bidi-inhibit-bpa t)
+```
+
+## Load preference
+
+Prefer newer source files to stale `.elc` in batch mode only. Interactive sessions keep `.elc` preference for speed.
+
+```elisp
+(setq load-prefer-newer noninteractive)
+```
+
+## package.el and use-package
+
+`package.el` stays on and `package-quickstart` is enabled — Nix (and, in dev, devenv) already provides most packages via `load-path`, so startup is fast without any trickery. `use-package` is built in on Emacs 29+, so the only thing we configure before `init.el` loads is imenu support and `use-package-always-ensure`.
+
+```elisp
+(setq package-quickstart t)
+(setq use-package-enable-imenu-support t
+      use-package-always-ensure t)
+```
+
+With `use-package-always-ensure` set to `t`, every `use-package` block defaults to "install if missing". Built-ins must opt out with `:ensure nil`.
+
+## Frame chrome
+
+GUI chrome is disabled in `default-frame-alist` *before* the first frame is drawn — this is much faster than toggling the modes off afterwards.
+
+```elisp
+(push '(menu-bar-lines . 0) default-frame-alist)
+(push '(tool-bar-lines . 0) default-frame-alist)
+(push '(vertical-scroll-bars) default-frame-alist)
+(when (featurep 'ns)
+  (push '(ns-transparent-titlebar . t) default-frame-alist)
+  (push '(ns-appearance . dark) default-frame-alist))
+
+(setq inhibit-startup-screen t
+      inhibit-startup-message t
+      inhibit-startup-echo-area-message user-login-name
+      initial-scratch-message nil)
+```
+
+## Byte-compiler noise
+
+Silence obsolete-symbol warnings from third-party packages we do not control. Real warnings still surface.
+
+```elisp
+(setq byte-compile-warnings '(not obsolete))
+```
+
+## Font caches
+
+Trade a bit of RAM for smoother redisplay.
+
+```elisp
+(setq inhibit-compacting-font-caches t)
+(when (eq system-type 'darwin)
+  (setq ns-use-thin-smoothing t))
+```
+
+## Native compilation
+
+On Emacs 30 with native compilation available, keep the eln-cache out of the config directory, silence the firehose of async warnings during init, and crank native-comp speed.
+
+```elisp
+(when (and (fboundp 'native-comp-available-p)
+           (native-comp-available-p))
+  (setq native-comp-async-report-warnings-errors nil
+        native-comp-speed 2)
+  (when (fboundp 'startup-redirect-eln-cache)
+    (startup-redirect-eln-cache
+     (convert-standard-filename
+      (expand-file-name "var/eln-cache/" user-emacs-directory)))))
+```
+
+## Tree-sitter grammars
+
+Nix sets `TREE_SITTER_DIR` to point at the grammar bundle produced by `default.nix`; `early-init.el` picks it up and wires it into `treesit-extra-load-path`.
+
+```elisp
+(when-let* ((ts-dir (getenv "TREE_SITTER_DIR")))
+  (setq treesit-extra-load-path (list ts-dir)))
+```
+
+## Terminal aliases
+
+Ghostty advertises `TERM=xterm-ghostty`, but Emacs does not ship `term/xterm-ghostty.el`. Aliasing to `xterm-256color` makes `term/xterm.el` load instead, restoring `modifyOtherKeys` and 24-bit colour. This must be set in `early-init.el` because `tty-run-terminal-initialization` fires before `init.el`.
+
+```elisp
+(add-to-list 'term-file-aliases '("xterm-ghostty" . "xterm-256color"))
+```
