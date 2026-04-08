@@ -39,7 +39,6 @@ and the result is a face-attribute soup."
 (advice-add 'load-theme :before #'jotain-ui--disable-other-themes)
 
 (use-package modus-themes
-  :ensure nil ; Built-in since Emacs 28
   :demand t
   :custom
   (modus-themes-italic-constructs t)

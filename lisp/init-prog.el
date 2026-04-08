@@ -46,6 +46,8 @@
 ;; Combobulate: structural editing via treesit. Loaded on demand only —
 ;; enable per buffer with `M-x combobulate-mode' or via .dir-locals.el.
 (use-package combobulate
+  :ensure nil ; Provided by Nix; :vc fallback for non-Nix installs
+  :vc (:url "https://github.com/mickeynp/combobulate")
   :defer t
   :commands combobulate-mode
   :custom (combobulate-key-prefix "C-c o"))
@@ -126,7 +128,14 @@
         ("M-n"     . flymake-goto-next-error)
         ("M-p"     . flymake-goto-prev-error)
         ("C-c ! l" . flymake-show-buffer-diagnostics)
-        ("C-c ! p" . flymake-show-project-diagnostics)))
+        ("C-c ! p" . flymake-show-project-diagnostics))
+  :config
+  (defun jotain-prog--disable-flymake-byte-compile ()
+    "Disable `elisp-flymake-byte-compile' in non-file buffers like *scratch*."
+    (when (and (derived-mode-p 'emacs-lisp-mode)
+               (not buffer-file-name))
+      (remove-hook 'flymake-diagnostic-functions #'elisp-flymake-byte-compile t)))
+  (add-hook 'flymake-mode-hook #'jotain-prog--disable-flymake-byte-compile))
 
 (use-package eldoc
   :ensure nil

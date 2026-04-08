@@ -21,7 +21,8 @@
 ;; whole block a no-op when wakatime-cli is not on PATH, so you can
 ;; install Wakapi later without reconfiguring Emacs.
 (use-package wakatime-mode
-  :if (executable-find "wakatime-cli")
+  :if (and (executable-find "wakatime-cli")
+           (getenv "WAKATIME_API_KEY"))
   :diminish wakatime-mode
   :custom (wakatime-cli-path (executable-find "wakatime-cli"))
   :config (global-wakatime-mode))

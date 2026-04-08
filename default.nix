@@ -34,19 +34,10 @@ let
   emacsArgs = builtins.removeAttrs args [ "withTreeSitterGrammars" ];
   emacs = import ./emacs.nix emacsArgs;
 
-  # All tree-sitter grammars Emacs ships in nixpkgs (~275 of them).
-  # Uses the wiki-recommended `treesit-grammars.with-grammars'.
-  # See https://wiki.nixos.org/wiki/Emacs.
-  allTreeSitterGrammars =
-    epkgs:
-    epkgs.treesit-grammars.with-grammars (
-      grammars: builtins.attrValues (lib.filterAttrs (n: _: lib.hasPrefix "tree-sitter-" n) grammars)
-    );
-
 in
 if withTreeSitterGrammars then
   (pkgs.emacsPackagesFor emacs).withPackages (epkgs: [
-    (allTreeSitterGrammars epkgs)
+    epkgs.treesit-grammars.with-all-grammars
   ])
 else
   emacs
