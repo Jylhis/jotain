@@ -76,7 +76,7 @@ nix-instantiate --eval --strict -E \
 
 `devenv.nix` builds its own `jotainEmacs` (from `emacs.nix` + two MELPA-absent packages via `trivialBuild`: `claude-code-ide` and `combobulate`) and exposes it as the `emacs` binary on `PATH`. The custom `languages.emacs-lisp` module from `nix/devenv-emacs-lisp.nix` provides `eask-cli` alongside; `ellsp` and `elsa` are available but opt-in (both defaulted off in `devenv.nix`).
 
-`nix/jotain-service.nix` is a Home Manager module (`services.jotain`) for running Jotain as a user-session Emacs daemon with `emacsclient`; it supports systemd on Linux and launchd on macOS.
+`module.nix` is a Home Manager module (`services.jotain`) for running Jotain as a user-session Emacs daemon with `emacsclient`; it supports systemd on Linux and launchd on macOS.
 
 ### Pinning
 

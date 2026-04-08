@@ -1,8 +1,8 @@
-# nix/jotain-service.nix — Home Manager module for the Jotain Emacs daemon.
+# module.nix — Home Manager module for the Jotain Emacs daemon.
 #
 # Import this module from your home-manager configuration and enable:
 #
-#   imports = [ /path/to/jotain/nix/jotain-service.nix ];
+#   imports = [ /path/to/jotain/module.nix ];
 #
 #   services.jotain = {
 #     enable = true;
@@ -64,8 +64,8 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = import ../default.nix { inherit pkgs; };
-      defaultText = lib.literalExpression "import ../default.nix { inherit pkgs; }";
+      default = import ./default.nix { inherit pkgs; };
+      defaultText = lib.literalExpression "import ./default.nix { inherit pkgs; }";
       description = "The Jotain Emacs package to use.";
     };
 
