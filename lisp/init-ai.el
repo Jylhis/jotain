@@ -21,6 +21,7 @@
 ;;; Code:
 
 (use-package claude-code-ide
+  :ensure nil ; Provided by Nix
   :defer t
   :bind ("C-c C-'" . claude-code-ide-menu)
   :config

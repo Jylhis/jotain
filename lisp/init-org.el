@@ -75,6 +75,7 @@
   :custom
   (org-roam-directory (expand-file-name "org-roam/" org-directory))
   :config
+  (make-directory org-roam-directory t)
   (org-roam-db-autosync-mode 1))
 
 (provide 'init-org)

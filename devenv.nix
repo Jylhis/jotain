@@ -16,10 +16,52 @@ let
   # so the editor in dev matches whatever the build flavours produce.
   # For the full distribution including ~275 tree-sitter grammars,
   # use `import ./default.nix { ... }` instead.
-  jotainEmacs = import ./emacs.nix {
+  baseEmacs = import ./emacs.nix {
     inherit (pkgs.stdenv.hostPlatform) system;
     pkgs = pinned;
   };
+
+  # Emacs Lisp packages not available on any archive (MELPA, GNU ELPA,
+  # NonGNU ELPA). Nix provides them on load-path so use-package finds
+  # them without touching the network; the :vc keyword in each
+  # use-package block serves as a fallback for non-Nix installs.
+  epkgs = (pinned.emacsPackagesFor baseEmacs).overrideScope (
+    efinal: _eprev: {
+      claude-code-ide = efinal.trivialBuild {
+        pname = "claude-code-ide";
+        version = "0.2.6";
+        src = pinned.fetchFromGitHub {
+          owner = "manzaltu";
+          repo = "claude-code-ide.el";
+          rev = "5f12e60c6d2d1802c8c1b7944bbdf935d5db1364";
+          sha256 = "148xcrqff6khpwf8nnadcyvz8h6mk45xz1498k0wbzy80yzd2axn";
+        };
+        packageRequires = with efinal; [
+          websocket
+          web-server
+        ];
+        # transient is built-in to Emacs 30+
+      };
+
+      combobulate = efinal.trivialBuild {
+        pname = "combobulate";
+        version = "0-unstable-2026-01-26";
+        src = pinned.fetchFromGitHub {
+          owner = "mickeynp";
+          repo = "combobulate";
+          rev = "38773810b5e532f25d11c6d1af02c3a8dffeacd7";
+          sha256 = "0j647m17bwj4hia32nq650z7bpnxcg5bflk0z8r867qzmg8j6vc1";
+        };
+        # All dependencies (seq, map, treesit) are built-in to Emacs 30+
+      };
+    }
+  );
+
+  jotainEmacs = epkgs.withPackages (ep: [
+    ep.claude-code-ide
+    ep.combobulate
+    ep.treesit-grammars.with-all-grammars
+  ]);
 in
 {
   # The custom emacs-lisp language module lives in nix/. Importing it

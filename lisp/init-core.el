@@ -46,6 +46,9 @@
   (scroll-preserve-screen-position 1)
   (mouse-yank-at-point t)
   (kill-do-not-save-duplicates t)
+  (save-interprogram-paste-before-kill t)
+  (set-mark-command-repeat-pop t)
+  (redisplay-skip-fontification-on-input t)
   (enable-recursive-minibuffers t)
   (minibuffer-follows-selected-frame t)
   (minibuffer-prompt-properties
@@ -59,6 +62,28 @@
   :config
   (context-menu-mode 1)
   (save-place-mode 1)
+
+  ;; Recenter the buffer after `save-place-mode' restores the cursor —
+  ;; otherwise reopening a file can leave point on the bottom line.
+  ;; Deferred via a zero-delay timer because the window doesn't exist
+  ;; yet when `save-place-find-file-hook' fires.
+  (defun jotain-core--recenter-buffer-window (buffer)
+    "Recenter the window currently displaying BUFFER, if any."
+    (when-let* ((win (get-buffer-window buffer)))
+      (with-selected-window win
+        (ignore-errors (recenter)))))
+
+  (defun jotain-core--recenter-after-save-place (&rest _)
+    "Schedule a recenter after `save-place-mode' restores point."
+    (when buffer-file-name
+      (run-with-timer 0 nil
+                      #'jotain-core--recenter-buffer-window
+                      (current-buffer))))
+
+  (with-eval-after-load 'saveplace
+    (advice-add 'save-place-find-file-hook :after
+                #'jotain-core--recenter-after-save-place))
+
   (line-number-mode 1)
   (column-number-mode 1)
   (minibuffer-depth-indicate-mode 1))

@@ -39,7 +39,6 @@ and the result is a face-attribute soup."
 (advice-add 'load-theme :before #'jotain-ui--disable-other-themes)
 
 (use-package modus-themes
-  :ensure nil ; Built-in since Emacs 28
   :demand t
   :custom
   (modus-themes-italic-constructs t)
@@ -96,6 +95,10 @@ The first family that is actually installed wins."
 (add-hook 'server-after-make-frame-hook #'jotain-ui-apply-font)
 
 ;;;; Built-in display tweaks
+
+;; Don't draw cursors or highlight selections in non-focused windows.
+(setq-default cursor-in-non-selected-windows nil)
+(setopt highlight-nonselected-windows nil)
 
 (use-package display-line-numbers
   :ensure nil
