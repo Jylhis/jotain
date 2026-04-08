@@ -1,0 +1,70 @@
+---
+title: Installation
+description: How to build and install Jotain
+---
+
+# Installation
+
+Jotain uses [Nix](https://nixos.org/) to build Emacs from source, driven by a `Justfile` task runner. Development assumes a [devenv](https://devenv.sh) shell (managed by `direnv` via `.envrc`, or entered manually with `devenv shell`).
+
+## Prerequisites
+
+- [Nix package manager](https://nixos.org/download) with `nix-build` available
+- [just](https://github.com/casey/just) task runner (provided by the devenv shell)
+- [devenv](https://devenv.sh) (optional but recommended for development)
+
+All `just` recipes assume the devenv shell is active. If you do not use direnv, prefix any command with `devenv shell --`, e.g. `devenv shell -- just check`.
+
+## Building Emacs
+
+The default build targets the current system and includes every tree-sitter grammar from nixpkgs:
+
+```bash
+just build
+```
+
+This runs `nix-build --argstr system <current-system> default.nix`, which wraps `emacs.nix` with `emacsPackagesFor ... withPackages` to add `treesit-grammars.with-all-grammars`. For the plain Emacs 30 mainline build (the `emacs.nix` default), the store path is bit-for-bit identical to `pkgs.emacs30` on nixpkgs-unstable, so the public binary cache is hit and nothing recompiles from source.
+
+### Build Variants
+
+Every `emacs.nix` argument is forwarded through `default.nix`. The `Justfile` provides shortcuts for the common flavours:
+
+```bash
+just build          # mainline Emacs 30 + every grammar (default)
+just build-bare     # bare Emacs from emacs.nix — no grammars
+just build-pgtk     # --with-pgtk (pure GTK, Wayland)
+just build-gtk3     # --with-x-toolkit=gtk3 (X11 + GTK3)
+just build-nox      # --without-x --without-ns (terminal only)
+just build-macport  # jdtsmith/emacs-mac fork (Darwin only)
+just build-git      # bleeding-edge master from git.savannah.gnu.org
+just build-igc      # feature/igc3 MPS incremental GC branch
+just build-android  # aarch64-linux nox (Termux)
+```
+
+Or call `nix-build` directly with any argument the `emacs.nix` file accepts:
+
+```bash
+nix-build default.nix                                    # mainline + grammars
+nix-build default.nix --arg withTreeSitterGrammars false # grammars off
+nix-build emacs.nix  --arg withNativeCompilation false   # no native-comp
+nix-build emacs.nix  --arg variant '"git"'               # master
+nix-build emacs.nix  --arg variant '"igc"'               # MPS GC branch
+nix-build emacs.nix  --arg variant '"macport"'           # macOS macport fork
+```
+
+<Note>
+For `git`/`unstable`/`igc` variants the first build will fail and report the expected hash. Re-run with `--argstr hash "sha256-..."` (or edit `emacs.nix` to pin it).
+</Note>
+
+## Running
+
+Jotain is designed to be launched out of its own checkout via `--init-directory`, so it never touches `~/.emacs.d`.
+
+```bash
+just run                # launch Emacs with this config (GUI)
+just debug              # same, with --debug-init and debug-on-error
+just tty                # -nw terminal session (exercises kkp + clipetty)
+just run-built          # build for this platform, then launch result/bin/emacs
+```
+
+`just run` simply invokes `emacs --init-directory=<repo>`. The devenv shell ships the same Emacs that `just build-bare` produces, so running inside direnv is usually enough for day-to-day use — no `nix-build` required.

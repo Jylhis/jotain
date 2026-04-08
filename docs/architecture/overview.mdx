@@ -1,0 +1,58 @@
+---
+title: Overview
+description: How Jotain is structured
+---
+
+# Architecture Overview
+
+Jotain is organised into distinct layers, each with a clear responsibility.
+
+## File Structure
+
+```
+jotain/
+├── early-init.el       # Pre-package/GUI initialisation
+├── init.el             # Entry point — loads modules in order
+├── lisp/               # Modular Elisp config (init-*.el, one per concern)
+├── emacs.nix           # GNU Emacs build from source
+├── default.nix         # Distribution wrapper (Emacs + tree-sitter grammars)
+├── nix/
+│   ├── devenv-emacs-lisp.nix  # devenv language module for Elisp
+│   ├── ellsp.nix              # ellsp (Emacs LSP) package definition
+│   ├── elsa.nix               # elsa (Elisp static analyser)
+│   └── jotain-service.nix     # Home Manager module for the daemon
+├── devenv.nix          # Development shell
+├── devenv.yaml         # devenv inputs
+├── npins/              # Pinned source tree (nixpkgs-unstable, …)
+├── Justfile            # Task runner recipes
+├── docs/               # Mintlify documentation (this site)
+└── journal/            # Development journal entries
+```
+
+## Layers
+
+### Emacs Lisp Layer
+
+The Elisp configuration is split into three parts:
+
+1. **`early-init.el`** — loaded before `package.el`, before the first frame, before `init.el`. Handles anything that *must* happen that early: the startup GC threshold, `use-package-always-ensure`, frame chrome defaults, native-comp and eln-cache redirection, terminal aliases.
+
+2. **`init.el`** — tiny entry point. Registers MELPA/NonGNU ELPA as fallback archives, puts `lisp/` on the load-path, points `custom-file` at `var/custom.el` (write-only — never loaded back), and `require`s each module in order. A bootstrap guard handles the first run after `just clean-all`.
+
+3. **`lisp/init-*.el`** — one file per concern. See [Modules](/architecture/modules) for the full list and their responsibilities.
+
+### Nix Layer
+
+The Nix layer provides reproducible Emacs builds:
+
+1. **`emacs.nix`** — wraps `pkgs.emacs30` (or `pkgs.emacs30-macport`) with the full set of build flags exposed as arguments. A cache-parity invariant guarantees that `import ./emacs.nix {}` produces the same store path as `pkgs.emacs30`, so the default build is a cache hit. Divergent variants (`git`, `unstable`, `igc`, `macport`, Darwin patches) run through `overrideAttrs` and intentionally rebuild from source.
+
+2. **`default.nix`** — distribution wrapper. Imports `emacs.nix`, forwards every argument, and (by default) calls `emacsPackagesFor emacs |> withPackages (ep: [ ep.treesit-grammars.with-all-grammars ])` to produce an Emacs that ships every tree-sitter grammar in nixpkgs.
+
+3. **`nix/jotain-service.nix`** — Home Manager module that runs Jotain as a user-session Emacs daemon (`services.jotain`), generates a desktop entry for `emacsclient`, and can install itself as `EDITOR`/`VISUAL`. Supports systemd on Linux and launchd on macOS.
+
+### Development Layer
+
+- **`devenv.nix`** — development shell. Provides the local Emacs build (so `emacs` in the shell matches `just build-bare`), Nerd Fonts, `npins`, `nil`, `nixfmt-rfc-style`, and `treefmt`. Enables the custom `languages.emacs-lisp` module from `nix/devenv-emacs-lisp.nix`, which provides Emacs + `eask-cli` (with `ellsp` and `elsa` off by default).
+- **`Justfile`** — every recipe you run day-to-day: `run`, `debug`, `tty`, `check`, `compile`, `test`, the `build-*` matrix, `fmt`, `update-pins`, `clean`, `clean-all`.
+- **`npins/`** — pinned sources (at minimum `nixpkgs-unstable`). Updated with `just update-pins`.
