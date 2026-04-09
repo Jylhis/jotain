@@ -184,7 +184,7 @@
   (add-to-list 'warning-suppress-types '(envrc)))
 
 (use-package inheritenv
-  :demand t)
+  :defer t)
 
 ;; Async format-on-save via external formatters (ruff, nixfmt, rustfmt,
 ;; prettier, etc.). Replaces hand-rolled before-save hooks per language.
