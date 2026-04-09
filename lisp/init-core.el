@@ -12,11 +12,11 @@
 
 ;;;; Persistent-state directory
 ;;
-;; TODO: Can we remove this folder setup completely? and just use default folders.
 ;; Jotain used to pull in `no-littering' to shepherd 200-odd variables
 ;; into `var/'. The actual set of paths *this* config writes is small
 ;; and stable, so we theme the relevant vars by hand from each module.
-;; `jotain-var-file' is the single helper they share.
+;; `jotain-var-file' is the single helper they share (used across
+;; init-core, init-vc, init-project, init-systems, init-tracking).
 
 (defconst jotain-var-dir
   (expand-file-name "var/" user-emacs-directory)
