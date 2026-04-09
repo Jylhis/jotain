@@ -39,8 +39,16 @@
 ;; `M-x customize' has somewhere to scribble without touching init.el.
 (setq custom-file (locate-user-emacs-file "var/custom.el"))
 
+;; Don't refresh archives eagerly — it hits the network and drags in
+;; the entire url/tls/gpg stack (~8 s on a cold start).  use-package's
+;; :ensure machinery already calls `package-refresh-contents' on demand
+;; when a package-install fails because archives are stale.
+(defun jotain--package-refresh-once (&rest _)
+  "Refresh package archives once, then remove this advice."
+  (package-refresh-contents)
+  (advice-remove 'package-install #'jotain--package-refresh-once))
 (unless package-archive-contents
-  (package-refresh-contents))
+  (advice-add 'package-install :before #'jotain--package-refresh-once))
 
 (require 'init-core)         ; GC, encoding, var/ paths, sane defaults
 (require 'init-keys)         ; Global keymap and leader-key setup

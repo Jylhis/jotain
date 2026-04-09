@@ -9,16 +9,21 @@
 
 ;;; Code:
 
-(use-package dockerfile-mode)
+(use-package dockerfile-mode
+  :defer t)
 
-(use-package docker-compose-mode)
+(use-package docker-compose-mode
+  :defer t)
 
 (use-package terraform-mode
+  :defer t
   :mode "\\.tf\\'")
 
-(use-package gitlab-ci-mode)
+(use-package gitlab-ci-mode
+  :defer t)
 
-(use-package just-mode)
+(use-package just-mode
+  :defer t)
 
 ;; ansible-mode is a minor mode that hooks onto yaml-mode for playbooks.
 (use-package ansible
