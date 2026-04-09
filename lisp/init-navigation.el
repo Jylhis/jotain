@@ -50,11 +50,6 @@
   :config
   (dirvish-override-dired-mode 1))
 
-(use-package project
-  :ensure nil
-  :custom
-  (project-vc-extra-root-markers '(".project" "package.json" "Cargo.toml" "pyproject.toml" "flake.nix")))
-
 ;; Resize all sibling windows proportionally when splitting, instead
 ;; of always halving the current window.
 (setopt window-combination-resize t)
