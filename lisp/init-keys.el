@@ -48,10 +48,7 @@ positions, and focus are preserved during the swap."
    ("C-x C-z" . nil)
    ;; Window switching without the prefix dance.
    ("M-o" . other-window)
-   ("C-x j" . jotain-toggle-window-split)
-   ;; Scroll by a line, keeping point put.
-   ("M-p" . scroll-down-line)
-   ("M-n" . scroll-up-line)))
+   ("C-x j" . jotain-toggle-window-split)))
 
 ;; windmove: directional window switching with Shift-<arrow>. Ships with
 ;; Emacs, no reason not to turn it on globally.
