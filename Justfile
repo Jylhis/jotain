@@ -83,6 +83,49 @@ test:
         -f ert-run-tests-batch-and-exit
 
 
+# Benchmark startup: launch Emacs, collect metrics, print results.
+[group('check')]
+bench output="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    results="$(mktemp "${TMPDIR:-/tmp}/jotain-bench-results.XXXXXX")"
+    script="$(mktemp "${TMPDIR:-/tmp}/jotain-bench-script.XXXXXX")"
+    trap 'rm -f "$results" "$script"' EXIT
+
+    cat > "$script" << 'ELISP'
+    (add-hook 'emacs-startup-hook
+      (lambda ()
+        (let* ((init-time (float-time (time-subtract after-init-time before-init-time)))
+               (total-time (float-time (time-subtract (current-time) before-init-time)))
+               (gc-pct (if (> init-time 0) (* 100.0 (/ gc-elapsed init-time)) 0.0))
+               (pkg-count (if (bound-and-true-p package-activated-list)
+                              (length package-activated-list) 0))
+               (outfile (getenv "JOTAIN_BENCH_OUTPUT")))
+          (when outfile
+            (with-temp-file outfile
+              (insert
+               (format "Emacs Startup Benchmark\n")
+               (format "═══════════════════════════════════════\n")
+               (format "Init time            %.3f seconds\n" init-time)
+               (format "Total startup time   %.3f seconds\n" total-time)
+               (format "GC count             %d\n" gcs-done)
+               (format "GC time              %.3f seconds (%.1f%%)\n" gc-elapsed gc-pct)
+               (format "Features loaded      %d\n" (length features))
+               (format "Packages activated   %d\n" pkg-count))))
+          (kill-emacs 0))))
+    ELISP
+
+    JOTAIN_BENCH_OUTPUT="$results" \
+        emacs --init-directory={{config_dir}} -l "$script"
+
+    cat "$results"
+    if [ -n "{{output}}" ]; then
+        cp "$results" "{{output}}"
+        echo ""
+        echo "Results saved to {{output}}"
+    fi
+
+
 # ── Build (nix) ─────────────────────────────────────────────────────
 #
 # `default.nix' wraps `emacs.nix' with all tree-sitter grammars from
