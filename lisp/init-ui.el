@@ -102,8 +102,7 @@ The first family that is actually installed wins."
 
 (use-package display-line-numbers
   :ensure nil
-  :hook ((prog-mode conf-mode) . display-line-numbers-mode)
-  :custom (display-line-numbers-type 'relative))
+  :hook ((prog-mode conf-mode) . display-line-numbers-mode))
 
 (use-package pixel-scroll
   :ensure nil
@@ -159,9 +158,6 @@ The first family that is actually installed wins."
   (nerd-icons-completion-mode)
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
-(use-package nerd-icons-dired
-  :after nerd-icons
-  :hook (dired-mode . nerd-icons-dired-mode))
 
 (use-package nerd-icons-ibuffer
   :after nerd-icons

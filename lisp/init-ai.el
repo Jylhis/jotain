@@ -33,7 +33,6 @@
   (("C-c RET"   . gptel-send)
    ("C-c M-RET" . gptel-menu))
   :config
-  ;; TODO: Add also Codex and Gemini if possible
   ;; Anthropic (Claude) — primary backend.
   (setopt gptel-backend
           (gptel-make-anthropic "Claude"
