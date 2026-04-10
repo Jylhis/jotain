@@ -86,10 +86,10 @@ in
 
       home.packages = [ cfg.package ]
         ++ lib.optionals cfg.includeRuntimeDeps (
-          lspServers
+        lspServers
           ++ cliTools
           ++ fonts
-        );
+      );
 
       home.sessionVariables = lib.mkMerge [
         (lib.mkIf (!cfg.enableDaemon) {
@@ -107,7 +107,7 @@ in
     }
 
     # fonts.fontconfig is Linux-only in home-manager; nix-darwin doesn't have it
-    (lib.optionalAttrs (cfg.includeRuntimeDeps && pkgs.stdenv.isLinux) {
+    (lib.mkIf (cfg.includeRuntimeDeps && pkgs.stdenv.isLinux) {
       fonts.fontconfig.enable = true;
     })
   ]);
