@@ -159,6 +159,11 @@
   :custom
   (uniquify-buffer-name-style 'forward "Prefix identical buffer names with their directory path"))
 
+(use-package network-stream
+  :ensure nil
+  :custom
+  (network-security-level 'high "Enforce strict TLS/SSL policies against deprecated protocols or weak ciphers."))
+
 ;;; Essential packages
 (use-package super-save
   :ensure t
