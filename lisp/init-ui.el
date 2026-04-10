@@ -144,7 +144,14 @@ The first family that is actually installed wins."
 ;;;; Icons (Nerd Font glyphs in dired, ibuffer, corfu, marginalia)
 
 (use-package nerd-icons
-  :defer t)
+  :config
+  (when (display-graphic-p)
+    (when-let* ((nerd-font
+                 (cl-loop for (family . _height) in jotain-font-preferences
+                          when (and (string-match-p "Nerd Font" family)
+                                    (find-font (font-spec :family family)))
+                          return family)))
+      (setopt nerd-icons-font-family nerd-font))))
 
 (use-package nerd-icons-corfu
   :after (nerd-icons corfu)
