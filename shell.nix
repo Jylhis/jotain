@@ -80,6 +80,8 @@ let
 
     # Linters
     shellcheck
+    statix
+    deadnix
 
     # Tools
     ripgrep
