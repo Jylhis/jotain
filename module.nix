@@ -134,106 +134,112 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    home.sessionVariables = lib.mkIf cfg.defaultEditor {
-      EDITOR = "${lib.getBin editorScript}/bin/jotain-editor";
-      VISUAL = "${lib.getBin editorScript}/bin/jotain-editor";
-    };
-
-    home.packages = [
-      cfg.package
-      editorScript
-      # hiPrio so the wrapped `emacs` shadows the unwrapped binary
-      # that ships inside cfg.package.
-      (lib.hiPrio emacsWrapper)
-    ]
-    ++ lib.optional (cfg.client.enable && pkgs.stdenv.isLinux) (lib.hiPrio clientDesktopItem);
-
-    # Install the Jotain Emacs configuration into ~/.config/emacs so the
-    # daemon picks up early-init.el, init.el and the lisp/ modules.
-    xdg.configFile = {
-      "emacs/early-init.el".source = ./early-init.el;
-      "emacs/init.el".source = ./init.el;
-      "emacs/lisp".source = ./lisp;
-    };
-
-    systemd.user.services.jotain = {
-      Unit = {
-        Description = "Jotain Emacs text editor";
-        Documentation = "info:emacs man:emacs(1) https://gnu.org/software/emacs/";
-
-        After = lib.optional (cfg.startWithUserSession == "graphical") "graphical-session.target";
-        PartOf = lib.optional (cfg.startWithUserSession == "graphical") "graphical-session.target";
-
-        # Avoid killing the session, which may be full of unsaved buffers.
-        X-RestartIfChanged = false;
-      }
-      // lib.optionalAttrs needsSocketWorkaround {
-        RefuseManualStart = true;
+  config = lib.mkIf cfg.enable (lib.mkMerge [
+    {
+      home.sessionVariables = lib.mkIf cfg.defaultEditor {
+        EDITOR = "${lib.getBin editorScript}/bin/jotain-editor";
+        VISUAL = "${lib.getBin editorScript}/bin/jotain-editor";
       };
 
-      Service = {
-        Type = "notify";
+      home.packages = [
+        cfg.package
+        editorScript
+        # hiPrio so the wrapped `emacs` shadows the unwrapped binary
+        # that ships inside cfg.package.
+        (lib.hiPrio emacsWrapper)
+      ]
+      ++ lib.optional (cfg.client.enable && pkgs.stdenv.isLinux) (lib.hiPrio clientDesktopItem);
 
-        # Wrap in a login shell so Emacs inherits the user's
-        # environment ($PATH, $NIX_PROFILES, etc.).
-        ExecStart = ''${pkgs.runtimeShell} -l -c "${emacsWrapper}/bin/emacs --fg-daemon${lib.optionalString cfg.socketActivation.enable "=${lib.escapeShellArg socketPath}"} ${lib.escapeShellArgs cfg.extraOptions}"'';
-
-        # Emacs exits with status 15 after SIGTERM.
-        SuccessExitStatus = 15;
-
-        Restart = "on-failure";
-      }
-      // lib.optionalAttrs needsSocketWorkaround {
-        ExecStartPost = "${pkgs.coreutils}/bin/chmod --changes -w ${socketDir}";
-        ExecStopPost = "${pkgs.coreutils}/bin/chmod --changes +w ${socketDir}";
+      # Install the Jotain Emacs configuration into ~/.config/emacs so the
+      # daemon picks up early-init.el, init.el and the lisp/ modules.
+      xdg.configFile = {
+        "emacs/early-init.el".source = ./early-init.el;
+        "emacs/init.el".source = ./init.el;
+        "emacs/lisp".source = ./lisp;
       };
     }
-    // lib.optionalAttrs (cfg.startWithUserSession != false) {
-      Install = {
-        WantedBy = [
-          (if cfg.startWithUserSession == true then "default.target" else "graphical-session.target")
-        ];
-      };
-    };
 
-    systemd.user.sockets.jotain = lib.mkIf cfg.socketActivation.enable {
-      Unit = {
-        Description = "Jotain Emacs text editor";
-        Documentation = "info:emacs man:emacs(1) https://gnu.org/software/emacs/";
-      };
+    (lib.mkIf pkgs.stdenv.isLinux {
+      systemd.user.services.jotain = {
+        Unit = {
+          Description = "Jotain Emacs text editor";
+          Documentation = "info:emacs man:emacs(1) https://gnu.org/software/emacs/";
 
-      Socket = {
-        ListenStream = socketPath;
-        FileDescriptorName = "server";
-        SocketMode = "0600";
-        DirectoryMode = "0700";
-        # Prevents the service from immediately restarting after stop,
-        # due to `server-force-stop' in `kill-emacs-hook' calling
-        # `server-running-p', which opens the socket file.
-        FlushPending = true;
-      };
+          After = lib.optional (cfg.startWithUserSession == "graphical") "graphical-session.target";
+          PartOf = lib.optional (cfg.startWithUserSession == "graphical") "graphical-session.target";
 
-      Install = {
-        WantedBy = [ "sockets.target" ];
-        RequiredBy = [ "jotain.service" ];
-      };
-    };
+          # Avoid killing the session, which may be full of unsaved buffers.
+          X-RestartIfChanged = false;
+        }
+        // lib.optionalAttrs needsSocketWorkaround {
+          RefuseManualStart = true;
+        };
 
-    launchd.agents.jotain = {
-      enable = true;
-      config = {
-        ProgramArguments = [
-          "${emacsWrapper}/bin/emacs"
-          "--fg-daemon"
-        ]
-        ++ cfg.extraOptions;
-        RunAtLoad = true;
-        KeepAlive = {
-          Crashed = true;
-          SuccessfulExit = false;
+        Service = {
+          Type = "notify";
+
+          # Wrap in a login shell so Emacs inherits the user's
+          # environment ($PATH, $NIX_PROFILES, etc.).
+          ExecStart = ''${pkgs.runtimeShell} -l -c "${emacsWrapper}/bin/emacs --fg-daemon${lib.optionalString cfg.socketActivation.enable "=${lib.escapeShellArg socketPath}"} ${lib.escapeShellArgs cfg.extraOptions}"'';
+
+          # Emacs exits with status 15 after SIGTERM.
+          SuccessExitStatus = 15;
+
+          Restart = "on-failure";
+        }
+        // lib.optionalAttrs needsSocketWorkaround {
+          ExecStartPost = "${pkgs.coreutils}/bin/chmod --changes -w ${socketDir}";
+          ExecStopPost = "${pkgs.coreutils}/bin/chmod --changes +w ${socketDir}";
+        };
+      }
+      // lib.optionalAttrs (cfg.startWithUserSession != false) {
+        Install = {
+          WantedBy = [
+            (if cfg.startWithUserSession == true then "default.target" else "graphical-session.target")
+          ];
         };
       };
-    };
-  };
+
+      systemd.user.sockets.jotain = lib.mkIf cfg.socketActivation.enable {
+        Unit = {
+          Description = "Jotain Emacs text editor";
+          Documentation = "info:emacs man:emacs(1) https://gnu.org/software/emacs/";
+        };
+
+        Socket = {
+          ListenStream = socketPath;
+          FileDescriptorName = "server";
+          SocketMode = "0600";
+          DirectoryMode = "0700";
+          # Prevents the service from immediately restarting after stop,
+          # due to `server-force-stop' in `kill-emacs-hook' calling
+          # `server-running-p', which opens the socket file.
+          FlushPending = true;
+        };
+
+        Install = {
+          WantedBy = [ "sockets.target" ];
+          RequiredBy = [ "jotain.service" ];
+        };
+      };
+    })
+
+    (lib.mkIf pkgs.stdenv.isDarwin {
+      launchd.agents.jotain = {
+        enable = true;
+        config = {
+          ProgramArguments = [
+            "${emacsWrapper}/bin/emacs"
+            "--fg-daemon"
+          ]
+          ++ cfg.extraOptions;
+          RunAtLoad = true;
+          KeepAlive = {
+            Crashed = true;
+            SuccessfulExit = false;
+          };
+        };
+      };
+    })
+  ]);
 }
