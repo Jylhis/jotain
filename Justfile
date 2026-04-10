@@ -36,9 +36,26 @@ tty *ARGS:
 
 # ── Check / compile ─────────────────────────────────────────────────
 
-# Parse every .el file (no compile, no package install).
+# Run all checks: eval, flake, devenv, linting.
 [group('check')]
 check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Evaluating default.nix..."
+    nix-instantiate --eval default.nix > /dev/null
+    echo "Running nix flake check..."
+    nix flake check --no-build
+    echo "Running devenv test..."
+    devenv test
+    echo "Running statix..."
+    statix check .
+    echo "Running deadnix..."
+    deadnix --fail --exclude npins .devenv result .
+    echo "All checks passed."
+
+# Parse every .el file (no compile, no package install).
+[group('check')]
+check-elisp:
     #!/usr/bin/env bash
     set -euo pipefail
     emacs -Q --batch --eval '
@@ -201,16 +218,11 @@ bench output="":
 
 
 # ── Build (nix) ─────────────────────────────────────────────────────
-#
-# `default.nix' wraps `emacs.nix' with all tree-sitter grammars from
-# nixpkgs. `emacs.nix' alone builds a bare Emacs binary. Both default to
-# the npins-pinned nixpkgs-unstable channel; pass --arg pkgs '<nixpkgs>'
-# to use NIX_PATH instead.
 
 # Build the full distribution (Emacs + every grammar) for the current system.
 [group('build')]
 build:
-    nix-build --argstr system {{system}} default.nix
+    nix-build -A packages.default
 
 # Build a bare Emacs (no tree-sitter grammars).
 [group('build')]
@@ -220,37 +232,37 @@ build-bare:
 # Build with --with-pgtk for Wayland.
 [group('build')]
 build-pgtk:
-    nix-build --arg withPgtk true --argstr system {{system}} default.nix
+    nix-build --arg withPgtk true --argstr system {{system}} emacs.nix
 
 # Build with --with-x-toolkit=gtk3 (X11 + GTK3).
 [group('build')]
 build-gtk3:
-    nix-build --arg withGTK3 true --argstr system {{system}} default.nix
+    nix-build --arg withGTK3 true --argstr system {{system}} emacs.nix
 
 # Build a terminal-only Emacs (--without-x --without-ns).
 [group('build')]
 build-nox:
-    nix-build --arg noGui true --argstr system {{system}} default.nix
+    nix-build --arg noGui true --argstr system {{system}} emacs.nix
 
 # Build the macport variant (Darwin only).
 [group('build')]
 build-macport:
-    nix-build --arg variant '"macport"' --argstr system {{system}} default.nix
+    nix-build --arg variant '"macport"' --argstr system {{system}} emacs.nix
 
 # Build from current git master (first run will report a hash to fill in).
 [group('build')]
 build-git:
-    nix-build --arg variant '"git"' --argstr system {{system}} default.nix
+    nix-build --arg variant '"git"' --argstr system {{system}} emacs.nix
 
 # Build the IGC (Memory Pool System GC) branch.
 [group('build')]
 build-igc:
-    nix-build --arg variant '"igc"' --argstr system {{system}} default.nix
+    nix-build --arg variant '"igc"' --argstr system {{system}} emacs.nix
 
 # Build for aarch64-linux nox (Termux/Android).
 [group('build')]
 build-android:
-    nix-build --arg noGui true --argstr system aarch64-linux default.nix
+    nix-build --arg noGui true --argstr system aarch64-linux emacs.nix
 
 # Auto-detect platform, build, then launch Emacs with this configuration.
 [group('build')]
@@ -275,10 +287,10 @@ run-built *ARGS:
 
 # ── Format ──────────────────────────────────────────────────────────
 
-# Format Nix (and anything else treefmt knows about).
+# Format all Nix files.
 [group('format')]
 fmt:
-    treefmt
+    nixfmt .
 
 
 # ── Pin management (npins) ──────────────────────────────────────────
@@ -297,6 +309,40 @@ update-pin NAME:
 [group('pins')]
 show-pins:
     npins show
+
+
+# ── Sync all locks ──────────────────────────────────────────────────
+
+# Update npins and sync devenv.yaml + flake.lock to the same nixpkgs rev.
+[group('pins')]
+update:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    npins update
+    REV=$(jq -r '.pins.nixpkgs.revision' npins/sources.json)
+    echo "Syncing all locks to nixpkgs $REV"
+    sed -i '' "s|url: github:NixOS/nixpkgs/.*|url: github:NixOS/nixpkgs/$REV|" devenv.yaml
+    devenv update
+    nix flake lock --override-input nixpkgs "github:NixOS/nixpkgs/$REV"
+    echo "Done. All locks pinned to $REV"
+
+# Verify that all three pinning mechanisms agree on the same nixpkgs rev.
+[group('pins')]
+verify:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Checking nixpkgs rev sync..."
+    NPINS_REV=$(jq -r '.pins.nixpkgs.revision' npins/sources.json)
+    FLAKE_REV=$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock)
+    DEVENV_REV=$(jq -r '.nodes.nixpkgs.locked.rev' devenv.lock)
+    if [ "$NPINS_REV" != "$FLAKE_REV" ] || [ "$NPINS_REV" != "$DEVENV_REV" ]; then
+        echo "FAIL: nixpkgs revs diverged"
+        echo "  npins:  $NPINS_REV"
+        echo "  flake:  $FLAKE_REV"
+        echo "  devenv: $DEVENV_REV"
+        exit 1
+    fi
+    echo "OK: all locks pinned to $NPINS_REV"
 
 
 # ── Cleanup ─────────────────────────────────────────────────────────

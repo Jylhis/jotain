@@ -76,8 +76,8 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = import ./default.nix { inherit pkgs; };
-      defaultText = lib.literalExpression "import ./default.nix { inherit pkgs; }";
+      default = (import ./default.nix { inherit pkgs; }).packages.default;
+      defaultText = lib.literalExpression "(import ./default.nix { inherit pkgs; }).packages.default";
       description = "The Jotain Emacs package to use.";
     };
 

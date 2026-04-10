@@ -6,7 +6,7 @@ let
   # The npins-managed nixpkgs. Anything in this file that wants "the
   # pinned nixpkgs" should use `pinned` instead of the ambient `pkgs`
   # (which is whatever devenv resolved from devenv.yaml).
-  pinned = import sources.nixpkgs-unstable {
+  pinned = import sources.nixpkgs {
     inherit (pkgs.stdenv.hostPlatform) system;
     config.allowUnfree = true;
   };
@@ -64,6 +64,10 @@ in
     # Nix tooling
     nil
     nixfmt-rfc-style
+
+    # Nix linting
+    pinned.statix
+    pinned.deadnix
 
     # Fonts used by the Emacs configuration (init-ui.el looks them up by name).
     # These are only active while you're inside the devenv shell; on your real
