@@ -67,8 +67,8 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable (lib.mkMerge [
-    {
+  config = lib.mkMerge [
+    (lib.mkIf cfg.enable {
       programs.emacs = {
         enable = true;
         package = jotainEmacs;
@@ -86,10 +86,10 @@ in
 
       home.packages = [ cfg.package ]
         ++ lib.optionals cfg.includeRuntimeDeps (
-          lspServers
+        lspServers
           ++ cliTools
           ++ fonts
-        );
+      );
 
       home.sessionVariables = lib.mkMerge [
         (lib.mkIf (!cfg.enableDaemon) {
@@ -104,11 +104,11 @@ in
 
       xdg.configFile."emacs/early-init.el".source = "${cfg.package}/share/jotain/early-init.el";
       xdg.configFile."emacs/init.el".source = "${cfg.package}/share/jotain/init.el";
-    }
+    })
 
     # fonts.fontconfig is Linux-only in home-manager; nix-darwin doesn't have it
-    (lib.optionalAttrs (cfg.includeRuntimeDeps && pkgs.stdenv.isLinux) {
+    (lib.mkIf (cfg.enable && cfg.includeRuntimeDeps && pkgs.stdenv.isLinux) {
       fonts.fontconfig.enable = true;
     })
-  ]);
+  ];
 }
