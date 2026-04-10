@@ -28,7 +28,7 @@
 #   - nix-giant           github:nix-giant/nix-darwin-emacs
 {
   system ? builtins.currentSystem,
-  pkgs ? import (import ./npins).nixpkgs-unstable {
+  pkgs ? import (import ./npins).nixpkgs {
     inherit system;
     config.allowUnfree = true;
   },
@@ -183,7 +183,7 @@ let
   # Verify after any change to defaults:
   #     nix-instantiate --eval --strict -E \
   #       '(import ./emacs.nix {}).outPath \
-  #          == (import (import ./npins).nixpkgs-unstable {}).emacs30.outPath'
+  #          == (import (import ./npins).nixpkgs {}).emacs30.outPath'
   overridden = basePackage.override {
     inherit
       noGui
