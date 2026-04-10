@@ -67,48 +67,44 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable (lib.mkMerge [
-    {
-      programs.emacs = {
+  config = lib.mkIf cfg.enable {
+    programs.emacs = {
+      enable = true;
+      package = jotainEmacs;
+      extraPackages = cfg.extraPackages;
+    };
+
+    services.emacs = lib.mkIf cfg.enableDaemon {
+      enable = true;
+      socketActivation.enable = pkgs.stdenv.isLinux;
+      client = {
         enable = true;
-        package = jotainEmacs;
-        extraPackages = cfg.extraPackages;
+        arguments = [ "-c" "-a" "" ];
       };
+    };
 
-      services.emacs = lib.mkIf cfg.enableDaemon {
-        enable = true;
-        socketActivation.enable = pkgs.stdenv.isLinux;
-        client = {
-          enable = true;
-          arguments = [ "-c" "-a" "" ];
-        };
-      };
+    home.packages = [ cfg.package ]
+      ++ lib.optionals cfg.includeRuntimeDeps (
+      lspServers
+        ++ cliTools
+        ++ fonts
+    );
 
-      home.packages = [ cfg.package ]
-        ++ lib.optionals cfg.includeRuntimeDeps (
-          lspServers
-          ++ cliTools
-          ++ fonts
-        );
+    home.sessionVariables = lib.mkMerge [
+      (lib.mkIf (!cfg.enableDaemon) {
+        EDITOR = "emacs -nw";
+        VISUAL = "emacs";
+      })
+      (lib.mkIf cfg.enableDaemon {
+        EDITOR = "emacsclient -t -a ''";
+        VISUAL = "emacsclient -c -a ''";
+      })
+    ];
 
-      home.sessionVariables = lib.mkMerge [
-        (lib.mkIf (!cfg.enableDaemon) {
-          EDITOR = "emacs -nw";
-          VISUAL = "emacs";
-        })
-        (lib.mkIf cfg.enableDaemon {
-          EDITOR = "emacsclient -t -a ''";
-          VISUAL = "emacsclient -c -a ''";
-        })
-      ];
-
-      xdg.configFile."emacs/early-init.el".source = "${cfg.package}/share/jotain/early-init.el";
-      xdg.configFile."emacs/init.el".source = "${cfg.package}/share/jotain/init.el";
-    }
+    xdg.configFile."emacs/early-init.el".source = "${cfg.package}/share/jotain/early-init.el";
+    xdg.configFile."emacs/init.el".source = "${cfg.package}/share/jotain/init.el";
 
     # fonts.fontconfig is Linux-only in home-manager; nix-darwin doesn't have it
-    (lib.optionalAttrs (cfg.includeRuntimeDeps && pkgs.stdenv.isLinux) {
-      fonts.fontconfig.enable = true;
-    })
-  ]);
+    fonts.fontconfig.enable = lib.mkIf (cfg.includeRuntimeDeps && pkgs.stdenv.isLinux) true;
+  };
 }
