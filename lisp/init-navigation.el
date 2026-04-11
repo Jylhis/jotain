@@ -11,7 +11,16 @@
 (use-package dired
   :ensure nil
   :custom
-  (dired-listing-switches (if (eq system-type 'darwin)
+  ;; macOS ships BSD `ls', which rejects `--dired' and `--group-directories-first'.
+  ;; Prefer GNU `gls' from coreutils when available; otherwise fall back to BSD
+  ;; ls and disable the `--dired' handshake so Emacs doesn't error on startup.
+  (insert-directory-program (or (and (eq system-type 'darwin)
+                                     (executable-find "gls"))
+                                "ls"))
+  (dired-use-ls-dired (or (not (eq system-type 'darwin))
+                          (and (executable-find "gls") t)))
+  (dired-listing-switches (if (and (eq system-type 'darwin)
+                                   (not (executable-find "gls")))
                               "-alh"
                             "-alh --group-directories-first"))
   (dired-dwim-target t)
