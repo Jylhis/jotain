@@ -29,8 +29,6 @@ immediately for writes."
   (make-directory jotain-var-dir t)
   (expand-file-name name jotain-var-dir))
 
-(make-directory jotain-var-dir t)
-
 ;; Restore a sane GC threshold after the early-init.el bump. 16 MiB is the
 ;; common compromise: high enough that typing/scrolling never trips a GC,
 ;; low enough that an idle GC actually completes quickly. Combined with
