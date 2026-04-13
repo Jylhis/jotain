@@ -32,7 +32,7 @@
   :config
   ;; Capture templates: keep the list short and obvious. Add more here
   ;; rather than scattering them across other modules.
-  (setq org-capture-templates
+  (setopt org-capture-templates
         '(("t" "Todo" entry
            (file+headline org-default-notes-file "Tasks")
            "* TODO %?\n  %U\n  %a")
@@ -50,11 +50,6 @@
   (org-clock-into-drawer t)
   :config
   (org-clock-persistence-insinuate))
-
-;; Export org-clock data to CSV for analysis (Pandas, spreadsheets…).
-(use-package org-clock-csv
-  :after org
-  :defer t)
 
 ;; Auto-show emphasis markers (* _ / ~) when point is on them, hide
 ;; otherwise — best of both visual worlds.

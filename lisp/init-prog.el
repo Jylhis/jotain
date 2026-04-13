@@ -183,7 +183,7 @@
   (envrc-global-mode)
   (add-to-list 'warning-suppress-types '(envrc))
 
-  (defun jylhis/envrc-blocked-p (buffer-name _action)
+  (defun jotain-prog--envrc-blocked-p (buffer-name _action)
     "Non-nil when the *envrc* buffer reports a blocked .envrc."
     (and (equal buffer-name "*envrc*")
          (when-let* ((buf (get-buffer buffer-name)))
@@ -193,11 +193,8 @@
                (search-backward "is blocked" nil t))))))
 
   (add-to-list 'display-buffer-alist
-               '(jylhis/envrc-blocked-p
+               '(jotain-prog--envrc-blocked-p
                  (display-buffer-no-window))))
-
-(use-package inheritenv
-  :defer t)
 
 ;; Async format-on-save via external formatters (ruff, nixfmt, rustfmt,
 ;; prettier, etc.). Replaces hand-rolled before-save hooks per language.
