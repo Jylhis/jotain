@@ -8,19 +8,23 @@
 
 ;;; Code:
 
+;; Cache the result of checking for GNU ls on macOS so the three dired
+;; settings below don't each re-scan exec-path independently.
+(defvar jotain--gnu-ls
+  (and (eq system-type 'darwin) (executable-find "gls"))
+  "Path to GNU ls (`gls') on macOS, or nil if unavailable.")
+
 (use-package dired
   :ensure nil
   :custom
   ;; macOS ships BSD `ls', which rejects `--dired' and `--group-directories-first'.
   ;; Prefer GNU `gls' from coreutils when available; otherwise fall back to BSD
   ;; ls and disable the `--dired' handshake so Emacs doesn't error on startup.
-  (insert-directory-program (or (and (eq system-type 'darwin)
-                                     (executable-find "gls"))
-                                "ls"))
+  (insert-directory-program (or jotain--gnu-ls "ls"))
   (dired-use-ls-dired (or (not (eq system-type 'darwin))
-                          (and (executable-find "gls") t)))
+                          (and jotain--gnu-ls t)))
   (dired-listing-switches (if (and (eq system-type 'darwin)
-                                   (not (executable-find "gls")))
+                                   (not jotain--gnu-ls))
                               "-alh"
                             "-alh --group-directories-first"))
   (dired-dwim-target t)
@@ -40,12 +44,7 @@
   :custom
   (dired-omit-verbose nil)
   (dired-omit-files
-   (concat "\\`[.]?#\\|\\`[.][.]?\\'"
-           "\\|^[a-zA-Z0-9]\\.syncthing-enc\\'"
-           "\\|^\\.git\\'"
-           "\\|^\\.stfolder\\'"
-           "\\|^\\.stversions\\'"
-           "\\|^__pycache__\\'")))
+   (concat "\\`[.]?#\\|\\`[.][.]?\\'"n           "\\|^[a-zA-Z0-9]\\.syncthing-enc\\'"n           "\\|^\\.git\\'"n           "\\|^\\.stfolder\\'"n           "\\|^\\.stversions\\'"n           "\\|^__pycache__\\'")))
 
 ;; Shorten /nix/store/abc123-foo-1.0 display to …foo-1.0 in dired/shell
 ;; buffers. Pure cosmetic, no behavioral change.
