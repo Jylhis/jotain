@@ -11,42 +11,11 @@ let
     config.allowUnfree = true;
   };
 
-  # Build Emacs from our local emacs.nix (the same builder the
-  # `just build` recipes use). This is what the devenv shell ships,
-  # so the editor in dev matches whatever the build flavours produce.
-  # For the full distribution including ~275 tree-sitter grammars,
-  # use `import ./default.nix { ... }` instead.
-  baseEmacs = import ./emacs.nix {
-    inherit (pkgs.stdenv.hostPlatform) system;
-    pkgs = pinned;
-  };
-
-  # use-package → emacsPackages mapper (see nix/use-package.nix for the
-  # full implementation). It scans every .el file under lisp/ for
-  # (use-package NAME ...) forms, honours :ensure nil / :disabled t,
-  # and returns the corresponding attrs from `epkgs`. Packages that
-  # Nix doesn't ship fall through to MELPA at runtime — the mapper
-  # just traces a warning.
-  usePackage = import ./nix/use-package.nix { inherit (pinned) lib; };
-
-  extraPackages = import ./nix/extra-packages.nix { pkgs = pinned; };
-
-  jotainEmacs = usePackage.emacsWithPackagesFromUsePackage {
-    config = ./lisp;
-    package = baseEmacs;
-    emacsPackagesFor = pinned.emacsPackagesFor;
-    override = extraPackages;
-    # The auto-mapper skips `:ensure nil` blocks, so Nix-exclusive
-    # packages whose `use-package` form is pinned with `:ensure nil`
-    # (to stop package.el touching the network) must be injected
-    # explicitly here. Same goes for the tree-sitter grammar bundle,
-    # which isn't declared via use-package at all.
-    extraEmacsPackages = ep: [
-      ep.claude-code-ide
-      ep.combobulate
-      ep.treesit-grammars.with-all-grammars
-    ];
-  };
+  # Apply the project overlay to the pinned nixpkgs so the devenv
+  # shell gets the exact same jotainEmacsPackages derivation that
+  # `nix-build -A packages.default` and flake consumers produce.
+  pinnedWithOverlay = pinned.extend (import ./overlay.nix);
+  jotainEmacs = pinnedWithOverlay.jotainEmacsPackages;
 in
 {
   # The custom emacs-lisp language module lives in nix/. Importing it

@@ -98,7 +98,7 @@ The first family that is actually installed wins."
 ;;;; Built-in display tweaks
 
 ;; Don't draw cursors or highlight selections in non-focused windows.
-(setq-default cursor-in-non-selected-windows nil)
+(setopt cursor-in-non-selected-windows nil)
 (setopt highlight-nonselected-windows nil)
 
 (use-package display-line-numbers

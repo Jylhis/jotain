@@ -181,9 +181,9 @@ immediately for writes."
 ;; keyboard layouts, so we put Meta on Command and leave Right-Option
 ;; alone for special character entry.
 (when (eq system-type 'darwin)
-  (setq mac-command-modifier      'meta
-        mac-option-modifier       'super
-        mac-right-option-modifier 'none)
+  (setopt mac-command-modifier      'meta
+          mac-option-modifier       'super
+          mac-right-option-modifier 'none)
   (setopt trash-directory "~/.Trash"))
 
 (use-package autorevert
