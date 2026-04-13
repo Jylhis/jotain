@@ -181,7 +181,20 @@
   :demand t
   :config
   (envrc-global-mode)
-  (add-to-list 'warning-suppress-types '(envrc)))
+  (add-to-list 'warning-suppress-types '(envrc))
+
+  (defun jylhis/envrc-blocked-p (buffer-name _action)
+    "Non-nil when the *envrc* buffer reports a blocked .envrc."
+    (and (equal buffer-name "*envrc*")
+         (when-let* ((buf (get-buffer buffer-name)))
+           (with-current-buffer buf
+             (save-excursion
+               (goto-char (point-max))
+               (search-backward "is blocked" nil t))))))
+
+  (add-to-list 'display-buffer-alist
+               '(jylhis/envrc-blocked-p
+                 (display-buffer-no-window))))
 
 (use-package inheritenv
   :defer t)
