@@ -31,6 +31,8 @@
 
       homeManagerModules.default = import ./module.nix;
 
+      lib = import ./nix/use-package.nix { lib = nixpkgs.lib; };
+
       packages = forAllSystems (
         system:
         let
