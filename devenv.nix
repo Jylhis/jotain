@@ -1,42 +1,26 @@
 { pkgs, lib, ... }:
 
 let
-  sources = import ./npins;
-
-  # The npins-managed nixpkgs. Anything in this file that wants "the
-  # pinned nixpkgs" should use `pinned` instead of the ambient `pkgs`
-  # (which is whatever devenv resolved from devenv.yaml).
-  pinned = import sources.nixpkgs {
-    inherit (pkgs.stdenv.hostPlatform) system;
-    config.allowUnfree = true;
-  };
-
-  # Apply the project overlay to the pinned nixpkgs so the devenv
-  # shell gets the exact same jotainEmacsPackages derivation that
-  # `nix-build -A packages.default` and flake consumers produce.
-  pinnedWithOverlay = pinned.extend (import ./overlay.nix);
-  jotainEmacs = pinnedWithOverlay.jotainEmacsPackages;
+  # pkgs is what devenv resolved from devenv.lock, which `just update` keeps
+  # in sync with flake.lock. Apply the project overlay so the devenv shell
+  # gets the exact same jotainEmacsPackages derivation as flake consumers.
+  pkgsWithOverlay = pkgs.extend (import ./overlay.nix);
+  jotainEmacs = pkgsWithOverlay.jotainEmacsPackages;
 in
 {
   # The custom emacs-lisp language module lives in nix/. Importing it
   # adds `languages.emacs-lisp` to the option tree below.
   imports = [ ./nix/devenv-emacs-lisp.nix ];
 
-  # Expose `pinned` to other modules that might want it.
-  _module.args.pinned = pinned;
-
   # https://devenv.sh/packages/
   packages = with pkgs; [
-    # Pinning / input management
-    npins
-
     # Nix tooling
     nil
     nixfmt-rfc-style
 
     # Nix linting
-    pinned.statix
-    pinned.deadnix
+    statix
+    deadnix
 
     # Fonts used by the Emacs configuration (init-ui.el looks them up by name).
     # These are only active while you're inside the devenv shell; on your real
@@ -105,12 +89,6 @@ in
         emacs --init-directory="$DEVENV_ROOT" "$@"
       '';
     };
-  };
-
-  # https://devenv.sh/tasks/
-  tasks."repo:update-pins" = {
-    description = "Update all npins-managed sources.";
-    exec = "${pkgs.npins}/bin/npins update";
   };
 
   # https://devenv.sh/tests/

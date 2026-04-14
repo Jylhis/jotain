@@ -50,7 +50,7 @@ check:
     echo "Running statix..."
     statix check .
     echo "Running deadnix..."
-    deadnix --fail --exclude npins .devenv result .
+    deadnix --fail .devenv result .
     echo "All checks passed."
 
 # Parse every .el file (no compile, no package install).
@@ -222,7 +222,7 @@ bench output="":
 # Build the full distribution (Emacs + every grammar) for the current system.
 [group('build')]
 build:
-    nix-build -A packages.default
+    nix-build
 
 # Build a bare Emacs (no tree-sitter grammars).
 [group('build')]
@@ -293,58 +293,37 @@ fmt:
     nixfmt .
 
 
-# ── Pin management (npins) ──────────────────────────────────────────
+# ── Lock synchronization ────────────────────────────────────────────
 
-# Update every npins-managed source.
-[group('pins')]
-update-pins:
-    npins update
-
-# Update one named pin.
-[group('pins')]
-update-pin NAME:
-    npins update {{NAME}}
-
-# Show all current pins.
-[group('pins')]
-show-pins:
-    npins show
-
-
-# ── Sync all locks ──────────────────────────────────────────────────
-
-# Update npins and sync devenv.yaml + flake.lock to the same nixpkgs rev.
+# Update nixpkgs in flake.lock and sync devenv.lock to match.
 [group('pins')]
 update:
     #!/usr/bin/env bash
     set -euo pipefail
-    npins update
-    REV=$(jq -r '.pins.nixpkgs.revision' npins/sources.json)
-    echo "Syncing all locks to nixpkgs $REV"
+    nix flake update nixpkgs
+    REV=$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock)
+    echo "Syncing devenv to nixpkgs $REV"
     tmpfile=$(mktemp)
     sed "s|url: github:NixOS/nixpkgs/.*|url: github:NixOS/nixpkgs/$REV|" devenv.yaml > "$tmpfile"
     mv "$tmpfile" devenv.yaml
     devenv update
-    nix flake lock --override-input nixpkgs "github:NixOS/nixpkgs/$REV"
-    echo "Done. All locks pinned to $REV"
+    echo "Done. Both locks pinned to $REV"
 
-# Verify that all three pinning mechanisms agree on the same nixpkgs rev.
+# Verify that flake.lock and devenv.lock agree on the same nixpkgs rev.
 [group('pins')]
 verify:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "Checking nixpkgs rev sync..."
-    NPINS_REV=$(jq -r '.pins.nixpkgs.revision' npins/sources.json)
     FLAKE_REV=$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock)
     DEVENV_REV=$(jq -r '.nodes.nixpkgs.locked.rev' devenv.lock)
-    if [ "$NPINS_REV" != "$FLAKE_REV" ] || [ "$NPINS_REV" != "$DEVENV_REV" ]; then
+    if [ "$FLAKE_REV" != "$DEVENV_REV" ]; then
         echo "FAIL: nixpkgs revs diverged"
-        echo "  npins:  $NPINS_REV"
         echo "  flake:  $FLAKE_REV"
         echo "  devenv: $DEVENV_REV"
         exit 1
     fi
-    echo "OK: all locks pinned to $NPINS_REV"
+    echo "OK: both locks pinned to $FLAKE_REV"
 
 
 # ── Cleanup ─────────────────────────────────────────────────────────
