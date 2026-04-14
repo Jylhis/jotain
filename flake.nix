@@ -38,5 +38,58 @@
           emacs = pkgs.jotainEmacs;
         }
       );
+
+      checks = forAllSystems (
+        system:
+        let
+          pkgs = pkgsFor system;
+        in
+        {
+          # Package builds
+          packages-default = self.packages.${system}.default;
+          packages-emacs = self.packages.${system}.emacs;
+
+          # Nix formatting
+          formatting =
+            pkgs.runCommandLocal "check-nixfmt"
+              {
+                nativeBuildInputs = [
+                  pkgs.nixfmt
+                  pkgs.findutils
+                ];
+                src = self;
+              }
+              ''
+                find $src -name '*.nix' -not -path '*/npins/*' -exec nixfmt --check {} +
+                touch $out
+              '';
+
+          # Static analysis
+          statix =
+            pkgs.runCommandLocal "check-statix"
+              {
+                nativeBuildInputs = [ pkgs.statix ];
+                src = self;
+              }
+              ''
+                cd $src
+                statix check .
+                touch $out
+              '';
+
+          # Dead code detection
+          deadnix =
+            pkgs.runCommandLocal "check-deadnix"
+              {
+                nativeBuildInputs = [ pkgs.deadnix ];
+                src = self;
+              }
+              ''
+                cd $src
+                deadnix --fail --exclude npins .
+                touch $out
+              '';
+        }
+      );
     };
 }
