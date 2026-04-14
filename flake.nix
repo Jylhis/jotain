@@ -7,10 +7,19 @@
       url = "github:edolstra/flake-compat";
       flake = false;
     };
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
-    { self, nixpkgs, ... }:
+    {
+      self,
+      nixpkgs,
+      treefmt-nix,
+      ...
+    }:
     let
       systems = [
         "x86_64-linux"
@@ -25,75 +34,35 @@
           inherit system;
           overlays = [ self.overlays.default ];
         };
+      treefmtEval =
+        system:
+        treefmt-nix.lib.evalModule (pkgsFor system) {
+          projectRootFile = "flake.nix";
+          programs = import ./nix/treefmt.nix;
+        };
     in
     {
       overlays.default = import ./overlay.nix;
 
       homeManagerModules.default = import ./module.nix;
+      nixosModules.default = import ./module-system.nix;
+      darwinModules.default = import ./module-system.nix;
 
       lib = import ./nix/use-package.nix { lib = nixpkgs.lib; };
 
-      packages = forAllSystems (
-        system:
-        let
-          pkgs = pkgsFor system;
-        in
-        {
-          default = pkgs.jotainEmacsPackages;
-          emacs = pkgs.jotainEmacs;
-        }
-      );
+      packages = forAllSystems (system: {
+        default = (pkgsFor system).jotainEmacsPackages;
+        emacs = (pkgsFor system).jotainEmacs;
+      });
+
+      formatter = forAllSystems (system: (treefmtEval system).config.build.wrapper);
 
       checks = forAllSystems (
         system:
-        let
+        import ./nix/checks.nix {
           pkgs = pkgsFor system;
-        in
-        {
-          # Package builds
-          packages-default = self.packages.${system}.default;
-          packages-emacs = self.packages.${system}.emacs;
-
-          # Nix formatting
-          formatting =
-            pkgs.runCommandLocal "check-nixfmt"
-              {
-                nativeBuildInputs = [
-                  pkgs.nixfmt
-                  pkgs.findutils
-                ];
-                src = self;
-              }
-              ''
-                find $src -name '*.nix' -exec nixfmt --check {} +
-                touch $out
-              '';
-
-          # Static analysis
-          statix =
-            pkgs.runCommandLocal "check-statix"
-              {
-                nativeBuildInputs = [ pkgs.statix ];
-                src = self;
-              }
-              ''
-                cd $src
-                statix check .
-                touch $out
-              '';
-
-          # Dead code detection
-          deadnix =
-            pkgs.runCommandLocal "check-deadnix"
-              {
-                nativeBuildInputs = [ pkgs.deadnix ];
-                src = self;
-              }
-              ''
-                cd $src
-                deadnix --fail .
-                touch $out
-              '';
+          src = self;
+          treefmtCheck = (treefmtEval system).config.build.check self;
         }
       );
     };

@@ -28,19 +28,22 @@
 #   - nix-giant           github:nix-giant/nix-darwin-emacs
 {
   system ? builtins.currentSystem,
-  pkgs ? import (
-    let
-      lock = builtins.fromJSON (builtins.readFile ./flake.lock);
-      n = lock.nodes.nixpkgs.locked;
-    in
-    fetchTarball {
-      url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz";
-      sha256 = n.narHash;
-    }
-  ) {
-    inherit system;
-    config.allowUnfree = true;
-  },
+  pkgs ?
+    import
+      (
+        let
+          lock = builtins.fromJSON (builtins.readFile ./flake.lock);
+          n = lock.nodes.nixpkgs.locked;
+        in
+        fetchTarball {
+          url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz";
+          sha256 = n.narHash;
+        }
+      )
+      {
+        inherit system;
+        config.allowUnfree = true;
+      },
 
   # ── Source variant ────────────────────────────────────────────────
   #   "mainline"  — Emacs 30 release tarball (default, binary-cached)
