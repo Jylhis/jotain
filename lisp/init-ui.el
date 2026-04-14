@@ -13,20 +13,21 @@
   "User-facing UI knobs for the Jotain configuration."
   :group 'convenience)
 
-;;;; Theme — modus operandi/vivendi tinted, switched by system appearance
+;;;; Theme — catppuccin (latte/mocha), switched by system appearance
 
-(defcustom jotain-theme-light 'modus-operandi-tinted
-  "Theme to use when the system is in light mode."
-  :type 'symbol
+(defcustom jotain-catppuccin-light 'latte
+  "Catppuccin flavor to use when the system is in light mode.
+One of `latte', `frappe', `macchiato', or `mocha'."
+  :type '(choice (const latte) (const frappe) (const macchiato) (const mocha))
   :group 'jotain-ui)
 
-(defcustom jotain-theme-dark 'modus-vivendi-tinted
-  "Theme to use when the system is in dark mode."
-  :type 'symbol
+(defcustom jotain-catppuccin-dark 'mocha
+  "Catppuccin flavor to use when the system is in dark mode.
+One of `latte', `frappe', `macchiato', or `mocha'."
+  :type '(choice (const latte) (const frappe) (const macchiato) (const mocha))
   :group 'jotain-ui)
 
-;; Trust all themes by default — modus is built-in and signed, and we
-;; never load themes from disk paths we don't control.
+;; Trust all themes by default — we only load themes shipped as packages.
 (setopt custom-safe-themes t)
 
 (defun jotain-ui--disable-other-themes (_theme &optional _no-confirm no-enable)
@@ -38,27 +39,32 @@ and the result is a face-attribute soup."
 
 (advice-add 'load-theme :before #'jotain-ui--disable-other-themes)
 
-(use-package modus-themes
+(use-package catppuccin-theme
   :demand t
   :custom
-  (modus-themes-italic-constructs t)
-  (modus-themes-bold-constructs t)
-  (modus-themes-mixed-fonts t)
+  (catppuccin-italic-comments t)
   :config
-  ;; Pre-load both themes so auto-dark can flip between them without
-  ;; re-evaluating the .el files on every appearance change.
-  (load-theme jotain-theme-light t t)
-  (load-theme jotain-theme-dark  t t))
+  (load-theme 'catppuccin t t))
 
 (use-package auto-dark
   :diminish
   :demand t
-  :after modus-themes
+  :after catppuccin-theme
   :bind ("C-c t" . auto-dark-toggle-appearance)
   :custom
   (auto-dark-allow-osascript t)
-  (auto-dark-themes `((,jotain-theme-light) (,jotain-theme-dark)))
+  (auto-dark-themes '((catppuccin) (catppuccin)))
   :config
+  (add-hook 'auto-dark-dark-mode-hook
+            (lambda ()
+              (setopt catppuccin-flavor jotain-catppuccin-dark)
+              (catppuccin-reload)))
+
+  (add-hook 'auto-dark-light-mode-hook
+            (lambda ()
+              (setopt catppuccin-flavor jotain-catppuccin-light)
+              (catppuccin-reload)))
+
   (auto-dark-mode 1))
 
 ;;;; Modeline
