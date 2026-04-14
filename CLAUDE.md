@@ -27,20 +27,19 @@ All day-to-day work goes through the `Justfile`:
 - `just debug` — same as `run` but with `--debug-init` and `debug-on-error`.
 - `just tty` — `emacs -nw` (exercises kkp + clipetty paths).
 - `just fmt` — `nixfmt .` (Nix formatting via `nixfmt-rfc-style`).
-- `just update` — synchronize all three lock files (npins, devenv.lock, flake.lock) to the same nixpkgs revision. npins is the source of truth.
-- `just update-pins` / `just update-pin NAME` — refresh `npins/`.
-- `just verify` — verify all lock files (npins, devenv.lock, flake.lock) reference the same nixpkgs revision.
+- `just update` — update nixpkgs in `flake.lock` (source of truth), then sync `devenv.lock` to match.
+- `just verify` — verify that `flake.lock` and `devenv.lock` reference the same nixpkgs revision.
 - `just clean` — remove `*.elc`, autosaves, `eln-cache`, `result` symlink.
 - `just clean-all` — additionally wipe `elpa/` and `var/`, forcing a full re-fetch. The next `just run` will hit every MELPA package fresh, so expect the first startup to be slow.
 
 Build recipes (all via `nix-build`, targeting current system by default; override with `just system=x86_64-linux …`):
 
-- `just build` — full distribution (Emacs + all ~275 tree-sitter grammars) via `nix-build -A packages.default`.
+- `just build` — full distribution (Emacs + all ~275 tree-sitter grammars) via plain `nix-build`.
 - `just build-bare` — bare Emacs via `emacs.nix`, no grammars.
 - `just build-pgtk` / `build-gtk3` / `build-nox` / `build-macport` / `build-git` / `build-igc` / `build-android` — variant builds targeting `emacs.nix` directly (bare Emacs only). Git/unstable/igc/macport variants will fail on first run and report the hash to pass back via `--argstr hash`.
 - `just run-built [ARGS]` — auto-detect platform, build, then launch from `./result/bin/emacs`.
 
-There's also a `devenv-emacs-smoke` script (defined in `devenv.nix`) that byte-compiles everything with warnings-as-errors, and `emacs-run` which is the non-Justfile equivalent of `just run`.
+There's also an `emacs-smoke` script (defined in `devenv.nix`) that byte-compiles everything with warnings-as-errors, and `emacs-run` which is the non-Justfile equivalent of `just run`.
 
 ## Architecture
 
@@ -68,26 +67,35 @@ There's also a `devenv-emacs-smoke` script (defined in `devenv.nix`) that byte-c
 Divergent variants (`git`, `unstable`, `igc`, `macport`, Darwin patch flags) go through `overrideAttrs` and *intentionally* bust the cache. Any edit to `emacs.nix` that touches the `basePackage.override { … }` block must preserve parity for the mainline variant. Verify with:
 
 ```
-nix-instantiate --eval --strict -E \
-  '(import ./emacs.nix {}).outPath == (import (import ./npins).nixpkgs {}).emacs30.outPath'
+nix-instantiate --eval --strict -E '
+  let lock = builtins.fromJSON (builtins.readFile ./flake.lock);
+      n = lock.nodes.nixpkgs.locked;
+      nixpkgs = fetchTarball { url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz"; sha256 = n.narHash; };
+  in (import ./emacs.nix {}).outPath == (import nixpkgs {}).emacs30.outPath'
 ```
 
 **`overlay.nix`** is a nixpkgs overlay providing two attributes: `jotainEmacs` (bare Emacs from `emacs.nix`) and `jotainEmacsPackages` (full distribution with use-package auto-mapping + tree-sitter grammars).
 
-**`default.nix`** returns a structured attrset `{ packages.default, overlays.default, homeManagerModules.default, lib }` instead of a single derivation. `packages.default` is the full distribution. `overlays.default` re-exports `overlay.nix`. Plain `nix-build` (no `-A`) no longer works; use `nix-build -A packages.default`. Variant builds use `emacs.nix` directly (e.g. `nix-build emacs.nix --arg withPgtk true`).
+**`default.nix`** is a thin flake-compat wrapper. It reads the pinned `flake-compat` rev from `flake.lock`, evaluates `flake.nix`, and promotes the current system's packages to the top level. `nix-build` builds the full distribution; `nix-build -A emacs` builds bare Emacs. Variant builds still target `emacs.nix` directly (e.g. `nix-build emacs.nix --arg withPgtk true`).
 
-**`flake.nix`** is a thin wrapper that exposes `overlays.default` and `homeManagerModules.default` for flake consumers. It has no `packages` output — non-flake users go through `default.nix` directly.
+**`flake.nix`** is the primary entry point for flake consumers. It exposes:
+- `packages.<system>.default` — full distribution (`jotainEmacsPackages`)
+- `packages.<system>.emacs` — bare Emacs (`jotainEmacs`)
+- `overlays.default` — the nixpkgs overlay from `overlay.nix`
+- `homeManagerModules.default` — the Home Manager module from `module.nix`
+- `lib` — use-package scanner utilities from `nix/use-package.nix`
+- `checks.<system>.*` — package builds, nixfmt, statix, deadnix
 
 ### Dev shell's Emacs
 
-`devenv.nix` builds its own `jotainEmacs` (from `emacs.nix` + two MELPA-absent packages via `trivialBuild`: `claude-code-ide` and `combobulate`) and exposes it as the `emacs` binary on `PATH`. The custom `languages.emacs-lisp` module from `nix/devenv-emacs-lisp.nix` provides `eask-cli` alongside; `ellsp` and `elsa` are available but opt-in (both defaulted off in `devenv.nix`). The dev shell also includes `statix` and `deadnix` for Nix linting.
+`devenv.nix` builds `jotainEmacs` by applying `overlay.nix` to devenv's ambient `pkgs` (two MELPA-absent packages, `claude-code-ide` and `combobulate`, are added via `trivialBuild` in `nix/extra-packages.nix`). This derivation is exposed as the `emacs` binary on `PATH`. The custom `languages.emacs-lisp` module from `nix/devenv-emacs-lisp.nix` provides `eask-cli` alongside; `ellsp` and `elsa` are available but opt-in (both defaulted off in `devenv.nix`). The dev shell also includes `statix` and `deadnix` for Nix linting.
 
 `module.nix` is a Home Manager module (`services.jotain`) for running Jotain as a user-session Emacs daemon with `emacsclient`; it supports systemd on Linux and launchd on macOS.
 
 ### Pinning
 
-Sources are managed with `npins` as the source of truth. `npins/` holds at minimum `nixpkgs` (GitHub type, pinned to an exact commit). Three lock files must stay in sync: `npins/sources.json`, `devenv.lock`, and `flake.lock` — all must reference the same nixpkgs revision. `devenv.yaml` uses `github:NixOS/nixpkgs/<exact-commit>` (not `github:cachix/devenv-nixpkgs/rolling`) to ensure binary cache hits across all three pinning mechanisms.
+`flake.lock` is the single source of truth for the nixpkgs revision. Two lock files must stay in sync: `flake.lock` and `devenv.lock`. `devenv.yaml` pins nixpkgs to the exact same commit as `flake.lock` using `github:NixOS/nixpkgs/<exact-commit>` to ensure binary cache hits.
 
-Use `just update` to synchronize all three locks (npins is updated first, then devenv.lock and flake.lock are synced to the same revision). Use `just verify` to check that all locks reference the same nixpkgs rev.
+Use `just update` to update nixpkgs in `flake.lock` first, then sync `devenv.lock` to match. Use `just verify` to check that both locks agree.
 
-`devenv.nix` imports `./npins` and uses the pinned nixpkgs as `pinned` for everything that needs "the same nixpkgs" — **prefer `pinned` over the ambient `pkgs`** inside `devenv.nix` when consistency matters.
+`default.nix` and `emacs.nix` read nixpkgs from `flake.lock` directly via `fetchTarball` — no separate pinning tool is needed for non-flake consumers.
