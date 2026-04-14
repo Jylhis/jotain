@@ -47,15 +47,57 @@
   (magit-todos-depth 1))
 
 ;; Forge: GitHub/GitLab/Forgejo PRs, issues, and reviews inside Magit.
-;; Auth: add to ~/.authinfo.gpg
-;;   machine api.github.com login YOUR_USERNAME^forge password ghp_…
+;; Auth: tokens are fetched on the fly from the `gh' (GitHub) and
+;; `glab' (GitLab) CLI tools.  Falls through to auth-source when
+;; neither CLI is available.
 (use-package forge
   :after magit
   :custom
   (forge-database-file (jotain-var-file "forge/database.sqlite"))
   (forge-post-directory (jotain-var-file "forge/posts/"))
   ;; Use the built-in sqlite (Emacs 30+) instead of the external emacsql.
-  (forge-database-connector 'emacsql-sqlite-builtin))
+  (forge-database-connector 'emacsql-sqlite-builtin)
+  :config
+  ;; --- CLI-based authentication for forge ---
+  ;; Instead of maintaining tokens in ~/.authinfo.gpg, shell out to
+  ;; `gh auth token' / `glab auth token'.  The :before-until advices
+  ;; intercept ghub's token lookup; when the CLI returns a valid token
+  ;; auth-source is never consulted.
+
+  (defun jotain--cli-auth-token (cli &optional host)
+    "Return a token string from CLI (\"gh\" or \"glab\") for HOST.
+Return nil when the CLI is absent or the command fails, so the
+caller falls through to auth-source."
+    (when (executable-find cli)
+      (with-temp-buffer
+        (let ((args (list "auth" "token")))
+          (when host (setq args (append args (list "-h" host))))
+          (when (zerop (apply #'call-process cli nil t nil args))
+            (let ((token (string-trim (buffer-string))))
+              (unless (string-empty-p token) token)))))))
+
+  ;; GitHub — `gh auth token [-h HOST]'
+  (defun jotain--ghub-cli-token (host username package &optional noerror forge)
+    "Return a GitHub token from the `gh' CLI for HOST."
+    (ignore username package noerror forge)
+    (jotain--cli-auth-token
+     "gh"
+     (unless (equal host "api.github.com")
+       (replace-regexp-in-string "\\`api\\." "" host))))
+
+  (advice-add 'ghub--token :before-until #'jotain--ghub-cli-token)
+
+  ;; GitLab — `glab auth token [-h HOST]'
+  ;; glab.el is autoloaded when forge visits a GitLab remote, so defer
+  ;; the advice until it's actually needed.
+  (with-eval-after-load 'glab
+    (defun jotain--glab-cli-token (host username package &optional noerror forge)
+      "Return a GitLab token from the `glab' CLI for HOST."
+      (ignore username package noerror forge)
+      (jotain--cli-auth-token
+       "glab"
+       (replace-regexp-in-string "/api/v4\\'" "" host)))
+    (advice-add 'glab--token :before-until #'jotain--glab-cli-token)))
 
 ;; transient is the menu system magit/forge are built on. Theme its
 ;; three state files under var/ so they don't drop at the repo root.
