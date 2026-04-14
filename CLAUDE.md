@@ -78,19 +78,21 @@ nix-instantiate --eval --strict -E '
 
 **`default.nix`** is a thin flake-compat wrapper. It reads the pinned `flake-compat` rev from `flake.lock`, evaluates `flake.nix`, and promotes the current system's packages to the top level. `nix-build` builds the full distribution; `nix-build -A emacs` builds bare Emacs. Variant builds still target `emacs.nix` directly (e.g. `nix-build emacs.nix --arg withPgtk true`).
 
-**`flake.nix`** is the primary entry point for flake consumers. It exposes:
+**`flake.nix`** is a thin wrapper — no inline derivations, just wiring. It exposes:
 - `packages.<system>.default` — full distribution (`jotainEmacsPackages`)
 - `packages.<system>.emacs` — bare Emacs (`jotainEmacs`)
 - `overlays.default` — the nixpkgs overlay from `overlay.nix`
-- `homeManagerModules.default` — the Home Manager module from `module.nix`
+- `homeManagerModules.default` — Home Manager module from `module.nix` (per-user daemon, wrappers, desktop entry)
+- `nixosModules.default` / `darwinModules.default` — NixOS / nix-darwin module from `module-system.nix` (overlay + system packages)
+- `formatter.<system>` — `treefmt` wrapper using shared config from `nix/treefmt.nix`
 - `lib` — use-package scanner utilities from `nix/use-package.nix`
-- `checks.<system>.*` — package builds, nixfmt, statix, deadnix
+- `checks.<system>.*` — defined in `nix/checks.nix`: package builds, formatting (treefmt), statix, deadnix, elisp-lint (paren check), elisp-compile (byte-compile with warnings-as-errors)
 
 ### Dev shell's Emacs
 
 `devenv.nix` builds `jotainEmacs` by applying `overlay.nix` to devenv's ambient `pkgs` (two MELPA-absent packages, `claude-code-ide` and `combobulate`, are added via `trivialBuild` in `nix/extra-packages.nix`). This derivation is exposed as the `emacs` binary on `PATH`. The custom `languages.emacs-lisp` module from `nix/devenv-emacs-lisp.nix` provides `eask-cli` alongside; `ellsp` and `elsa` are available but opt-in (both defaulted off in `devenv.nix`). The dev shell also includes `statix` and `deadnix` for Nix linting.
 
-`module.nix` is a Home Manager module (`services.jotain`) for running Jotain as a user-session Emacs daemon with `emacsclient`; it supports systemd on Linux and launchd on macOS.
+`module.nix` is a Home Manager module (`services.jotain`) for running Jotain as a user-session Emacs daemon with `emacsclient`; it supports systemd on Linux and launchd on macOS. `module-system.nix` is a shared NixOS / nix-darwin module that applies the overlay and adds packages to `environment.systemPackages` — it is intentionally a single file reused by both `nixosModules.default` and `darwinModules.default`.
 
 ### Pinning
 
@@ -99,3 +101,11 @@ nix-instantiate --eval --strict -E '
 Use `just update` to update nixpkgs in `flake.lock` first, then sync `devenv.lock` to match. Use `just verify` to check that both locks agree.
 
 `default.nix` and `emacs.nix` read nixpkgs from `flake.lock` directly via `fetchTarball` — no separate pinning tool is needed for non-flake consumers.
+
+### Shared treefmt configuration
+
+`nix/treefmt.nix` defines the formatter programs (currently `nixfmt`). It is consumed by both `flake.nix` (via `treefmt-nix` for `nix fmt` and the formatting check) and `devenv.nix` (via devenv's treefmt module). Add new formatters to this single file.
+
+### Check / test responsibility split
+
+Flake checks (`nix flake check`, defined in `nix/checks.nix`) validate the **application and configuration**: Nix linting (statix, deadnix, nixfmt), Elisp syntax (balanced parens), and Elisp byte-compilation (warnings as errors). devenv tests (`devenv test`, defined in `devenv.nix` `enterTest`) validate the **dev environment**: binary provenance, isolation from host config, and tooling availability.

@@ -65,9 +65,7 @@ in
   # https://devenv.sh/integrations/treefmt/
   treefmt = {
     enable = true;
-    config.programs = {
-      nixfmt.enable = true;
-    };
+    config.programs = import ./nix/treefmt.nix;
   };
 
   # https://devenv.sh/scripts/
