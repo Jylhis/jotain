@@ -57,7 +57,7 @@ and the result is a face-attribute soup."
   :bind ("C-c t" . auto-dark-toggle-appearance)
   :custom
   (auto-dark-allow-osascript t)
-  (auto-dark-themes `((,jotain-theme-light) (,jotain-theme-dark)))
+  (auto-dark-themes `((,jotain-theme-dark) (,jotain-theme-light)))
   :config
   (auto-dark-mode 1))
 
