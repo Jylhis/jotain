@@ -3,7 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/4c1018dae018162ec878d42fec712642d214fdfa";
-
+    flake-compat = {
+      url = "github:edolstra/flake-compat";
+      flake = false;
+    };
   };
 
   outputs =
@@ -60,7 +63,7 @@
                 src = self;
               }
               ''
-                find $src -name '*.nix' -not -path '*/npins/*' -exec nixfmt --check {} +
+                find $src -name '*.nix' -exec nixfmt --check {} +
                 touch $out
               '';
 
@@ -86,7 +89,7 @@
               }
               ''
                 cd $src
-                deadnix --fail --exclude npins .
+                deadnix --fail .
                 touch $out
               '';
         }
