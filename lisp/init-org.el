@@ -63,6 +63,7 @@
 
 (use-package org-roam
   :commands (org-roam-node-find org-roam-capture)
+  :functions (org-roam-db-autosync-mode)
   :bind
   (("C-c n f" . org-roam-node-find)
    ("C-c n i" . org-roam-node-insert)

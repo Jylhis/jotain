@@ -53,6 +53,7 @@
 
 (use-package projection-multi-embark
   :after (embark projection-multi)
+  :functions (projection-multi-embark-setup-command-map)
   :demand t
   :config (projection-multi-embark-setup-command-map))
 
@@ -78,6 +79,7 @@
 
 (use-package consult-compile-multi
   :after compile-multi
+  :functions (consult-compile-multi-mode)
   :demand t
   :config (consult-compile-multi-mode))
 
@@ -87,6 +89,7 @@
 
 (use-package compile-multi-embark
   :after (embark compile-multi)
+  :functions (compile-multi-embark-mode)
   :demand t
   :config (compile-multi-embark-mode 1))
 
