@@ -5,7 +5,7 @@ description: How Jotain builds Emacs from source using Nix
 
 # Nix Build System
 
-Jotain uses Nix for reproducible Emacs builds with fine-grained control over compile options. The source of nixpkgs is the npins-pinned `nixpkgs-unstable` channel by default; pass `--arg pkgs '<nixpkgs>'` or override `pkgs` to use a different one.
+Jotain uses Nix for reproducible Emacs builds with fine-grained control over compile options. The source of nixpkgs is the revision pinned in `flake.lock` by default; both `default.nix` and `emacs.nix` read it directly via `fetchTarball`, so non-flake `nix-build` consumers get the same pin. Pass `--arg pkgs '<nixpkgs>'` or override `pkgs` to use a different one.
 
 ## Two-Layer Architecture
 
@@ -36,9 +36,14 @@ produces the *exact* store path of `pkgs.emacs30(.override { ... })`, so the pub
 Verify after any change to defaults:
 
 ```bash
-nix-instantiate --eval --strict -E \
-  '(import ./emacs.nix {}).outPath
-     == (import (import ./npins).nixpkgs-unstable {}).emacs30.outPath'
+nix-instantiate --eval --strict -E '
+  let lock = builtins.fromJSON (builtins.readFile ./flake.lock);
+      n = lock.nodes.nixpkgs.locked;
+      nixpkgs = fetchTarball {
+        url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz";
+        sha256 = n.narHash;
+      };
+  in (import ./emacs.nix {}).outPath == (import nixpkgs {}).emacs30.outPath'
 ```
 
 ### default.nix
