@@ -48,7 +48,7 @@
       nixosModules.default = import ./module-system.nix;
       darwinModules.default = import ./module-system.nix;
 
-      lib = import ./nix/use-package.nix { lib = nixpkgs.lib; };
+      lib = import ./nix/use-package.nix { inherit (nixpkgs) lib; };
 
       packages = forAllSystems (system: {
         default = (pkgsFor system).jotainEmacsPackages;

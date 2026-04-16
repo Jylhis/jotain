@@ -4,4 +4,6 @@
 # devenv's treefmt module) so formatting rules live in one place.
 {
   nixfmt.enable = true;
+  deadnix.enable = true;
+  statix.enable = true;
 }

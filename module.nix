@@ -189,10 +189,10 @@ in
         ExecStopPost = "${pkgs.coreutils}/bin/chmod --changes +w ${socketDir}";
       };
     }
-    // lib.optionalAttrs (cfg.startWithUserSession != false) {
+    // lib.optionalAttrs cfg.startWithUserSession {
       Install = {
         WantedBy = [
-          (if cfg.startWithUserSession == true then "default.target" else "graphical-session.target")
+          (if cfg.startWithUserSession then "default.target" else "graphical-session.target")
         ];
       };
     };

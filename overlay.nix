@@ -17,7 +17,7 @@ in
   jotainEmacsPackages = usePackage.emacsWithPackagesFromUsePackage {
     config = ./lisp;
     package = final.jotainEmacs;
-    emacsPackagesFor = final.emacsPackagesFor;
+    inherit (final) emacsPackagesFor;
     override = extraPackages;
     extraEmacsPackages = epkgs: [
       epkgs.claude-code-ide
