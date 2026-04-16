@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ pkgs, ... }:
 
 let
   # pkgs is what devenv resolved from devenv.lock, which `just update` keeps

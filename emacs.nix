@@ -134,7 +134,7 @@ let
     fetchpatch
     ;
 
-  isDarwin = stdenv.hostPlatform.isDarwin;
+  inherit (stdenv.hostPlatform) isDarwin;
   isAarch64Linux = stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isAarch64;
   isGitVariant = builtins.elem variant [
     "git"

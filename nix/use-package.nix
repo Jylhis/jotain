@@ -167,12 +167,10 @@ let
     in
     if mapped == null then
       null
-    else if epkgs ? ${mapped} then
-      epkgs.${mapped}
-    else if warnMissing then
+    else epkgs.${mapped} or (if warnMissing then
       trace "use-package: '${name}' (→ ${mapped}) not found in emacsPackages — falling through" null
     else
-      null;
+      null);
 
   packagesForDirectory =
     {
