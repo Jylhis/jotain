@@ -51,6 +51,7 @@
 ;; you're currently editing.
 (use-package super-save
   :diminish
+  :functions (super-save-mode)
   :custom
   (super-save-auto-save-when-idle t)
   (super-save-remote-files nil)

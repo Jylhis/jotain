@@ -55,6 +55,7 @@
 (use-package dirvish
   :demand t
   :after dired
+  :functions (dirvish-override-dired-mode)
   :custom
   (dirvish-attributes '(nerd-icons file-time file-size collapse subtree-state vc-state))
   (dirvish-mode-line-format '(:left (sort symlink) :right (omit yank index)))
@@ -71,6 +72,7 @@
 
 ;; Reversible `C-x 1': first press collapses to a single window,
 ;; second press restores the previous layout via `winner-mode'.
+(declare-function winner-undo "winner")
 (defun jotain-nav-toggle-delete-other-windows ()
   "Delete other windows, or restore the previous layout.
 If only one window is visible and `winner-mode' has a previous

@@ -29,7 +29,7 @@ immediately for writes."
   (make-directory jotain-var-dir t)
   (expand-file-name name jotain-var-dir))
 
-(make-directory jotain-var-dir t)
+(ignore-errors (make-directory jotain-var-dir t))
 
 ;; Restore a sane GC threshold after the early-init.el bump. 16 MiB is the
 ;; common compromise: high enough that typing/scrolling never trips a GC,
@@ -118,6 +118,7 @@ immediately for writes."
 (use-package diminish
   :demand t)
 
+(declare-function jotain-core--auto-create-missing-dirs nil)
 (use-package files
   :ensure nil
   :custom

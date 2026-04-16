@@ -69,6 +69,7 @@
 (use-package diff-hl
   :after magit
   :demand t
+  :functions (diff-hl-flydiff-mode diff-hl-magit-post-refresh diff-hl-dired-mode)
   :custom
   (diff-hl-draw-borders nil)
   (fringes-outside-margins t)
@@ -76,7 +77,7 @@
   :hook
   ((after-init . global-diff-hl-mode)
    (dired-mode . diff-hl-dired-mode)
-   (magit-pre-refresh  . diff-hl-magit-pre-refresh)
+   (magit-pre-refresh  . ignore)
    (magit-post-refresh . diff-hl-magit-post-refresh))
   :config
   ;; Live, pre-save diff indicators.

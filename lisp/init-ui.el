@@ -156,6 +156,7 @@ The first family that is actually installed wins."
 
 (use-package nerd-icons-corfu
   :after (nerd-icons corfu)
+  :functions (nerd-icons-corfu-formatter)
   :config
   (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
 
@@ -189,6 +190,7 @@ The first family that is actually installed wins."
 
 (use-package pulsar
   :demand t
+  :functions (pulsar-global-mode)
   :custom
   (pulsar-pulse-functions
    '(recenter-top-bottom move-to-window-line-top-bottom reposition-window
@@ -211,6 +213,7 @@ The first family that is actually installed wins."
 ;; C-[/ESC, and pass through Shift-modified function keys. global-kkp-mode
 ;; is itself a no-op in GUI frames, so it's safe to enable unconditionally.
 (use-package kkp
+  :functions (global-kkp-mode)
   :config (global-kkp-mode 1))
 
 ;; OSC 52 clipboard integration that works through ssh + tmux.

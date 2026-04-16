@@ -80,6 +80,7 @@
         cd work
         emacs --batch \
           -L lisp \
+          --eval "(require 'pcre2el)" \
           --eval "(setq byte-compile-error-on-warn t)" \
           -f batch-byte-compile early-init.el init.el lisp/init-*.el
         touch $out
