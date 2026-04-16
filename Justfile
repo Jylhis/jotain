@@ -186,35 +186,48 @@ fmt:
 
 # ── Lock synchronization ────────────────────────────────────────────
 
-# Update nixpkgs in flake.lock and sync devenv.lock to match.
+# Inputs shared between flake.nix and devenv.yaml — both locks must agree on these revs.
+shared_inputs := "nixpkgs treefmt-nix"
+
+# Update flake inputs and sync matching devenv.yaml URLs to the new revs.
 [group('pins')]
 update:
     #!/usr/bin/env bash
     set -euo pipefail
-    nix flake update nixpkgs
-    REV=$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock)
-    echo "Syncing devenv to nixpkgs $REV"
+    nix flake update
     tmpfile=$(mktemp)
-    sed "s|url: github:NixOS/nixpkgs/.*|url: github:NixOS/nixpkgs/$REV|" devenv.yaml > "$tmpfile"
+    cp devenv.yaml "$tmpfile"
+    for input in {{ shared_inputs }}; do
+        owner=$(jq -r ".nodes.\"$input\".locked.owner" flake.lock)
+        repo=$(jq -r ".nodes.\"$input\".locked.repo" flake.lock)
+        rev=$(jq -r ".nodes.\"$input\".locked.rev" flake.lock)
+        echo "Syncing devenv.yaml: $input -> $rev"
+        sed -i.bak "s|url: github:$owner/$repo/[^[:space:]]*|url: github:$owner/$repo/$rev|" "$tmpfile"
+        rm -f "$tmpfile.bak"
+    done
     mv "$tmpfile" devenv.yaml
     devenv update
-    echo "Done. Both locks pinned to $REV"
+    echo "Done."
 
-# Verify that flake.lock and devenv.lock agree on the same nixpkgs rev.
+# Verify that flake.lock and devenv.lock agree on every shared input's rev.
 [group('pins')]
 verify:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "Checking nixpkgs rev sync..."
-    FLAKE_REV=$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock)
-    DEVENV_REV=$(jq -r '.nodes.nixpkgs.locked.rev' devenv.lock)
-    if [ "$FLAKE_REV" != "$DEVENV_REV" ]; then
-        echo "FAIL: nixpkgs revs diverged"
-        echo "  flake:  $FLAKE_REV"
-        echo "  devenv: $DEVENV_REV"
-        exit 1
-    fi
-    echo "OK: both locks pinned to $FLAKE_REV"
+    fail=0
+    for input in {{ shared_inputs }}; do
+        flake_rev=$(jq -r ".nodes.\"$input\".locked.rev" flake.lock)
+        devenv_rev=$(jq -r ".nodes.\"$input\".locked.rev" devenv.lock)
+        if [ "$flake_rev" != "$devenv_rev" ]; then
+            echo "FAIL: $input revs diverged"
+            echo "  flake:  $flake_rev"
+            echo "  devenv: $devenv_rev"
+            fail=1
+        else
+            echo "OK: $input -> $flake_rev"
+        fi
+    done
+    exit $fail
 
 
 # ── Cleanup ─────────────────────────────────────────────────────────
