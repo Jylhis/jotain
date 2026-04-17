@@ -117,11 +117,12 @@ External packages should use :ensure t for explicit documentation."
   :tags '(fast unit)
   ;; This is informational - we verify external packages have :ensure t
   ;; by checking a sample of known external packages
-  (let ((elisp-dir (expand-file-name "elisp" user-emacs-directory))
-        (sample-externals '("magit" "vertico" "consult" "corfu" "orderless")))
+  (let* ((elisp-dir (expand-file-name "elisp" user-emacs-directory))
+         (sample-externals '("magit" "vertico" "consult" "corfu" "orderless"))
+         (el-files (directory-files elisp-dir t "\\.el$")))
     (dolist (pkg sample-externals)
       (let ((found nil))
-        (dolist (file (directory-files elisp-dir t "\\.el$"))
+        (dolist (file el-files)
           (with-temp-buffer
             (insert-file-contents file)
             (goto-char (point-min))
