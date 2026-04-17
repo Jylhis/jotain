@@ -37,7 +37,17 @@ Check that the fix is genuinely trivial:
 
 If the user confirms they want to proceed despite the warning, continue.
 
-### 2. Apply the fix
+### 2. Check for active beads issue
+
+```bash
+bd list --status=in_progress 2>/dev/null | head -20 || true
+```
+
+If an in-progress beads issue is found, note its ID — the fix will be linked to it at the end.
+
+If beads is unavailable, skip all beads steps silently.
+
+### 3. Apply the fix
 
 Make the targeted change(s) directly. For each file changed:
 - Read the file first to understand context
@@ -45,7 +55,7 @@ Make the targeted change(s) directly. For each file changed:
 - Do not refactor surrounding code
 - Do not add comments, docstrings, or type annotations to unchanged code
 
-### 3. Run quality gate
+### 4. Run quality gate
 
 Run the project's fast test suite to verify the fix doesn't break anything:
 
@@ -60,12 +70,20 @@ If tests fail:
 
 If `just` is unavailable (e.g., outside the dev shell), report that tests could not be verified and ask the user to confirm manually.
 
-### 4. Report
+### 5. Report and optionally update beads
 
 Summarize what was changed:
 - Files modified
 - Nature of the fix (one sentence)
 - Test result
+
+If an active beads issue was found in step 2, ask the user:
+"Should I add a comment to `<issue-id>` noting this fix was applied? (yes/no)"
+
+If yes:
+```bash
+bd comment <issue-id> "Quick fix applied: <one-line description>"
+```
 
 ## Constraints
 

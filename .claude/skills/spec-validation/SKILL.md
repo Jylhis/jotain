@@ -72,6 +72,7 @@ When all three artifacts exist, check:
 | Plan → Tasks coverage | Every component in plan.md has at least one task |
 | Terminology drift | Same concepts use the same names across all three files |
 | No orphan tasks | Every task maps to a requirement or story |
+| Beads annotation | If `<!-- bd:ID -->` annotations exist, verify IDs match real beads issues |
 
 ## When to Escalate
 
