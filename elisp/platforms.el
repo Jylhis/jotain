@@ -55,12 +55,11 @@
 ;;; Font fallback system
 (defun platform-set-font-with-fallback (font-list height)
   "Set font from FONT-LIST with HEIGHT, using first available font."
-  (require 'fonts)
-  (let* ((available-fonts (jotain-fonts--get-available-families))
-         (available-font (seq-find (lambda (font)
-                                     (gethash font available-fonts))
-                                   font-list)))
+  (let ((available-font (seq-find (lambda (font)
+                                    (find-font (font-spec :name font)))
+                                  font-list)))
     (when available-font
+      (require 'fonts)
       (jotain-fonts--set-face-font 'default (cons available-font height))
       available-font)))
 
@@ -113,7 +112,7 @@
           (princ "Font: (default)\n")))
       (when (display-graphic-p)
         (if (bound-and-true-p jotain-fonts--available-cache)
-            (princ (format "Available fonts: %d\n" (hash-table-count jotain-fonts--available-cache)))
+            (princ (format "Available fonts: %d\n" (length jotain-fonts--available-cache)))
           (princ "Available fonts: (uncached)\n")))
       (princ "\n=== Environment ===\n")
       (when platform-android-p

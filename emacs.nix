@@ -39,7 +39,7 @@ let
     ++ (if devMode then devPackages epkgs else [ ]);
 
   # Use Emacs 30 (or latest from overlay)
-  baseEmacs = pkgs.emacs-unstable-pgtk or pkgs.emacs-pgtk or pkgs.emacs;
+  baseEmacs = pkgs.emacs30-pgtk or pkgs.emacs-pgtk or pkgs.emacs;
 
   # Get runtime dependencies (LSP servers, CLI tools, tree-sitter grammars)
   runtimeDeps = jotainLib.runtimeDeps;
