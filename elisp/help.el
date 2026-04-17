@@ -5,11 +5,6 @@
 
 ;;; Code:
 
-(use-package help
-  :ensure nil
-  :custom
-  (help-window-select t "Automatically shift focus to the help window upon opening"))
-
 (use-package help-at-pt
   :ensure nil
   :custom

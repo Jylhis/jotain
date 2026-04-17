@@ -89,18 +89,15 @@
 		 (pixel-scroll-precision-mode 1))
 
   ;;; Storage Integration
-	       ;; Reduce unnecessary disk writes (lock files cause issues on Android storage)
-	       (setopt create-lockfiles nil)
-
 	       ;; Set up org directory to use external storage
 	       (let ((external-storage (getenv "EXTERNAL_STORAGE")))
 		 (when external-storage
-		   (setopt org-directory
-			   (expand-file-name "Documents/syncthing" external-storage))
+		   (setq org-directory
+			 (expand-file-name "Documents/syncthing" external-storage))
 		   ;; Alternative path structure for different setups
 		   (unless (file-directory-p org-directory)
-		     (setopt org-directory
-			     "/storage/emulated/0/Documents/syncthing"))))
+		     (setq org-directory
+			   "/storage/emulated/0/Documents/syncthing"))))
 
   ;;; Performance Optimizations
 	       ;; Reduce GC pressure on mobile devices
@@ -147,8 +144,8 @@
 
 	       (with-eval-after-load 'magit
 		 ;; Simpler magit interface
-		 (setopt magit-diff-refine-hunk nil) ; Disable for performance
-		 (setopt magit-revision-show-gravatars nil))
+		 (setq magit-diff-refine-hunk nil) ; Disable for performance
+		 (setq magit-revision-show-gravatars nil))
 
   ;;; Helper Functions
 	       (defun android-restart-emacs ()

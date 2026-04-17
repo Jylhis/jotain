@@ -127,7 +127,7 @@
       output = machine.succeed("""
         sudo -u testuser emacs --batch \\
           --eval '(require (quote platform))' \\
-          --eval '(message "Linux: %s, GUI: %s" platform-linux-p (platform-gui-p))' 2>&1
+          --eval '(message "Linux: %s, GUI: %s" platform-linux-p platform-gui-p)' 2>&1
       """)
       assert "Linux: t" in output, f"Platform detection failed: {output}"
       print("PASS: Platform detection works correctly")

@@ -13,46 +13,51 @@
 ;; Mock org variables for testing (avoid loading org-mode)
 (defvar org-directory)
 (defvar org-agenda-files)
+(setq org-directory (expand-file-name "~/Documents"))
+(setq org-agenda-files nil)
 
 ;;; Fast Tests (no I/O)
 
 (ert-deftest test-utils/find-org-files-nonexistent-directory ()
-  "Test that jotain-utils-find-org-files-recursively returns nil for nonexistent directory."
+  "Test that my/find-org-files-recursively returns nil for nonexistent directory."
   :tags '(unit utils fast)
-  (let ((result (jotain-utils-find-org-files-recursively "/nonexistent/directory/that/does/not/exist")))
+  (let ((result (my/find-org-files-recursively "/nonexistent/directory/that/does/not/exist")))
     (should (null result))))
 
 (ert-deftest test-utils/find-org-files-nil-input ()
-  "Test that jotain-utils-find-org-files-recursively handles nil input gracefully."
+  "Test that my/find-org-files-recursively handles nil input gracefully."
   :tags '(unit utils fast)
-  (let ((result (jotain-utils-find-org-files-recursively nil)))
+  (let ((result (my/find-org-files-recursively nil)))
     (should (null result))))
 
 (ert-deftest test-utils/update-org-agenda-files-nonexistent ()
-  "Test that jotain-utils-update-org-agenda-files preserves agenda files when directories don't exist."
+  "Test that my/update-org-agenda-files preserves agenda files when directories don't exist."
   :tags '(unit utils fast)
-  (let ((org-directory (expand-file-name "~/Documents"))
-        (org-agenda-files '("dummy-file.org")))
-    (jotain-utils-update-org-agenda-files '("/nonexistent/directory"))
-    (should (equal org-agenda-files '("dummy-file.org")))))
+  (let ((original-org-agenda-files org-agenda-files))
+    (unwind-protect
+        (progn
+          (setq org-agenda-files '("dummy-file.org"))
+          (my/update-org-agenda-files '("/nonexistent/directory"))
+          (should (equal org-agenda-files '("dummy-file.org"))))
+      (setq org-agenda-files original-org-agenda-files))))
 
 ;;; Filesystem Tests (minimal I/O)
 
 (ert-deftest test-utils/find-org-files-empty-directory ()
-  "Test that jotain-utils-find-org-files-recursively returns nil for empty directory."
+  "Test that my/find-org-files-recursively returns nil for empty directory."
   :tags '(unit utils filesystem)
   (let ((temp-dir (make-temp-file "emacs-test-empty-" t)))
     (unwind-protect
-        (let ((result (jotain-utils-find-org-files-recursively temp-dir)))
+        (let ((result (my/find-org-files-recursively temp-dir)))
           (should (null result)))
       (delete-directory temp-dir t))))
 
 (ert-deftest test-utils/find-org-files-file-input ()
-  "Test that jotain-utils-find-org-files-recursively returns nil when given a file instead of directory."
+  "Test that my/find-org-files-recursively returns nil when given a file instead of directory."
   :tags '(unit utils filesystem)
   (let ((temp-file (make-temp-file "emacs-test-file-" nil ".org")))
     (unwind-protect
-        (let ((result (jotain-utils-find-org-files-recursively temp-file)))
+        (let ((result (my/find-org-files-recursively temp-file)))
           (should (null result)))
       (when (file-exists-p temp-file)
         (delete-file temp-file)))))
@@ -71,11 +76,11 @@
     temp-dir))
 
 (ert-deftest test-utils/find-org-files-basic ()
-  "Test that jotain-utils-find-org-files-recursively finds org files."
+  "Test that my/find-org-files-recursively finds org files."
   :tags '(unit utils filesystem slow)
   (let ((temp-dir (test-utils--create-simple-structure)))
     (unwind-protect
-        (let ((org-files (jotain-utils-find-org-files-recursively temp-dir)))
+        (let ((org-files (my/find-org-files-recursively temp-dir)))
           (should (= (length org-files) 2))
           (should (cl-some (lambda (f) (string-match-p "test1\\.org$" f)) org-files))
           (should (cl-some (lambda (f) (string-match-p "test2\\.org$" f)) org-files))
@@ -83,7 +88,7 @@
       (delete-directory temp-dir t))))
 
 (ert-deftest test-utils/find-org-files-ignores-hidden ()
-  "Test that jotain-utils-find-org-files-recursively ignores hidden folders."
+  "Test that my/find-org-files-recursively ignores hidden folders."
   :tags '(unit utils filesystem slow)
   (let* ((temp-dir (make-temp-file "emacs-test-" t))
          (hidden-dir (expand-file-name ".hidden" temp-dir)))
@@ -94,27 +99,28 @@
             (insert "* Visible\n"))
           (with-temp-file (expand-file-name "hidden.org" hidden-dir)
             (insert "* Hidden\n"))
-          (let ((org-files (jotain-utils-find-org-files-recursively temp-dir)))
+          (let ((org-files (my/find-org-files-recursively temp-dir)))
             (should (= (length org-files) 1))
             (should-not (cl-some (lambda (f) (string-match-p "hidden\\.org$" f)) org-files))))
       (delete-directory temp-dir t))))
 
 (ert-deftest test-utils/update-org-agenda-files-integration ()
-  "Test that jotain-utils-update-org-agenda-files correctly updates agenda files."
+  "Test that my/update-org-agenda-files correctly updates agenda files."
   :tags '(integration utils filesystem slow)
   (let ((temp-dir (test-utils--create-simple-structure))
-        (org-directory (expand-file-name "~/Documents"))
-        (org-agenda-files nil))
+        (original-org-agenda-files org-agenda-files))
     (unwind-protect
         (progn
-          (jotain-utils-update-org-agenda-files (list temp-dir))
+          (setq org-agenda-files nil)
+          (my/update-org-agenda-files (list temp-dir))
           (should (= (length org-agenda-files) 2))
           (should (cl-every #'file-exists-p org-agenda-files)))
+      (setq org-agenda-files original-org-agenda-files)
       (delete-directory temp-dir t))))
 
 ;; Symlink test - platform specific and slow
 (ert-deftest test-utils/find-org-files-symlink-handling ()
-  "Test that jotain-utils-find-org-files-recursively handles symbolic links correctly."
+  "Test that my/find-org-files-recursively handles symbolic links correctly."
   :tags '(unit utils filesystem slow platform-specific)
   (skip-unless (eq system-type 'gnu/linux))
   (let ((temp-dir (make-temp-file "emacs-test-symlink-" t)))
@@ -124,30 +130,10 @@
             (insert "* Real org file\n"))
           (let ((link-path (expand-file-name "link.org" temp-dir)))
             (make-symbolic-link (expand-file-name "real.org" temp-dir) link-path)
-            (let ((result (jotain-utils-find-org-files-recursively temp-dir)))
+            (let ((result (my/find-org-files-recursively temp-dir)))
               (should (>= (length result) 1))
               (should (cl-some (lambda (file) (string-match-p "real\\.org$" file)) result)))))
       (delete-directory temp-dir t))))
-
-(ert-deftest test-utils/auto-create-missing-dirs ()
-  "Test that jotain-utils-auto-create-missing-dirs creates missing directories."
-  :tags '(unit utils filesystem)
-  (let* ((temp-dir (make-temp-file "emacs-test-auto-create-" t))
-         (nested-dir (expand-file-name "a/b/c" temp-dir))
-         (test-file (expand-file-name "test.txt" nested-dir)))
-    (unwind-protect
-        (let ((buffer-file-name test-file))
-          (should-not (file-exists-p nested-dir))
-          (jotain-utils-auto-create-missing-dirs)
-          (should (file-directory-p nested-dir)))
-      (delete-directory temp-dir t))))
-
-(ert-deftest test-utils/auto-create-missing-dirs-nil-buffer-file-name ()
-  "Test that jotain-utils-auto-create-missing-dirs does not crash when buffer-file-name is nil."
-  :tags '(unit utils)
-  (let ((buffer-file-name nil))
-    (jotain-utils-auto-create-missing-dirs)
-    (should t)))
 
 (provide 'test-utils)
 ;;; test-utils.el ends here
