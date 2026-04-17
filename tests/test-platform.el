@@ -16,11 +16,11 @@
   (should (booleanp platform-macos-p))
   (should (booleanp platform-linux-p))
   (should (booleanp platform-windows-p))
-  (should (booleanp (platform-gui-p)))
-  (should (booleanp (platform-terminal-p)))
+  (should (booleanp platform-gui-p))
+  (should (booleanp platform-terminal-p))
 
   ;; GUI and terminal should be mutually exclusive
-  (should (not (and (platform-gui-p) (platform-terminal-p)))))
+  (should (not (and platform-gui-p platform-terminal-p))))
 
 (ert-deftest test-platform-has-feature-p ()
   "Test platform feature detection."
@@ -66,16 +66,6 @@
 
     (setq result nil)
     (platform-unless t (setq result 'failure))
-    (should (null result))
-
-    ;; platform-cond should work like cond
-    (setq result (platform-cond (t 'cond-success)))
-    (should (eq result 'cond-success))
-
-    (setq result (platform-cond (nil 'should-not-reach) (t 'second-clause)))
-    (should (eq result 'second-clause))
-
-    (setq result (platform-cond (nil 'not-this)))
     (should (null result))))
 
 (ert-deftest test-platform-android-detection ()

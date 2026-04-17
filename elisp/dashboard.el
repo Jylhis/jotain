@@ -5,34 +5,31 @@
 
 ;;; Code:
 
-(defun jotain-dashboard-initial-buffer ()
-  "Return enlight dashboard unless file-visiting buffers already exist.
-When Emacs is launched with file arguments, those buffers are
-visited before this function runs, so we skip the dashboard."
-  ;; Optimization: Use `or` with `seq-find` to avoid traversing the buffer list
-  ;; twice (previously `seq-some` followed by `seq-find`).
-  (or (seq-find #'buffer-file-name (buffer-list))
-      (enlight)))
+(defun my-dashboard/open-downloads ()
+  "Open the user's downloads directory in dired."
+  (interactive)
+  (let ((downloads-dir
+         (if (and (eq system-type 'gnu/linux) (require 'xdg nil t))
+             (or (xdg-user-dir "DOWNLOAD") "~/Downloads")
+           "~/Downloads")))
+    (dired downloads-dir)))
 
 (use-package enlight
   :ensure t
-  :init
-  (setopt initial-buffer-choice #'jotain-dashboard-initial-buffer)
   :custom
-  (enlight-content
-   (concat
-    (propertize "MENU" 'face 'highlight)
-    "\n"
-    (enlight-menu
-     '(("Org Mode"
-        ("Org-Agenda (current day)" (org-agenda nil "a") "a"))
-       ("Files"
-        ("Find file" find-file "f")
-        ("Recent files" recentf-open-files "r")
-        ("Developer projects" (dired "~/Developer") "D"))
-       ("Projects"
-        ("Switch project" project-switch-project "p")
-        ("Magit repositories" magit-list-repositories "m")))))))
+  (initial-buffer-choice #'enlight)
+  :config
+  (setq enlight-content
+        (concat
+         (propertize "MENU" 'face 'highlight)
+         "\n"
+         (enlight-menu
+          '(("Org Mode"
+             ("Org-Agenda (current day)" (org-agenda nil "a") "a"))
+            ("Downloads"
+             ("Downloads folder" my-dashboard/open-downloads "d"))
+            ("Other"
+             ("Projects" project-switch-project "p")))))))
 
 (provide 'dashboard)
 ;;; dashboard.el ends here

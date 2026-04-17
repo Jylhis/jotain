@@ -17,15 +17,9 @@
 
 (require 'platform)
 
-;;; Font Customization Group
-
-(defgroup jotain-fonts nil
-  "Font configuration for Jotain."
-  :group 'jotain-ui)
-
 ;;; Font Configuration Variables
 
-(defcustom jotain-fonts-default-family
+(defcustom j10s-fonts-default-family
   '(("JetBrainsMono Nerd Font" . 110)
     ("FiraCode Nerd Font" . 110)
     ("Iosevka Nerd Font" . 110)
@@ -35,9 +29,9 @@
   "Programming font preferences with fallbacks.
 Each entry is (font-name . height-in-points*10)."
   :type '(alist :key-type string :value-type integer)
-  :group 'jotain-fonts)
+  :group 'j10s-fonts)
 
-(defcustom jotain-fonts-variable-family  
+(defcustom j10s-fonts-variable-family
   '(("Inter" . 120)
     ("SF Pro Text" . 120)
     ("Segoe UI" . 120)
@@ -45,91 +39,85 @@ Each entry is (font-name . height-in-points*10)."
     ("DejaVu Sans" . 110))
   "Variable pitch fonts for prose and UI elements."
   :type '(alist :key-type string :value-type integer)
-  :group 'jotain-fonts)
+  :group 'j10s-fonts)
 
-(defcustom jotain-fonts-serif-family
+(defcustom j10s-fonts-serif-family
   '(("Source Serif Pro" . 120)
     ("Liberation Serif" . 120)
     ("DejaVu Serif" . 110))
   "Serif fonts for formal documents and reading."
   :type '(alist :key-type string :value-type integer)
-  :group 'jotain-fonts)
+  :group 'j10s-fonts)
 
 ;;; Font Detection and Utilities
 
-(defvar jotain-fonts--available-cache nil
+(defvar j10s-fonts--available-cache nil
   "Cache of available font families to avoid repeated system calls.")
 
-(defun jotain-fonts--get-available-families ()
-  "Get hash table of available font families, cached for performance."
-  (unless jotain-fonts--available-cache
-    (let* ((fonts (font-family-list))
-           (cache (make-hash-table :test 'equal :size (length fonts))))
-      (dolist (font fonts)
-        (puthash font t cache))
-      (setq jotain-fonts--available-cache cache)))
-  jotain-fonts--available-cache)
+(defun j10s-fonts--get-available-families ()
+  "Get list of available font families, cached for performance."
+  (unless j10s-fonts--available-cache
+    (setq j10s-fonts--available-cache (font-family-list)))
+  j10s-fonts--available-cache)
 
-(defun jotain-fonts--find-first-available (font-list)
+(defun j10s-fonts--find-first-available (font-list)
   "Find first available font from FONT-LIST preference list.
 Returns (font-name . height) or nil if none found."
-  (let ((available-fonts (jotain-fonts--get-available-families)))
-    (seq-find (lambda (font-entry)
-                (gethash (car font-entry) available-fonts))
+  (let ((available-fonts (j10s-fonts--get-available-families)))
+    (seq-find (lambda (font-spec)
+                (member (car font-spec) available-fonts))
               font-list)))
 
-(defun jotain-fonts--set-face-font (face font-entry)
-  "Set FACE to use FONT-ENTRY (font-name . height)."
-  (when font-entry
-    (let ((font-name (car font-entry))
-          (font-height (cdr font-entry)))
+(defun j10s-fonts--set-face-font (face font-spec)
+  "Set FACE to use FONT-SPEC (font-name . height)."
+  (when font-spec
+    (let ((font-name (car font-spec))
+          (font-height (cdr font-spec)))
       (set-face-attribute face nil
                           :family font-name
                           :height font-height)
-      (when (eq face 'default)
-        (set-frame-font (font-spec :family font-name :size (/ font-height 10.0)) nil t))
-      (message "jotain-fonts: Set %s to %s (height %d)"
+      (message "j10s-fonts: Set %s to %s (height %d)"
                face font-name font-height)
-      font-entry)))
+      font-spec)))
 
 ;;; Core Font Setup Functions
 
-(defun jotain-fonts-setup-default ()
+(defun j10s-fonts-setup-default ()
   "Setup default monospace programming font."
-  (let ((font (jotain-fonts--find-first-available jotain-fonts-default-family)))
+  (let ((font (j10s-fonts--find-first-available j10s-fonts-default-family)))
     (when font
-      (jotain-fonts--set-face-font 'default font)
-      (jotain-fonts--set-face-font 'fixed-pitch font))))
+      (j10s-fonts--set-face-font 'default font)
+      (j10s-fonts--set-face-font 'fixed-pitch font))))
 
-(defun jotain-fonts-setup-variable-pitch ()
+(defun j10s-fonts-setup-variable-pitch ()
   "Setup variable pitch font for prose and UI."
-  (let ((font (jotain-fonts--find-first-available jotain-fonts-variable-family)))
+  (let ((font (j10s-fonts--find-first-available j10s-fonts-variable-family)))
     (when font
-      (jotain-fonts--set-face-font 'variable-pitch font))))
+      (j10s-fonts--set-face-font 'variable-pitch font))))
 
-(defun jotain-fonts-setup-serif ()
+(defun j10s-fonts-setup-serif ()
   "Setup serif font for formal reading."
-  (let ((font (jotain-fonts--find-first-available jotain-fonts-serif-family)))
+  (let ((font (j10s-fonts--find-first-available j10s-fonts-serif-family)))
     (when font
-      (jotain-fonts--set-face-font 'jotain-fonts-serif font))))
-
-(defface jotain-fonts-serif
-  '((t :inherit variable-pitch))
-  "Serif font face for formal text."
-  :group 'jotain-fonts)
+      ;; Create a custom serif face for org-mode and similar
+      (unless (facep 'j10s-fonts-serif)
+        (defface j10s-fonts-serif
+          '((t :inherit variable-pitch))
+          "Serif font face for formal text."))
+      (j10s-fonts--set-face-font 'j10s-fonts-serif font))))
 
 ;;; Performance Optimizations
 
-(defun jotain-fonts-setup-performance ()
+(defun j10s-fonts-setup-performance ()
   "Apply font-related performance optimizations."
   ;; Prevent font cache compaction during GC
-  (setopt inhibit-compacting-font-caches t)
+  (setq inhibit-compacting-font-caches t)
   
   ;; Enable font scaling
-  (setopt scalable-fonts-allowed t)
+  (setq scalable-fonts-allowed t)
   
   ;; Reduce font rendering overhead
-  (setopt font-use-system-font t)
+  (setq font-use-system-font t)
   
   ;; Better Unicode handling
   (set-fontset-font t 'unicode (font-spec :name "Noto Color Emoji") nil 'prepend))
@@ -153,7 +141,7 @@ Returns (font-name . height) or nil if none found."
 
 ;;; Theme Integration
 
-(defun jotain-fonts-setup-theme-faces ()
+(defun j10s-fonts-setup-theme-faces ()
   "Setup additional font faces that work well with themes."
   ;; Comments with subtle styling
   (set-face-attribute 'font-lock-comment-face nil
@@ -172,70 +160,69 @@ Returns (font-name . height) or nil if none found."
 
 ;;; Daemon/Client Compatibility
 
-(defun jotain-fonts--setup-frame (&optional frame)
+(defun j10s-fonts--setup-frame (&optional frame)
   "Setup fonts for FRAME (or current frame if nil).
 This ensures consistent fonts across daemon and client sessions."
   (with-selected-frame (or frame (selected-frame))
     (when (display-graphic-p)
-      (jotain-fonts-setup-default)
-      (jotain-fonts-setup-variable-pitch)
-      (jotain-fonts-setup-serif)
-      (jotain-fonts-setup-theme-faces)
-      (message "jotain-fonts: Frame font setup completed"))))
+      (j10s-fonts-setup-default)
+      (j10s-fonts-setup-variable-pitch)
+      (j10s-fonts-setup-serif)
+      (j10s-fonts-setup-theme-faces)
+      (message "j10s-fonts: Frame font setup completed"))))
 
-(defun jotain-fonts-setup ()
+(defun j10s-fonts-setup ()
   "Main font setup function."
   ;; Performance optimizations first
-  (jotain-fonts-setup-performance)
+  (j10s-fonts-setup-performance)
   
   ;; Setup fonts for current frame
-  (jotain-fonts--setup-frame)
+  (j10s-fonts--setup-frame)
   
-  ;; Ensure theme changes reapply font faces
-  (add-hook 'after-load-theme-hook #'jotain-fonts-setup-theme-faces)
-
   ;; Ensure new frames get font setup (critical for daemon/client)
-  (when (daemonp)
-    (add-hook 'after-make-frame-functions #'jotain-fonts--setup-frame)))
+  (if (daemonp)
+      (add-hook 'after-make-frame-functions #'j10s-fonts--setup-frame)
+    ;; For non-daemon, ensure theme changes reapply fonts
+    (add-hook 'after-load-theme-hook #'j10s-fonts-setup-theme-faces)))
 
 ;;; Interactive Commands
 
-(defun jotain-fonts-increase-size ()
+(defun j10s-fonts-increase-size ()
   "Increase font size for current buffer."
   (interactive)
   (text-scale-increase 1))
 
-(defun jotain-fonts-decrease-size ()
+(defun j10s-fonts-decrease-size ()
   "Decrease font size for current buffer."
   (interactive)
   (text-scale-decrease 1))
 
-(defun jotain-fonts-reset-size ()
+(defun j10s-fonts-reset-size ()
   "Reset font size for current buffer."
   (interactive)
   (text-scale-set 0))
 
-(defun jotain-fonts-info ()
+(defun j10s-fonts-info ()
   "Display information about current font configuration."
   (interactive)
   (let ((default-font (face-attribute 'default :family))
         (default-height (face-attribute 'default :height))
         (variable-font (face-attribute 'variable-pitch :family))
-        (available-count (hash-table-count (jotain-fonts--get-available-families))))
+        (available-count (length (j10s-fonts--get-available-families))))
     (message "Font: %s (height %d), Variable: %s, Available fonts: %d"
              default-font default-height variable-font available-count)))
 
 ;;; Global Keybindings
 
-(global-set-key (kbd "C-+") #'jotain-fonts-increase-size)
-(global-set-key (kbd "C--") #'jotain-fonts-decrease-size)
-(global-set-key (kbd "C-0") #'jotain-fonts-reset-size)
-(global-set-key (kbd "C-c f i") #'jotain-fonts-info)
+(global-set-key (kbd "C-+") #'j10s-fonts-increase-size)
+(global-set-key (kbd "C--") #'j10s-fonts-decrease-size)
+(global-set-key (kbd "C-0") #'j10s-fonts-reset-size)
+(global-set-key (kbd "C-c f i") #'j10s-fonts-info)
 
 ;;; Initialize Font System
 
 ;; Setup fonts when this module loads
-(jotain-fonts-setup)
+(j10s-fonts-setup)
 
 (provide 'fonts)
 ;;; fonts.el ends here

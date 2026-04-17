@@ -15,7 +15,6 @@
 
 (setq use-package-enable-imenu-support t)
 (setq use-package-always-ensure nil)     ; CRITICAL: Never auto-install packages
-(setq use-package-ensure-function 'ignore)  ; Packages provided by Nix, not package.el
 
 (require 'use-package)
 

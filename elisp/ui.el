@@ -5,65 +5,48 @@
 
 ;;; Code:
 
-(defgroup jotain-ui nil
+(defgroup j10s-ui nil
   "Customization group for UI."
   :group 'emacs)
 
-(defcustom jotain-theme-light 'doom-nord-light
+(defcustom j10s-theme-light 'nord-light
   "Theme to use when system is in light mode or detection fails."
   :type 'symbol
-  :group 'jotain-ui)
+  :group 'j10s-ui)
 
-(defcustom jotain-theme-dark 'doom-nord
+(defcustom j10s-theme-dark 'nord
   "Theme to use when system is in dark mode."
   :type 'symbol
-  :group 'jotain-ui)
-
-;; Trust all themes by default without prompting — must be set before
-;; theme packages are loaded with :demand t.
-(setopt custom-safe-themes t)
-
-(defun jotain-ui--disable-all-themes (_theme &optional _no-confirm no-enable)
-  "Disable all active themes before loading a new one, unless NO-ENABLE is non-nil.
-This prevents theme blending/stacking artifacts."
-  (unless no-enable
-    (mapc #'disable-theme (copy-sequence custom-enabled-themes))))
-
-(advice-add 'load-theme :before #'jotain-ui--disable-all-themes)
-
-(use-package doom-themes
-  :ensure t
-  :demand t)
+  :group 'j10s-ui)
 
 (use-package nord-theme
   :ensure t
-  :demand t)
-
-(defun jotain-ui--preload-themes (&optional _frame)
-  "Preload both themes into memory without enabling either.
-auto-dark is the sole decider of which theme becomes active."
-  (load-theme jotain-theme-light t t)
-  (load-theme jotain-theme-dark t t))
+  :demand t
+  :bind (("C-c t" . nord-toggle-theme))
+  :config
+  (setq nord-disable-line-numbers-background t)
+  (setq nord-region-highlight 'snow)
+  (setq nord-uniform-mode-lines t))
 
 (use-package emacs
   :init
-  ;; In daemon mode, themes must be loaded after a frame is created
-  (if (daemonp)
-      (add-hook 'server-after-make-frame-hook #'jotain-ui--preload-themes)
-    (jotain-ui--preload-themes))
-
+  ;; Trust all themes by default without prompting
+  (setq custom-safe-themes t)
+  (when (interactive-p)
+    (if (and (boundp 'system-uses-dark-theme)
+             system-uses-dark-theme)
+        (load-theme j10s-theme-dark t)
+      (load-theme j10s-theme-light t)))
   (tool-bar-mode -1)
   (scroll-bar-mode -1))
 
 (use-package auto-dark
   :ensure t
-  :demand t
   :diminish
-  :bind ("C-c t" . auto-dark-toggle-appearance)
-  :after nord-theme doom-themes
-  :custom
-  (auto-dark-themes `((,jotain-theme-light) (,jotain-theme-dark)))
+  :after nord-theme
+  :demand t
   :config
+  (setq auto-dark-themes `((,j10s-theme-light) (,j10s-theme-dark)))
   (auto-dark-mode 1)
   (add-hook 'after-make-frame-functions
             (lambda (frame)
@@ -82,7 +65,7 @@ auto-dark is the sole decider of which theme becomes active."
   :custom
   (global-hl-line-sticky-flag t)
   :hook ((after-init . global-hl-line-mode)
-         ((enlight-mode eshell-mode shell-mode term-mode vterm-mode org-mode) .
+         ((dashboard-mode eshell-mode shell-mode term-mode vterm-mode org-mode) .
           (lambda () (setq-local global-hl-line-mode nil)))))
 
 (use-package rainbow-delimiters
@@ -94,11 +77,11 @@ auto-dark is the sole decider of which theme becomes active."
   :config
   (copy-face 'font-lock-constant-face 'calendar-iso-week-face)
   (set-face-attribute 'calendar-iso-week-face nil :height 0.7)
-  (setopt calendar-week-start-day 1)
-  (setopt calendar-intermonth-text
-          '(propertize (format "%2d" (car (calendar-iso-from-absolute
-                                           (calendar-absolute-from-gregorian (list month day year)))))
-                       'font-lock-face 'calendar-iso-week-face)))
+  (setq calendar-week-start-day 1)
+  (setq calendar-intermonth-text
+        '(propertize (format "%2d" (car (calendar-iso-from-absolute
+                                         (calendar-absolute-from-gregorian (list month day year)))))
+                     'font-lock-face 'calendar-iso-week-face)))
 
 (use-package breadcrumb
   :ensure t
@@ -168,15 +151,16 @@ auto-dark is the sole decider of which theme becomes active."
 
 (use-package pixel-scroll
   :ensure nil
+  :when (display-graphic-p)
   :init
-  (if (daemonp)
-      (add-hook 'after-make-frame-functions
-                (lambda (frame)
-                  (when (display-graphic-p frame)
-                    (with-selected-frame frame
-                      (pixel-scroll-precision-mode 1)))))
-    (when (display-graphic-p)
-      (pixel-scroll-precision-mode 1))))
+  (pixel-scroll-precision-mode 1)
+  :config
+  ;; Enable for graphical frames when using server-client
+  (add-hook 'after-make-frame-functions
+            (lambda (frame)
+              (when (display-graphic-p frame)
+                (with-selected-frame frame
+                  (pixel-scroll-precision-mode 1))))))
 
 (use-package emojify
   :ensure t
@@ -207,47 +191,6 @@ auto-dark is the sole decider of which theme becomes active."
   :ensure t
   :config
   (global-kkp-mode +1))
-
-(use-package doom-modeline
-  :ensure t
-  :demand t
-  :custom
-  (doom-modeline-height 25)
-  (doom-modeline-bar-width 3)
-  (doom-modeline-lsp t)
-  (doom-modeline-github nil)
-  :config
-  (doom-modeline-mode 1))
-
-(use-package indent-bars
-  :ensure t
-  :custom
-  (indent-bars-treesit-support t)
-  :hook (prog-mode . indent-bars-mode))
-
-(use-package pulsar
-  :ensure t
-  :demand t
-  :custom
-  (pulsar-pulse-functions '(recenter-top-bottom
-                            move-to-window-line-top-bottom
-                            reposition-window
-                            bookmark-jump
-                            other-window
-                            delete-window
-                            delete-other-windows
-                            forward-page
-                            backward-page
-                            scroll-up-command
-                            scroll-down-command
-                            xref-find-definitions
-                            xref-find-references
-                            xref-go-back
-                            consult-line
-                            consult-goto-line
-                            imenu))
-  :config
-  (pulsar-global-mode 1))
 
 (provide 'ui)
 ;;; ui.el ends here
