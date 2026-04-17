@@ -66,6 +66,8 @@ Otherwise, use `my/org-agenda-directories'."
 (defvar org-agenda-files)
 
 (defun my/update-org-agenda-files-async
+
+
     (&optional directories)
   "Update org-agenda-files asynchronously using `find' if available.
 If DIRECTORIES is provided, search those directories.
