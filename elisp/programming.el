@@ -27,34 +27,17 @@
   (global-treesit-auto-mode))
 
 (use-package treesit-fold
+  :disabled
   :diminish
   :ensure t
   :hook (after-init . global-treesit-fold-indicators-mode)
   :init (setq treesit-fold-indicators-priority -1))
 
-(use-package combobulate
-  :ensure t
-  :custom
-  (combobulate-key-prefix "C-c o")
-  :hook ((python-ts-mode . combobulate-mode)
-         (typescript-ts-mode . combobulate-mode)
-         (tsx-ts-mode . combobulate-mode)
-         (js-ts-mode . combobulate-mode)
-         (json-ts-mode . combobulate-mode)
-         (yaml-ts-mode . combobulate-mode)
-         (html-ts-mode . combobulate-mode)
-         (css-ts-mode . combobulate-mode)
-         (go-ts-mode . combobulate-mode)
-         (rust-ts-mode . combobulate-mode)
-         (c-ts-mode . combobulate-mode)
-         (c++-ts-mode . combobulate-mode)))
-
 (use-package flymake
-  :ensure nil
   :custom
   (flymake-fringe-indicator-position 'left-fringe)
   (flymake-suppress-zero-counters t)
-  (flymake-show-diagnostics-at-end-of-line t)
+  ;; (flymake-show-diagnostics-at-end-of-line t) ; FIXME
   (flymake-margin-indicators-string '((error "!" compilation-error)
                                       (warning "?" compilation-warning)
                                       (note "·" compilation-info)))
@@ -65,7 +48,7 @@
               ("C-c ! p" . flymake-show-project-diagnostics))
   :config
   ;; Show diagnostics in echo area when cursor is on an error
-  (defun jotain-flymake-show-diagnostic-at-point ()
+  (defun j10s/flymake-show-diagnostic-at-point ()
     "Display flymake diagnostic at point in echo area."
     (when (and flymake-mode (not (minibufferp)))
       (let ((diagnostics (flymake-diagnostics (point))))
@@ -80,20 +63,20 @@
                      (flymake-diagnostic-text diagnostic)))))))
 
   ;; Show diagnostic after a short delay
-  (defvar-local jotain-flymake--diagnostic-timer nil)
-  (defun jotain-flymake-show-diagnostic-delayed ()
+  (defvar-local j10s/flymake-diagnostic-timer nil)
+  (defun j10s/flymake-show-diagnostic-delayed ()
     "Show diagnostic after a delay."
     (when flymake-mode
-      (when jotain-flymake--diagnostic-timer
-        (cancel-timer jotain-flymake--diagnostic-timer))
-      (setq jotain-flymake--diagnostic-timer
-            (run-with-timer 0.5 nil #'jotain-flymake-show-diagnostic-at-point))))
+      (when j10s/flymake-diagnostic-timer
+        (cancel-timer j10s/flymake-diagnostic-timer))
+      (setq j10s/flymake-diagnostic-timer
+            (run-with-timer 0.5 nil #'j10s/flymake-show-diagnostic-at-point))))
 
   (add-hook 'flymake-mode-hook
             (lambda ()
               (if flymake-mode
-                  (add-hook 'post-command-hook #'jotain-flymake-show-diagnostic-delayed nil t)
-                (remove-hook 'post-command-hook #'jotain-flymake-show-diagnostic-delayed t))))
+                  (add-hook 'post-command-hook #'j10s/flymake-show-diagnostic-delayed nil t)
+                (remove-hook 'post-command-hook #'j10s/flymake-show-diagnostic-delayed t))))
 
   ;; Configure elisp-flymake-byte-compile to trust local configuration files
   (with-eval-after-load 'elisp-mode
@@ -102,16 +85,17 @@
           (append elisp-flymake-byte-compile-load-path (list user-emacs-directory)))
 
     ;; Add hook to trust local config files
-    (defun jotain-trust-local-elisp-files ()
+    (defun j10s/trust-local-elisp-files ()
       "Trust elisp files in the current Emacs configuration directory."
       (when (and buffer-file-name
-                 (file-in-directory-p buffer-file-name user-emacs-directory))
+                 (string-prefix-p (expand-file-name user-emacs-directory)
+                                  (expand-file-name buffer-file-name)))
         ;; Mark buffer as safe for byte-compilation
         (setq-local safe-local-variable-values
                     (append safe-local-variable-values
                             '((elisp-flymake-byte-compile . t))))))
 
-    (add-hook 'emacs-lisp-mode-hook #'jotain-trust-local-elisp-files))
+    (add-hook 'emacs-lisp-mode-hook #'j10s/trust-local-elisp-files))
 
   ;; Disable flymake during smerge mode
   ;; (add-hook 'smerge-mode-hook
@@ -139,7 +123,6 @@
   :after (consult flyspell))
 
 (use-package eglot
-  :ensure nil ; Built-in to Emacs 29+
   :hook ((prog-mode . (lambda ()
                         (unless (derived-mode-p 'emacs-lisp-mode 'lisp-mode 'makefile-mode 'snippet-mode)
                           (eglot-ensure))))
@@ -147,10 +130,10 @@
 	 ;; (eglot-mode . sideline-mode)
 	 )
   :init
-  (setopt eglot-send-changes-idle-time 0.5)
-  (setopt eglot-autoshutdown t)
+  (setq eglot-send-changes-idle-time 0.5)
+  (setq eglot-autoshutdown t)
+  (setq eglot-events-buffer-size 0) ; Disable event logging for performance
   :custom
-  (eglot-events-buffer-config '(:size 0 :format short) "Disable event logging for performance")
   (eglot-report-progress nil "Prevent Eglot minibuffer spam")
   (eglot-extend-to-xref t "Activate Eglot in cross-referenced non-project files")
   (eglot-confirm-server-initiated-edits nil) ; Auto-accept server edits
@@ -170,12 +153,8 @@
   (when (fboundp 'eglot-inlay-hints-mode)
     (add-hook 'eglot-managed-mode-hook
               (lambda ()
-                (when (member major-mode '(go-mode go-ts-mode rust-mode rust-ts-mode
-						   typescript-mode typescript-ts-mode
-						   python-mode python-ts-mode))
+                (when (member major-mode '(go-mode rust-mode typescript-mode python-mode))
                   (eglot-inlay-hints-mode 1)))))
-  ;; eglot-inlay-hints-mode is buffer-local and safe for .dir-locals.el:
-  ;; ((go-ts-mode . ((eglot-inlay-hints-mode . nil))))
 
   ;; Configure server-specific settings
   (add-to-list 'eglot-server-programs
@@ -203,17 +182,11 @@
   :defer t
   :after (consult eglot embark))
 
-(use-package eglot-booster
-  :ensure t
-  :after eglot
-  :config
-  (eglot-booster-mode))
-
 (use-package xref
   :ensure nil
   :init
   ;; Ripgrep is guaranteed to be available via Nix (see nix/lib/runtime-deps.nix)
-  (setopt xref-search-program 'ripgrep))
+  (setq xref-search-program 'ripgrep))
 
 (use-package elisp-lint
   :defer t
@@ -228,25 +201,13 @@
   :hook (prog-mode . dtrt-indent-mode)
   )
 
-(use-package envrc
+(use-package direnv
   :ensure t
   :demand t
-  ;; Direnv CLI is provided by Nix (see nix/lib/runtime-deps.nix)
-  ;; envrc provides buffer-local environment isolation (superior to direnv.el)
+  ;; Direnv is guaranteed to be available via Nix (see nix/lib/runtime-deps.nix)
   :config
-  (envrc-global-mode)
-  (add-to-list 'warning-suppress-types '(envrc)))
-
-(use-package inheritenv
-  :ensure t
-  :demand t)
-
-(use-package apheleia
-  :ensure t
-  :config
-  (apheleia-global-mode +1))
-
-(put 'apheleia-mode 'safe-local-variable #'booleanp)
+  (direnv-mode)
+  (add-to-list 'warning-suppress-types '(direnv)))
 
 ;; Debugging
 (use-package gdb-mi
@@ -265,9 +226,10 @@
   (dape-info-hide-mode-line nil)
   (dape-inlay-hints t "Showing inlay hints")
 
-  :config
-  (dape-breakpoint-global-mode)
-  (add-hook 'dape-compile-hook 'kill-buffer))
+  :init
+  (with-eval-after-load 'dape
+    (dape-breakpoint-global-mode)
+    (add-hook 'dape-compile-hook 'kill-buffer)))
 
 (use-package wgrep
   :ensure t
@@ -282,6 +244,7 @@
   :mode ("\\.plt\\'" . gnuplot-mode))
 
 (use-package markdown-mode
+  :after dash
   :ensure t
   :defer t
   :mode (("README\\.md\\'" . gfm-mode)
@@ -295,6 +258,7 @@
 (use-package cc-mode
   :ensure nil
   :custom
+  (c-basic-indent 5)
   (c-basic-offset 5)
   (c-default-style '((c-mode . "stroustrup")
                      (c++-mode . "stroustrup")
@@ -347,28 +311,12 @@
 (use-package yaml-mode
   :defer t
   )
-
-(use-package jinja2-mode
-  :ensure t
-  :mode (("\\.j2\\'" . jinja2-mode)
-         ("\\.jinja2?\\'" . jinja2-mode)))
 (use-package csv-mode
   :ensure t
   :mode "\\.csv\\'"
   :hook (csv-mode . csv-align-mode)
   :custom
   (csv-separators '("," ";" "|" "\t")))
-
-
-(use-package typescript-ts-mode
-  :ensure nil
-  :mode (("\\.ts\\'" . typescript-ts-mode)
-         ("\\.tsx\\'" . tsx-ts-mode)
-         ("\\.jsx\\'" . tsx-ts-mode)))
-
-(use-package js
-  :ensure nil
-  :mode ("\\.js\\'" . js-ts-mode))
 (use-package modern-cpp-font-lock
   :ensure t
   :hook (c++-mode . modern-c++-font-lock-mode))
@@ -428,14 +376,14 @@
 ;; Enhanced tooltip support for better diagnostic display
 (when (display-graphic-p)
   (tooltip-mode 1)
-  (setopt tooltip-delay 0.5
-          tooltip-short-delay 0.1
-          tooltip-recent-seconds 1
-          tooltip-hide-delay 10))
+  (setq tooltip-delay 0.5
+        tooltip-short-delay 0.1
+        tooltip-recent-seconds 1
+        tooltip-hide-delay 10))
 
-(use-package vue-mode
-  :ensure t
-  :mode "\\.vue\\'")
+;; Future enhancement options (commented out - packages not in nixpkgs):
+;; For even better diagnostic display, consider these packages via straight.el or melpa:
+;; - flymake-diagnostic-at-point: Shows diagnostics in minibuffer/tooltip
 
 (provide 'programming)
 ;;; programming.el ends here

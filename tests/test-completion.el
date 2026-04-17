@@ -69,6 +69,14 @@
   (should (boundp 'corfu-history-mode))
   (should corfu-history-mode))
 
+(ert-deftest test-completion/kind-icon-configured ()
+  "Test that kind-icon is configured for corfu."
+  :tags '(unit)
+  (should (boundp 'kind-icon-default-face))
+  (should (eq kind-icon-default-face 'corfu-default))
+  (should (boundp 'kind-icon-blend-background))
+  (should-not kind-icon-blend-background))
+
 ;;; Cape Configuration
 
 (ert-deftest test-completion/cape-completers-registered ()

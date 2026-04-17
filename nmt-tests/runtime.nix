@@ -59,12 +59,13 @@
       print("\n=== Test 3: Configuration Files Present ===")
       machine.succeed("sudo -u testuser test -f /home/testuser/.config/emacs/init.el")
       machine.succeed("sudo -u testuser test -f /home/testuser/.config/emacs/early-init.el")
+      machine.succeed("sudo -u testuser test -d /home/testuser/.config/emacs/elisp")
       print("PASS: Configuration files are present")
 
       print("\n=== Test 4: Configuration Loads Without Errors ===")
       output = machine.succeed("""
         sudo -u testuser emacs --batch \\
-          --init-directory /home/testuser/.config/emacs \\
+          -l /home/testuser/.config/emacs/init.el \\
           --eval '(message "Config loaded: OK")' 2>&1
       """)
       # Check that config loaded successfully
@@ -126,8 +127,8 @@
       print("\n=== Test 10: Platform Detection Works ===")
       output = machine.succeed("""
         sudo -u testuser emacs --batch \\
-          --eval '(require (quote platform))' \\
-          --eval '(message "Linux: %s, GUI: %s" platform-linux-p (platform-gui-p))' 2>&1
+          -l /home/testuser/.config/emacs/elisp/platform.el \\
+          --eval '(message "Linux: %s, GUI: %s" platform-linux-p platform-gui-p)' 2>&1
       """)
       assert "Linux: t" in output, f"Platform detection failed: {output}"
       print("PASS: Platform detection works correctly")
@@ -135,7 +136,7 @@
       print("\n=== Test 11: No Startup Warnings or Errors ===")
       output = machine.succeed("""
         sudo -u testuser emacs --batch \\
-          --init-directory /home/testuser/.config/emacs \\
+          -l /home/testuser/.config/emacs/init.el \\
           --eval '(message "Startup complete")' 2>&1
       """)
       # Allow some common non-critical messages but fail on errors

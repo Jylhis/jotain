@@ -13,7 +13,6 @@ let
   corePackages = epkgs: with epkgs; [
     use-package
     no-littering
-    jotain-modules
   ];
 
   # Get packages from elisp directory if it exists
@@ -38,11 +37,8 @@ let
     ++ autoPackages epkgs
     ++ (if devMode then devPackages epkgs else [ ]);
 
-  # Use Emacs 30: on darwin via nix-darwin-emacs, on Linux via emacs-overlay (PGTK)
-  baseEmacs =
-    if pkgs.stdenv.isDarwin
-    then pkgs.emacs-30 or pkgs.emacs
-    else pkgs.emacs-unstable-pgtk or pkgs.emacs-pgtk or pkgs.emacs;
+  # Use Emacs 30 (or latest from overlay)
+  baseEmacs = pkgs.emacs30-pgtk or pkgs.emacs-pgtk or pkgs.emacs;
 
   # Get runtime dependencies (LSP servers, CLI tools, tree-sitter grammars)
   runtimeDeps = jotainLib.runtimeDeps;
