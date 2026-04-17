@@ -21,13 +21,13 @@
 
 ;; Trust all themes by default without prompting — must be set before
 ;; theme packages are loaded with :demand t.
-(setopt custom-safe-themes t)
+(setq custom-safe-themes t)
 
 (defun jotain-ui--disable-all-themes (_theme &optional _no-confirm no-enable)
   "Disable all active themes before loading a new one, unless NO-ENABLE is non-nil.
 This prevents theme blending/stacking artifacts."
   (unless no-enable
-    (mapc #'disable-theme (copy-sequence custom-enabled-themes))))
+    (mapc #'disable-theme custom-enabled-themes)))
 
 (advice-add 'load-theme :before #'jotain-ui--disable-all-themes)
 
@@ -94,7 +94,7 @@ auto-dark is the sole decider of which theme becomes active."
   :config
   (copy-face 'font-lock-constant-face 'calendar-iso-week-face)
   (set-face-attribute 'calendar-iso-week-face nil :height 0.7)
-  (setopt calendar-week-start-day 1)
+  (setq calendar-week-start-day 1)
   (setq calendar-intermonth-text
         '(propertize (format "%2d" (car (calendar-iso-from-absolute
                                          (calendar-absolute-from-gregorian (list month day year)))))
@@ -168,15 +168,16 @@ auto-dark is the sole decider of which theme becomes active."
 
 (use-package pixel-scroll
   :ensure nil
+  :when (display-graphic-p)
   :init
-  (if (daemonp)
-      (add-hook 'after-make-frame-functions
-                (lambda (frame)
-                  (when (display-graphic-p frame)
-                    (with-selected-frame frame
-                      (pixel-scroll-precision-mode 1)))))
-    (when (display-graphic-p)
-      (pixel-scroll-precision-mode 1))))
+  (pixel-scroll-precision-mode 1)
+  :config
+  ;; Enable for graphical frames when using server-client
+  (add-hook 'after-make-frame-functions
+            (lambda (frame)
+              (when (display-graphic-p frame)
+                (with-selected-frame frame
+                  (pixel-scroll-precision-mode 1))))))
 
 (use-package emojify
   :ensure t

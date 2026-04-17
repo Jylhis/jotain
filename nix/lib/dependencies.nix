@@ -77,10 +77,12 @@ let
   # Most packages work automatically via the `or pkgName` fallback in mapToNixpkgsName
   packageNameMap = {
     # Built-in packages (exclude from installation)
-    "emacs" = null; # Pseudo-package for configuring Emacs itself
     "project" = null; # Built-in to Emacs 30+
     "diff-mode" = null; # Built-in to Emacs
     "xt-mouse" = null; # Built-in to Emacs
+
+    # Name mismatches: use-package name → nixpkgs emacsPackages attr
+    "minuet-ai" = "minuet"; # elisp feature is 'minuet', nixpkgs attr is 'minuet'
   };
 
   # Map elisp package name to nixpkgs name
@@ -113,12 +115,7 @@ let
   listPackageNames = elispDir:
     let
       packageNames = scanDirectory elispDir;
-      mapped = map
-        (name:
-          let nixName = mapToNixpkgsName name;
-          in "${name} -> ${if nixName == null then "(built-in)" else nixName}"
-        )
-        packageNames;
+      mapped = map (name: "${name} -> ${mapToNixpkgsName name}") packageNames;
     in
     lib.concatStringsSep "\n" mapped;
 

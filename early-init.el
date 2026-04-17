@@ -12,12 +12,9 @@
 ;; Temporarily increase GC threshold during startup
 (setq gc-cons-threshold most-positive-fixnum)
 
-(defconst jotain/gc-threshold-default (* 50 1024 1024)
-  "Default garbage collection threshold (50MB).")
-
-;; Restore to normal value after startup
+;; Restore to normal value after startup (e.g. 50MB)
 (add-hook 'emacs-startup-hook
-          (lambda () (setq gc-cons-threshold jotain/gc-threshold-default)))
+          (lambda () (setq gc-cons-threshold (* 50 1024 1024))))
 
 
 ;; In noninteractive sessions, prioritize non-byte-compiled source files to

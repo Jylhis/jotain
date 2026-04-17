@@ -165,5 +165,28 @@ CONTRACTS_DIR='$feature_dir/contracts'
 EOF
 }
 
+# Check if beads issue tracking is available and functional
+# Returns 0 if available, 1 if not; outputs diagnostic on failure
+check_beads() {
+  if ! command -v bd >/dev/null 2>&1; then
+    echo "[specify] beads unavailable: 'bd' CLI not found in PATH" >&2
+    return 1
+  fi
+
+  local repo_root
+  repo_root=$(get_repo_root)
+  if [[ ! -d "$repo_root/.beads" ]]; then
+    echo "[specify] beads unavailable: .beads/ directory not found at repo root ($repo_root)" >&2
+    return 1
+  fi
+
+  if ! bd list --status=open >/dev/null 2>&1; then
+    echo "[specify] beads unavailable: 'bd list' failed (run 'bd doctor' to diagnose)" >&2
+    return 1
+  fi
+
+  return 0
+}
+
 check_file() { [[ -f $1 ]] && echo "  ✓ $2" || echo "  ✗ $2"; }
 check_dir() { [[ -d $1 && -n $(ls -A "$1" 2>/dev/null) ]] && echo "  ✓ $2" || echo "  ✗ $2"; }
