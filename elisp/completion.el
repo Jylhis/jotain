@@ -138,8 +138,8 @@
          ("M-r" . consult-history))                ;; orig. previous-matching-history-element
   :init
   ;; Use Consult to select xref locations with preview
-  (setq xref-show-xrefs-function #'consult-xref
-        xref-show-definitions-function #'consult-xref)
+  (setopt xref-show-xrefs-function #'consult-xref
+          xref-show-definitions-function #'consult-xref)
   ;; Emacs 30: Sort completions by minibuffer history
   (setopt completions-sort 'historical))
 

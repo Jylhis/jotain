@@ -213,8 +213,7 @@ let
 
       # LSP JSON acceleration via bytecode pre-conversion
       # Used by: elisp/programming.el (eglot-booster)
-      # TODO: Re-enable once emacs-lsp-booster no longer pulls in stock pkgs.emacs (nss_wrapper broken on darwin)
-      # pkgs.emacs-lsp-booster
+      pkgs.emacs-lsp-booster
 
       # SQLite database for emacsql (forge PR/issue storage)
       # Used by: elisp/git.el (forge via emacsql-sqlite-builtin)

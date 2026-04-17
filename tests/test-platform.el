@@ -16,11 +16,11 @@
   (should (booleanp platform-macos-p))
   (should (booleanp platform-linux-p))
   (should (booleanp platform-windows-p))
-  (should (booleanp (platform-gui-p)))
-  (should (booleanp (platform-terminal-p)))
+  (should (booleanp platform-gui-p))
+  (should (booleanp platform-terminal-p))
 
   ;; GUI and terminal should be mutually exclusive
-  (should (not (and (platform-gui-p) (platform-terminal-p)))))
+  (should (not (and platform-gui-p platform-terminal-p))))
 
 (ert-deftest test-platform-has-feature-p ()
   "Test platform feature detection."

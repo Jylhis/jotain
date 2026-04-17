@@ -30,13 +30,13 @@
   (memq system-type '(cygwin windows-nt ms-dos))
   "Non-nil if running on Windows.")
 
-(defsubst platform-gui-p ()
-  "Non-nil if running in GUI mode."
-  (display-graphic-p))
+(defconst platform-gui-p
+  (display-graphic-p)
+  "Non-nil if running in GUI mode.")
 
-(defsubst platform-terminal-p ()
-  "Non-nil if running in terminal mode."
-  (not (display-graphic-p)))
+(defconst platform-terminal-p
+  (not (display-graphic-p))
+  "Non-nil if running in terminal mode.")
 
 (defun platform-has-feature-p (feature)
   "Check if platform supports FEATURE.
@@ -45,13 +45,13 @@ FEATURE can be: 'notifications, 'clipboard, 'fonts, 'native-comp,
   (pcase feature
     ('notifications (or platform-macos-p platform-linux-p))
     ('clipboard (not platform-android-p))
-    ('fonts (platform-gui-p))
+    ('fonts platform-gui-p)
     ('native-comp (and (fboundp 'native-comp-available-p)
                        (native-comp-available-p)))
     ('treesitter (treesit-available-p))
     ('image-support (display-images-p))
     ('process-support (not platform-windows-p))
-    ('mouse-support (platform-gui-p))
+    ('mouse-support platform-gui-p)
     ('external-browser (not platform-android-p))
     (_ nil)))
 
@@ -78,8 +78,8 @@ Each clause is (PLATFORM-CONDITION BODY...)."
     (macos-p . ,platform-macos-p)
     (linux-p . ,platform-linux-p)
     (windows-p . ,platform-windows-p)
-    (gui-p . ,(platform-gui-p))
-    (terminal-p . ,(platform-terminal-p))
+    (gui-p . ,platform-gui-p)
+    (terminal-p . ,platform-terminal-p)
     (termux-version . ,(getenv "TERMUX_VERSION"))
     (prefix . ,(getenv "PREFIX"))
     (window-system . ,window-system)
