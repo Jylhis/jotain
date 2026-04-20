@@ -57,10 +57,25 @@ let
   # falling back to a stray ~/.emacs.d/ on the user's machine.
   initDirectory = "${config.xdg.configHome}/emacs";
 
+  # Runtime dependencies the Elisp config invokes unconditionally (outside
+  # of envrc-managed project buffers). Prepending these to PATH in the
+  # wrapper keeps them available regardless of launch context — notably
+  # launchd on macOS, which doesn't inherit the user's login-shell PATH.
+  runtimeDeps = with pkgs; [
+    ripgrep # xref-search-program, consult-ripgrep
+    fd # project/consult fallback finder
+    git # magit, vc
+    direnv # envrc
+    coreutils # gls, used by dirvish-listing-switches on darwin
+  ];
+
+  runtimePath = lib.makeBinPath runtimeDeps;
+
   # Wrapper around `emacs` that always passes --init-directory, so the
   # daemon and any interactive `emacs` invocation pick up Jotain
   # regardless of Emacs's user-emacs-directory discovery order.
   emacsWrapper = pkgs.writeShellScriptBin "emacs" ''
+    export PATH=${runtimePath}''${PATH:+:$PATH}
     exec ${emacsBinPath}/emacs --init-directory=${lib.escapeShellArg initDirectory} "$@"
   '';
 
