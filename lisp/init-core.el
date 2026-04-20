@@ -187,6 +187,21 @@ immediately for writes."
           mac-right-option-modifier 'none)
   (setopt trash-directory "~/.Trash"))
 
+;; Inherit PATH, MANPATH, and a few shell-managed vars from the user's
+;; login shell so GUI / launchd / systemd-spawned Emacs matches what the
+;; terminal sees. module.nix prepends the essential Nix-store binaries
+;; (rg, fd, git, direnv, coreutils) to the wrapper's PATH — this handles
+;; the rest (e.g. ~/.nix-profile, user-managed toolchains).
+(use-package exec-path-from-shell
+  :if (or (daemonp)
+          (memq window-system '(mac ns x)))
+  :demand t
+  :functions (exec-path-from-shell-initialize)
+  :custom
+  (exec-path-from-shell-arguments nil) ; faster: skip -i
+  :config
+  (exec-path-from-shell-initialize))
+
 (use-package autorevert
   :ensure nil
   :custom (global-auto-revert-non-file-buffers t)
