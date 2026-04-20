@@ -176,6 +176,13 @@ run-built *ARGS:
         --init-directory={{config_dir}} {{ARGS}}
 
 
+# Build option reference documentation.
+[group('build')]
+docs:
+    nix build .#docs -o result-docs
+    @echo "Docs built → result-docs/index.html"
+
+
 # ── Format ──────────────────────────────────────────────────────────
 
 # Format all Nix files.
