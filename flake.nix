@@ -53,6 +53,10 @@
       packages = forAllSystems (system: {
         default = (pkgsFor system).jotainEmacsPackages;
         emacs = (pkgsFor system).jotainEmacs;
+        docs = import ./nix/options-doc.nix {
+          pkgs = pkgsFor system;
+          src = self;
+        };
       });
 
       formatter = forAllSystems (system: (treefmtEval system).config.build.wrapper);

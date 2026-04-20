@@ -12,6 +12,9 @@
   packages-default = pkgs.jotainEmacsPackages;
   packages-emacs = pkgs.jotainEmacs;
 
+  # ── Option documentation ─────────────────────────────────────────
+  options-doc = import ./options-doc.nix { inherit pkgs src; };
+
   # ── Nix formatting (via shared treefmt config) ────────────────────
   formatting = treefmtCheck;
 
