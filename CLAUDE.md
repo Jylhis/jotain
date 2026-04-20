@@ -14,13 +14,13 @@ All recipes assume the devenv shell is active. `direnv` handles this via `.envrc
 devenv shell -- just check
 ```
 
-CI (`.github/workflows/devenv.yml`) runs `devenv test` on Ubuntu and macOS, which executes the seven `enterTest` assertions in `devenv.nix` (they lock down that `emacs`/`emacsclient`/`etags`/`eask` all come from the jotainEmacs derivation and that Emacs doesn't leak paths outside the Nix store or the project).
+CI (`.github/workflows/ci.yml`) runs three parallel jobs on Ubuntu and macOS: `check` (`nix flake check`), `test` (`devenv test` — the seven `enterTest` assertions in `devenv.nix`), and `build` (`nix build`). The `jylhis` cachix cache is used for pulling and pushing artifacts.
 
 ## Common commands
 
 All day-to-day work goes through the `Justfile`:
 
-- `just check` — full project lint: Nix evaluation (`nix-instantiate`), flake check, devenv test, `statix`, `deadnix`, plus Elisp paren-check. Use `just check-elisp` for the Elisp-only subset.
+- `just check` — runs `nix flake check`, which covers: formatting (treefmt), statix, deadnix, elisp paren-check, elisp byte-compile (warnings as errors), and package evaluation. Does NOT run `devenv test` (use `devenv test` separately for dev-environment assertions). Use `just check-elisp` for the Elisp-only subset.
 - `just compile` — byte-compile the full config with `byte-compile-error-on-warn`. Requires packages to already be installed (run `just run` once first to trigger bootstrap).
 - `just test` — run ERT tests under `test/` if the directory exists (no tests yet).
 - `just run [ARGS]` — launch Emacs with `--init-directory` pointed at this repo (isolated from `~/.emacs.d`).
@@ -40,6 +40,8 @@ Build recipes (all via `nix-build`, targeting current system by default; overrid
 - `just run-built [ARGS]` — auto-detect platform, build, then launch from `./result/bin/emacs`.
 
 There's also an `emacs-smoke` script (defined in `devenv.nix`) that byte-compiles everything with warnings-as-errors, and `emacs-run` which is the non-Justfile equivalent of `just run`.
+
+- `just bench [output]` — benchmark startup: launches Emacs through `bench/early-init.el` which wraps `require` and `package-refresh-contents` with timing advice, then prints results sorted by load time. Optionally saves to a file.
 
 ## Architecture
 
@@ -96,15 +98,15 @@ nix-instantiate --eval --strict -E '
 
 ### Pinning
 
-`flake.lock` is the single source of truth for the nixpkgs revision. Two lock files must stay in sync: `flake.lock` and `devenv.lock`. `devenv.yaml` pins nixpkgs to the exact same commit as `flake.lock` using `github:NixOS/nixpkgs/<exact-commit>` to ensure binary cache hits.
+`flake.lock` is the single source of truth for input revisions. Two lock files must stay in sync: `flake.lock` and `devenv.lock`. `devenv.yaml` pins shared inputs (`nixpkgs` and `treefmt-nix`) to the exact same commits as `flake.lock` to ensure binary cache hits.
 
-Use `just update` to update nixpkgs in `flake.lock` first, then sync `devenv.lock` to match. Use `just verify` to check that both locks agree.
+Use `just update` to update flake inputs first, then sync `devenv.yaml` URLs and `devenv.lock` to match. Use `just verify` to check that both locks agree on all shared inputs.
 
 `default.nix` and `emacs.nix` read nixpkgs from `flake.lock` directly via `fetchTarball` — no separate pinning tool is needed for non-flake consumers.
 
 ### Shared treefmt configuration
 
-`nix/treefmt.nix` defines the formatter programs (currently `nixfmt`). It is consumed by both `flake.nix` (via `treefmt-nix` for `nix fmt` and the formatting check) and `devenv.nix` (via devenv's treefmt module). Add new formatters to this single file.
+`nix/treefmt.nix` defines the formatter programs (currently `nixfmt`, `deadnix`, and `statix`). It is consumed by both `flake.nix` (via `treefmt-nix` for `nix fmt` and the formatting check) and `devenv.nix` (via devenv's treefmt module). Add new formatters to this single file.
 
 ### Check / test responsibility split
 
