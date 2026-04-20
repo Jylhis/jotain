@@ -22,6 +22,12 @@ in
     statix
     deadnix
 
+    # Documentation build chain (`just info`, `just docs`).  Declared
+    # here so both the recipe and interactive invocations have them on
+    # PATH; the Nix derivations still pull their own copies.
+    pandoc
+    texinfo
+
     # Fonts used by the Emacs configuration (init-ui.el looks them up by name).
     # These are only active while you're inside the devenv shell; on your real
     # system they come from home-manager or equivalent.
