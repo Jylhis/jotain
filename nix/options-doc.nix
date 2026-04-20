@@ -64,6 +64,9 @@ in
 pkgs.runCommand "jotain-options-doc"
   {
     nativeBuildInputs = [ pkgs.pandoc ];
+    # Fragment consumed by nix/info-manual.nix so the same option
+    # reference appears as an appendix in the bundled Info manual.
+    passthru.texinfoFragment = "jotain-options.texi";
   }
   # shellcheck disable=SC2016,SC2086
   ''
@@ -216,6 +219,30 @@ pkgs.runCommand "jotain-options-doc"
           --css style.css \
           --highlight-style=kate \
           --wrap=none
+
+        # Texinfo fragment consumed by nix/info-manual.nix.  --shift-heading-level-by=1
+        # collapses the top-level "# Module Options Reference" into an @section inside
+        # the parent @appendix in docs/jotain.texi, and each per-module `# ...` header
+        # becomes an @section below that.  Strip the @node/@top/@menu scaffolding that
+        # pandoc emits by default — it would collide with the node layout in
+        # docs/jotain.texi; makeinfo re-derives nodes from @section hierarchy.  Also
+        # flatten @ref{name,,text} into plain text since the stripped nodes no longer
+        # exist as cross-reference targets.
+        pandoc combined.md \
+          -f gfm \
+          -t texinfo \
+          --shift-heading-level-by=1 \
+          --wrap=none \
+        | awk '
+            /^@menu$/     { in_menu = 1; next }
+            /^@end menu$/ { in_menu = 0; next }
+            in_menu       { next }
+            /^@node /     { next }
+            /^@top /      { next }
+            { print }
+          ' \
+        | sed -E 's/@ref\{[^,}]*,,([^}]*)\}/\1/g; s/@ref\{([^}]*)\}/\1/g' \
+          > $out/jotain-options.texi
 
         touch $out/.nojekyll
   ''

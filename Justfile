@@ -176,11 +176,23 @@ run-built *ARGS:
         --init-directory={{config_dir}} {{ARGS}}
 
 
-# Build option reference documentation.
+# Build option reference documentation (HTML for GitHub Pages).
 [group('build')]
 docs:
     nix build .#docs -o result-docs
     @echo "Docs built → result-docs/index.html"
+
+# Build the bundled Info manual (jotain.info) from docs/*.mdx + options.
+# Loaded automatically by init-docs.el when result-info/ exists.
+[group('build')]
+info:
+    nix build .#info -o result-info
+    @echo "Info manual → result-info/share/info/jotain.info"
+    @echo "Open with 'just run' then C-h i d m Jotain RET."
+
+# Build both HTML docs and the Info manual.
+[group('build')]
+docs-all: docs info
 
 
 # ── Format ──────────────────────────────────────────────────────────
