@@ -73,39 +73,50 @@ and the result is a face-attribute soup."
   (doom-modeline-github nil)
   (doom-modeline-buffer-encoding nil))
 
-;;;; Fonts — minimal version: pick first available monospace
+;;;; Fonts
+
+(defcustom jotain-font-scale 1.0
+  "Multiplier applied to every height in the font preference lists.
+Increase above 1.0 on large or high-density displays where the
+default sizes feel small (e.g. set 1.25 in custom.el for 4K)."
+  :type 'float
+  :group 'jotain-ui)
 
 (defcustom jotain-font-preferences
-  '(("JetBrainsMono Nerd Font" . 130)
-    ("Iosevka Nerd Font"       . 130)
-    ("DejaVu Sans Mono"        . 120))
+  '(("JetBrainsMono Nerd Font" . 140)
+    ("Iosevka Nerd Font"       . 140)
+    ("DejaVu Sans Mono"        . 130))
   "Ordered list of (FAMILY . HEIGHT) pairs to try for the default face.
-The first family that is actually installed wins."
+HEIGHT is in 1/10 pt units (140 = 14 pt).  The first installed family
+wins.  All heights are multiplied by `jotain-font-scale' at runtime."
   :type '(alist :key-type string :value-type integer)
   :group 'jotain-ui)
 
 (defcustom jotain-variable-pitch-font-preferences
-  '(("Iosevka Aile"      . 140)
-    ("Noto Sans"          . 140)
-    ("DejaVu Sans"        . 130))
+  '(("Iosevka Aile" . 150)
+    ("Noto Sans"    . 150)
+    ("DejaVu Sans"  . 140))
   "Ordered list of (FAMILY . HEIGHT) pairs to try for the variable-pitch face.
-Height is intentionally larger than the monospace default because
-proportional fonts render visually smaller at the same point size."
+Heights are larger than the monospace default: proportional fonts render
+visually smaller at the same point size."
   :type '(alist :key-type string :value-type integer)
   :group 'jotain-ui)
 
-(defun jotain-ui-apply-font (&optional _frame)
-  "Set the default and variable-pitch faces from preference lists."
-  (cl-loop for (family . height) in jotain-font-preferences
-           when (find-font (font-spec :family family))
-           return (set-face-attribute 'default nil
-                                      :family family
-                                      :height height))
-  (cl-loop for (family . height) in jotain-variable-pitch-font-preferences
-           when (find-font (font-spec :family family))
-           return (set-face-attribute 'variable-pitch nil
-                                      :family family
-                                      :height height)))
+(defun jotain-ui-apply-font (&optional frame)
+  "Set default and variable-pitch faces; honours `jotain-font-scale'.
+FRAME is used to probe font availability on the right display; face
+attributes are applied globally so all frames see the update."
+  (when (display-graphic-p frame)
+    (cl-loop for (family . height) in jotain-font-preferences
+             when (find-font (font-spec :family family) frame)
+             return (set-face-attribute 'default nil
+                                        :family family
+                                        :height (round (* height jotain-font-scale))))
+    (cl-loop for (family . height) in jotain-variable-pitch-font-preferences
+             when (find-font (font-spec :family family) frame)
+             return (set-face-attribute 'variable-pitch nil
+                                        :family family
+                                        :height (round (* height jotain-font-scale))))))
 
 (jotain-ui-apply-font)
 (add-hook 'server-after-make-frame-hook #'jotain-ui-apply-font)
