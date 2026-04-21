@@ -84,11 +84,26 @@ The first family that is actually installed wins."
   :type '(alist :key-type string :value-type integer)
   :group 'jotain-ui)
 
+(defcustom jotain-variable-pitch-font-preferences
+  '(("Iosevka Aile"      . 140)
+    ("Noto Sans"          . 140)
+    ("DejaVu Sans"        . 130))
+  "Ordered list of (FAMILY . HEIGHT) pairs to try for the variable-pitch face.
+Height is intentionally larger than the monospace default because
+proportional fonts render visually smaller at the same point size."
+  :type '(alist :key-type string :value-type integer)
+  :group 'jotain-ui)
+
 (defun jotain-ui-apply-font (&optional _frame)
-  "Set the default face to the first available font in `jotain-font-preferences'."
+  "Set the default and variable-pitch faces from preference lists."
   (cl-loop for (family . height) in jotain-font-preferences
            when (find-font (font-spec :family family))
            return (set-face-attribute 'default nil
+                                      :family family
+                                      :height height))
+  (cl-loop for (family . height) in jotain-variable-pitch-font-preferences
+           when (find-font (font-spec :family family))
+           return (set-face-attribute 'variable-pitch nil
                                       :family family
                                       :height height)))
 
