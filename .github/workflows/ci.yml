@@ -1,11 +1,12 @@
 # CI for the Jotain Emacs configuration.
 #
-# Three jobs run in parallel on Ubuntu and macOS:
+# Two jobs run in parallel on Ubuntu and macOS:
 #
 #   check — nix flake check (formatting, statix, deadnix, elisp-lint,
-#           elisp-compile, package evaluation)
+#           elisp-compile, and package builds — jotainEmacs,
+#           jotainEmacsPackages, options-doc are all flake checks, so
+#           running a separate `nix build` job would duplicate work)
 #   test  — devenv test (dev environment assertions from devenv.nix)
-#   build — nix build (full distribution with tree-sitter grammars)
 #
 # The jylhis cachix cache is used for pulling pre-built artifacts and
 # pushing newly built ones (when CACHIX_AUTH_TOKEN is available).
@@ -19,12 +20,19 @@ on:
       - main
       - master
 
+# Cancel superseded runs on PR branches; keep protected-branch runs
+# intact so post-merge cache pushes always finish.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' && github.ref != 'refs/heads/next' }}
+
 permissions:
   contents: read
 
 jobs:
   check:
     name: Lint & check
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -41,10 +49,11 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: nix flake check
-        run: nix flake check
+        run: nix flake check --print-build-logs
 
   test:
     name: Dev environment
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -68,23 +77,3 @@ jobs:
 
       - name: devenv test
         run: devenv test
-
-  build:
-    name: Build
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: cachix/install-nix-action@v31
-
-      - uses: cachix/cachix-action@v16
-        with:
-          name: jylhis
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-
-      - name: nix build
-        run: nix build
