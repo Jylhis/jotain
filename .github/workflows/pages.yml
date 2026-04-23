@@ -8,6 +8,20 @@ name: Deploy docs
 on:
   push:
     branches: [main]
+    # Only re-publish when something that affects the rendered site
+    # actually changes.  Everything else (lisp/, test/, Justfile, …)
+    # has no effect on docs and should not trigger a Pages build.
+    paths:
+      - "docs/**"
+      - "nix/options-doc.nix"
+      - "nix/info-manual.nix"
+      - "emacs.nix"
+      - "overlay.nix"
+      - "module.nix"
+      - "module-system.nix"
+      - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -22,6 +36,7 @@ concurrency:
 jobs:
   build:
     name: Build docs
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -53,6 +68,7 @@ jobs:
   deploy:
     name: Deploy
     needs: build
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     environment:
       name: github-pages

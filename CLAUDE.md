@@ -14,7 +14,7 @@ All recipes assume the devenv shell is active. `direnv` handles this via `.envrc
 devenv shell -- just check
 ```
 
-CI (`.github/workflows/ci.yml`) runs three parallel jobs on Ubuntu and macOS: `check` (`nix flake check`), `test` (`devenv test` — the seven `enterTest` assertions in `devenv.nix`), and `build` (`nix build`). The `jylhis` cachix cache is used for pulling and pushing artifacts.
+CI (`.github/workflows/ci.yml`) runs two parallel jobs on Ubuntu and macOS: `check` (`nix flake check`, which already builds `packages-default`, `packages-emacs`, and `options-doc` as flake checks — so a separate `nix build` job would duplicate work) and `test` (`devenv test` — the seven `enterTest` assertions in `devenv.nix`). A workflow-level `concurrency` group cancels superseded runs on PR branches while preserving protected-branch runs so post-merge cache pushes always finish. The `jylhis` cachix cache is used for pulling and pushing artifacts.
 
 ## Common commands
 
