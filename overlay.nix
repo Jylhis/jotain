@@ -28,6 +28,8 @@ in
 {
   jotainEmacs = import ./emacs.nix { pkgs = final; };
 
+  sonarlintLs = final.sonarlint-ls;
+
   jotainInfo = import ./nix/info-manual.nix {
     pkgs = final;
     src = ./.;
