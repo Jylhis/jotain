@@ -61,13 +61,16 @@ let
   # of envrc-managed project buffers). Prepending these to PATH in the
   # wrapper keeps them available regardless of launch context — notably
   # launchd on macOS, which doesn't inherit the user's login-shell PATH.
-  runtimeDeps = with pkgs; [
-    ripgrep # xref-search-program, consult-ripgrep
-    fd # project/consult fallback finder
-    git # magit, vc
-    direnv # envrc
-    coreutils # gls, used by dirvish-listing-switches on darwin
-  ];
+  runtimeDeps =
+    with pkgs;
+    [
+      ripgrep # xref-search-program, consult-ripgrep
+      fd # project/consult fallback finder
+      git # magit, vc
+      direnv # envrc
+      coreutils # gls, used by dirvish-listing-switches on darwin
+    ]
+    ++ lib.optional cfg.sonarlint.enable pkgs.sonarlintLs;
 
   runtimePath = lib.makeBinPath runtimeDeps;
 
@@ -146,6 +149,10 @@ in
         editor using the {env}`EDITOR` and {env}`VISUAL`
         environment variables.
       '';
+    };
+
+    sonarlint = {
+      enable = lib.mkEnableOption "SonarLint language server ({command}`M-x jotain-sonarlint`)";
     };
   };
 
