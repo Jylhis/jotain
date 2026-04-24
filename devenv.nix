@@ -22,6 +22,10 @@ in
     statix
     deadnix
 
+    # SonarLint language server for in-editor code quality analysis.
+    # Start in Emacs with M-x jotain-sonarlint.
+    sonarlint-ls
+
     # Documentation build chain (`just info`, `just docs`).  Declared
     # here so both the recipe and interactive invocations have them on
     # PATH; the Nix derivations still pull their own copies.

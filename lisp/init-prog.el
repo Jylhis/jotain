@@ -113,6 +113,33 @@
   :after (consult eglot embark)
   :demand t)
 
+;;;; SonarLint (SonarCloud connected mode)
+
+;; SonarLint provides cross-language code-quality and security diagnostics
+;; via the sonarlint-ls language server (nixpkgs).  It runs as a secondary
+;; eglot connection alongside the primary language server for the buffer.
+;;
+;; SonarCloud connected mode is configured per-project via .dir-locals.el:
+;;
+;;   ((nil . ((eglot-workspace-configuration
+;;             . (:sonarlint
+;;                (:connectedMode
+;;                 (:connections
+;;                  (:sonarcloud
+;;                   [(:organizationKey "myorg" :token "...")])
+;;                  :project
+;;                  (:connectionId "myorg" :projectKey "myproject"))
+;;                 :disableTelemetry t))))))
+
+(defun jotain-sonarlint ()
+  "Start SonarLint analysis in the current project.
+Launches the SonarLint language server as a secondary eglot
+connection alongside any existing language server."
+  (interactive)
+  (let ((eglot-server-programs
+         `((,major-mode . ("sonarlint-ls" "-stdio")))))
+    (call-interactively #'eglot)))
+
 ;;;; Flymake / eldoc
 
 (use-package flymake
