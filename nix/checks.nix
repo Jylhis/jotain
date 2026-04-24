@@ -11,6 +11,7 @@
   # ── Package builds ────────────────────────────────────────────────
   packages-default = pkgs.jotainEmacsPackages;
   packages-emacs = pkgs.jotainEmacs;
+  packages-info = pkgs.jotainInfo;
 
   # ── Option documentation ─────────────────────────────────────────
   options-doc = import ./options-doc.nix { inherit pkgs src; };
