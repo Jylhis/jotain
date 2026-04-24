@@ -1,11 +1,13 @@
 # CI for the Jotain Emacs configuration.
 #
-# Two jobs run in parallel on Ubuntu and macOS:
+# Two jobs run in parallel across four platforms (x86_64-linux,
+# aarch64-linux, x86_64-darwin, aarch64-darwin):
 #
 #   check — nix flake check (formatting, statix, deadnix, elisp-lint,
 #           elisp-compile, and package builds — jotainEmacs,
-#           jotainEmacsPackages, options-doc are all flake checks, so
-#           running a separate `nix build` job would duplicate work)
+#           jotainEmacsPackages, jotainInfo, options-doc are all flake
+#           checks, so running a separate `nix build` job would
+#           duplicate work)
 #   test  — devenv test (dev environment assertions from devenv.nix)
 #
 # The jylhis cachix cache is used for pulling pre-built artifacts and
@@ -31,12 +33,21 @@ permissions:
 
 jobs:
   check:
-    name: Lint & check
-    timeout-minutes: 20
+    name: Check (${{ matrix.system }})
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            system: x86_64-linux
+          - os: ubuntu-24.04-arm
+            system: aarch64-linux
+          # macos-15-intel replaces retired macos-13; available until ~Aug 2027
+          - os: macos-15-intel
+            system: x86_64-darwin
+          - os: macos-latest
+            system: aarch64-darwin
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -52,12 +63,20 @@ jobs:
         run: nix flake check --print-build-logs
 
   test:
-    name: Dev environment
+    name: Dev environment (${{ matrix.system }})
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            system: x86_64-linux
+          - os: ubuntu-24.04-arm
+            system: aarch64-linux
+          - os: macos-15-intel
+            system: x86_64-darwin
+          - os: macos-latest
+            system: aarch64-darwin
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
