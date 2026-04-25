@@ -18,7 +18,7 @@
 # correct hash. Re-run with:
 #   nix-build emacs.nix --arg variant '"git"' --argstr hash "sha256-..."
 #
-# Adapted from the `next` branch. Source for nixpkgs is the npins-pinned
+# Adapted from the `next` branch. Source for nixpkgs is the flake.lock-pinned
 # nixpkgs-unstable channel; pass --arg pkgs '<nixpkgs>' or override `pkgs`
 # at the command line to use a different one.
 #
@@ -28,10 +28,22 @@
 #   - nix-giant           github:nix-giant/nix-darwin-emacs
 {
   system ? builtins.currentSystem,
-  pkgs ? import (import ./npins).nixpkgs {
-    inherit system;
-    config.allowUnfree = true;
-  },
+  pkgs ?
+    import
+      (
+        let
+          lock = builtins.fromJSON (builtins.readFile ./flake.lock);
+          n = lock.nodes.nixpkgs.locked;
+        in
+        fetchTarball {
+          url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz";
+          sha256 = n.narHash;
+        }
+      )
+      {
+        inherit system;
+        config.allowUnfree = true;
+      },
 
   # ── Source variant ────────────────────────────────────────────────
   #   "mainline"  — Emacs 30 release tarball (default, binary-cached)
@@ -122,7 +134,7 @@ let
     fetchpatch
     ;
 
-  isDarwin = stdenv.hostPlatform.isDarwin;
+  inherit (stdenv.hostPlatform) isDarwin;
   isAarch64Linux = stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isAarch64;
   isGitVariant = builtins.elem variant [
     "git"
@@ -182,8 +194,10 @@ let
   #
   # Verify after any change to defaults:
   #     nix-instantiate --eval --strict -E \
-  #       '(import ./emacs.nix {}).outPath \
-  #          == (import (import ./npins).nixpkgs {}).emacs30.outPath'
+  #       'let lock = builtins.fromJSON (builtins.readFile ./flake.lock);
+  #            n = lock.nodes.nixpkgs.locked;
+  #            nixpkgs = fetchTarball { url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz"; sha256 = n.narHash; };
+  #        in (import ./emacs.nix {}).outPath == (import nixpkgs {}).emacs30.outPath'
   overridden = basePackage.override {
     inherit
       noGui

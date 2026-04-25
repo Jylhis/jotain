@@ -13,6 +13,7 @@
   :ensure nil
   :hook
   ((text-mode . visual-line-mode)
+   (text-mode . visual-wrap-prefix-mode)
    (text-mode . variable-pitch-mode)))
 
 (use-package jinx

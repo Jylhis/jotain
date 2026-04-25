@@ -29,6 +29,7 @@
 
 (use-package gptel
   :defer t
+  :functions (gptel-make-anthropic gptel-make-gemini gptel-make-ollama)
   :bind
   (("C-c RET"   . gptel-send)
    ("C-c M-RET" . gptel-menu))

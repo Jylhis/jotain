@@ -39,19 +39,7 @@ tty *ARGS:
 # Run all checks: eval, flake, devenv, linting.
 [group('check')]
 check:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "Evaluating default.nix..."
-    nix-instantiate --eval default.nix > /dev/null
-    echo "Running nix flake check..."
-    nix flake check --no-build
-    echo "Running devenv test..."
-    devenv test
-    echo "Running statix..."
-    statix check .
-    echo "Running deadnix..."
-    deadnix --fail --exclude npins .devenv result .
-    echo "All checks passed."
+    nix flake check
 
 # Parse every .el file (no compile, no package install).
 [group('check')]
@@ -101,113 +89,16 @@ test:
 
 
 # Benchmark startup: launch Emacs, collect metrics, print results.
+# Wrapper init files live in bench/ — see bench/early-init.el.
 [group('check')]
 bench output="":
     #!/usr/bin/env bash
     set -euo pipefail
     results="$(mktemp "${TMPDIR:-/tmp}/jotain-bench-results.XXXXXX")"
-    wrapper="$(mktemp -d "${TMPDIR:-/tmp}/jotain-bench-wrapper.XXXXXX")"
-    trap 'rm -rf "$results" "$wrapper"' EXIT
-
-    real_dir="{{config_dir}}"
-
-    # early-init.el: set up require/package-refresh timing advice, then
-    # delegate to the real early-init.el.
-    cat > "$wrapper/early-init.el" << ELISP
-    (defvar jotain-bench--real-dir "$real_dir/")
-    (defvar jotain-bench--results nil)
-    (defun jotain-bench--require-advice (orig-fn feature &rest args)
-      (if (memq feature features)
-          (apply orig-fn feature args)
-        (let ((start (current-time)))
-          (prog1 (apply orig-fn feature args)
-            (let ((elapsed (float-time (time-subtract (current-time) start))))
-              (when (> elapsed 0.001)
-                (push (cons (symbol-name feature) elapsed) jotain-bench--results)))))))
-    (advice-add 'require :around #'jotain-bench--require-advice)
-    (defun jotain-bench--pkg-refresh-advice (orig-fn &rest args)
-      (let ((start (current-time)))
-        (prog1 (apply orig-fn args)
-          (push (cons "NETWORK:package-refresh-contents"
-                       (float-time (time-subtract (current-time) start)))
-                jotain-bench--results))))
-    (advice-add 'package-refresh-contents :around #'jotain-bench--pkg-refresh-advice)
-    (setq user-emacs-directory jotain-bench--real-dir)
-    (load (expand-file-name "early-init.el" jotain-bench--real-dir) nil t)
-    ELISP
-
-    # init.el: delegate to real init.el, then write the report.
-    cat > "$wrapper/init.el" << 'ELISP'
-    (load (expand-file-name "init.el" jotain-bench--real-dir) nil t)
-    (add-hook 'emacs-startup-hook
-      (lambda ()
-        (let* ((init-time (float-time (time-subtract after-init-time before-init-time)))
-               (total-time (float-time (time-subtract (current-time) before-init-time)))
-               (gc-pct (if (> init-time 0) (* 100.0 (/ gc-elapsed init-time)) 0.0))
-               (pkg-count (if (bound-and-true-p package-activated-list)
-                              (length package-activated-list) 0))
-               (outfile (getenv "JOTAIN_BENCH_OUTPUT"))
-               (sorted (sort (copy-sequence jotain-bench--results)
-                             (lambda (a b) (> (cdr a) (cdr b)))))
-               (init-modules (seq-filter (lambda (x) (string-prefix-p "init-" (car x))) sorted))
-               (network-ops (seq-filter (lambda (x) (string-prefix-p "NETWORK:" (car x))) sorted))
-               (other-slow (seq-filter (lambda (x)
-                                         (and (not (string-prefix-p "init-" (car x)))
-                                              (not (string-prefix-p "NETWORK:" (car x)))
-                                              (> (cdr x) 0.010)))
-                                       sorted))
-               (sum-init (apply #'+ (or (mapcar #'cdr init-modules) '(0))))
-               (sum-network (apply #'+ (or (mapcar #'cdr network-ops) '(0))))
-               (sum-other (apply #'+ (or (mapcar #'cdr other-slow) '(0)))))
-          (when outfile
-            (with-temp-file outfile
-              (insert
-               (format "Jotain Startup Benchmark\n")
-               (format "══════════════════════════════════════════════════════\n\n")
-               (format "SUMMARY\n")
-               (format "──────────────────────────────────────────────────────\n")
-               (format "  Init time              %8.3f s\n" init-time)
-               (format "  Total startup time     %8.3f s\n" total-time)
-               (format "  GC count               %8d\n" gcs-done)
-               (format "  GC time                %8.3f s  (%.1f%%)\n" gc-elapsed gc-pct)
-               (format "  Features loaded        %8d\n" (length features))
-               (format "  Packages activated     %8d\n\n" pkg-count)
-               (format "TIME BUDGET\n")
-               (format "──────────────────────────────────────────────────────\n")
-               (format "  init-* modules         %8.3f s  (%5.1f%%)\n" sum-init (* 100.0 (/ sum-init init-time)))
-               (format "  Network (refresh)      %8.3f s  (%5.1f%%)\n" sum-network (* 100.0 (/ sum-network init-time)))
-               (format "  Other slow loads       %8.3f s  (%5.1f%%)\n\n" sum-other (* 100.0 (/ sum-other init-time))))
-              (when network-ops
-                (insert (format "NETWORK OPERATIONS\n")
-                        (format "──────────────────────────────────────────────────────\n"))
-                (dolist (e network-ops)
-                  (insert (format "  %-40s %8.3f s\n" (car e) (cdr e))))
-                (insert "\n"))
-              (insert (format "PER-MODULE TIMING (init-* modules)\n")
-                      (format "──────────────────────────────────────────────────────\n")
-                      (format "  %-40s %8s  %5s\n" "Module" "Time(s)" "%init")
-                      (format "  %-40s %8s  %5s\n" (make-string 40 ?─) "────────" "─────"))
-              (dolist (e init-modules)
-                (insert (format "  %-40s %8.3f  %5.1f%%\n"
-                                (car e) (cdr e) (* 100.0 (/ (cdr e) init-time)))))
-              (insert (format "\nOTHER SLOW FEATURES (>10ms)\n")
-                      (format "──────────────────────────────────────────────────────\n")
-                      (format "  %-40s %8s  %5s\n" "Feature" "Time(s)" "%init")
-                      (format "  %-40s %8s  %5s\n" (make-string 40 ?─) "────────" "─────"))
-              (dolist (e other-slow)
-                (insert (format "  %-40s %8.3f  %5.1f%%\n"
-                                (car e) (cdr e) (* 100.0 (/ (cdr e) init-time)))))
-              (insert (format "\nCONFIGURATION\n")
-                      (format "──────────────────────────────────────────────────────\n")
-                      (format "  package-quickstart          %s\n"
-                              (if (bound-and-true-p package-quickstart) "yes" "no"))
-                      (format "  native-comp available       %s\n"
-                              (if (and (fboundp 'native-comp-available-p) (native-comp-available-p)) "yes" "no"))))))
-          (kill-emacs 0))))
-    ELISP
+    trap 'rm -f "$results"' EXIT
 
     JOTAIN_BENCH_OUTPUT="$results" \
-        emacs --init-directory="$wrapper" 2>/dev/null
+        emacs --init-directory="{{config_dir}}/bench" 2>/dev/null
 
     cat "$results"
     if [ -n "{{output}}" ]; then
@@ -222,7 +113,7 @@ bench output="":
 # Build the full distribution (Emacs + every grammar) for the current system.
 [group('build')]
 build:
-    nix-build -A packages.default
+    nix-build
 
 # Build a bare Emacs (no tree-sitter grammars).
 [group('build')]
@@ -285,66 +176,77 @@ run-built *ARGS:
         --init-directory={{config_dir}} {{ARGS}}
 
 
+# Build option reference documentation (HTML for GitHub Pages).
+[group('build')]
+docs:
+    nix build .#docs -o result-docs
+    @echo "Docs built → result-docs/index.html"
+
+# Build the bundled Info manual (jotain.info) from docs/*.mdx + options.
+# Loaded automatically by init-docs.el when result-info/ exists.
+[group('build')]
+info:
+    nix build .#info -o result-info
+    @echo "Info manual → result-info/share/info/jotain.info"
+    @echo "Open with 'just run' then C-h i d m Jotain RET."
+
+# Build both HTML docs and the Info manual.
+[group('build')]
+docs-all: docs info
+
+
 # ── Format ──────────────────────────────────────────────────────────
 
 # Format all Nix files.
 [group('format')]
 fmt:
-    nixfmt .
+    nix fmt
 
 
-# ── Pin management (npins) ──────────────────────────────────────────
+# ── Lock synchronization ────────────────────────────────────────────
 
-# Update every npins-managed source.
-[group('pins')]
-update-pins:
-    npins update
+# Inputs shared between flake.nix and devenv.yaml — both locks must agree on these revs.
+shared_inputs := "nixpkgs treefmt-nix"
 
-# Update one named pin.
-[group('pins')]
-update-pin NAME:
-    npins update {{NAME}}
-
-# Show all current pins.
-[group('pins')]
-show-pins:
-    npins show
-
-
-# ── Sync all locks ──────────────────────────────────────────────────
-
-# Update npins and sync devenv.yaml + flake.lock to the same nixpkgs rev.
+# Update flake inputs and sync matching devenv.yaml URLs to the new revs.
 [group('pins')]
 update:
     #!/usr/bin/env bash
     set -euo pipefail
-    npins update
-    REV=$(jq -r '.pins.nixpkgs.revision' npins/sources.json)
-    echo "Syncing all locks to nixpkgs $REV"
+    nix flake update
     tmpfile=$(mktemp)
-    sed "s|url: github:NixOS/nixpkgs/.*|url: github:NixOS/nixpkgs/$REV|" devenv.yaml > "$tmpfile"
+    cp devenv.yaml "$tmpfile"
+    for input in {{ shared_inputs }}; do
+        owner=$(jq -r ".nodes.\"$input\".locked.owner" flake.lock)
+        repo=$(jq -r ".nodes.\"$input\".locked.repo" flake.lock)
+        rev=$(jq -r ".nodes.\"$input\".locked.rev" flake.lock)
+        echo "Syncing devenv.yaml: $input -> $rev"
+        sed -i.bak "s|url: github:$owner/$repo/[^[:space:]]*|url: github:$owner/$repo/$rev|" "$tmpfile"
+        rm -f "$tmpfile.bak"
+    done
     mv "$tmpfile" devenv.yaml
     devenv update
-    nix flake lock --override-input nixpkgs "github:NixOS/nixpkgs/$REV"
-    echo "Done. All locks pinned to $REV"
+    echo "Done."
 
-# Verify that all three pinning mechanisms agree on the same nixpkgs rev.
+# Verify that flake.lock and devenv.lock agree on every shared input's rev.
 [group('pins')]
 verify:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "Checking nixpkgs rev sync..."
-    NPINS_REV=$(jq -r '.pins.nixpkgs.revision' npins/sources.json)
-    FLAKE_REV=$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock)
-    DEVENV_REV=$(jq -r '.nodes.nixpkgs.locked.rev' devenv.lock)
-    if [ "$NPINS_REV" != "$FLAKE_REV" ] || [ "$NPINS_REV" != "$DEVENV_REV" ]; then
-        echo "FAIL: nixpkgs revs diverged"
-        echo "  npins:  $NPINS_REV"
-        echo "  flake:  $FLAKE_REV"
-        echo "  devenv: $DEVENV_REV"
-        exit 1
-    fi
-    echo "OK: all locks pinned to $NPINS_REV"
+    fail=0
+    for input in {{ shared_inputs }}; do
+        flake_rev=$(jq -r ".nodes.\"$input\".locked.rev" flake.lock)
+        devenv_rev=$(jq -r ".nodes.\"$input\".locked.rev" devenv.lock)
+        if [ "$flake_rev" != "$devenv_rev" ]; then
+            echo "FAIL: $input revs diverged"
+            echo "  flake:  $flake_rev"
+            echo "  devenv: $devenv_rev"
+            fail=1
+        else
+            echo "OK: $input -> $flake_rev"
+        fi
+    done
+    exit $fail
 
 
 # ── Cleanup ─────────────────────────────────────────────────────────

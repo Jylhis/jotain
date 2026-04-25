@@ -54,6 +54,7 @@
 (require 'init-keys)         ; Global keymap and leader-key setup
 (require 'init-ui)           ; Theme, modeline, fonts, frame tweaks
 (require 'init-help)         ; helpful + built-in help tweaks
+(require 'init-docs)         ; Surface jotain.info under C-h i
 (require 'init-editing)      ; Electric pairs, delsel, whitespace, region tools
 (require 'init-completion)   ; Vertico, marginalia, orderless, consult, corfu
 (require 'init-navigation)   ; Dired + dirvish, project, windmove, winner

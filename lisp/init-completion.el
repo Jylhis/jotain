@@ -90,6 +90,7 @@
 
 (use-package consult
   :hook (completion-list-mode . consult-preview-at-point-mode)
+  :functions (consult-xref consult-register-window)
   :bind
   (;; C-c bindings in `mode-specific-map'
    ("C-c M-x" . consult-mode-command)
@@ -220,6 +221,7 @@
 
 (use-package cape
   :demand t
+  :functions (cape-dabbrev cape-file cape-keyword)
   :custom
   (cape-file-directory-must-exist t)
   (cape-file-prefix '("~" "/" "./" "../"))

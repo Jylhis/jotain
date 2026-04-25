@@ -17,6 +17,7 @@
 ;; resolved against your 1Password vault.
 (use-package auth-source-1password
   :defer t
+  :functions (auth-source-1password-enable)
   :custom
   (auth-source-1password-vault "Private")
   (auth-source-1password-op-executable "op")
@@ -34,6 +35,7 @@
 
 (use-package sops
   :demand t
+  :functions (global-sops-mode sops-save-file sops-cancel sops-edit-file)
   :config
   (global-sops-mode 1)
   (define-key sops-mode-map (kbd "C-c C-c") #'sops-save-file)

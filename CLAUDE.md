@@ -14,33 +14,35 @@ All recipes assume the devenv shell is active. `direnv` handles this via `.envrc
 devenv shell -- just check
 ```
 
-CI (`.github/workflows/devenv.yml`) runs `devenv test` on Ubuntu and macOS, which executes the seven `enterTest` assertions in `devenv.nix` (they lock down that `emacs`/`emacsclient`/`etags`/`eask` all come from the jotainEmacs derivation and that Emacs doesn't leak paths outside the Nix store or the project).
+CI (`.github/workflows/ci.yml`) runs three parallel jobs on Ubuntu and macOS: `check` (`nix flake check`), `test` (`devenv test` — the seven `enterTest` assertions in `devenv.nix`), and `build` (`nix build`). The `jylhis` cachix cache is used for pulling and pushing artifacts.
 
 ## Common commands
 
 All day-to-day work goes through the `Justfile`:
 
-- `just check` — full project lint: Nix evaluation (`nix-instantiate`), flake check, devenv test, `statix`, `deadnix`, plus Elisp paren-check. Use `just check-elisp` for the Elisp-only subset.
+- `just check` — runs `nix flake check`, which covers: formatting (treefmt), statix, deadnix, elisp paren-check, elisp byte-compile (warnings as errors), and package evaluation. Does NOT run `devenv test` (use `devenv test` separately for dev-environment assertions). Use `just check-elisp` for the Elisp-only subset.
 - `just compile` — byte-compile the full config with `byte-compile-error-on-warn`. Requires packages to already be installed (run `just run` once first to trigger bootstrap).
 - `just test` — run ERT tests under `test/` if the directory exists (no tests yet).
 - `just run [ARGS]` — launch Emacs with `--init-directory` pointed at this repo (isolated from `~/.emacs.d`).
 - `just debug` — same as `run` but with `--debug-init` and `debug-on-error`.
 - `just tty` — `emacs -nw` (exercises kkp + clipetty paths).
 - `just fmt` — `nixfmt .` (Nix formatting via `nixfmt-rfc-style`).
-- `just update` — synchronize all three lock files (npins, devenv.lock, flake.lock) to the same nixpkgs revision. npins is the source of truth.
-- `just update-pins` / `just update-pin NAME` — refresh `npins/`.
-- `just verify` — verify all lock files (npins, devenv.lock, flake.lock) reference the same nixpkgs revision.
+- `just update` — update nixpkgs in `flake.lock` (source of truth), then sync `devenv.lock` to match.
+- `just verify` — verify that `flake.lock` and `devenv.lock` reference the same nixpkgs revision.
 - `just clean` — remove `*.elc`, autosaves, `eln-cache`, `result` symlink.
 - `just clean-all` — additionally wipe `elpa/` and `var/`, forcing a full re-fetch. The next `just run` will hit every MELPA package fresh, so expect the first startup to be slow.
 
 Build recipes (all via `nix-build`, targeting current system by default; override with `just system=x86_64-linux …`):
 
-- `just build` — full distribution (Emacs + all ~275 tree-sitter grammars) via `nix-build -A packages.default`.
+- `just build` — full distribution (Emacs + all ~275 tree-sitter grammars) via plain `nix-build`.
 - `just build-bare` — bare Emacs via `emacs.nix`, no grammars.
 - `just build-pgtk` / `build-gtk3` / `build-nox` / `build-macport` / `build-git` / `build-igc` / `build-android` — variant builds targeting `emacs.nix` directly (bare Emacs only). Git/unstable/igc/macport variants will fail on first run and report the hash to pass back via `--argstr hash`.
 - `just run-built [ARGS]` — auto-detect platform, build, then launch from `./result/bin/emacs`.
+- `just docs` / `just info` / `just docs-all` — build the Nix-options HTML reference, the bundled `jotain.info` manual, or both. HTML goes to `result-docs/`; Info goes to `result-info/share/info/jotain.info`.
 
-There's also a `devenv-emacs-smoke` script (defined in `devenv.nix`) that byte-compiles everything with warnings-as-errors, and `emacs-run` which is the non-Justfile equivalent of `just run`.
+There's also an `emacs-smoke` script (defined in `devenv.nix`) that byte-compiles everything with warnings-as-errors, and `emacs-run` which is the non-Justfile equivalent of `just run`.
+
+- `just bench [output]` — benchmark startup: launches Emacs through `bench/early-init.el` which wraps `require` and `package-refresh-contents` with timing advice, then prints results sorted by load time. Optionally saves to a file.
 
 ## Architecture
 
@@ -68,26 +70,51 @@ There's also a `devenv-emacs-smoke` script (defined in `devenv.nix`) that byte-c
 Divergent variants (`git`, `unstable`, `igc`, `macport`, Darwin patch flags) go through `overrideAttrs` and *intentionally* bust the cache. Any edit to `emacs.nix` that touches the `basePackage.override { … }` block must preserve parity for the mainline variant. Verify with:
 
 ```
-nix-instantiate --eval --strict -E \
-  '(import ./emacs.nix {}).outPath == (import (import ./npins).nixpkgs {}).emacs30.outPath'
+nix-instantiate --eval --strict -E '
+  let lock = builtins.fromJSON (builtins.readFile ./flake.lock);
+      n = lock.nodes.nixpkgs.locked;
+      nixpkgs = fetchTarball { url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz"; sha256 = n.narHash; };
+  in (import ./emacs.nix {}).outPath == (import nixpkgs {}).emacs30.outPath'
 ```
 
-**`overlay.nix`** is a nixpkgs overlay providing two attributes: `jotainEmacs` (bare Emacs from `emacs.nix`) and `jotainEmacsPackages` (full distribution with use-package auto-mapping + tree-sitter grammars).
+**`overlay.nix`** is a nixpkgs overlay providing three attributes: `jotainEmacs` (bare Emacs from `emacs.nix`), `jotainInfo` (the `jotain.info` manual generated by `nix/info-manual.nix`), and `jotainEmacsPackages` (full distribution — use-package auto-mapping + tree-sitter grammars + a makeBinaryWrapper that prepends `${jotainInfo}/share/info` to `INFOPATH` so `C-h i d m Jotain RET` works out of the box).
 
-**`default.nix`** returns a structured attrset `{ packages.default, overlays.default, homeManagerModules.default, lib }` instead of a single derivation. `packages.default` is the full distribution. `overlays.default` re-exports `overlay.nix`. Plain `nix-build` (no `-A`) no longer works; use `nix-build -A packages.default`. Variant builds use `emacs.nix` directly (e.g. `nix-build emacs.nix --arg withPgtk true`).
+**`default.nix`** is a thin flake-compat wrapper. It reads the pinned `flake-compat` rev from `flake.lock`, evaluates `flake.nix`, and promotes the current system's packages to the top level. `nix-build` builds the full distribution; `nix-build -A emacs` builds bare Emacs. Variant builds still target `emacs.nix` directly (e.g. `nix-build emacs.nix --arg withPgtk true`).
 
-**`flake.nix`** is a thin wrapper that exposes `overlays.default` and `homeManagerModules.default` for flake consumers. It has no `packages` output — non-flake users go through `default.nix` directly.
+**`flake.nix`** is a thin wrapper — no inline derivations, just wiring. It exposes:
+- `packages.<system>.default` — full distribution (`jotainEmacsPackages`)
+- `packages.<system>.emacs` — bare Emacs (`jotainEmacs`)
+- `packages.<system>.info` — `jotain.info` manual alone (`jotainInfo`), for `just info`
+- `packages.<system>.docs` — HTML option reference (for GitHub Pages)
+- `overlays.default` — the nixpkgs overlay from `overlay.nix`
+- `homeManagerModules.default` — Home Manager module from `module.nix` (per-user daemon, wrappers, desktop entry)
+- `nixosModules.default` / `darwinModules.default` — NixOS / nix-darwin module from `module-system.nix` (overlay + system packages)
+- `formatter.<system>` — `treefmt` wrapper using shared config from `nix/treefmt.nix`
+- `lib` — use-package scanner utilities from `nix/use-package.nix`
+- `checks.<system>.*` — defined in `nix/checks.nix`: package builds, formatting (treefmt), statix, deadnix, elisp-lint (paren check), elisp-compile (byte-compile with warnings-as-errors)
 
 ### Dev shell's Emacs
 
-`devenv.nix` builds its own `jotainEmacs` (from `emacs.nix` + two MELPA-absent packages via `trivialBuild`: `claude-code-ide` and `combobulate`) and exposes it as the `emacs` binary on `PATH`. The custom `languages.emacs-lisp` module from `nix/devenv-emacs-lisp.nix` provides `eask-cli` alongside; `ellsp` and `elsa` are available but opt-in (both defaulted off in `devenv.nix`). The dev shell also includes `statix` and `deadnix` for Nix linting.
+`devenv.nix` builds `jotainEmacs` by applying `overlay.nix` to devenv's ambient `pkgs` (two MELPA-absent packages, `claude-code-ide` and `combobulate`, are added via `trivialBuild` in `nix/extra-packages.nix`). This derivation is exposed as the `emacs` binary on `PATH`. The custom `languages.emacs-lisp` module from `nix/devenv-emacs-lisp.nix` provides `eask-cli` alongside; `ellsp` and `elsa` are available but opt-in (both defaulted off in `devenv.nix`). The dev shell also includes `statix` and `deadnix` for Nix linting.
 
-`module.nix` is a Home Manager module (`services.jotain`) for running Jotain as a user-session Emacs daemon with `emacsclient`; it supports systemd on Linux and launchd on macOS.
+`module.nix` is a Home Manager module (`services.jotain`) for running Jotain as a user-session Emacs daemon with `emacsclient`; it supports systemd on Linux and launchd on macOS. `module-system.nix` is a shared NixOS / nix-darwin module that applies the overlay and adds packages to `environment.systemPackages` — it is intentionally a single file reused by both `nixosModules.default` and `darwinModules.default`.
 
 ### Pinning
 
-Sources are managed with `npins` as the source of truth. `npins/` holds at minimum `nixpkgs` (GitHub type, pinned to an exact commit). Three lock files must stay in sync: `npins/sources.json`, `devenv.lock`, and `flake.lock` — all must reference the same nixpkgs revision. `devenv.yaml` uses `github:NixOS/nixpkgs/<exact-commit>` (not `github:cachix/devenv-nixpkgs/rolling`) to ensure binary cache hits across all three pinning mechanisms.
+`flake.lock` is the single source of truth for input revisions. Two lock files must stay in sync: `flake.lock` and `devenv.lock`. `devenv.yaml` pins shared inputs (`nixpkgs` and `treefmt-nix`) to the exact same commits as `flake.lock` to ensure binary cache hits.
 
-Use `just update` to synchronize all three locks (npins is updated first, then devenv.lock and flake.lock are synced to the same revision). Use `just verify` to check that all locks reference the same nixpkgs rev.
+Use `just update` to update flake inputs first, then sync `devenv.yaml` URLs and `devenv.lock` to match. Use `just verify` to check that both locks agree on all shared inputs.
 
-`devenv.nix` imports `./npins` and uses the pinned nixpkgs as `pinned` for everything that needs "the same nixpkgs" — **prefer `pinned` over the ambient `pkgs`** inside `devenv.nix` when consistency matters.
+`default.nix` and `emacs.nix` read nixpkgs from `flake.lock` directly via `fetchTarball` — no separate pinning tool is needed for non-flake consumers.
+
+### Shared treefmt configuration
+
+`nix/treefmt.nix` defines the formatter programs (currently `nixfmt`, `deadnix`, and `statix`). It is consumed by both `flake.nix` (via `treefmt-nix` for `nix fmt` and the formatting check) and `devenv.nix` (via devenv's treefmt module). Add new formatters to this single file.
+
+### Check / test responsibility split
+
+Flake checks (`nix flake check`, defined in `nix/checks.nix`) validate the **application and configuration**: Nix linting (statix, deadnix, nixfmt), Elisp syntax (balanced parens), and Elisp byte-compilation (warnings as errors). devenv tests (`devenv test`, defined in `devenv.nix` `enterTest`) validate the **dev environment**: binary provenance, isolation from host config, and tooling availability.
+
+### Info manual
+
+`docs/jotain.texi` is the master Texinfo file; `nix/info-manual.nix` pandoc-converts every `docs/*.md(x)` page into a chapter fragment, `@include`s them, and runs `makeinfo` + `install-info` to produce `share/info/{jotain.info,dir}`. The Nix module options appendix comes from `nix/options-doc.nix`, which now emits both `index.html` (for Pages) and `jotain-options.texi` (for the Info manual) from the same CommonMark source. `overlay.nix` wraps `jotainEmacsPackages`' binaries with `INFOPATH=${jotainInfo}/share/info:` so the manual is discoverable for NixOS / nix-darwin / Home Manager users without any Elisp config. For source-checkout (`just run` against a host Emacs that isn't the Jotain wrapper), `lisp/init-docs.el` scans `JOTAIN_INFO_DIR`, `result-info/share/info`, and `result/share/info` and adds the first that exists to `Info-directory-list`.

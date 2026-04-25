@@ -47,6 +47,49 @@
            "\\|^\\.stversions\\'"
            "\\|^__pycache__\\'")))
 
+;; When BSD `ls' is all we have (macOS without coreutils), fall back to
+;; Emacs's built-in `ls-lisp' emulation so we still get folders-first
+;; sorting — BSD ls lacks `--group-directories-first'.
+(use-package ls-lisp
+  :ensure nil
+  :if (and (eq system-type 'darwin) (not (executable-find "gls")))
+  :custom
+  (ls-lisp-dirs-first t)
+  (ls-lisp-use-insert-directory-program nil)
+  (ls-lisp-use-string-collate t)
+  (ls-lisp-UCA-like-collation t)
+  (ls-lisp-verbosity '(links uid gid)))
+
+(use-package wdired
+  :ensure nil
+  :after dired
+  :custom
+  (wdired-allow-to-change-permissions t)
+  (wdired-create-parent-directories t)
+  :bind (:map dired-mode-map ("C-c C-e" . wdired-change-to-wdired-mode)))
+
+(use-package diredfl
+  :hook (dired-mode . diredfl-mode))
+
+(use-package dired-narrow
+  :after dired
+  :bind (:map dired-mode-map ("/" . dired-narrow)))
+
+(use-package dired-subtree
+  :after dired
+  :custom
+  (dired-subtree-use-backgrounds nil)
+  :bind (:map dired-mode-map
+              ("TAB" . dired-subtree-toggle)
+              ("<backtab>" . dired-subtree-cycle)))
+
+(use-package trashed
+  :commands trashed
+  :custom
+  (trashed-action-confirmer 'y-or-n-p)
+  (trashed-use-header-line t)
+  (trashed-sort-key '("Date deleted" . t)))
+
 ;; Shorten /nix/store/abc123-foo-1.0 display to …foo-1.0 in dired/shell
 ;; buffers. Pure cosmetic, no behavioral change.
 (use-package pretty-sha-path
@@ -55,9 +98,15 @@
 (use-package dirvish
   :demand t
   :after dired
+  :functions (dirvish-override-dired-mode)
   :custom
   (dirvish-attributes '(nerd-icons file-time file-size collapse subtree-state vc-state))
   (dirvish-mode-line-format '(:left (sort symlink) :right (omit yank index)))
+  (dirvish-default-layout '(0 0.4 0.6))
+  (dirvish-preview-dispatchers '(image gif video audio epub archive pdf))
+  (dirvish-side-width 30)
+  :bind (("C-c d" . dirvish)
+         ("C-c D" . dirvish-side))
   :config
   (dirvish-override-dired-mode 1))
 
@@ -71,6 +120,7 @@
 
 ;; Reversible `C-x 1': first press collapses to a single window,
 ;; second press restores the previous layout via `winner-mode'.
+(declare-function winner-undo "winner")
 (defun jotain-nav-toggle-delete-other-windows ()
   "Delete other windows, or restore the previous layout.
 If only one window is visible and `winner-mode' has a previous
