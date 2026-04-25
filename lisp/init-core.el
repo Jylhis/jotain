@@ -29,7 +29,7 @@ immediately for writes."
   (make-directory jotain-var-dir t)
   (expand-file-name name jotain-var-dir))
 
-(make-directory jotain-var-dir t)
+(ignore-errors (make-directory jotain-var-dir t))
 
 ;; Restore a sane GC threshold after the early-init.el bump. 16 MiB is the
 ;; common compromise: high enough that typing/scrolling never trips a GC,
@@ -118,6 +118,7 @@ immediately for writes."
 (use-package diminish
   :demand t)
 
+(declare-function jotain-core--auto-create-missing-dirs nil)
 (use-package files
   :ensure nil
   :custom
@@ -185,6 +186,21 @@ immediately for writes."
           mac-option-modifier       'super
           mac-right-option-modifier 'none)
   (setopt trash-directory "~/.Trash"))
+
+;; Inherit PATH, MANPATH, and a few shell-managed vars from the user's
+;; login shell so GUI / launchd / systemd-spawned Emacs matches what the
+;; terminal sees. module.nix prepends the essential Nix-store binaries
+;; (rg, fd, git, direnv, coreutils) to the wrapper's PATH — this handles
+;; the rest (e.g. ~/.nix-profile, user-managed toolchains).
+(use-package exec-path-from-shell
+  :if (or (daemonp)
+          (memq window-system '(mac ns x)))
+  :demand t
+  :functions (exec-path-from-shell-initialize)
+  :custom
+  (exec-path-from-shell-arguments nil) ; faster: skip -i
+  :config
+  (exec-path-from-shell-initialize))
 
 (use-package autorevert
   :ensure nil

@@ -1,34 +1,19 @@
-# default.nix — Jotain Emacs distribution.
+# default.nix — Jotain non-flake entry point via flake-compat.
 #
-# Returns a structured attrset:
-#   packages.default             — full Emacs distribution
-#   overlays.default             — nixpkgs overlay (see overlay.nix)
-#   homeManagerModules.default   — Home Manager module (see module.nix)
-#   lib                          — use-package scanner utilities
+# Evaluates flake.nix using flake-compat (pinned in flake.lock).
+# Packages for the current system are promoted to the top level, so:
 #
-# Usage:
-#   nix-build -A packages.default                    # full distribution
-#   nix-build emacs.nix                              # bare Emacs (cache-parity)
-#   nix-build emacs.nix --arg withPgtk true          # variant builds
-{
-  pkgs ? import (import ./npins).nixpkgs {
-    overlays = [ (import ./overlay.nix) ];
-    config.allowUnfree = true;
-  },
-  lib ? pkgs.lib,
-}:
+#   nix-build                              # full distribution (jotainEmacsPackages)
+#   nix-build -A emacs                     # bare Emacs only
+#   nix-build emacs.nix                    # bare Emacs (cache-parity build)
+#   nix-build emacs.nix --arg withPgtk true  # variant builds
 let
-  overlay = import ./overlay.nix;
-  # Apply overlay if caller's pkgs doesn't have it
-  # (e.g. module.nix passes Home Manager's pkgs without the overlay)
-  pkgs' = if pkgs ? jotainEmacsPackages then pkgs else pkgs.extend overlay;
+  lock = builtins.fromJSON (builtins.readFile ./flake.lock);
+  flake-compat = fetchTarball {
+    url = "https://github.com/edolstra/flake-compat/archive/${
+      lock.nodes."flake-compat".locked.rev
+    }.tar.gz";
+    sha256 = lock.nodes."flake-compat".locked.narHash;
+  };
 in
-{
-  packages.default = pkgs'.jotainEmacsPackages;
-
-  overlays.default = overlay;
-
-  homeManagerModules.default = import ./module.nix;
-
-  lib = import ./nix/use-package.nix { inherit lib; };
-}
+(import flake-compat { src = ./.; }).defaultNix

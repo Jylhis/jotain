@@ -41,7 +41,7 @@
 (use-package treesit-fold
   :diminish
   :hook (after-init . global-treesit-fold-indicators-mode)
-  :init (setq treesit-fold-indicators-priority -1))
+  :custom (treesit-fold-indicators-priority -1))
 
 ;; Combobulate: structural editing via treesit. Loaded on demand only —
 ;; enable per buffer with `M-x combobulate-mode' or via .dir-locals.el.
@@ -179,6 +179,7 @@
 ;; better than direnv-mode because the env is buffer-local, not global.
 (use-package envrc
   :demand t
+  :functions (envrc-global-mode)
   :config
   (envrc-global-mode)
   (add-to-list 'warning-suppress-types '(envrc))
@@ -200,6 +201,7 @@
 ;; prettier, etc.). Replaces hand-rolled before-save hooks per language.
 (use-package apheleia
   :diminish apheleia-mode
+  :functions (apheleia-global-mode)
   :config
   (apheleia-global-mode 1)
   (put 'apheleia-mode 'safe-local-variable #'booleanp))

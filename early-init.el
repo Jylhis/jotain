@@ -38,6 +38,7 @@
 ;; which is outside `var/' and never gets loaded — quickstart then pays
 ;; its refresh + byte-compile cost on every `package-install' without
 ;; providing any startup speedup.
+(defvar package-quickstart nil)
 (setq package-quickstart-file
       (expand-file-name "var/package-quickstart.el" user-emacs-directory)
       package-quickstart t)
@@ -48,12 +49,15 @@
 ;; `package-initialize' in init file" warning as a false positive. There
 ;; is no way to distinguish the legitimate internal call from a user one,
 ;; so suppress the warning type directly.
+(defvar warning-suppress-log-types nil)
 (with-eval-after-load 'warnings
   (add-to-list 'warning-suppress-log-types '(package reinitialization)))
 
 ;; use-package is built in since Emacs 29; configure it before init.el
 ;; loads any `use-package` form. `always-ensure' means every block defaults
 ;; to `:ensure t' — built-ins must opt out with `:ensure nil'.
+(defvar use-package-enable-imenu-support nil)
+(defvar use-package-always-ensure nil)
 (setq use-package-enable-imenu-support t
       use-package-always-ensure t)
 
@@ -80,11 +84,14 @@
 (setq inhibit-compacting-font-caches t)
 
 ;; macOS: thinner font smoothing matches the system rendering on Retina.
+(defvar ns-use-thin-smoothing nil)
 (when (eq system-type 'darwin)
   (setq ns-use-thin-smoothing t))
 
 ;; Native compilation (Emacs 30+): keep eln-cache out of the config dir,
 ;; and silence the firehose of async warnings during init.
+(defvar native-comp-async-report-warnings-errors nil)
+(defvar native-comp-speed nil)
 (when (and (fboundp 'native-comp-available-p)
            (native-comp-available-p))
   (setq native-comp-async-report-warnings-errors nil
@@ -95,6 +102,7 @@
       (expand-file-name "var/eln-cache/" user-emacs-directory)))))
 
 ;; Tree-sitter grammars provided out-of-band (Nix sets TREE_SITTER_DIR).
+(defvar treesit-extra-load-path nil)
 (when-let* ((ts-dir (getenv "TREE_SITTER_DIR")))
   (setq treesit-extra-load-path (list ts-dir)))
 

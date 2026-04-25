@@ -1,5 +1,4 @@
 {
-  lib,
   fetchFromGitHub,
   buildNpmPackage,
   nodejs,
