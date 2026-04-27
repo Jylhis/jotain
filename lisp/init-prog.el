@@ -34,8 +34,14 @@
   :demand t
   :custom (treesit-auto-install nil)
   :config
-  (treesit-auto-add-to-auto-mode-alist 'all)
-  (global-treesit-auto-mode))
+  ;; Populate auto-mode-alist with foo-ts-mode entries for every grammar
+  ;; Nix provides.  This is sufficient — global-treesit-auto-mode is NOT
+  ;; used because it advises set-auto-mode-0 with a hook that rebuilds
+  ;; major-mode-remap-alist on every call (62 treesit-ready-p checks,
+  ;; ~1.2 s), and set-auto-mode-0 fires 3× per file open, adding ~3.6 s
+  ;; per find-file.  The alist entries achieve the same mode routing with
+  ;; zero overhead.
+  (treesit-auto-add-to-auto-mode-alist 'all))
 
 ;; Code folding driven by treesit nodes.
 (use-package treesit-fold
