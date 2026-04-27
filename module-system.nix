@@ -26,6 +26,27 @@
 }:
 let
   cfg = config.services.jotain;
+
+  # Fallback script for EDITOR when the daemon is not running.
+  editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
+    exec ${lib.getBin cfg.package}/bin/emacs -nw "$@"
+  '';
+
+  # EDITOR — terminal-friendly emacsclient (works over SSH, in git commit, etc.)
+  editorScript = pkgs.writeShellScriptBin "jotain-editor" ''
+    exec ${lib.getBin cfg.package}/bin/emacsclient \
+      --tty \
+      --alternate-editor=${editorFallback} \
+      "$@"
+  '';
+
+  # VISUAL — opens a GUI emacsclient frame.
+  visualScript = pkgs.writeShellScriptBin "jotain-visual" ''
+    exec ${lib.getBin cfg.package}/bin/emacsclient \
+      --create-frame \
+      --alternate-editor=${lib.getBin cfg.package}/bin/emacs \
+      "$@"
+  '';
 in
 {
   options.services.jotain = {
@@ -37,10 +58,29 @@ in
       defaultText = lib.literalExpression "(pkgs.extend (import ./overlay.nix)).jotainEmacsPackages";
       description = "The Jotain Emacs package to use.";
     };
+
+    defaultEditor = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      example = false;
+      description = ''
+        Whether to configure {command}`emacsclient` as the default
+        editor using the {env}`EDITOR` and {env}`VISUAL`
+        environment variables.
+      '';
+    };
   };
 
   config = lib.mkIf cfg.enable {
     nixpkgs.overlays = [ (import ./overlay.nix) ];
-    environment.systemPackages = [ cfg.package ];
+    environment.systemPackages = [
+      cfg.package
+      editorScript
+      visualScript
+    ];
+    environment.variables = lib.mkIf cfg.defaultEditor {
+      EDITOR = lib.mkOverride 900 "${lib.getBin editorScript}/bin/jotain-editor";
+      VISUAL = lib.mkOverride 900 "${lib.getBin visualScript}/bin/jotain-visual";
+    };
   };
 }
