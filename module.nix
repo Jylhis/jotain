@@ -82,10 +82,26 @@ let
     exec ${emacsBinPath}/emacs --init-directory=${lib.escapeShellArg initDirectory} "$@"
   '';
 
-  # Wrapper script that launches emacsclient with a sensible default
-  # (--create-frame) when invoked without arguments.
+  # Fallback script for EDITOR when the daemon is not running.
+  # Goes through emacsWrapper so --init-directory is preserved.
+  editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
+    exec ${emacsWrapper}/bin/emacs -nw "$@"
+  '';
+
+  # EDITOR — terminal-friendly emacsclient (works over SSH, in git commit, etc.)
   editorScript = pkgs.writeShellScriptBin "jotain-editor" ''
-    exec ${lib.getBin cfg.package}/bin/emacsclient "''${@:---create-frame}"
+    exec ${lib.getBin cfg.package}/bin/emacsclient \
+      --tty \
+      --alternate-editor=${editorFallback} \
+      "$@"
+  '';
+
+  # VISUAL — opens a GUI emacsclient frame.
+  visualScript = pkgs.writeShellScriptBin "jotain-visual" ''
+    exec ${lib.getBin cfg.package}/bin/emacsclient \
+      --create-frame \
+      --alternate-editor=${emacsWrapper}/bin/emacs \
+      "$@"
   '';
 in
 {
@@ -142,8 +158,8 @@ in
 
     defaultEditor = lib.mkOption {
       type = lib.types.bool;
-      default = false;
-      example = true;
+      default = true;
+      example = false;
       description = ''
         Whether to configure {command}`emacsclient` as the default
         editor using the {env}`EDITOR` and {env}`VISUAL`
@@ -159,12 +175,13 @@ in
   config = lib.mkIf cfg.enable {
     home.sessionVariables = lib.mkIf cfg.defaultEditor {
       EDITOR = "${lib.getBin editorScript}/bin/jotain-editor";
-      VISUAL = "${lib.getBin editorScript}/bin/jotain-editor";
+      VISUAL = "${lib.getBin visualScript}/bin/jotain-visual";
     };
 
     home.packages = [
       cfg.package
       editorScript
+      visualScript
       # hiPrio so the wrapped `emacs` shadows the unwrapped binary
       # that ships inside cfg.package.
       (lib.hiPrio emacsWrapper)
