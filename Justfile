@@ -107,6 +107,24 @@ bench output="":
         echo "Results saved to {{output}}"
     fi
 
+# Benchmark file-open: open representative files and time each hook.
+[group('check')]
+bench-open output="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    results="$(mktemp "${TMPDIR:-/tmp}/jotain-bench-open.XXXXXX")"
+    trap 'rm -f "$results"' EXIT
+
+    JOTAIN_BENCH_OPEN_OUTPUT="$results" \
+        emacs --init-directory="{{config_dir}}/bench" 2>/dev/null
+
+    cat "$results"
+    if [ -n "{{output}}" ]; then
+        cp "$results" "{{output}}"
+        echo ""
+        echo "Results saved to {{output}}"
+    fi
+
 
 # ── Build (nix) ─────────────────────────────────────────────────────
 
