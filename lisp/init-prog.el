@@ -7,8 +7,9 @@
 ;; `flymake', `eldoc', and `xref' — splitting it out would just spread
 ;; one feature across five files.
 ;;
-;; Per-language hooks (eglot-ensure, treesit grammar pinning, formatter
-;; choice) live in `init-lang-*.el'. This file owns the substrate.
+;; Per-language `eglot-ensure' hooks live here so all LSP wiring is
+;; visible in one place. Language modules own mode registration and
+;; language-specific indentation/settings.
 
 ;;; Code:
 
@@ -65,7 +66,16 @@
 
 (use-package eglot
   :ensure nil
-  ;; Per-language modules add themselves to eglot-ensure in their own files.
+  ;; Per-language modules register modes only; auto-start lives here.
+  :hook
+  ((dockerfile-mode
+    go-mode go-ts-mode
+    nix-ts-mode
+    python-mode python-ts-mode
+    rust-mode rust-ts-mode
+    tsx-ts-mode
+    typescript-mode typescript-ts-mode)
+   . eglot-ensure)
   :custom
   (eglot-autoshutdown t)
   (eglot-extend-to-xref t)

@@ -7,8 +7,7 @@
 ;; Built-in tree-sitter modes are pinned with :ensure nil; web-mode and
 ;; vue-mode etc. were dropped during review.
 ;;
-;; Eglot is wired up centrally in `init-prog.el' \u2014 add per-mode hooks
-;; there if you want eglot-ensure for these modes.
+;; Eglot hooks for TypeScript/TSX live centrally in `init-prog.el'.
 
 ;;; Code:
 
