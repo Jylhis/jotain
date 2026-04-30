@@ -1,6 +1,9 @@
 # TODO
 
 - https://github.com/federicotdn/verb
+- Disable "Process zoxide finished" messages in zoxide buffer
+- Disable direnv errors in envrc buffer
+- Fix themes in terminal
 
 ## Investigate
 
