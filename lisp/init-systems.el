@@ -16,7 +16,7 @@
 ;; circe, etc. — can ask for credentials by host and they'll be
 ;; resolved against your 1Password vault.
 (use-package auth-source-1password
-  :defer t
+  :demand t
   :functions (auth-source-1password-enable)
   :custom
   (auth-source-1password-vault "Private")

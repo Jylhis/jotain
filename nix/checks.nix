@@ -7,6 +7,67 @@
   src,
   treefmtCheck,
 }:
+let
+  inherit (pkgs) lib;
+
+  hmStubModule = {
+    options = {
+      assertions = lib.mkOption {
+        type = lib.types.listOf lib.types.unspecified;
+        default = [ ];
+      };
+      home.sessionVariables = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { };
+      };
+      home.packages = lib.mkOption {
+        type = lib.types.listOf lib.types.package;
+        default = [ ];
+      };
+      xdg.configHome = lib.mkOption {
+        type = lib.types.str;
+        default = "/tmp/jotain-home/.config";
+      };
+      xdg.configFile = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        default = { };
+      };
+      systemd.user.services = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        default = { };
+      };
+      systemd.user.sockets = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        default = { };
+      };
+      launchd.agents = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        default = { };
+      };
+    };
+  };
+
+  evalHomeModule =
+    jotainConfig:
+    lib.evalModules {
+      modules = [
+        hmStubModule
+        ../module.nix
+        {
+          services.jotain = {
+            enable = true;
+          }
+          // jotainConfig;
+        }
+      ];
+      specialArgs = { inherit pkgs; };
+    };
+
+  defaultModule = evalHomeModule { };
+  graphicalModule = evalHomeModule {
+    startWithUserSession = "graphical";
+  };
+in
 {
   # ── Package builds ────────────────────────────────────────────────
   packages-default = pkgs.jotainEmacsPackages;
@@ -15,6 +76,21 @@
 
   # ── Option documentation ─────────────────────────────────────────
   options-doc = import ./options-doc.nix { inherit pkgs src; };
+
+  # ── Home Manager module evaluation ───────────────────────────────
+  module-eval =
+    pkgs.runCommandLocal "check-module-eval"
+      {
+        defaultEditor = defaultModule.config.home.sessionVariables.EDITOR;
+        graphicalTarget =
+          if pkgs.stdenv.hostPlatform.isLinux then
+            builtins.toJSON graphicalModule.config.systemd.user.services.jotain.Install.WantedBy
+          else
+            builtins.toJSON graphicalModule.config.launchd.agents.jotain.config.ProgramArguments;
+      }
+      ''
+        touch $out
+      '';
 
   # ── Nix formatting (via shared treefmt config) ────────────────────
   formatting = treefmtCheck;
