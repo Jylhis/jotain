@@ -3,6 +3,19 @@
 { pkgs }:
 
 efinal: _eprev: {
+  jylhis-emacs-themes = efinal.trivialBuild {
+    pname = "jylhis-emacs-themes";
+    version = "0.3.0";
+    src =
+      pkgs.fetchFromGitHub {
+        owner = "Jylhis";
+        repo = "design";
+        rev = "c2c5fac0b9d3ed30a9286863e469f5d788f5b4da";
+        sha256 = "04016bm6h22s5z1srjlzk69640d8k7v5yglycq7sh4qq8sa69yzf";
+      }
+      + "/platforms/emacs";
+  };
+
   claude-code-ide = efinal.trivialBuild {
     pname = "claude-code-ide";
     version = "0.2.6";
