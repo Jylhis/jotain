@@ -13,20 +13,20 @@
   "User-facing UI knobs for the Jotain configuration."
   :group 'convenience)
 
-;;;; Theme — modus operandi/vivendi tinted, switched by system appearance
+;;;; Theme — Jylhis paper/roast, switched by system appearance
 
-(defcustom jotain-theme-light 'modus-operandi-tinted
+(defcustom jotain-theme-light 'jylhis-paper
   "Theme to use when the system is in light mode."
   :type 'symbol
   :group 'jotain-ui)
 
-(defcustom jotain-theme-dark 'modus-vivendi-tinted
+(defcustom jotain-theme-dark 'jylhis-roast
   "Theme to use when the system is in dark mode."
   :type 'symbol
   :group 'jotain-ui)
 
-;; Trust all themes by default — modus is built-in and signed, and we
-;; never load themes from disk paths we don't control.
+;; Trust all themes by default — we only load our own Jylhis themes
+;; and never load themes from disk paths we don't control.
 (setopt custom-safe-themes t)
 
 (defun jotain-ui--disable-other-themes (_theme &optional _no-confirm no-enable)
@@ -38,22 +38,20 @@ and the result is a face-attribute soup."
 
 (advice-add 'load-theme :before #'jotain-ui--disable-other-themes)
 
-(use-package modus-themes
-  :demand t
-  :custom
-  (modus-themes-italic-constructs t)
-  (modus-themes-bold-constructs t)
-  (modus-themes-mixed-fonts t)
-  :config
-  ;; Pre-load both themes so auto-dark can flip between them without
-  ;; re-evaluating the .el files on every appearance change.
+;; Register the Jylhis theme directory on custom-theme-load-path.
+;; The package ships jylhis-themes.el as the entry point for this.
+(require 'jylhis-themes)
+
+;; Pre-load both themes so auto-dark can flip between them without
+;; re-evaluating the .el files on every appearance change.  Guarded
+;; against batch mode where custom-theme-load-path may be incomplete.
+(unless noninteractive
   (load-theme jotain-theme-light t t)
   (load-theme jotain-theme-dark  t t))
 
 (use-package auto-dark
   :diminish
   :demand t
-  :after modus-themes
   :bind ("C-c t" . auto-dark-toggle-appearance)
   :custom
   (auto-dark-allow-osascript t)
@@ -93,7 +91,8 @@ wins.  All heights are multiplied by `jotain-font-scale' at runtime."
   :group 'jotain-ui)
 
 (defcustom jotain-variable-pitch-font-preferences
-  '(("Iosevka Aile" . 150)
+  '(("Literata"     . 150)
+    ("Iosevka Aile" . 150)
     ("Noto Sans"    . 150)
     ("DejaVu Sans"  . 140))
   "Ordered list of (FAMILY . HEIGHT) pairs to try for the variable-pitch face.
