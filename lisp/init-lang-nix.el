@@ -10,6 +10,7 @@
 ;;; Code:
 
 (use-package nix-ts-mode
+  :ensure nil ; Provided by Nix
   :mode "\\.nix\\'")
 
 ;; Format-on-save is handled by apheleia (configured in init-prog.el).

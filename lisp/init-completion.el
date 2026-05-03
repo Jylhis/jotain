@@ -89,6 +89,7 @@
 ;;;; Consult — the big binding table
 
 (use-package consult
+  :demand t
   :hook (completion-list-mode . consult-preview-at-point-mode)
   :functions (consult-xref consult-register-window)
   :bind
@@ -149,10 +150,12 @@
   ;; Take over register preview.
   (advice-add #'register-preview :override #'consult-register-window)
   (setopt register-preview-delay 0.5)
+  :config
+  (require 'consult-xref)
   ;; Use consult for xref result lists.
   (setopt xref-show-xrefs-function       #'consult-xref
           xref-show-definitions-function #'consult-xref)
-  :config
+
   ;; Per-command preview debouncing — theme preview is fast, ripgrep/grep
   ;; preview is expensive so it waits for you to stop moving the cursor.
   (consult-customize

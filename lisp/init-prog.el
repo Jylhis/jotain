@@ -7,8 +7,9 @@
 ;; `flymake', `eldoc', and `xref' — splitting it out would just spread
 ;; one feature across five files.
 ;;
-;; Per-language hooks (eglot-ensure, treesit grammar pinning, formatter
-;; choice) live in `init-lang-*.el'. This file owns the substrate.
+;; Per-language `eglot-ensure' hooks live here so all LSP wiring is
+;; visible in one place. Language modules own mode registration and
+;; language-specific indentation/settings.
 
 ;;; Code:
 
@@ -34,8 +35,14 @@
   :demand t
   :custom (treesit-auto-install nil)
   :config
-  (treesit-auto-add-to-auto-mode-alist 'all)
-  (global-treesit-auto-mode))
+  ;; Populate auto-mode-alist with foo-ts-mode entries for every grammar
+  ;; Nix provides.  This is sufficient — global-treesit-auto-mode is NOT
+  ;; used because it advises set-auto-mode-0 with a hook that rebuilds
+  ;; major-mode-remap-alist on every call (62 treesit-ready-p checks,
+  ;; ~1.2 s), and set-auto-mode-0 fires 3× per file open, adding ~3.6 s
+  ;; per find-file.  The alist entries achieve the same mode routing with
+  ;; zero overhead.
+  (treesit-auto-add-to-auto-mode-alist 'all))
 
 ;; Code folding driven by treesit nodes.
 (use-package treesit-fold
@@ -59,7 +66,16 @@
 
 (use-package eglot
   :ensure nil
-  ;; Per-language modules add themselves to eglot-ensure in their own files.
+  ;; Per-language modules register modes only; auto-start lives here.
+  :hook
+  ((dockerfile-mode
+    go-mode go-ts-mode
+    nix-ts-mode
+    python-mode python-ts-mode
+    rust-mode rust-ts-mode
+    tsx-ts-mode
+    typescript-mode typescript-ts-mode)
+   . eglot-ensure)
   :custom
   (eglot-autoshutdown t)
   (eglot-extend-to-xref t)

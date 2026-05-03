@@ -20,6 +20,10 @@
 }:
 let
   cfg = config.services.jotain;
+  inherit (pkgs.stdenv.hostPlatform) isLinux;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin;
+  startWithSession =
+    if cfg.startWithUserSession == "graphical" then true else cfg.startWithUserSession;
 
   emacsBinPath = "${cfg.package}/bin";
   emacsVersion = lib.getVersion cfg.package;
@@ -82,11 +86,30 @@ let
     exec ${emacsBinPath}/emacs --init-directory=${lib.escapeShellArg initDirectory} "$@"
   '';
 
-  # Wrapper script that launches emacsclient with a sensible default
-  # (--create-frame) when invoked without arguments.
-  editorScript = pkgs.writeShellScriptBin "jotain-editor" ''
-    exec ${lib.getBin cfg.package}/bin/emacsclient "''${@:---create-frame}"
+  # Fallback script for EDITOR when the daemon is not running.
+  # Goes through emacsWrapper so --init-directory is preserved.
+  editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
+    exec ${emacsWrapper}/bin/emacs -nw "$@"
   '';
+
+  # EDITOR — terminal-friendly emacsclient (works over SSH, in git commit, etc.)
+  editorScript = pkgs.writeShellScriptBin "jotain-editor" ''
+    exec ${lib.getBin cfg.package}/bin/emacsclient \
+      --tty \
+      --alternate-editor=${editorFallback} \
+      "$@"
+  '';
+
+  # VISUAL — opens a GUI emacsclient frame.
+  visualScript = pkgs.writeShellScriptBin "jotain-visual" ''
+    exec ${lib.getBin cfg.package}/bin/emacsclient \
+      --create-frame \
+      --alternate-editor=${emacsWrapper}/bin/emacs \
+      "$@"
+  '';
+
+  systemdWantedBy =
+    if cfg.startWithUserSession == "graphical" then "graphical-session.target" else "default.target";
 in
 {
   options.services.jotain = {
@@ -142,8 +165,8 @@ in
 
     defaultEditor = lib.mkOption {
       type = lib.types.bool;
-      default = false;
-      example = true;
+      default = true;
+      example = false;
       description = ''
         Whether to configure {command}`emacsclient` as the default
         editor using the {env}`EDITOR` and {env}`VISUAL`
@@ -157,14 +180,22 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = !cfg.socketActivation.enable || isLinux;
+        message = "services.jotain.socketActivation.enable is only supported on Linux/systemd.";
+      }
+    ];
+
     home.sessionVariables = lib.mkIf cfg.defaultEditor {
       EDITOR = "${lib.getBin editorScript}/bin/jotain-editor";
-      VISUAL = "${lib.getBin editorScript}/bin/jotain-editor";
+      VISUAL = "${lib.getBin visualScript}/bin/jotain-visual";
     };
 
     home.packages = [
       cfg.package
       editorScript
+      visualScript
       # hiPrio so the wrapped `emacs` shadows the unwrapped binary
       # that ships inside cfg.package.
       (lib.hiPrio emacsWrapper)
@@ -179,47 +210,47 @@ in
       "emacs/lisp".source = ./lisp;
     };
 
-    systemd.user.services.jotain = {
-      Unit = {
-        Description = "Jotain Emacs text editor";
-        Documentation = "info:emacs man:emacs(1) https://gnu.org/software/emacs/";
+    systemd.user.services.jotain = lib.mkIf isLinux (
+      {
+        Unit = {
+          Description = "Jotain Emacs text editor";
+          Documentation = "info:emacs man:emacs(1) https://gnu.org/software/emacs/";
 
-        After = lib.optional (cfg.startWithUserSession == "graphical") "graphical-session.target";
-        PartOf = lib.optional (cfg.startWithUserSession == "graphical") "graphical-session.target";
+          After = lib.optional (cfg.startWithUserSession == "graphical") "graphical-session.target";
+          PartOf = lib.optional (cfg.startWithUserSession == "graphical") "graphical-session.target";
 
-        # Avoid killing the session, which may be full of unsaved buffers.
-        X-RestartIfChanged = false;
+          # Avoid killing the session, which may be full of unsaved buffers.
+          X-RestartIfChanged = false;
+        }
+        // lib.optionalAttrs needsSocketWorkaround {
+          RefuseManualStart = true;
+        };
+
+        Service = {
+          Type = "notify";
+
+          # Wrap in a login shell so Emacs inherits the user's
+          # environment ($PATH, $NIX_PROFILES, etc.).
+          ExecStart = ''${pkgs.runtimeShell} -l -c "${emacsWrapper}/bin/emacs --fg-daemon${lib.optionalString cfg.socketActivation.enable "=${lib.escapeShellArg socketPath}"} ${lib.escapeShellArgs cfg.extraOptions}"'';
+
+          # Emacs exits with status 15 after SIGTERM.
+          SuccessExitStatus = 15;
+
+          Restart = "on-failure";
+        }
+        // lib.optionalAttrs needsSocketWorkaround {
+          ExecStartPost = "${pkgs.coreutils}/bin/chmod --changes -w ${socketDir}";
+          ExecStopPost = "${pkgs.coreutils}/bin/chmod --changes +w ${socketDir}";
+        };
       }
-      // lib.optionalAttrs needsSocketWorkaround {
-        RefuseManualStart = true;
-      };
-
-      Service = {
-        Type = "notify";
-
-        # Wrap in a login shell so Emacs inherits the user's
-        # environment ($PATH, $NIX_PROFILES, etc.).
-        ExecStart = ''${pkgs.runtimeShell} -l -c "${emacsWrapper}/bin/emacs --fg-daemon${lib.optionalString cfg.socketActivation.enable "=${lib.escapeShellArg socketPath}"} ${lib.escapeShellArgs cfg.extraOptions}"'';
-
-        # Emacs exits with status 15 after SIGTERM.
-        SuccessExitStatus = 15;
-
-        Restart = "on-failure";
+      // lib.optionalAttrs startWithSession {
+        Install = {
+          WantedBy = [ systemdWantedBy ];
+        };
       }
-      // lib.optionalAttrs needsSocketWorkaround {
-        ExecStartPost = "${pkgs.coreutils}/bin/chmod --changes -w ${socketDir}";
-        ExecStopPost = "${pkgs.coreutils}/bin/chmod --changes +w ${socketDir}";
-      };
-    }
-    // lib.optionalAttrs cfg.startWithUserSession {
-      Install = {
-        WantedBy = [
-          (if cfg.startWithUserSession then "default.target" else "graphical-session.target")
-        ];
-      };
-    };
+    );
 
-    systemd.user.sockets.jotain = lib.mkIf cfg.socketActivation.enable {
+    systemd.user.sockets.jotain = lib.mkIf (isLinux && cfg.socketActivation.enable) {
       Unit = {
         Description = "Jotain Emacs text editor";
         Documentation = "info:emacs man:emacs(1) https://gnu.org/software/emacs/";
@@ -242,7 +273,7 @@ in
       };
     };
 
-    launchd.agents.jotain = {
+    launchd.agents.jotain = lib.mkIf isDarwin {
       enable = true;
       config = {
         ProgramArguments = [

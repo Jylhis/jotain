@@ -21,6 +21,8 @@ let
     extraEmacsPackages = epkgs: [
       epkgs.claude-code-ide
       epkgs.combobulate
+      epkgs.jylhis-emacs-themes
+      epkgs.nix-ts-mode
       epkgs.treesit-grammars.with-all-grammars
     ];
   };

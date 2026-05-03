@@ -37,6 +37,7 @@ in
     # system they come from home-manager or equivalent.
     nerd-fonts.jetbrains-mono
     nerd-fonts.iosevka
+    google-fonts
   ];
 
   # https://devenv.sh/languages/
