@@ -201,14 +201,7 @@ attributes are applied globally so all frames see the update."
 (use-package hl-todo
   :hook (prog-mode . hl-todo-mode)
   :custom
-  (hl-todo-highlight-punctuation ":")
-  (hl-todo-keyword-faces
-   '(("TODO"       . "#cc9393")
-     ("FIXME"      . "#ff0000")
-     ("HACK"       . "#d0bf8f")
-     ("REVIEW"     . "#7cb8bb")
-     ("NOTE"       . "#7f9f7f")
-     ("DEPRECATED" . "#cc9393"))))
+  (hl-todo-highlight-punctuation ":"))
 
 (use-package breadcrumb
   :hook (prog-mode . breadcrumb-local-mode))
