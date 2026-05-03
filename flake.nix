@@ -2,7 +2,7 @@
   description = "Jotain — GNU Emacs 30+ configuration with Nix build layer";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/4c1018dae018162ec878d42fec712642d214fdfa";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
