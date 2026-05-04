@@ -10,8 +10,8 @@ efinal: _eprev: {
       pkgs.fetchFromGitHub {
         owner = "Jylhis";
         repo = "design";
-        rev = "4a8326edcc4b22dbe6920a33e0246e9c411e3cb4";
-        sha256 = "0qj226pn392x894kdqkfp2gm9wfrqxd93ygxij4w3z0zqplhjvx6";
+        rev = "0e59959881172c7010c051507b2d4f07a18eb26d";
+        sha256 = "1qa8zq1lhprvv702rfnc6xjlfrl0mx5ianph2n23k2wx37s157p0";
       }
       + "/platforms/emacs";
   };
