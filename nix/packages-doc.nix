@@ -26,30 +26,102 @@ let
   # Files not listed here are appended at the end of the body so a
   # newly added module never silently drops off the reference.
   moduleOrder = [
-    { file = "init-core.el";          title = "Core baseline"; }
-    { file = "init-keys.el";          title = "Global keys"; }
-    { file = "init-ui.el";            title = "UI: theme, modeline, fonts"; }
-    { file = "init-help.el";          title = "Help system"; }
-    { file = "init-docs.el";          title = "Info manual discovery"; }
-    { file = "init-editing.el";       title = "Editing primitives"; }
-    { file = "init-completion.el";    title = "Minibuffer + in-buffer completion"; }
-    { file = "init-navigation.el";    title = "dired, project, windows"; }
-    { file = "init-vc.el";            title = "Version control"; }
-    { file = "init-prog.el";          title = "prog-mode, treesit, eglot"; }
-    { file = "init-project.el";       title = "Per-project commands"; }
-    { file = "init-ai.el";            title = "AI assistants"; }
-    { file = "init-shell.el";         title = "Shells"; }
-    { file = "init-systems.el";       title = "Sysadmin tools"; }
-    { file = "init-tracking.el";      title = "Activity tracking"; }
-    { file = "init-writing.el";       title = "Prose & notes"; }
-    { file = "init-org.el";           title = "Org"; }
-    { file = "init-lang-nix.el";      title = "Nix"; }
-    { file = "init-lang-rust.el";     title = "Rust"; }
-    { file = "init-lang-python.el";   title = "Python"; }
-    { file = "init-lang-web.el";      title = "Web (TypeScript, JS, CSS, HTML)"; }
-    { file = "init-lang-devops.el";   title = "DevOps (CI, IaC, containers)"; }
-    { file = "init-lang-data.el";     title = "Data formats"; }
-    { file = "init-lang-systems.el";  title = "Systems (Go, C/C++, Haskell)"; }
+    {
+      file = "init-core.el";
+      title = "Core baseline";
+    }
+    {
+      file = "init-keys.el";
+      title = "Global keys";
+    }
+    {
+      file = "init-ui.el";
+      title = "UI: theme, modeline, fonts";
+    }
+    {
+      file = "init-help.el";
+      title = "Help system";
+    }
+    {
+      file = "init-docs.el";
+      title = "Info manual discovery";
+    }
+    {
+      file = "init-editing.el";
+      title = "Editing primitives";
+    }
+    {
+      file = "init-completion.el";
+      title = "Minibuffer + in-buffer completion";
+    }
+    {
+      file = "init-navigation.el";
+      title = "dired, project, windows";
+    }
+    {
+      file = "init-vc.el";
+      title = "Version control";
+    }
+    {
+      file = "init-prog.el";
+      title = "prog-mode, treesit, eglot";
+    }
+    {
+      file = "init-project.el";
+      title = "Per-project commands";
+    }
+    {
+      file = "init-ai.el";
+      title = "AI assistants";
+    }
+    {
+      file = "init-shell.el";
+      title = "Shells";
+    }
+    {
+      file = "init-systems.el";
+      title = "Sysadmin tools";
+    }
+    {
+      file = "init-tracking.el";
+      title = "Activity tracking";
+    }
+    {
+      file = "init-writing.el";
+      title = "Prose & notes";
+    }
+    {
+      file = "init-org.el";
+      title = "Org";
+    }
+    {
+      file = "init-lang-nix.el";
+      title = "Nix";
+    }
+    {
+      file = "init-lang-rust.el";
+      title = "Rust";
+    }
+    {
+      file = "init-lang-python.el";
+      title = "Python";
+    }
+    {
+      file = "init-lang-web.el";
+      title = "Web (TypeScript, JS, CSS, HTML)";
+    }
+    {
+      file = "init-lang-devops.el";
+      title = "DevOps (CI, IaC, containers)";
+    }
+    {
+      file = "init-lang-data.el";
+      title = "Data formats";
+    }
+    {
+      file = "init-lang-systems.el";
+      title = "Systems (Go, C/C++, Haskell)";
+    }
   ];
 
   # { file = entries } map.
@@ -60,25 +132,26 @@ let
   # moduleOrder list didn't account for, in alphabetical order.
   knownFiles = map (m: m.file) moduleOrder;
   scannedFiles = lib.attrNames byFile;
-  leftover = lib.filter (f: ! lib.elem f knownFiles) scannedFiles;
+  leftover = lib.filter (f: !lib.elem f knownFiles) scannedFiles;
   orderedModules =
     moduleOrder
-    ++ map (file: { inherit file; title = "Other"; }) leftover;
+    ++ map (file: {
+      inherit file;
+      title = "Other";
+    }) leftover;
 
   # Render one (name, doc, ensureNil) entry as a markdown block.
-  renderEntry = e:
+  renderEntry =
+    e:
     let
       tag = lib.optionalString e.ensureNil " *(built-in / Nix)*";
       heading = "### `${e.name}`${tag}";
-      body =
-        if e.doc == "" then
-          "_Undocumented._"
-        else
-          e.doc;
+      body = if e.doc == "" then "_Undocumented._" else e.doc;
     in
     "${heading}\n\n${body}\n";
 
-  renderModule = m:
+  renderModule =
+    m:
     let
       entries = byFile.${m.file} or [ ];
     in
@@ -120,8 +193,8 @@ let
 
   '';
 
-  combinedMd  = pkgs.writeText "jotain-packages-combined.md"     combined;
-  mdxFront    = pkgs.writeText "jotain-packages-frontmatter.mdx" mdxFrontmatter;
+  combinedMd = pkgs.writeText "jotain-packages-combined.md" combined;
+  mdxFront = pkgs.writeText "jotain-packages-frontmatter.mdx" mdxFrontmatter;
 
 in
 pkgs.runCommand "jotain-packages-doc"
