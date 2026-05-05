@@ -164,7 +164,10 @@ let
       ''
       + lib.concatMapStringsSep "\n" renderEntry entries;
 
-  body = lib.concatMapStringsSep "\n" renderModule orderedModules;
+  # Drop empty render results before joining so a module with zero
+  # use-package blocks (e.g. init-docs.el) doesn't insert a phantom
+  # extra blank line between its neighbours.
+  body = lib.concatStringsSep "\n" (lib.filter (s: s != "") (map renderModule orderedModules));
 
   intro = ''
     Auto-generated from `;;; @doc` markers immediately above each
