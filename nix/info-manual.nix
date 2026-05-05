@@ -36,7 +36,7 @@ let
     );
   };
 
-  optionsDoc  = import ./options-doc.nix  { inherit pkgs src; };
+  optionsDoc = import ./options-doc.nix { inherit pkgs src; };
   packagesDoc = import ./packages-doc.nix { inherit pkgs src; };
 
   # Pages that flow into @chapter sections of jotain.texi.  Order and
@@ -115,7 +115,7 @@ pkgs.runCommand "jotain-info"
       pkgs.texinfo
     ];
     src = docsSrc;
-    optionsFragment  = "${optionsDoc}/jotain-options.texi";
+    optionsFragment = "${optionsDoc}/jotain-options.texi";
     packagesFragment = "${packagesDoc}/jotain-packages.texi";
     meta = {
       description = "Jotain Info manual (generated from docs/)";
