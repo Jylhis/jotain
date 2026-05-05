@@ -301,11 +301,7 @@ let
       # string from the trailing newline. Drop it so the marker check
       # actually reaches the last comment line.
       n = length raw;
-      lines =
-        if n > 0 && elemAt raw (n - 1) == "" then
-          lib.lists.sublist 0 (n - 1) raw
-        else
-          raw;
+      lines = if n > 0 && elemAt raw (n - 1) == "" then lib.lists.sublist 0 (n - 1) raw else raw;
     in
     lib.concatStringsSep "\n" (collectDocLines lines);
 
