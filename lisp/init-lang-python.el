@@ -9,6 +9,10 @@
 
 ;;; Code:
 
+;;; @doc Built-in Python mode pinned to its tree-sitter variant so we
+;;; @doc get the modern parser without any third-party package. The LSP
+;;; @doc server (pyright/basedpyright/ruff-lsp) comes from the project's
+;;; @doc own environment, not from this config.
 (use-package python
   :ensure nil
   :mode ("\\.py\\'" . python-ts-mode)
@@ -16,9 +20,6 @@
   :custom
   (python-indent-offset 4)
   (python-shell-interpreter "python3"))
-
-;; Format-on-save is handled by apheleia (configured in init-prog.el).
-;; apheleia ships a default Python entry that prefers ruff/black.
 
 (provide 'init-lang-python)
 ;;; init-lang-python.el ends here

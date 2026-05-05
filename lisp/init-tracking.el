@@ -9,8 +9,9 @@
 
 ;;; Code:
 
-;; Records command frequency to disk; `M-x keyfreq-show' ranks the
-;; busiest commands. Tiny, no daemon, no network.
+;;; @doc Counts command invocations to disk; `M-x keyfreq-show` ranks
+;;; @doc the busiest commands so you can spot rebinding opportunities.
+;;; @doc Tiny, no daemon, no network.
 (use-package keyfreq
   :diminish keyfreq-mode
   :functions (keyfreq-mode keyfreq-autosave-mode)
@@ -21,9 +22,10 @@
   (keyfreq-mode 1)
   (keyfreq-autosave-mode 1))
 
-;; Heartbeats to a Wakatime/Wakapi server. The :if guard makes the
-;; whole block a no-op when wakatime-cli is not on PATH, so you can
-;; install Wakapi later without reconfiguring Emacs.
+;;; @doc Heartbeats to a Wakatime / Wakapi server. The `:if` guard makes
+;;; @doc the whole block a no-op when `wakatime-cli` or
+;;; @doc WAKATIME_API_KEY is missing, so you can install Wakapi later
+;;; @doc without reconfiguring Emacs.
 (use-package wakatime-mode
   :if (and (executable-find "wakatime-cli")
            (getenv "WAKATIME_API_KEY"))
@@ -32,9 +34,10 @@
   :custom (wakatime-cli-path (executable-find "wakatime-cli"))
   :config (global-wakatime-mode))
 
-;; ActivityWatch — installed but OFF by default. Enable with
-;; `M-x global-activity-watch-mode' once the AW server is running,
-;; or set the option in custom.el for persistent on.
+;;; @doc ActivityWatch integration — correlates editor activity with
+;;; @doc the rest of the machine. Installed but OFF by default; enable
+;;; @doc with `M-x global-activity-watch-mode` once the AW server is
+;;; @doc running, or set the option in custom.el to persist.
 (use-package activity-watch-mode
   :defer t
   :commands (activity-watch-mode global-activity-watch-mode))

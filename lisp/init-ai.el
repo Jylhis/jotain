@@ -20,6 +20,10 @@
 
 ;;; Code:
 
+;;; @doc Agentic multi-file editing through the Claude Code CLI. Bound to
+;;; @doc C-c C-' so the menu is one key away whenever a refactor needs more
+;;; @doc context than a single LSP rename can carry. Provided by Nix
+;;; @doc (manzaltu/claude-code-ide.el is not on MELPA).
 (use-package claude-code-ide
   :ensure nil ; Provided by Nix
   :defer t
@@ -27,6 +31,10 @@
   :config
   (claude-code-ide-emacs-tools-setup))
 
+;;; @doc Conversational LLM front-end with multiple backends (Anthropic,
+;;; @doc Gemini, local Ollama) configured below. Bound to C-c RET / C-c
+;;; @doc M-RET for quick send and full menu. Keys come from the
+;;; @doc environment first, then auth-source via auth-source-1password.
 (use-package gptel
   :defer t
   :functions (gptel-make-anthropic gptel-make-gemini gptel-make-ollama)
@@ -60,6 +68,9 @@
     :host "localhost:11434"
     :models '(llama3.1:latest)))
 
+;;; @doc Model Context Protocol bridge — lets gptel call MCP tools so the
+;;; @doc LLM can read files, query databases, and act through registered
+;;; @doc servers. Loaded after gptel.
 (use-package mcp
   :defer t
   :after gptel)

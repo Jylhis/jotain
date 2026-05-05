@@ -36,7 +36,8 @@ let
     );
   };
 
-  optionsDoc = import ./options-doc.nix { inherit pkgs src; };
+  optionsDoc  = import ./options-doc.nix  { inherit pkgs src; };
+  packagesDoc = import ./packages-doc.nix { inherit pkgs src; };
 
   # Pages that flow into @chapter sections of jotain.texi.  Order and
   # grouping mirror docs/docs.json.  Each entry is { src, out }: the
@@ -79,6 +80,10 @@ let
       src = "configuration/packages.mdx";
       out = "configuration-packages.texi";
     }
+    # configuration/package-reference.mdx is itself generated from
+    # `;;; @doc` markers (see nix/packages-doc.nix). Skip the markdown
+    # round-trip and use the texinfo fragment that derivation already
+    # produces; it is copied into docs/ below.
     {
       src = "finding-information-in-emacs.mdx";
       out = "finding-information-in-emacs.texi";
@@ -110,7 +115,8 @@ pkgs.runCommand "jotain-info"
       pkgs.texinfo
     ];
     src = docsSrc;
-    optionsFragment = "${optionsDoc}/jotain-options.texi";
+    optionsFragment  = "${optionsDoc}/jotain-options.texi";
+    packagesFragment = "${packagesDoc}/jotain-packages.texi";
     meta = {
       description = "Jotain Info manual (generated from docs/)";
     };
@@ -204,8 +210,10 @@ pkgs.runCommand "jotain-info"
     ${convertLines}
         cd ..
 
-        # Bring the options-doc texinfo fragment into the include search path.
-        cp "$optionsFragment" docs/jotain-options.texi
+        # Bring the options-doc and packages-doc texinfo fragments into
+        # the include search path.
+        cp "$optionsFragment"  docs/jotain-options.texi
+        cp "$packagesFragment" docs/jotain-packages.texi
 
         # Emit the final .info.  Jotain is a short manual — one node per
         # chapter is enough, no need for --split-size gymnastics.

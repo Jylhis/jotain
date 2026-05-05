@@ -9,23 +9,36 @@
 
 ;;; Code:
 
+;;; @doc Dockerfile major mode — syntax for the file you edit every
+;;; @doc time you change a container image.
 (use-package dockerfile-mode
   :defer t)
 
+;;; @doc YAML-flavoured docker-compose syntax with awareness of compose
+;;; @doc keywords and service references.
 (use-package docker-compose-mode
   :defer t)
 
+;;; @doc HCL-aware Terraform mode for `.tf` files. Loaded by the mode
+;;; @doc regex; LSP comes from terraform-ls (configured in init-prog).
 (use-package terraform-mode
   :defer t
   :mode "\\.tf\\'")
 
+;;; @doc YAML mode tuned for `.gitlab-ci.yml` keywords — includes,
+;;; @doc rules, jobs. Saves a lot of typo'd job names on CI debugging
+;;; @doc days.
 (use-package gitlab-ci-mode
   :defer t)
 
+;;; @doc Major mode for `Justfile` — the project-aware command runner
+;;; @doc Jotain itself uses. Pairs with compile-multi for project
+;;; @doc commands.
 (use-package just-mode
   :defer t)
 
-;; ansible-mode is a minor mode that hooks onto yaml-mode for playbooks.
+;;; @doc Ansible minor mode layered on top of yaml-mode for playbook
+;;; @doc files. Adds module-name completion and Jinja2 highlighting.
 (use-package ansible
   :defer t)
 

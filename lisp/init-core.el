@@ -52,6 +52,9 @@ immediately for writes."
 (set-language-environment "UTF-8")
 (prefer-coding-system 'utf-8)
 
+;;; @doc Sane defaults for the bare editor — fill column, dialog/box use,
+;;; @doc lockfiles, recursive minibuffers, case-insensitive completion.
+;;; @doc Settings here are the ones that don't deserve their own module.
 (use-package emacs
   :ensure nil
   :custom
@@ -87,6 +90,9 @@ immediately for writes."
   (column-number-mode 1)
   (minibuffer-depth-indicate-mode 1))
 
+;;; @doc Persist point per file across sessions. Built-in. The advice
+;;; @doc below recenters the buffer after restore so you don't reopen on
+;;; @doc the bottom line.
 (use-package saveplace
   :ensure nil
   :custom (save-place-file (jotain-var-file "save-place.el"))
@@ -113,12 +119,16 @@ immediately for writes."
   (advice-add 'save-place-find-file-hook :after
               #'jotain-core--recenter-after-save-place))
 
-;; Load diminish early so other use-package blocks can use `:diminish'
-;; without producing macroexpansion errors.
+;;; @doc Hides minor-mode lighters from the modeline. Loaded early and
+;;; @doc :demand t so that downstream use-package blocks can use the
+;;; @doc :diminish keyword without macro-expansion errors.
 (use-package diminish
   :demand t)
 
 (declare-function jotain-core--auto-create-missing-dirs nil)
+;;; @doc Built-in file-handling tweaks: no auto-save side files, no
+;;; @doc backup `~` files, no kill-process confirmation, plus a hook that
+;;; @doc auto-creates missing parent directories on find-file.
 (use-package files
   :ensure nil
   :custom
@@ -138,25 +148,34 @@ immediately for writes."
   (add-to-list 'find-file-not-found-functions
                #'jotain-core--auto-create-missing-dirs))
 
+;;; @doc Repeat-mode lets you press the trailing key alone after a prefix
+;;; @doc command (e.g. C-x o o o instead of C-x o C-x o). Built-in,
+;;; @doc enabled globally.
 (use-package repeat
   :ensure nil
   :config (repeat-mode 1))
 
+;;; @doc Disambiguate same-name buffers by directory prefix instead of
+;;; @doc the default `<2>` suffix. `forward` style mirrors the path.
 (use-package uniquify
   :ensure nil
   :custom (uniquify-buffer-name-style 'forward))
 
+;;; @doc Replace `list-buffers` (C-x C-b) with the more capable ibuffer:
+;;; @doc dired-style filter/mark/operate on buffers.
 (use-package ibuffer
   :ensure nil
   :bind ([remap list-buffers] . ibuffer))
 
+;;; @doc Tame `find-file-at-point` so an unknown hostname doesn't block
+;;; @doc the editor on a DNS lookup — reject means "treat as not a host".
 (use-package ffap
   :ensure nil
   :custom
-  ;; Don't ping unknown hostnames in `find-file-at-point' — feels
-  ;; instant instead of hanging on bad URLs.
   (ffap-machine-p-known 'reject))
 
+;;; @doc Built-in `world-clock` for cross-timezone scheduling. Loaded on
+;;; @doc demand only.
 (use-package time
   :ensure nil
   :commands world-clock
@@ -187,11 +206,11 @@ immediately for writes."
           mac-right-option-modifier 'none)
   (setopt trash-directory "~/.Trash"))
 
-;; Inherit PATH, MANPATH, and a few shell-managed vars from the user's
-;; login shell so GUI / launchd / systemd-spawned Emacs matches what the
-;; terminal sees. module.nix prepends the essential Nix-store binaries
-;; (rg, fd, git, direnv, coreutils) to the wrapper's PATH — this handles
-;; the rest (e.g. ~/.nix-profile, user-managed toolchains).
+;;; @doc Inherits PATH, MANPATH, and other shell-managed vars from the
+;;; @doc user's login shell so GUI / launchd / systemd-spawned Emacs
+;;; @doc matches what the terminal sees. module.nix prepends Nix-store
+;;; @doc binaries (rg, fd, git, direnv, coreutils) to the wrapper's
+;;; @doc PATH — this picks up ~/.nix-profile and user toolchains.
 (use-package exec-path-from-shell
   :if (or (daemonp)
           (memq window-system '(mac ns x)))
@@ -202,11 +221,17 @@ immediately for writes."
   :config
   (exec-path-from-shell-initialize))
 
+;;; @doc Auto-revert buffers when the underlying file changes on disk —
+;;; @doc essential for branch switches and external edits. Also covers
+;;; @doc non-file buffers (dired, magit) so they refresh too.
 (use-package autorevert
   :ensure nil
   :custom (global-auto-revert-non-file-buffers t)
   :config (global-auto-revert-mode 1))
 
+;;; @doc Built-in recently-visited files list. Used by consult-recent-file
+;;; @doc and the bookmarks UI; state file lives under var/ to keep the
+;;; @doc repo root clean.
 (use-package recentf
   :ensure nil
   :custom
@@ -216,11 +241,15 @@ immediately for writes."
   (recentf-mode 1)
   (add-to-list 'recentf-exclude jotain-var-dir))
 
+;;; @doc Persist minibuffer history (M-p / M-n, vertico ordering, etc.)
+;;; @doc across sessions. Built-in, enabled globally.
 (use-package savehist
   :ensure nil
   :custom (savehist-file (jotain-var-file "savehist.el"))
   :config (savehist-mode 1))
 
+;;; @doc Built-in bookmark store. State file is themed under var/ so it
+;;; @doc joins the rest of Jotain's persistent state.
 (use-package bookmark
   :ensure nil
   :custom (bookmark-default-file (jotain-var-file "bookmarks.el")))

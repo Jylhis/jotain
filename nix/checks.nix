@@ -77,6 +77,35 @@ in
   # ── Option documentation ─────────────────────────────────────────
   options-doc = import ./options-doc.nix { inherit pkgs src; };
 
+  # ── Package reference documentation ──────────────────────────────
+  packages-doc = import ./packages-doc.nix { inherit pkgs src; };
+
+  # ── Checked-in Mintlify .mdx must match the generator ────────────
+  #
+  # docs/configuration/package-reference.mdx is checked in so the
+  # Mintlify site can serve it without running Nix. The generator in
+  # nix/packages-doc.nix is the source of truth, so we verify the
+  # tracked file is byte-identical to the freshly generated one.
+  packages-doc-in-sync =
+    let
+      generated = import ./packages-doc.nix { inherit pkgs src; };
+    in
+    pkgs.runCommandLocal "check-packages-doc-in-sync"
+      {
+        inherit src;
+        generatedMdx = "${generated}/package-reference.mdx";
+      }
+      ''
+        if ! diff -u "$src/docs/configuration/package-reference.mdx" "$generatedMdx"; then
+          echo "" >&2
+          echo "docs/configuration/package-reference.mdx is out of sync with" >&2
+          echo "the ;;; @doc markers in lisp/init-*.el." >&2
+          echo "Refresh it with: just docs-refresh-packages" >&2
+          exit 1
+        fi
+        touch $out
+      '';
+
   # ── Home Manager module evaluation ───────────────────────────────
   module-eval =
     pkgs.runCommandLocal "check-module-eval"

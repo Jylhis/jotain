@@ -8,14 +8,20 @@
 
 ;;; Code:
 
+;;; @doc Auto-insert matching delimiters as you type. Built-in.
 (use-package elec-pair
   :ensure nil
   :config (electric-pair-mode 1))
 
+;;; @doc When a region is active, typing replaces it instead of leaving
+;;; @doc the selection alone. Built-in, on by default in most modern
+;;; @doc editors — Emacs needs this opt-in.
 (use-package delsel
   :ensure nil
   :config (delete-selection-mode 1))
 
+;;; @doc Strip trailing whitespace and stray tabs on save without
+;;; @doc reformatting the rest of the buffer. Built-in.
 (use-package whitespace
   :ensure nil
   :hook (before-save . whitespace-cleanup)
@@ -23,32 +29,38 @@
   (whitespace-style '(face trailing tabs tab-mark))
   (whitespace-action '(auto-cleanup)))
 
+;;; @doc Treats CamelCase / snake_case word parts as separate words for
+;;; @doc M-f / M-b / M-d. Built-in. Programming-mode only — prose still
+;;; @doc gets whole-word motion.
 (use-package subword
   :ensure nil
   :hook ((prog-mode . subword-mode)))
 
-;; expreg is the smaller, treesit-aware successor to expand-region.
-;; Wherever treesit is on (which is everywhere now), it produces better
-;; semantic expansions with much less code.
+;;; @doc Treesit-aware semantic region expansion. Smaller, faster
+;;; @doc successor to expand-region; produces better expansions with
+;;; @doc much less code now that treesit is everywhere.
 (use-package expreg
   :bind ("C-=" . expreg-expand))
 
+;;; @doc Visual multi-cursor editing. C-> and C-< select the next/prev
+;;; @doc occurrence; C-c C-< selects every occurrence in the buffer.
 (use-package multiple-cursors
   :bind
   (("C->"     . mc/mark-next-like-this)
    ("C-<"     . mc/mark-previous-like-this)
    ("C-c C-<" . mc/mark-all-like-this)))
 
-;; Visual undo tree on C-x u. Stateless, no .undo-tree files cluttering
-;; the filesystem like undo-tree.el used to leave behind.
+;;; @doc Visual undo tree on C-x u. Stateless — no .undo-tree side files
+;;; @doc cluttering the filesystem like undo-tree.el used to leave
+;;; @doc behind.
 (use-package vundo
   :bind ("C-x u" . vundo)
   :custom (vundo-glyph-alist vundo-unicode-symbols))
 
-;; Auto-save buffers when idle and on focus loss. Replaces the default
-;; auto-save mechanism (which writes to #foo# files) with regular saves
-;; to the actual file. Trims trailing whitespace except on the line
-;; you're currently editing.
+;;; @doc Auto-saves buffers when idle and on focus loss, writing the
+;;; @doc actual file rather than #foo# auto-save side files. Also strips
+;;; @doc trailing whitespace except on the current line so you don't
+;;; @doc fight your own cursor.
 (use-package super-save
   :diminish
   :functions (super-save-mode)

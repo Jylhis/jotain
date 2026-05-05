@@ -208,6 +208,22 @@ info:
     @echo "Info manual → result-info/share/info/jotain.info"
     @echo "Open with 'just run' then C-h i d m Jotain RET."
 
+# Build the per-package reference (HTML + texi + Mintlify .mdx).
+[group('build')]
+build-packages-doc:
+    nix build .#packages-doc -o result-packages-doc
+    @echo "Packages doc → result-packages-doc/index.html"
+
+# Regenerate docs/configuration/package-reference.mdx from the
+# `;;; @doc` markers in lisp/init-*.el. Run after editing any
+# `;;; @doc` block; CI's `packages-doc-in-sync` check will fail
+# otherwise.
+[group('build')]
+docs-refresh-packages: build-packages-doc
+    cp result-packages-doc/package-reference.mdx \
+       docs/configuration/package-reference.mdx
+    @echo "Refreshed docs/configuration/package-reference.mdx"
+
 # Build both HTML docs and the Info manual.
 [group('build')]
 docs-all: docs info

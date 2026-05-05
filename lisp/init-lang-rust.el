@@ -8,6 +8,8 @@
 
 ;;; Code:
 
+;;; @doc Built-in tree-sitter Rust mode. Eglot wires rust-analyzer in
+;;; @doc init-prog; format-on-save runs rustfmt through apheleia.
 (use-package rust-ts-mode
   :ensure nil
   :mode "\\.rs\\'"

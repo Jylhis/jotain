@@ -58,6 +58,10 @@
           pkgs = pkgsFor system;
           src = self;
         };
+        packages-doc = import ./nix/packages-doc.nix {
+          pkgs = pkgsFor system;
+          src = self;
+        };
       });
 
       formatter = forAllSystems (system: (treefmtEval system).config.build.wrapper);
