@@ -9,6 +9,9 @@
 
 ;;; Code:
 
+;;; @doc Built-in Lisp-driven shell — works the same on every platform
+;;; @doc and is the right tool for Emacs-flavoured pipelines (commands
+;;; @doc as Elisp functions, no subprocess for builtins).
 (use-package eshell
   :ensure nil
   :commands (eshell)
@@ -19,12 +22,17 @@
   (eshell-error-if-no-glob t)
   (eshell-destroy-buffer-when-process-dies t))
 
+;;; @doc Real terminal emulator (libvterm). Use this when you need a
+;;; @doc tmux session, ncurses programs, or anything that wants a true
+;;; @doc PTY — eshell can't do those.
 (use-package vterm
   :commands (vterm vterm-other-window)
   :custom
   (vterm-max-scrollback 10000)
   (vterm-buffer-name-string "vterm: %s"))
 
+;;; @doc Built-in REPL substrate (used by python, ielm, sql, etc.).
+;;; @doc The settings here apply to every comint-derived buffer.
 (use-package comint
   :ensure nil
   :custom

@@ -10,9 +10,14 @@
 
 ;;; Code:
 
+;;; @doc Go major mode. Eglot wires gopls in init-prog so all language
+;;; @doc servers are configured in one place.
 (use-package go-mode
   :defer t)
 
+;;; @doc Built-in C/C++ mode with a Stroustrup style bias. The header
+;;; @doc extensions below default to C++ — Jotain assumes that's the
+;;; @doc more common case in modern repos.
 (use-package cc-mode
   :ensure nil
   :custom
@@ -32,9 +37,13 @@
          ("\\.tpp\\'" . c++-mode)
          ("\\.txx\\'" . c++-mode)))
 
+;;; @doc CMake mode for CMakeLists.txt and `.cmake` files. Mode regex
+;;; @doc covers both file conventions.
 (use-package cmake-mode
   :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
 
+;;; @doc Haskell major mode. Loaded on demand only — keeps the rare
+;;; @doc Haskell editing session from costing every Emacs start.
 (use-package haskell-mode
   :defer t)
 

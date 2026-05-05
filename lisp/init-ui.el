@@ -49,6 +49,10 @@ and the result is a face-attribute soup."
   (load-theme jotain-theme-light t t)
   (load-theme jotain-theme-dark  t t))
 
+;;; @doc Flips between `jotain-theme-light` and `jotain-theme-dark`
+;;; @doc following the system appearance — works on macOS, GNOME, and
+;;; @doc anything that exposes a dark/light setting. C-c t toggles
+;;; @doc manually.
 (use-package auto-dark
   :diminish
   :demand t
@@ -61,6 +65,9 @@ and the result is a face-attribute soup."
 
 ;;;; Modeline
 
+;;; @doc A dense, IDE-style modeline with LSP/eglot status, project
+;;; @doc buffer info, and Nerd Font glyphs. Loaded after init so the
+;;; @doc primary frame doesn't redraw before fonts are ready.
 (use-package doom-modeline
   :hook (after-init . doom-modeline-mode)
   :custom
@@ -126,18 +133,26 @@ attributes are applied globally so all frames see the update."
 (setopt cursor-in-non-selected-windows nil)
 (setopt highlight-nonselected-windows nil)
 
+;;; @doc Built-in line numbers — only on programming and config buffers,
+;;; @doc never on prose or org files where they're noise.
 (use-package display-line-numbers
   :ensure nil
   :hook ((prog-mode conf-mode) . display-line-numbers-mode))
 
+;;; @doc Built-in pixel-precision smooth scrolling. Required for usable
+;;; @doc trackpad / smooth-mouse scrolling.
 (use-package pixel-scroll
   :ensure nil
   :config (pixel-scroll-precision-mode 1))
 
+;;; @doc Built-in current-line highlight — on for code and prose, off
+;;; @doc in shells/dired where it would fight the cursor.
 (use-package hl-line
   :ensure nil
   :hook ((prog-mode conf-mode text-mode) . hl-line-mode))
 
+;;; @doc Built-in matching-paren highlight. Tuned to flash quickly and
+;;; @doc highlight even when point is just outside the pair.
 (use-package paren
   :ensure nil
   :hook (after-init . show-paren-mode)
@@ -147,11 +162,17 @@ attributes are applied globally so all frames see the update."
   (show-paren-when-point-inside-paren t)
   (show-paren-when-point-in-periphery t))
 
+;;; @doc Built-in keybinding cheatsheet. After a prefix key, displays a
+;;; @doc paged list of completions in the echo area. Discoverability
+;;; @doc multiplier — a Jotain staple.
 (use-package which-key
   :ensure nil
   :diminish
   :config (which-key-mode 1))
 
+;;; @doc Built-in calendar. Configured for ISO week numbering and a
+;;; @doc Monday week start so it agrees with how the rest of Europe
+;;; @doc thinks about dates.
 (use-package calendar
   :ensure nil
   :defer t
@@ -169,6 +190,9 @@ attributes are applied globally so all frames see the update."
 
 ;;;; Icons (Nerd Font glyphs in dired, ibuffer, corfu, marginalia)
 
+;;; @doc Provides the Nerd-Font glyph alphabet that the rest of the
+;;; @doc nerd-icons-* family draws on. Picks the font family from
+;;; @doc `jotain-font-preferences` so the icons match the editor face.
 (use-package nerd-icons
   :config
   (when (display-graphic-p)
@@ -179,12 +203,16 @@ attributes are applied globally so all frames see the update."
                           return family)))
       (setopt nerd-icons-font-family nerd-font))))
 
+;;; @doc Decorates corfu candidates with a kind-specific glyph in the
+;;; @doc margin, so completions are scannable at a glance.
 (use-package nerd-icons-corfu
   :after (nerd-icons corfu)
   :functions (nerd-icons-corfu-formatter)
   :config
   (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
 
+;;; @doc Adds Nerd-Font icons to marginalia annotations (file/buffer
+;;; @doc category icons in completion lists).
 (use-package nerd-icons-completion
   :after (nerd-icons marginalia)
   :config
@@ -192,20 +220,30 @@ attributes are applied globally so all frames see the update."
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
 
+;;; @doc Adds Nerd-Font glyphs to ibuffer rows so buffer types are
+;;; @doc visually distinguished at a glance.
 (use-package nerd-icons-ibuffer
   :after nerd-icons
   :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
 
 ;;;; Polish packages
 
+;;; @doc Highlights TODO / FIXME / HACK / NOTE / XXX keywords in code
+;;; @doc with a face that survives theme changes.
 (use-package hl-todo
   :hook (prog-mode . hl-todo-mode)
   :custom
   (hl-todo-highlight-punctuation ":"))
 
+;;; @doc Headerline showing project / file / nested function position —
+;;; @doc the missing "where am I in this file?" indicator built on
+;;; @doc imenu.
 (use-package breadcrumb
   :hook (prog-mode . breadcrumb-local-mode))
 
+;;; @doc Pulses a coloured highlight when point jumps a long distance
+;;; @doc (other-window, xref, consult-line). Tells the eye where the
+;;; @doc cursor went without staring.
 (use-package pulsar
   :demand t
   :functions (pulsar-global-mode)
@@ -218,23 +256,29 @@ attributes are applied globally so all frames see the update."
      consult-line consult-goto-line imenu))
   :config (pulsar-global-mode 1))
 
+;;; @doc Colourises matching parens by depth in Lisp buffers — almost
+;;; @doc essential for navigating deeply nested forms.
 (use-package rainbow-delimiters
   :hook ((lisp-mode emacs-lisp-mode) . rainbow-delimiters-mode))
 
+;;; @doc Vertical indent guides for code, treesit-aware so the bars
+;;; @doc follow real syntactic indentation.
 (use-package indent-bars
   :custom (indent-bars-treesit-support t)
   :hook (prog-mode . indent-bars-mode))
 
 ;;;; Terminal compatibility (no-ops in GUI)
 
-;; Kitty Keyboard Protocol: lets Emacs distinguish C-i/TAB, C-m/RET,
-;; C-[/ESC, and pass through Shift-modified function keys. global-kkp-mode
-;; is itself a no-op in GUI frames, so it's safe to enable unconditionally.
+;;; @doc Kitty Keyboard Protocol — lets terminal Emacs distinguish
+;;; @doc C-i/TAB, C-m/RET, C-[/ESC, and pass Shift-modified function
+;;; @doc keys through. No-op in GUI frames, so safe to enable
+;;; @doc unconditionally.
 (use-package kkp
   :functions (global-kkp-mode)
   :config (global-kkp-mode 1))
 
-;; OSC 52 clipboard integration that works through ssh + tmux.
+;;; @doc OSC 52 clipboard integration. Yank/kill in terminal Emacs
+;;; @doc reaches the system clipboard even through ssh + tmux.
 (use-package clipetty
   :diminish
   :hook (after-init . global-clipetty-mode))
