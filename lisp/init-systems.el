@@ -11,10 +11,10 @@
 
 ;;;; auth-source-1password
 
-;; Pull credentials from the 1Password CLI (`op'). Once enabled, any
-;; package that uses auth-source — magit/forge, gptel, smtpmail,
-;; circe, etc. — can ask for credentials by host and they'll be
-;; resolved against your 1Password vault.
+;;; @doc Pulls credentials from the 1Password CLI (`op`). Once enabled,
+;;; @doc every package that uses auth-source — magit/forge, gptel,
+;;; @doc smtpmail, circe — resolves credentials by host against the
+;;; @doc 1Password vault transparently.
 (use-package auth-source-1password
   :demand t
   :functions (auth-source-1password-enable)
@@ -33,6 +33,9 @@
 (defvar sops-mode-map (make-sparse-keymap)
   "Keymap for `sops-mode'.")
 
+;;; @doc Transparent SOPS encrypt/decrypt for YAML/JSON/env files. C-c
+;;; @doc C-c saves an encrypted edit; C-c C-d toggles into the editing
+;;; @doc view; C-c C-k cancels.
 (use-package sops
   :demand t
   :functions (global-sops-mode sops-save-file sops-cancel sops-edit-file)
@@ -48,6 +51,9 @@
 
 ;;;; logview — major mode for log files
 
+;;; @doc Major mode for log files — level filtering, timestamp parsing,
+;;; @doc thread highlighting. Configured for SLF4J (Java/Kotlin) and a
+;;; @doc custom ROS2 submode.
 (use-package logview
   :defer t
   :custom

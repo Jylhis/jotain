@@ -9,12 +9,14 @@
 
 ;;; Code:
 
+;;; @doc Tree-sitter Nix major mode. Nix is the package manager and
+;;; @doc dev-shell tool the whole config is built around, so it gets a
+;;; @doc dedicated module even though we don't write much of it daily.
+;;; @doc Provided by Nix; format-on-save flows through apheleia →
+;;; @doc nixfmt (configured in init-prog).
 (use-package nix-ts-mode
   :ensure nil ; Provided by Nix
   :mode "\\.nix\\'")
-
-;; Format-on-save is handled by apheleia (configured in init-prog.el).
-;; apheleia ships a default Nix entry that uses nixfmt.
 
 (provide 'init-lang-nix)
 ;;; init-lang-nix.el ends here
