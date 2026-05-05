@@ -389,7 +389,11 @@ let
       sortedFiles = lib.sort (a: b: toString a < toString b) elFiles;
     in
     map (f: {
-      file = builtins.baseNameOf (toString f);
+      # `baseNameOf` retains the source path's string context, which
+      # later trips `listToAttrs` (attrset keys must be context-free).
+      # `unsafeDiscardStringContext` strips it; the basename is just a
+      # filename ("init-ai.el"), no longer a reference to a store path.
+      file = builtins.unsafeDiscardStringContext (builtins.baseNameOf (toString f));
       entries = parsePackagesWithDocFromFile f;
     }) sortedFiles;
 
