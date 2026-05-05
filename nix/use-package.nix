@@ -238,6 +238,161 @@ let
     in
     scope.withPackages collect;
 
+  # ── Doc extraction (for nix/packages-doc.nix) ─────────────────────
+  #
+  # In addition to the package name and `:ensure` resolution above, the
+  # docs generator wants the WHY-comment that authors place immediately
+  # above each `(use-package ...)` form, marked with `;;; @doc`. The
+  # convention is documented in docs/configuration/package-reference.mdx
+  # and lives next to the use-package form so the form is the single
+  # source of truth.
+  #
+  # For each capture we look at the text *before* the form (the
+  # `parts[idx-1]` element produced by `builtins.split`) and walk its
+  # lines from the bottom up, collecting trailing `;;; @doc ...` lines.
+  # The walk stops at the first non-marker line, so a section header
+  # like `;;;; Section name` or a blank line breaks the doc.
+  #
+  # Returned entries look like:
+  #
+  #     { name = "magit"; doc = "Git porcelain ..."; ensureNil = false; }
+
+  # Strip the marker prefix from a single matched line.
+  #   "Foo"      → "Foo"     (input came from `;;; @docFoo`, no separator)
+  #   ": Foo"    → "Foo"
+  #   " Foo"     → "Foo"
+  #   ""         → ""        (blank `;;; @doc` line — paragraph break)
+  stripDocSeparator =
+    raw:
+    let
+      m = match "[: ][[:space:]]*(.*)" raw;
+    in
+    if m != null then head m else raw;
+
+  # Walk `lines` backwards from `idx`, collecting `;;; @doc`-prefixed
+  # entries until the first non-marker line. The accumulator is built
+  # in forward order (oldest first) so the final concatStringsSep
+  # preserves authoring order.
+  collectDocLines =
+    lines:
+    let
+      walk =
+        acc: idx:
+        if idx < 0 then
+          acc
+        else
+          let
+            line = elemAt lines idx;
+            markerMatch = match ";;; @doc(.*)" line;
+          in
+          if markerMatch != null then
+            walk ([ (stripDocSeparator (head markerMatch)) ] ++ acc) (idx - 1)
+          else
+            acc;
+    in
+    walk [ ] (length lines - 1);
+
+  extractDocFromPrev =
+    prevText:
+    let
+      raw = lib.splitString "\n" prevText;
+      # `builtins.split` gives us text up to (but not including) the `(`
+      # of `(use-package ...)`, so the last element is usually an empty
+      # string from the trailing newline. Drop it so the marker check
+      # actually reaches the last comment line.
+      n = length raw;
+      lines =
+        if n > 0 && elemAt raw (n - 1) == "" then
+          lib.lists.sublist 0 (n - 1) raw
+        else
+          raw;
+    in
+    lib.concatStringsSep "\n" (collectDocLines lines);
+
+  parsePackagesWithDocFromContent =
+    content:
+    let
+      parts = split "\\(use-package[[:space:]]+([a-zA-Z0-9+_-]+)" content;
+
+      getBlock =
+        idx:
+        let
+          next = idx + 1;
+        in
+        if next < length parts then
+          let
+            v = elemAt parts next;
+          in
+          if builtins.isString v then v else ""
+        else
+          "";
+
+      getPrevBlock =
+        idx:
+        let
+          prev = idx - 1;
+        in
+        if prev >= 0 then
+          let
+            v = elemAt parts prev;
+          in
+          if builtins.isString v then v else ""
+        else
+          "";
+
+      endSym = "[^A-Za-z0-9_-]";
+
+      isEnsureNil =
+        block:
+        let
+          m = match (".*:ensure[[:space:]]+nil(" + endSym + ".*)?") block;
+        in
+        m != null;
+
+      isDisabled =
+        block:
+        let
+          m = match (".*:disabled[[:space:]]+t(" + endSym + ".*)?") block;
+        in
+        m != null;
+
+      processCapture =
+        idx: item:
+        if isList item && item != [ ] then
+          let
+            headName = head item;
+            block = getBlock idx;
+            prevBlock = getPrevBlock idx;
+          in
+          if isDisabled block then
+            null
+          else
+            {
+              name = headName;
+              doc = extractDocFromPrev prevBlock;
+              ensureNil = isEnsureNil block;
+            }
+        else
+          null;
+
+      results = lib.imap0 processCapture parts;
+    in
+    filter (x: x != null) results;
+
+  parsePackagesWithDocFromFile = file: parsePackagesWithDocFromContent (readFile file);
+
+  scanDirectoryWithDoc =
+    dir:
+    let
+      all = lib.filesystem.listFilesRecursive dir;
+      elFiles = filter (f: lib.hasSuffix ".el" (toString f)) all;
+      sortedFiles = lib.sort (a: b: toString a < toString b) elFiles;
+    in
+    map (f: {
+      file = builtins.baseNameOf (toString f);
+      entries = parsePackagesWithDocFromFile f;
+    }) sortedFiles;
+
   # ── Debug helpers ─────────────────────────────────────────────────
 
   listPackageNames =
@@ -268,5 +423,8 @@ in
     packagesForDirectory
     emacsWithPackagesFromUsePackage
     listPackageNames
+    parsePackagesWithDocFromContent
+    parsePackagesWithDocFromFile
+    scanDirectoryWithDoc
     ;
 }

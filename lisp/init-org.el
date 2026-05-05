@@ -8,6 +8,10 @@
 
 ;;; Code:
 
+;;; @doc Built-in Org — outline, agenda, capture, literate-programming.
+;;; @doc Treated as a "third-party" package despite being built-in
+;;; @doc because it's the size and surface area of one. Capture templates
+;;; @doc and a small bind table live below.
 (use-package org
   :ensure nil
   :commands (org-mode org-capture org-agenda)
@@ -40,7 +44,8 @@
            (file+headline org-default-notes-file "Notes")
            "* %?\n  %U"))))
 
-;; Time tracking with persistence across restarts.
+;;; @doc Built-in time tracking with persistence across restarts. Lets
+;;; @doc you resume an interrupted clock without losing the entry.
 (use-package org-clock
   :ensure nil
   :after org
@@ -51,16 +56,22 @@
   :config
   (org-clock-persistence-insinuate))
 
-;; Auto-show emphasis markers (* _ / ~) when point is on them, hide
-;; otherwise — best of both visual worlds.
+;;; @doc Reveal Org emphasis markers (`*` `_` `/` `~`) only when point is
+;;; @doc on them — best of both visual worlds: clean reading, easy
+;;; @doc editing.
 (use-package org-appear
   :after org
   :hook (org-mode . org-appear-mode))
 
+;;; @doc Modern visual styling for Org buffers and agenda — typographic
+;;; @doc bullets, faux-rendered blocks, agenda decorations.
 (use-package org-modern
   :hook ((org-mode            . org-modern-mode)
          (org-agenda-finalize . org-modern-agenda)))
 
+;;; @doc Zettelkasten-style note-linking on top of Org. SQLite database
+;;; @doc auto-syncs in the background; C-c n f / i / c are the three
+;;; @doc bindings you actually use day-to-day.
 (use-package org-roam
   :commands (org-roam-node-find org-roam-capture)
   :functions (org-roam-db-autosync-mode)
