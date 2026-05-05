@@ -16,8 +16,8 @@
 ;;; Code:
 
 ;;; @doc Built-in version control. Pinned to Git only — every other
-;;; @doc backend is a slow startup tax (probes every visited file's
-;;; @doc parents) you almost never benefit from.
+;;; backend is a slow startup tax (probes every visited file's
+;;; parents) you almost never benefit from.
 (use-package vc
   :ensure nil
   :custom
@@ -25,8 +25,8 @@
   (vc-handled-backends '(Git)))
 
 ;;; @doc The Git porcelain. Bound C-x g for status, C-x M-g for global
-;;; @doc dispatch, C-c g for the file-specific menu. Refined hunks +
-;;; @doc whitespace-ignoring diffs are turned on globally.
+;;; dispatch, C-c g for the file-specific menu. Refined hunks +
+;;; whitespace-ignoring diffs are turned on globally.
 (use-package magit
   :bind
   (("C-x g"   . magit-status)
@@ -44,7 +44,7 @@
   (add-hook 'magit-status-sections-hook 'magit-insert-worktrees t))
 
 ;;; @doc Surfaces TODO/FIXME/HACK comments as a section in magit-status.
-;;; @doc Scan depth pinned to 1 so it stays fast on large repos.
+;;; Scan depth pinned to 1 so it stays fast on large repos.
 (use-package magit-todos
   :after magit
   :commands (magit-todos-mode global-magit-todos-mode)
@@ -52,9 +52,9 @@
   (magit-todos-depth 1))
 
 ;;; @doc PRs, issues, and reviews from GitHub/GitLab/Forgejo inside
-;;; @doc magit. Uses the Emacs-30 built-in sqlite so no external
-;;; @doc emacsql binary is needed. Auth via ~/.authinfo.gpg
-;;; @doc (machine api.github.com login USER^forge password ghp_…).
+;;; magit. Uses the Emacs-30 built-in sqlite so no external
+;;; emacsql binary is needed. Auth via ~/.authinfo.gpg
+;;; (machine api.github.com login USER^forge password ghp_…).
 (use-package forge
   :after magit
   :custom
@@ -63,8 +63,8 @@
   (forge-database-connector 'emacsql-sqlite-builtin))
 
 ;;; @doc Built-in transient menu system that magit/forge are built on.
-;;; @doc Themed under var/ so its three state files don't drop at the
-;;; @doc repo root.
+;;; Themed under var/ so its three state files don't drop at the
+;;; repo root.
 (use-package transient
   :ensure nil
   :custom
@@ -73,8 +73,8 @@
   (transient-levels-file  (jotain-var-file "transient/levels.el")))
 
 ;;; @doc Fringe indicators for added/changed/removed lines in the buffer
-;;; @doc you're editing. `diff-hl-flydiff-mode` updates pre-save so the
-;;; @doc indicators reflect uncommitted edits, not just the last save.
+;;; you're editing. `diff-hl-flydiff-mode` updates pre-save so the
+;;; indicators reflect uncommitted edits, not just the last save.
 (use-package diff-hl
   :after magit
   :demand t
@@ -93,8 +93,8 @@
   (diff-hl-flydiff-mode 1))
 
 ;;; @doc Built-in conflict-marker editor. Custom prefix C-c ^ groups
-;;; @doc upper/lower/next/prev so resolving merges doesn't require
-;;; @doc scrolling through the smerge menu.
+;;; upper/lower/next/prev so resolving merges doesn't require
+;;; scrolling through the smerge menu.
 (use-package smerge-mode
   :ensure nil
   :bind (:map smerge-mode-map
@@ -104,8 +104,8 @@
               ("C-c ^ p" . smerge-prev)))
 
 ;;; @doc Built-in interactive diff. Configured with `plain` window setup
-;;; @doc so the control panel doesn't pop a separate frame, plus
-;;; @doc whitespace-ignoring diffs for less merge noise.
+;;; so the control panel doesn't pop a separate frame, plus
+;;; whitespace-ignoring diffs for less merge noise.
 (use-package ediff
   :ensure nil
   :defer t

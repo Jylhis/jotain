@@ -9,30 +9,30 @@
 ;;; Code:
 
 ;;; @doc Built-in help window. Auto-focus so you can scroll or dismiss
-;;; @doc with q/n/p without reaching for the mouse.
+;;; with q/n/p without reaching for the mouse.
 (use-package help
   :ensure nil
   :custom
   (help-window-select t))
 
 ;;; @doc Built-in echo-area tooltips on buttons and links when point
-;;; @doc lingers — discoverability for the parts of Emacs that aren't
-;;; @doc plain text.
+;;; lingers — discoverability for the parts of Emacs that aren't
+;;; plain text.
 (use-package help-at-pt
   :ensure nil
   :custom
   (help-at-pt-display-when-idle t))
 
 ;;; @doc Built-in apropos. Bumped to "search everything" so it surfaces
-;;; @doc faces, classes, and customs alongside functions and variables.
+;;; faces, classes, and customs alongside functions and variables.
 (use-package apropos
   :ensure nil
   :custom
   (apropos-do-all t))
 
 ;;; @doc Replaces the default describe-* commands with richer buffers
-;;; @doc that include source, callers, examples, and active keybindings
-;;; @doc — the single biggest discoverability upgrade in Emacs.
+;;; that include source, callers, examples, and active keybindings
+;;; — the single biggest discoverability upgrade in Emacs.
 (use-package helpful
   :diminish
   :bind
