@@ -16,8 +16,8 @@
 ;;;; prog-mode
 
 ;;; @doc Built-in `prog-mode` parent. Just turns on the fill-column
-;;; @doc indicator — hl-line and show-paren live in init-ui so they
-;;; @doc apply outside programming buffers too.
+;;; indicator — hl-line and show-paren live in init-ui so they
+;;; apply outside programming buffers too.
 (use-package prog-mode
   :ensure nil
   :hook
@@ -26,18 +26,18 @@
 ;;;; Tree-sitter
 
 ;;; @doc Built-in tree-sitter substrate. Bumped to font-lock level 4 to
-;;; @doc enable every available syntactic decoration.
+;;; enable every available syntactic decoration.
 (use-package treesit
   :ensure nil
   :custom
   (treesit-font-lock-level 4))
 
 ;;; @doc Auto-routes `foo-mode` → `foo-ts-mode` whenever the grammar is
-;;; @doc loadable. Grammar installation is suppressed because Nix
-;;; @doc provides them via `treesit-extra-load-path` (set from
-;;; @doc $TREE_SITTER_DIR in early-init.el). We use only the alist hook
-;;; @doc — `global-treesit-auto-mode` advises `set-auto-mode-0` and
-;;; @doc costs ~3.6 s per find-file in this config.
+;;; loadable. Grammar installation is suppressed because Nix
+;;; provides them via `treesit-extra-load-path` (set from
+;;; $TREE_SITTER_DIR in early-init.el). We use only the alist hook
+;;; — `global-treesit-auto-mode` advises `set-auto-mode-0` and
+;;; costs ~3.6 s per find-file in this config.
 (use-package treesit-auto
   :demand t
   :custom (treesit-auto-install nil)
@@ -52,16 +52,16 @@
   (treesit-auto-add-to-auto-mode-alist 'all))
 
 ;;; @doc Code folding driven by treesit syntax nodes — folds along
-;;; @doc functions/classes/blocks instead of indentation guesses. Fringe
-;;; @doc indicators show fold state.
+;;; functions/classes/blocks instead of indentation guesses. Fringe
+;;; indicators show fold state.
 (use-package treesit-fold
   :diminish
   :hook (after-init . global-treesit-fold-indicators-mode)
   :custom (treesit-fold-indicators-priority -1))
 
 ;;; @doc Structural editing via treesit (move/clone/raise nodes,
-;;; @doc transpose siblings). Heavy enough to be opt-in per buffer via
-;;; @doc M-x combobulate-mode or .dir-locals.el. Provided by Nix.
+;;; transpose siblings). Heavy enough to be opt-in per buffer via
+;;; M-x combobulate-mode or .dir-locals.el. Provided by Nix.
 (use-package combobulate
   :ensure nil ; Provided by Nix
   :defer t
@@ -75,9 +75,9 @@
 (setopt read-process-output-max (* 4 1024 1024))
 
 ;;; @doc Built-in LSP client. Per-language `eglot-ensure` hooks live
-;;; @doc here so all LSP wiring is visible in one place; per-language
-;;; @doc mode regexes stay in their `init-lang-*` file. C-c r is the
-;;; @doc refactor prefix (rename/format/code-actions).
+;;; here so all LSP wiring is visible in one place; per-language
+;;; mode regexes stay in their `init-lang-*` file. C-c r is the
+;;; refactor prefix (rename/format/code-actions).
 (use-package eglot
   :ensure nil
   ;; Per-language modules register modes only; auto-start lives here.
@@ -135,14 +135,14 @@
   (fset #'jsonrpc--log-event #'ignore))
 
 ;;; @doc Consult-driven workspace symbol search — C-M-. opens an
-;;; @doc orderless-filtered list of symbols across the LSP workspace.
+;;; orderless-filtered list of symbols across the LSP workspace.
 (use-package consult-eglot
   :after (consult eglot)
   :bind (:map eglot-mode-map
               ("C-M-." . consult-eglot-symbols)))
 
 ;;; @doc Embark integration for consult-eglot — gives every workspace
-;;; @doc symbol an action menu (jump to def, find refs, rename, …).
+;;; symbol an action menu (jump to def, find refs, rename, …).
 (use-package consult-eglot-embark
   :after (consult eglot embark)
   :demand t)
@@ -177,8 +177,8 @@ connection alongside any existing language server."
 ;;;; Flymake / eldoc
 
 ;;; @doc Built-in inline diagnostic display. Indicator chars (! ? ·) and
-;;; @doc end-of-line message rendering keep diagnostics legible without
-;;; @doc opening a side window. M-n / M-p navigate.
+;;; end-of-line message rendering keep diagnostics legible without
+;;; opening a side window. M-n / M-p navigate.
 (use-package flymake
   :ensure nil
   :hook (prog-mode . flymake-mode)
@@ -205,8 +205,8 @@ connection alongside any existing language server."
   (add-hook 'flymake-mode-hook #'jotain-prog--disable-flymake-byte-compile))
 
 ;;; @doc Built-in echo-area documentation. Single-line display plus
-;;; @doc small idle delay so it feels responsive without flashing while
-;;; @doc you type.
+;;; small idle delay so it feels responsive without flashing while
+;;; you type.
 (use-package eldoc
   :ensure nil
   :diminish
@@ -219,8 +219,8 @@ connection alongside any existing language server."
 ;;;; xref
 
 ;;; @doc Built-in cross-reference engine. Pinned to ripgrep (in the
-;;; @doc devenv shell) for orders-of-magnitude faster project-wide
-;;; @doc lookups than default grep.
+;;; devenv shell) for orders-of-magnitude faster project-wide
+;;; lookups than default grep.
 (use-package xref
   :ensure nil
   :custom
@@ -229,8 +229,8 @@ connection alongside any existing language server."
 ;;;; Compile
 
 ;;; @doc Built-in compile / recompile. Auto-scroll until the first error
-;;; @doc and skip the "save?" prompt — the annoying defaults that make
-;;; @doc people reach for projectile or compilation-multi alternatives.
+;;; and skip the "save?" prompt — the annoying defaults that make
+;;; people reach for projectile or compilation-multi alternatives.
 (use-package compile
   :ensure nil
   :custom
@@ -241,7 +241,7 @@ connection alongside any existing language server."
 ;;;; editorconfig (built-in since 30)
 
 ;;; @doc Honour `.editorconfig` files (indent style/width, line endings,
-;;; @doc trailing whitespace). Built-in since Emacs 30.
+;;; trailing whitespace). Built-in since Emacs 30.
 (use-package editorconfig
   :ensure nil
   :diminish
@@ -250,9 +250,9 @@ connection alongside any existing language server."
 ;;;; Per-project environment + format-on-save + grep refactor
 
 ;;; @doc Apply the project's `.envrc` / Nix shell to every buffer in
-;;; @doc that project. Strictly better than direnv-mode because the env
-;;; @doc is buffer-local, not global — multiple projects can coexist in
-;;; @doc one Emacs without leaking environment.
+;;; that project. Strictly better than direnv-mode because the env
+;;; is buffer-local, not global — multiple projects can coexist in
+;;; one Emacs without leaking environment.
 (use-package envrc
   :demand t
   :functions (envrc-global-mode)
@@ -274,9 +274,9 @@ connection alongside any existing language server."
                  (display-buffer-no-window))))
 
 ;;; @doc Async format-on-save through external formatters (ruff, nixfmt,
-;;; @doc rustfmt, prettier, …). Replaces hand-rolled per-language hooks
-;;; @doc with one place to look. Per-buffer override safe-local-variable
-;;; @doc lets `.dir-locals.el` opt out.
+;;; rustfmt, prettier, …). Replaces hand-rolled per-language hooks
+;;; with one place to look. Per-buffer override safe-local-variable
+;;; lets `.dir-locals.el` opt out.
 (use-package apheleia
   :diminish apheleia-mode
   :functions (apheleia-global-mode)
@@ -285,9 +285,9 @@ connection alongside any existing language server."
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
 ;;; @doc Edit grep / ripgrep result buffers in place; saving propagates
-;;; @doc edits to every matched file. Powers the project-wide refactor
-;;; @doc flow: consult-ripgrep → C-c C-o (embark-export) → C-x C-q
-;;; @doc (wgrep) → edit → C-c C-c.
+;;; edits to every matched file. Powers the project-wide refactor
+;;; flow: consult-ripgrep → C-c C-o (embark-export) → C-x C-q
+;;; (wgrep) → edit → C-c C-c.
 (use-package wgrep
   :defer t
   :custom
@@ -295,7 +295,7 @@ connection alongside any existing language server."
   (wgrep-change-readonly-file t))
 
 ;;; @doc Detect indentation width from file contents — saves us from
-;;; @doc having to special-case every project's tab/space convention.
+;;; having to special-case every project's tab/space convention.
 (use-package dtrt-indent
   :diminish
   :hook (prog-mode . dtrt-indent-mode))

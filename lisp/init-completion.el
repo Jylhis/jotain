@@ -16,7 +16,7 @@
 ;;;; Minibuffer defaults
 
 ;;; @doc Built-in minibuffer customisation: detailed annotations and
-;;; @doc historical sorting (Emacs 30) so frequent commands surface first.
+;;; historical sorting (Emacs 30) so frequent commands surface first.
 (use-package minibuffer
   :ensure nil
   :custom
@@ -26,9 +26,9 @@
   (completions-sort 'historical))
 
 ;;; @doc Fuzzy, space-separated, order-independent completion. Pairs with
-;;; @doc partial-completion (path globbing) so `/u/s/a` matches
-;;; @doc `/usr/share/applications`. The single most important UX win in
-;;; @doc the minibuffer.
+;;; partial-completion (path globbing) so `/u/s/a` matches
+;;; `/usr/share/applications`. The single most important UX win in
+;;; the minibuffer.
 (use-package orderless
   :demand t
   :custom
@@ -44,15 +44,15 @@
 ;;;; Vertico + extensions
 
 ;;; @doc Vertical, performant minibuffer completion UI. Replaces the
-;;; @doc default `*Completions*` buffer with an inline list. The whole
-;;; @doc minibuffer experience hinges on this.
+;;; default `*Completions*` buffer with an inline list. The whole
+;;; minibuffer experience hinges on this.
 (use-package vertico
   :demand t
   :config (vertico-mode 1))
 
 ;;; @doc Path-savvy editing in vertico — RET enters a candidate
-;;; @doc directory, DEL/M-DEL delete a path component instead of one
-;;; @doc character. Bundled with vertico.
+;;; directory, DEL/M-DEL delete a path component instead of one
+;;; character. Bundled with vertico.
 (use-package vertico-directory
   :ensure nil
   :after vertico
@@ -63,8 +63,8 @@
   :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
 
 ;;; @doc Per-category and per-command display modes (grid for files,
-;;; @doc buffer for line/grep so the preview window has room). Bundled
-;;; @doc with vertico.
+;;; buffer for line/grep so the preview window has room). Bundled
+;;; with vertico.
 (use-package vertico-multiform
   :ensure nil
   :after vertico
@@ -89,8 +89,8 @@
   :config (vertico-multiform-mode 1))
 
 ;;; @doc Lets vertico render in a regular buffer instead of the
-;;; @doc minibuffer — used by vertico-multiform for consult-line and the
-;;; @doc grep family so candidates have room to breathe.
+;;; minibuffer — used by vertico-multiform for consult-line and the
+;;; grep family so candidates have room to breathe.
 (use-package vertico-buffer
   :ensure nil
   :after vertico
@@ -101,8 +101,8 @@
 ;;;; Annotations
 
 ;;; @doc Adds annotation columns (file size, mode, docstring, …) to every
-;;; @doc completion list. Pairs with vertico to make minibuffer choices
-;;; @doc self-explanatory.
+;;; completion list. Pairs with vertico to make minibuffer choices
+;;; self-explanatory.
 (use-package marginalia
   :demand t
   :config (marginalia-mode 1))
@@ -110,9 +110,9 @@
 ;;;; Consult — the big binding table
 
 ;;; @doc Consult provides preview-as-you-go variants of nearly every
-;;; @doc Emacs lookup: buffer switch, line jump, grep, recent files,
-;;; @doc imenu, flymake, register store. The big binding table below
-;;; @doc replaces a dozen built-ins with a single, consistent UI.
+;;; Emacs lookup: buffer switch, line jump, grep, recent files,
+;;; imenu, flymake, register store. The big binding table below
+;;; replaces a dozen built-ins with a single, consistent UI.
 (use-package consult
   :demand t
   :hook (completion-list-mode . consult-preview-at-point-mode)
@@ -196,8 +196,8 @@
 ;;;; Embark — actions on anything
 
 ;;; @doc Right-click for the keyboard. C-. on any candidate (file,
-;;; @doc symbol, region, command name) opens a menu of actions valid for
-;;; @doc that thing. C-h B replaces describe-bindings with a paged view.
+;;; symbol, region, command name) opens a menu of actions valid for
+;;; that thing. C-h B replaces describe-bindings with a paged view.
 (use-package embark
   :bind
   (("C-."   . embark-act)
@@ -214,8 +214,8 @@
                  (window-parameters (mode-line-format . none)))))
 
 ;;; @doc Glue between embark and consult — exports a consult result
-;;; @doc list (e.g. consult-ripgrep) into a grep buffer with C-c C-o for
-;;; @doc the classic search → wgrep refactor flow.
+;;; list (e.g. consult-ripgrep) into a grep buffer with C-c C-o for
+;;; the classic search → wgrep refactor flow.
 (use-package embark-consult
   :after (embark consult)
   :hook (embark-collect-mode . consult-preview-at-point-mode)
@@ -225,7 +225,7 @@
 ;;;; Jump tools
 
 ;;; @doc Tree-style char/word/line jumping. Bound under M-g so it sits
-;;; @doc next to the goto family. Multi-frame aware.
+;;; next to the goto family. Multi-frame aware.
 (use-package avy
   :bind
   (("M-g c" . avy-goto-char)
@@ -234,8 +234,8 @@
   :custom (avy-all-windows 'all-frames))
 
 ;;; @doc Frecency-ranked directory jump (like the shell zoxide). Adds
-;;; @doc visited files automatically; M-g z surfaces the most-recent
-;;; @doc matches first.
+;;; visited files automatically; M-g z surfaces the most-recent
+;;; matches first.
 (use-package zoxide
   :bind
   (("M-g z"   . zoxide-find-file)
@@ -245,8 +245,8 @@
 ;;;; In-buffer completion
 
 ;;; @doc In-buffer completion popup — the corfu equivalent of company.
-;;; @doc Auto-triggered after 2 chars so it feels like a modern editor
-;;; @doc without a long delay.
+;;; Auto-triggered after 2 chars so it feels like a modern editor
+;;; without a long delay.
 (use-package corfu
   :demand t
   :custom
@@ -257,16 +257,16 @@
   :config (global-corfu-mode 1))
 
 ;;; @doc Persists corfu's pick history into savehist so frequent
-;;; @doc completions float to the top across sessions. Bundled with
-;;; @doc corfu.
+;;; completions float to the top across sessions. Bundled with
+;;; corfu.
 (use-package corfu-history
   :ensure nil
   :after corfu
   :config (corfu-history-mode 1))
 
 ;;; @doc Completion-at-point Extensions — extra capf functions (dabbrev,
-;;; @doc file path, keyword) that feed corfu when the major mode's own
-;;; @doc capf finds nothing useful.
+;;; file path, keyword) that feed corfu when the major mode's own
+;;; capf finds nothing useful.
 (use-package cape
   :demand t
   :functions (cape-dabbrev cape-file cape-keyword)

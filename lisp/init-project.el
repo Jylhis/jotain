@@ -21,8 +21,8 @@
 ;;;; project.el (built-in)
 
 ;;; @doc Built-in project tracker. Extra root markers below mean a
-;;; @doc project is recognised when any of these is present, not just
-;;; @doc on a VCS root. Project list lives under var/.
+;;; project is recognised when any of these is present, not just
+;;; on a VCS root. Project list lives under var/.
 (use-package project
   :ensure nil
   :custom
@@ -34,8 +34,8 @@
 ;;;; projection — per-project commands keyed off .dir-locals.el
 
 ;;; @doc `.dir-locals.el`-driven per-project commands (configure, build,
-;;; @doc test, run, package, install) auto-detected from
-;;; @doc Makefile/justfile/Cargo.toml/etc and exposed under C-x P.
+;;; test, run, package, install) auto-detected from
+;;; Makefile/justfile/Cargo.toml/etc and exposed under C-x P.
 (use-package projection
   :hook (after-init . global-projection-hook-mode)
   :bind-keymap ("C-x P" . projection-map)
@@ -53,14 +53,14 @@
     (put sym 'safe-local-variable #'stringp)))
 
 ;;; @doc Bridges projection with compile-multi: project-prefix RET picks
-;;; @doc from every named compile command available in this project.
+;;; from every named compile command available in this project.
 (use-package projection-multi
   :after projection
   :bind (:map project-prefix-map
               ("RET" . projection-multi-compile)))
 
 ;;; @doc Embark menu for projection-multi entries — pin a command,
-;;; @doc preview output, etc.
+;;; preview output, etc.
 (use-package projection-multi-embark
   :after (embark projection-multi)
   :functions (projection-multi-embark-setup-command-map)
@@ -70,8 +70,8 @@
 ;;;; compile-multi — named compile commands per major mode
 
 ;;; @doc Per-major-mode picker for named compile commands ("go test",
-;;; @doc "pytest file", "nix flake check", …). Complement to projection,
-;;; @doc kept side by side because neither system fully covers the other.
+;;; "pytest file", "nix flake check", …). Complement to projection,
+;;; kept side by side because neither system fully covers the other.
 (use-package compile-multi
   :defer t
   :commands (compile-multi)
@@ -91,8 +91,8 @@
                       ("cargo build"    . "cargo build"))))))
 
 ;;; @doc Renders compile-multi pickers through consult — gives you
-;;; @doc orderless filtering and preview on every "what command should I
-;;; @doc run?" prompt.
+;;; orderless filtering and preview on every "what command should I
+;;; run?" prompt.
 (use-package consult-compile-multi
   :after compile-multi
   :functions (consult-compile-multi-mode)
@@ -100,13 +100,13 @@
   :config (consult-compile-multi-mode))
 
 ;;; @doc Decorates compile-multi entries with nerd-font glyphs for the
-;;; @doc command type — purely visual, but a useful at-a-glance hint.
+;;; command type — purely visual, but a useful at-a-glance hint.
 (use-package compile-multi-nerd-icons
   :after (compile-multi nerd-icons-completion)
   :demand t)
 
 ;;; @doc Embark actions on compile-multi entries (run, copy, edit
-;;; @doc command line). Mirrors the projection embark integration.
+;;; command line). Mirrors the projection embark integration.
 (use-package compile-multi-embark
   :after (embark compile-multi)
   :functions (compile-multi-embark-mode)
