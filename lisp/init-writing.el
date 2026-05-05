@@ -10,8 +10,8 @@
 ;;; Code:
 
 ;;; @doc Built-in text-mode tweaks for prose: visual line wrap, hanging
-;;; @doc indent on wrapped lines, variable-pitch face. Code modes stay
-;;; @doc monospaced.
+;;; indent on wrapped lines, variable-pitch face. Code modes stay
+;;; monospaced.
 (use-package text-mode
   :ensure nil
   :hook
@@ -20,8 +20,8 @@
    (text-mode . variable-pitch-mode)))
 
 ;;; @doc Just-in-time spell check using enchant — no on-save scan, no
-;;; @doc per-buffer flyspell setup. M-$ corrects the word at point;
-;;; @doc C-M-$ switches dictionaries.
+;;; per-buffer flyspell setup. M-$ corrects the word at point;
+;;; C-M-$ switches dictionaries.
 (use-package jinx
   :hook ((text-mode . jinx-mode)
          (org-mode  . jinx-mode))
@@ -29,8 +29,8 @@
          ("C-M-$" . jinx-languages)))
 
 ;;; @doc Markdown major mode with native code-block fontification and
-;;; @doc heading scaling. README.md opens in gfm-mode for the GitHub
-;;; @doc dialect.
+;;; heading scaling. README.md opens in gfm-mode for the GitHub
+;;; dialect.
 (use-package markdown-mode
   :mode (("README\\.md\\'" . gfm-mode)
          ("\\.md\\'"       . markdown-mode)
@@ -40,7 +40,7 @@
   (markdown-header-scaling t))
 
 ;;; @doc Plain-text note system with strict file-naming rules so notes
-;;; @doc are findable years later. Stored under `~/Documents/notes`.
+;;; are findable years later. Stored under `~/Documents/notes`.
 (use-package denote
   :commands (denote denote-create-note denote-open-or-create)
   :custom
@@ -48,8 +48,8 @@
   (denote-known-keywords '("emacs" "nix" "linux" "writing")))
 
 ;;; @doc In-Emacs PDF viewing — search, annotate, follow links, outline.
-;;; @doc Needs libpoppler at build time, which the emacs-pgtk / emacs-mac
-;;; @doc variants in nixpkgs already provide.
+;;; Needs libpoppler at build time, which the emacs-pgtk / emacs-mac
+;;; variants in nixpkgs already provide.
 (use-package pdf-tools
   :mode ("\\.pdf\\'" . pdf-view-mode)
   :magic ("%PDF" . pdf-view-mode))

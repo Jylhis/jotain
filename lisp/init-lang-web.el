@@ -12,7 +12,7 @@
 ;;; Code:
 
 ;;; @doc Built-in tree-sitter TypeScript / TSX / JSX modes. Eglot wires
-;;; @doc typescript-language-server in init-prog.
+;;; typescript-language-server in init-prog.
 (use-package typescript-ts-mode
   :ensure nil
   :mode (("\\.ts\\'"  . typescript-ts-mode)
@@ -20,22 +20,22 @@
          ("\\.jsx\\'" . tsx-ts-mode)))
 
 ;;; @doc Built-in JavaScript major mode pinned to its tree-sitter
-;;; @doc variant.
+;;; variant.
 (use-package js
   :ensure nil
   :mode ("\\.js\\'" . js-ts-mode))
 
 ;;; @doc Built-in CSS / SCSS major mode pinned to the tree-sitter
-;;; @doc variant.
+;;; variant.
 (use-package css-mode
   :ensure nil
   :mode (("\\.css\\'"  . css-ts-mode)
          ("\\.scss\\'" . css-ts-mode)))
 
 ;;; @doc One mode for every templating language that mixes HTML with
-;;; @doc something else: ERB, Mustache, Django, ASP, JSP, PHP. The
-;;; @doc M-o rebind below stops web-mode-map from shadowing our global
-;;; @doc other-window binding.
+;;; something else: ERB, Mustache, Django, ASP, JSP, PHP. The
+;;; M-o rebind below stops web-mode-map from shadowing our global
+;;; other-window binding.
 (use-package web-mode
   :mode (("\\.html?\\'"   . web-mode)
          ("\\.phtml\\'"   . web-mode)

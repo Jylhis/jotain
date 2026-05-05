@@ -10,10 +10,10 @@
 ;;; Code:
 
 ;;; @doc Tree-sitter Nix major mode. Nix is the package manager and
-;;; @doc dev-shell tool the whole config is built around, so it gets a
-;;; @doc dedicated module even though we don't write much of it daily.
-;;; @doc Provided by Nix; format-on-save flows through apheleia →
-;;; @doc nixfmt (configured in init-prog).
+;;; dev-shell tool the whole config is built around, so it gets a
+;;; dedicated module even though we don't write much of it daily.
+;;; Provided by Nix; format-on-save flows through apheleia →
+;;; nixfmt (configured in init-prog).
 (use-package nix-ts-mode
   :ensure nil ; Provided by Nix
   :mode "\\.nix\\'")

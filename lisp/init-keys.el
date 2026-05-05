@@ -41,8 +41,8 @@ positions, and focus are preserved during the swap."
     (user-error "Can only toggle split with exactly 2 windows")))
 
 ;;; @doc Top-level rebindings — disable accidental suspend (C-z and
-;;; @doc C-x C-z), put other-window on M-o for one-key window switching,
-;;; @doc and bind C-x j to the two-window rotate helper above.
+;;; C-x C-z), put other-window on M-o for one-key window switching,
+;;; and bind C-x j to the two-window rotate helper above.
 (use-package emacs
   :ensure nil
   :bind
@@ -52,8 +52,8 @@ positions, and focus are preserved during the swap."
    ("C-x j" . jotain-toggle-window-split)))
 
 ;;; @doc Built-in directional window switching — Shift-<arrow> moves
-;;; @doc focus between split windows. Ships with Emacs; no reason not
-;;; @doc to turn it on globally.
+;;; focus between split windows. Ships with Emacs; no reason not
+;;; to turn it on globally.
 (use-package windmove
   :ensure nil
   :config (windmove-default-keybindings))

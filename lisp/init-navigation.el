@@ -9,8 +9,8 @@
 ;;; Code:
 
 ;;; @doc Built-in directory editor — Jotain's primary file manager.
-;;; @doc The custom block below tames cross-platform ls quirks (BSD on
-;;; @doc macOS lacks `--group-directories-first` and `--dired`).
+;;; The custom block below tames cross-platform ls quirks (BSD on
+;;; macOS lacks `--group-directories-first` and `--dired`).
 (use-package dired
   :ensure nil
   :custom
@@ -37,8 +37,8 @@
   :hook (dired-mode . dired-hide-details-mode))
 
 ;;; @doc Built-in dired extras — `dired-omit-mode` hides dotfiles and
-;;; @doc cache directories so dired listings show only the things you
-;;; @doc actually want to see.
+;;; cache directories so dired listings show only the things you
+;;; actually want to see.
 (use-package dired-x
   :ensure nil
   :after dired
@@ -54,7 +54,7 @@
            "\\|^__pycache__\\'")))
 
 ;;; @doc Pure-Lisp ls emulation. Fallback for macOS without GNU coreutils
-;;; @doc — gives us folders-first sorting that BSD ls cannot produce.
+;;; — gives us folders-first sorting that BSD ls cannot produce.
 (use-package ls-lisp
   :ensure nil
   :if (and (eq system-type 'darwin) (not (executable-find "gls")))
@@ -66,8 +66,8 @@
   (ls-lisp-verbosity '(links uid gid)))
 
 ;;; @doc Built-in writable dired — C-c C-e turns the dired buffer into
-;;; @doc a regular text buffer where you can rename/chmod files with the
-;;; @doc usual editing commands. Save to commit changes.
+;;; a regular text buffer where you can rename/chmod files with the
+;;; usual editing commands. Save to commit changes.
 (use-package wdired
   :ensure nil
   :after dired
@@ -77,18 +77,18 @@
   :bind (:map dired-mode-map ("C-c C-e" . wdired-change-to-wdired-mode)))
 
 ;;; @doc Pretty colours for dired (font-locks files by type, age,
-;;; @doc executability). Pure cosmetic, big readability win.
+;;; executability). Pure cosmetic, big readability win.
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
 
 ;;; @doc Live filter dired buffers by typing a fragment after `/`.
-;;; @doc Faster than re-running ls with a glob.
+;;; Faster than re-running ls with a glob.
 (use-package dired-narrow
   :after dired
   :bind (:map dired-mode-map ("/" . dired-narrow)))
 
 ;;; @doc Inline tree expansion in dired — TAB on a directory expands its
-;;; @doc contents below it instead of opening a new buffer.
+;;; contents below it instead of opening a new buffer.
 (use-package dired-subtree
   :after dired
   :custom
@@ -98,8 +98,8 @@
               ("<backtab>" . dired-subtree-cycle)))
 
 ;;; @doc Browse the system trash bin from inside Emacs. With
-;;; @doc `delete-by-moving-to-trash` set in init-core, every dired
-;;; @doc deletion is recoverable through `M-x trashed`.
+;;; `delete-by-moving-to-trash` set in init-core, every dired
+;;; deletion is recoverable through `M-x trashed`.
 (use-package trashed
   :commands trashed
   :custom
@@ -108,13 +108,13 @@
   (trashed-sort-key '("Date deleted" . t)))
 
 ;;; @doc Shortens `/nix/store/abc123-foo-1.0` to `…foo-1.0` in dired and
-;;; @doc shell buffers — purely cosmetic, but transformative on a system
-;;; @doc that's mostly Nix store paths.
+;;; shell buffers — purely cosmetic, but transformative on a system
+;;; that's mostly Nix store paths.
 (use-package pretty-sha-path
   :hook ((dired-mode shell-mode) . pretty-sha-path-mode))
 
 ;;; @doc Modern dired front-end with previews, side panels, and miller
-;;; @doc columns. Overrides plain dired so every `C-x d` benefits.
+;;; columns. Overrides plain dired so every `C-x d` benefits.
 (use-package dirvish
   :demand t
   :after dired
@@ -135,8 +135,8 @@
 (setopt window-combination-resize t)
 
 ;;; @doc Built-in window-layout undo/redo — pairs with the toggle helper
-;;; @doc below so `C-x 1` becomes a reversible "expand this window"
-;;; @doc command.
+;;; below so `C-x 1` becomes a reversible "expand this window"
+;;; command.
 (use-package winner
   :ensure nil
   :config (winner-mode 1))

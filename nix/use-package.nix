@@ -1,12 +1,15 @@
 # nix/use-package.nix — Extract use-package declarations from Emacs Lisp
 # files and map them to `emacsPackages` attributes.
 #
-# This is a focused re-implementation of two things:
+# Two parsers are exposed, both built on the same low-level helpers:
 #
-#   • `nix/lib/dependencies.nix` from the `main` branch of this repo
-#     (pure-Nix regex scanner), and
-#   • `emacsWithPackagesFromUsePackage` from nix-community/emacs-overlay
-#     (public wrapper that composes the scanner with `emacsPackagesFor`).
+#   • parsePackagesFromContent — name-only scan used by
+#     `emacsWithPackagesFromUsePackage` to populate the build-time
+#     package list (re-implements the public part of
+#     emacs-overlay's helper).
+#   • parsePackagesWithDocFromContent — like the above but also
+#     extracts the `;;; @doc` block immediately above each form so
+#     `nix/packages-doc.nix` can render the package reference.
 #
 # We intentionally do NOT vendor `fromElisp` like emacs-overlay does. The
 # config in lisp/init-*.el never nests `(use-package ...)` forms inside
@@ -14,24 +17,20 @@
 # `leaf`, so a regex scan is sufficient and keeps the dependency surface
 # small.
 #
-# Features:
+# `;;; @doc` convention (multi-line, no need to repeat the marker):
 #
-#   • Recognises `(use-package NAME ...)` forms.
-#   • Skips forms with `:ensure nil` or `:disabled t` (the block-scoped
-#     check looks at the slice of text up to the next `(use-package ...)`
-#     form or end-of-file).
-#   • Honours `:ensure other-name` aliasing — the aliased name is used
-#     for the Nix lookup (emacs-overlay compatibility).
-#   • Drops known pseudo-packages (`emacs`) and anything whose lookup on
-#     `epkgs` fails (with a `builtins.trace` warning, never a hard
-#     failure — missing packages fall through to MELPA at runtime).
+#     ;;; @doc First sentence — the marker line.
+#     ;;; Continuation lines drop the @doc prefix.
+#     ;;;
+#     ;;; A blank `;;;` line is a paragraph break.
+#     (use-package foo …)
+#
+# The legacy form where every line is `;;; @doc <text>` still works.
 #
 # Public API:
 #
 #     let up = import ./nix/use-package.nix { inherit lib; };
 #     in up.packagesForDirectory { dir = ./lisp; epkgs = …; }
-#
-# See `packagesForDirectory` below for the full set of helpers.
 
 { lib }:
 
@@ -48,89 +47,220 @@ let
     trace
     ;
 
-  # ── Block-level parser ────────────────────────────────────────────
+  # ── Shared low-level helpers ──────────────────────────────────────
   #
   # `builtins.split` with a capturing pattern returns an alternating
   # list of [pre-text, [capture1], mid-text, [capture2], post-text, …].
   # We walk that list in pairs: for every capture group (the package
-  # name) we look at the *following* string element, which is the text
-  # between this `(use-package …)` form and the next one. That slice
-  # is where `:ensure …` / `:disabled t` would appear for this form.
+  # name) we look at the *following* string element (the form's body)
+  # for `:ensure`/`:disabled`, and at the *preceding* string element
+  # (between the previous form and this one) for the `;;; @doc` block.
+
+  splitOnUsePackage = content: split "\\(use-package[[:space:]]+([a-zA-Z0-9+_-]+)" content;
+
+  # Text following capture at index idx (form body up to the next form).
+  getNextText =
+    parts: idx:
+    let
+      next = idx + 1;
+    in
+    if next < length parts then
+      let
+        v = elemAt parts next;
+      in
+      if builtins.isString v then v else ""
+    else
+      "";
+
+  # Text preceding capture at index idx (between previous form and this).
+  getPrevText =
+    parts: idx:
+    let
+      prev = idx - 1;
+    in
+    if prev >= 0 then
+      let
+        v = elemAt parts prev;
+      in
+      if builtins.isString v then v else ""
+    else
+      "";
+
+  # Character classes used as word-boundary guards. POSIX ERE wants `-`
+  # at the start or end of a bracket expression, so we keep it last. We
+  # spell alphanumerics out literally instead of using `[:alnum:]`
+  # because some POSIX regex backends choke on `[[:alnum:]_-]`
+  # (ambiguous with the `[ ]` opener).
+  wordChar = "[A-Za-z0-9_-]";
+  endSym = "[^A-Za-z0-9_-]";
+
+  isEnsureNil = block: match (".*:ensure[[:space:]]+nil(" + endSym + ".*)?") block != null;
+
+  isDisabled = block: match (".*:disabled[[:space:]]+t(" + endSym + ".*)?") block != null;
+
+  # :ensure nil  ->  null  (skip — built-in or Nix-provided)
+  # :ensure t    ->  use the use-package head name
+  # :ensure foo  ->  use foo instead (emacs-overlay aliasing)
+  # :ensure …    ->  absent keyword means "use head name"
+  resolveEnsureName =
+    headName: block:
+    let
+      tMatch = match (".*:ensure[[:space:]]+t(" + endSym + ".*)?") block;
+      aliasMatch = match (".*:ensure[[:space:]]+(" + wordChar + "+).*") block;
+    in
+    if isEnsureNil block then
+      null
+    else if tMatch != null then
+      headName
+    else if aliasMatch != null then
+      head aliasMatch
+    else
+      headName;
+
+  # ── ;;; @doc extractor ────────────────────────────────────────────
+
+  # Match a triple-semicolon comment line, accepting both ";;;" alone
+  # and ";;; <anything>". Excludes ";;;;" (section headers) and
+  # ";;;<no space>" (which conventionally is also a section header).
+  isTripleSemi = line: match ";;;( .*)?" line != null;
+
+  # Strip the ";;; " (or just ";;;") prefix.
+  stripTriplePrefix =
+    line:
+    let
+      m = match ";;; ?(.*)" line;
+    in
+    if m != null then head m else line;
+
+  # If the input begins with "@doc" (after the ;;; prefix has already
+  # been stripped), return the content after the marker; otherwise
+  # null. Accepts "@doc <text>", "@doc: <text>", and bare "@doc".
+  stripDocMarker =
+    triple:
+    let
+      m = match "@doc(.*)" triple;
+    in
+    if m == null then
+      null
+    else
+      let
+        raw = head m;
+        sep = match "[: ][[:space:]]*(.*)" raw;
+      in
+      if sep != null then head sep else raw;
+
+  # Strip ";;; " and (if present) "@doc[: ]?" from a line.
+  stripCommentLine =
+    line:
+    let
+      triple = stripTriplePrefix line;
+      docM = stripDocMarker triple;
+    in
+    if docM != null then docM else triple;
+
+  # Collect the ;;;-comment block immediately above the form, then keep
+  # only the slice from the first `;;; @doc` marker downward — that
+  # slice is the doc. Anything above the marker (file headers like
+  # `;;; Code:`) is discarded.
+  collectDocLines =
+    lines:
+    let
+      walkBack =
+        acc: idx:
+        if idx < 0 then
+          acc
+        else
+          let
+            line = elemAt lines idx;
+          in
+          if isTripleSemi line then walkBack ([ line ] ++ acc) (idx - 1) else acc;
+
+      block = walkBack [ ] (length lines - 1);
+
+      findMarkerIndex =
+        blk:
+        let
+          go =
+            i:
+            if i >= length blk then
+              null
+            else if stripDocMarker (stripTriplePrefix (elemAt blk i)) != null then
+              i
+            else
+              go (i + 1);
+        in
+        go 0;
+
+      markerIdx = findMarkerIndex block;
+
+      docBlock =
+        if markerIdx == null then [ ] else lib.lists.sublist markerIdx (length block - markerIdx) block;
+    in
+    map stripCommentLine docBlock;
+
+  extractDocFromPrev =
+    prevText:
+    let
+      raw = lib.splitString "\n" prevText;
+      # builtins.split returns text up to (but not including) the `(`
+      # of `(use-package …)`, so the last element is usually an empty
+      # string from the trailing newline. Drop it so the marker check
+      # actually reaches the last comment line.
+      n = length raw;
+      lines = if n > 0 && elemAt raw (n - 1) == "" then lib.lists.sublist 0 (n - 1) raw else raw;
+    in
+    lib.concatStringsSep "\n" (collectDocLines lines);
+
+  # ── Parsers built on the shared helpers ──────────────────────────
+
   parsePackagesFromContent =
     content:
     let
-      parts = split "\\(use-package[[:space:]]+([a-zA-Z0-9+_-]+)" content;
+      parts = splitOnUsePackage content;
 
-      # getBlock :: int -> string
-      # Text immediately following the N-th capture group (may be "").
-      getBlock =
-        idx:
-        let
-          next = idx + 1;
-        in
-        if next < length parts then
-          let
-            v = elemAt parts next;
-          in
-          if builtins.isString v then v else ""
-        else
-          "";
-
-      # Character class used as a word-boundary guard. POSIX ERE (which
-      # `builtins.match` speaks) wants `-` at the start or end of a
-      # bracket expression, so we keep it last. We spell alphanumerics
-      # out literally instead of using `[:alnum:]` because some POSIX
-      # regex backends choke on `[[:alnum:]_-]` (ambiguous with the
-      # `[ ]` opener). This works everywhere.
-      wordChar = "[A-Za-z0-9_-]";
-      endSym = "[^A-Za-z0-9_-]";
-
-      # :ensure nil  ->  skip
-      # :ensure t    ->  use the use-package head name
-      # :ensure foo  ->  use foo instead (emacs-overlay aliasing)
-      # :ensure …    ->  absent keyword means "use head name"
-      ensureName =
-        headName: block:
-        let
-          nilMatch = match (".*:ensure[[:space:]]+nil(" + endSym + ".*)?") block;
-          tMatch = match (".*:ensure[[:space:]]+t(" + endSym + ".*)?") block;
-          aliasMatch = match (".*:ensure[[:space:]]+(" + wordChar + "+).*") block;
-        in
-        if nilMatch != null then
-          null
-        else if tMatch != null then
-          headName
-        else if aliasMatch != null then
-          head aliasMatch
-        else
-          headName;
-
-      isDisabled =
-        block:
-        let
-          m = match (".*:disabled[[:space:]]+t(" + endSym + ".*)?") block;
-        in
-        m != null;
-
-      # Process the capture at index `idx`.
       processCapture =
         idx: item:
         if isList item && item != [ ] then
           let
             headName = head item;
-            block = getBlock idx;
+            block = getNextText parts idx;
           in
-          if isDisabled block then null else ensureName headName block
+          if isDisabled block then null else resolveEnsureName headName block
         else
           null;
-
-      results = lib.imap0 processCapture parts;
     in
-    filter (x: x != null && x != "") results;
+    filter (x: x != null && x != "") (lib.imap0 processCapture parts);
+
+  parsePackagesWithDocFromContent =
+    content:
+    let
+      parts = splitOnUsePackage content;
+
+      processCapture =
+        idx: item:
+        if isList item && item != [ ] then
+          let
+            headName = head item;
+            block = getNextText parts idx;
+            prevBlock = getPrevText parts idx;
+          in
+          if isDisabled block then
+            null
+          else
+            {
+              name = headName;
+              doc = extractDocFromPrev prevBlock;
+              ensureNil = isEnsureNil block;
+            }
+        else
+          null;
+    in
+    filter (x: x != null) (lib.imap0 processCapture parts);
 
   # ── File / directory helpers ──────────────────────────────────────
 
   parsePackagesFromFile = file: parsePackagesFromContent (readFile file);
+  parsePackagesWithDocFromFile = file: parsePackagesWithDocFromContent (readFile file);
 
   scanDirectory =
     dir:
@@ -140,6 +270,22 @@ let
       names = lib.concatMap parsePackagesFromFile elFiles;
     in
     lib.unique names;
+
+  scanDirectoryWithDoc =
+    dir:
+    let
+      all = lib.filesystem.listFilesRecursive dir;
+      elFiles = filter (f: lib.hasSuffix ".el" (toString f)) all;
+      sortedFiles = lib.sort (a: b: toString a < toString b) elFiles;
+    in
+    map (f: {
+      # `baseNameOf` retains the source path's string context, which
+      # later trips `listToAttrs` (attrset keys must be context-free).
+      # `unsafeDiscardStringContext` strips it; the basename is just a
+      # filename ("init-ai.el"), no longer a reference to a store path.
+      file = builtins.unsafeDiscardStringContext (builtins.baseNameOf (toString f));
+      entries = parsePackagesWithDocFromFile f;
+    }) sortedFiles;
 
   # ── Name mapping ──────────────────────────────────────────────────
   #
@@ -237,161 +383,6 @@ let
         autoPkgs ++ extras;
     in
     scope.withPackages collect;
-
-  # ── Doc extraction (for nix/packages-doc.nix) ─────────────────────
-  #
-  # In addition to the package name and `:ensure` resolution above, the
-  # docs generator wants the WHY-comment that authors place immediately
-  # above each `(use-package ...)` form, marked with `;;; @doc`. The
-  # convention is documented in docs/configuration/package-reference.mdx
-  # and lives next to the use-package form so the form is the single
-  # source of truth.
-  #
-  # For each capture we look at the text *before* the form (the
-  # `parts[idx-1]` element produced by `builtins.split`) and walk its
-  # lines from the bottom up, collecting trailing `;;; @doc ...` lines.
-  # The walk stops at the first non-marker line, so a section header
-  # like `;;;; Section name` or a blank line breaks the doc.
-  #
-  # Returned entries look like:
-  #
-  #     { name = "magit"; doc = "Git porcelain ..."; ensureNil = false; }
-
-  # Strip the marker prefix from a single matched line.
-  #   "Foo"      → "Foo"     (input came from `;;; @docFoo`, no separator)
-  #   ": Foo"    → "Foo"
-  #   " Foo"     → "Foo"
-  #   ""         → ""        (blank `;;; @doc` line — paragraph break)
-  stripDocSeparator =
-    raw:
-    let
-      m = match "[: ][[:space:]]*(.*)" raw;
-    in
-    if m != null then head m else raw;
-
-  # Walk `lines` backwards from `idx`, collecting `;;; @doc`-prefixed
-  # entries until the first non-marker line. The accumulator is built
-  # in forward order (oldest first) so the final concatStringsSep
-  # preserves authoring order.
-  collectDocLines =
-    lines:
-    let
-      walk =
-        acc: idx:
-        if idx < 0 then
-          acc
-        else
-          let
-            line = elemAt lines idx;
-            markerMatch = match ";;; @doc(.*)" line;
-          in
-          if markerMatch != null then
-            walk ([ (stripDocSeparator (head markerMatch)) ] ++ acc) (idx - 1)
-          else
-            acc;
-    in
-    walk [ ] (length lines - 1);
-
-  extractDocFromPrev =
-    prevText:
-    let
-      raw = lib.splitString "\n" prevText;
-      # `builtins.split` gives us text up to (but not including) the `(`
-      # of `(use-package ...)`, so the last element is usually an empty
-      # string from the trailing newline. Drop it so the marker check
-      # actually reaches the last comment line.
-      n = length raw;
-      lines = if n > 0 && elemAt raw (n - 1) == "" then lib.lists.sublist 0 (n - 1) raw else raw;
-    in
-    lib.concatStringsSep "\n" (collectDocLines lines);
-
-  parsePackagesWithDocFromContent =
-    content:
-    let
-      parts = split "\\(use-package[[:space:]]+([a-zA-Z0-9+_-]+)" content;
-
-      getBlock =
-        idx:
-        let
-          next = idx + 1;
-        in
-        if next < length parts then
-          let
-            v = elemAt parts next;
-          in
-          if builtins.isString v then v else ""
-        else
-          "";
-
-      getPrevBlock =
-        idx:
-        let
-          prev = idx - 1;
-        in
-        if prev >= 0 then
-          let
-            v = elemAt parts prev;
-          in
-          if builtins.isString v then v else ""
-        else
-          "";
-
-      endSym = "[^A-Za-z0-9_-]";
-
-      isEnsureNil =
-        block:
-        let
-          m = match (".*:ensure[[:space:]]+nil(" + endSym + ".*)?") block;
-        in
-        m != null;
-
-      isDisabled =
-        block:
-        let
-          m = match (".*:disabled[[:space:]]+t(" + endSym + ".*)?") block;
-        in
-        m != null;
-
-      processCapture =
-        idx: item:
-        if isList item && item != [ ] then
-          let
-            headName = head item;
-            block = getBlock idx;
-            prevBlock = getPrevBlock idx;
-          in
-          if isDisabled block then
-            null
-          else
-            {
-              name = headName;
-              doc = extractDocFromPrev prevBlock;
-              ensureNil = isEnsureNil block;
-            }
-        else
-          null;
-
-      results = lib.imap0 processCapture parts;
-    in
-    filter (x: x != null) results;
-
-  parsePackagesWithDocFromFile = file: parsePackagesWithDocFromContent (readFile file);
-
-  scanDirectoryWithDoc =
-    dir:
-    let
-      all = lib.filesystem.listFilesRecursive dir;
-      elFiles = filter (f: lib.hasSuffix ".el" (toString f)) all;
-      sortedFiles = lib.sort (a: b: toString a < toString b) elFiles;
-    in
-    map (f: {
-      # `baseNameOf` retains the source path's string context, which
-      # later trips `listToAttrs` (attrset keys must be context-free).
-      # `unsafeDiscardStringContext` strips it; the basename is just a
-      # filename ("init-ai.el"), no longer a reference to a store path.
-      file = builtins.unsafeDiscardStringContext (builtins.baseNameOf (toString f));
-      entries = parsePackagesWithDocFromFile f;
-    }) sortedFiles;
 
   # ── Debug helpers ─────────────────────────────────────────────────
 

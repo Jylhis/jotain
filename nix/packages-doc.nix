@@ -175,7 +175,7 @@ let
     edit the source file and run `just docs-refresh-packages`.
 
     See the module-level narrative under
-    [Architecture → Modules](architecture/modules) for higher-level
+    [Architecture → Modules](/architecture/modules) for higher-level
     grouping.
   '';
 
