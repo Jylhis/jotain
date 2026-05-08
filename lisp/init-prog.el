@@ -271,7 +271,8 @@ connection alongside any existing language server."
 
   (add-to-list 'display-buffer-alist
                '(jotain-prog--envrc-blocked-p
-                 (display-buffer-no-window))))
+                 (display-buffer-no-window)
+                 (allow-no-window . t))))
 
 ;;; @doc Async format-on-save through external formatters (ruff, nixfmt,
 ;;; rustfmt, prettier, …). Replaces hand-rolled per-language hooks
