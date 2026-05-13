@@ -29,7 +29,7 @@
   (org-pretty-entities         t)
   (org-src-fontify-natively    t)
   (org-src-tab-acts-natively   t)
-  (org-confirm-babel-evaluate  nil)
+  (org-confirm-babel-evaluate  t)
   (org-log-done                'time)
   (org-return-follows-link     t)
   (org-fold-catch-invisible-edits 'show-and-error)
