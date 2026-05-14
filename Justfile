@@ -40,16 +40,16 @@ daemon *ARGS:
     emacs --fg-daemon --init-directory={{config_dir}} {{ARGS}}
 
 # Connect a graphical emacsclient frame to the running daemon. Falls
-# back to a fresh Emacs if no daemon is running.
+# back to a fresh Emacs (with the repo config) if no daemon is running.
 [group('run')]
 client *ARGS:
-    emacsclient -c --alternate-editor='' {{ARGS}}
+    emacsclient -c --alternate-editor='emacs --init-directory={{config_dir}}' {{ARGS}}
 
 # Connect a terminal emacsclient frame to the running daemon. Falls
-# back to a fresh -nw Emacs if no daemon is running.
+# back to a fresh -nw Emacs (with the repo config) if no daemon is running.
 [group('run')]
 client-tty *ARGS:
-    emacsclient -t --alternate-editor='' {{ARGS}}
+    emacsclient -t --alternate-editor='emacs -nw --init-directory={{config_dir}}' {{ARGS}}
 
 # Lightweight `emacs -Q -nw` for quick edits, no Jotain config. The
 # wombat theme keeps the buffer readable on dark terminals.
