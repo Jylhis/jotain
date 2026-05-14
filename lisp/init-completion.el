@@ -107,6 +107,15 @@
   :demand t
   :config (marginalia-mode 1))
 
+;;; @doc Show match counts like `(3/12)' in the isearch prompt while
+;;; typing. Built-in (Emacs 27+); replaces what `anzu' used to provide.
+(use-package isearch
+  :ensure nil
+  :custom
+  (isearch-lazy-count t)
+  (lazy-count-prefix-format "(%s/%s) ")
+  (lazy-count-suffix-format nil))
+
 ;;;; Consult — the big binding table
 
 ;;; @doc Consult provides preview-as-you-go variants of nearly every

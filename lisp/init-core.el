@@ -245,8 +245,22 @@ immediately for writes."
 ;;; across sessions. Built-in, enabled globally.
 (use-package savehist
   :ensure nil
-  :custom (savehist-file (jotain-var-file "savehist.el"))
-  :config (savehist-mode 1))
+  :custom
+  (savehist-file (jotain-var-file "savehist.el"))
+  (savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
+  :config
+  (savehist-mode 1)
+  ;; Strip text properties from kill-ring entries before they hit the
+  ;; savehist file — propertised strings serialize to enormous blobs of
+  ;; face/font-lock metadata that nobody needs across sessions.
+  (add-hook 'savehist-save-hook
+            (lambda ()
+              (setq kill-ring
+                    (mapcar (lambda (entry)
+                              (if (stringp entry)
+                                  (substring-no-properties entry)
+                                entry))
+                            kill-ring)))))
 
 ;;; @doc Built-in bookmark store. State file is themed under var/ so it
 ;;; joins the rest of Jotain's persistent state.

@@ -71,5 +71,12 @@
   (super-save-delete-trailing-whitespace 'except-current-line)
   :config (super-save-mode 1))
 
+;;; @doc Make `M-x re-builder' use string syntax — the same form you'd
+;;; paste into `re-search-forward' — instead of the default `read'
+;;; syntax that requires escaping every backslash twice.
+(use-package re-builder
+  :ensure nil
+  :custom (reb-re-syntax 'string))
+
 (provide 'init-editing)
 ;;; init-editing.el ends here
