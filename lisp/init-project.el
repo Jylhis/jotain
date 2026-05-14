@@ -32,8 +32,8 @@
 
 (defun jotain-find-projects-and-switch ()
   "Scan `jotain-projects-directories', pick a project, remember and open it.
-Completion labels include the parent root in parentheses so projects with
-the same base name in different roots stay distinguishable."
+Completion labels include the full abbreviated parent root, so two
+projects sharing a basename across different roots stay distinct."
   (interactive)
   (let* ((dirs (cl-loop for root in jotain-projects-directories
                         when (file-directory-p root)
@@ -41,7 +41,7 @@ the same base name in different roots stay distinguishable."
          (choices (cl-loop for d in dirs
                            when (file-directory-p d)
                            for name = (file-name-nondirectory d)
-                           for parent = (file-name-nondirectory
+                           for parent = (abbreviate-file-name
                                          (directory-file-name
                                           (file-name-directory d)))
                            collect (cons (format "%s (%s)" name parent) d))))

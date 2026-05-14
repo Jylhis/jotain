@@ -36,17 +36,26 @@
   (tab-bar-history-mode 1))
 
 (defun jotain-tabs--switch-project-in-tab (orig dir)
-  "Open DIR in its own tab; reuse an existing tab named after it."
-  (let* ((name (file-name-nondirectory (directory-file-name dir)))
-         (tabs (tab-bar-tabs))
-         (idx  (cl-position name tabs
-                            :key (lambda (tab) (alist-get 'name tab))
-                            :test #'string=)))
+  "Open DIR in its own tab.
+Tabs are keyed by the abbreviated project directory (stored as
+the `jotain-tabs-project-dir' tab parameter), so two projects
+that share a basename across different roots get distinct tabs."
+  (let* ((dir-key (abbreviate-file-name (directory-file-name dir)))
+         (name    (file-name-nondirectory (directory-file-name dir)))
+         (tabs    (tab-bar-tabs))
+         (idx     (cl-position
+                   dir-key tabs
+                   :key (lambda (tab)
+                          (alist-get 'jotain-tabs-project-dir tab))
+                   :test #'equal)))
     (if idx
         (progn (tab-bar-select-tab (1+ idx))
                (funcall orig dir))
       (tab-bar-new-tab)
       (tab-bar-rename-tab name)
+      (let ((current (assq 'current-tab (tab-bar-tabs))))
+        (when current
+          (push (cons 'jotain-tabs-project-dir dir-key) (cdr current))))
       (funcall orig dir))))
 
 (advice-add 'project-switch-project :around
