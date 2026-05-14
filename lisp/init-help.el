@@ -13,7 +13,8 @@
 (use-package help
   :ensure nil
   :custom
-  (help-window-select t))
+  (help-window-select t)
+  (help-window-keep-selected t))
 
 ;;; @doc Built-in echo-area tooltips on buttons and links when point
 ;;; lingers — discoverability for the parts of Emacs that aren't
