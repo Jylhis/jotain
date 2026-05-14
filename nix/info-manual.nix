@@ -105,6 +105,10 @@ let
       out = "setting-variables.texi";
     }
     {
+      src = "ergonomics.mdx";
+      out = "ergonomics.texi";
+    }
+    {
       src = "inspiration.mdx";
       out = "inspiration.texi";
     }
