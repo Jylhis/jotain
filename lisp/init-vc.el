@@ -24,6 +24,58 @@
   (vc-follow-symlinks t)
   (vc-handled-backends '(Git)))
 
+;;; @doc Quick jump to a file git status reports as changed. Runs
+;;; `git status --porcelain=v1' and offers M/A/D/R/?? entries
+;;; through `completing-read'. Adapted from Rahul M. Juliato's
+;;; emacs-solo/switch-git-status-buffer.
+(use-package vc-git
+  :ensure nil
+  :bind ("C-x C-g" . jotain-switch-git-status-buffer)
+  :preface
+  (declare-function vc-git-root "vc-git" (file))
+  (defun jotain-switch-git-status-buffer ()
+    "Switch to a file git status reports as changed in this repo.
+Candidates are parsed from `git status --porcelain=v1' (modified,
+added, deleted, renamed, untracked) and offered through
+`completing-read'."
+    (interactive)
+    (require 'vc-git)
+    (let ((repo-root (vc-git-root default-directory)))
+      (if (not repo-root)
+          (message "Not inside a Git repository.")
+        (let* ((expanded-root (expand-file-name repo-root))
+               (default-directory expanded-root)
+               (cmd-output (shell-command-to-string
+                            "git status --porcelain=v1"))
+               (target-files
+                (let (files)
+                  (dolist (line (split-string cmd-output "\n" t)
+                                (nreverse files))
+                    (when (> (length line) 3)
+                      (let ((status (substring line 0 2))
+                            (path-info (substring line 3)))
+                        (cond
+                         ((string-match-p "^R" status)
+                          (let ((new-path (cadr (split-string
+                                                 path-info " -> " t))))
+                            (when new-path
+                              (push (cons (format "R  %s" new-path)
+                                          new-path)
+                                    files))))
+                         ((string-match-p "[MAD?]" status)
+                          (push (cons (format "%s %s" status path-info)
+                                      path-info)
+                                files)))))))))
+          (if (not target-files)
+              (message "No changed files in this repository.")
+            (let* ((selection (completing-read
+                               "Switch to git-changed file: "
+                               (mapcar #'car target-files) nil t))
+                   (file-path (cdr (assoc selection target-files))))
+              (when file-path
+                (find-file (expand-file-name file-path
+                                             expanded-root))))))))))
+
 ;;; @doc The Git porcelain. Bound C-x g for status, C-x M-g for global
 ;;; dispatch, C-c g for the file-specific menu. Refined hunks +
 ;;; whitespace-ignoring diffs are turned on globally.
