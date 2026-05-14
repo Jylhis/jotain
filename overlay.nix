@@ -70,7 +70,7 @@ in
 
   sonarlintLs = final.sonarlint-ls;
 
-  dockerfileLs = final.dockerfile-language-server-nodejs;
+  dockerfileLs = final.dockerfile-language-server;
 
   jotainInfo = import ./nix/info-manual.nix {
     pkgs = final;
