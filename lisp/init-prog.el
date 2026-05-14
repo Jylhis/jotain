@@ -66,7 +66,10 @@
   :ensure nil ; Provided by Nix
   :defer t
   :commands combobulate-mode
-  :custom (combobulate-key-prefix "C-c o"))
+  :custom (combobulate-key-prefix "C-c o")
+  :bind (:map combobulate-key-map
+              ("M-P" . combobulate-drag-up)
+              ("M-N" . combobulate-drag-down)))
 
 ;;;; Eglot
 
