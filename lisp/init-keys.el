@@ -131,13 +131,16 @@ Region active → deactivate it.  Otherwise call regular
 ;; remaining gap for commands that don't have one out of the box.
 ;; See the "Ergonomics" chapter of the Info manual for background.
 
-;; After `C-x ^', `C-x }', or `C-x {', single `^', `}', or `{'
-;; keystrokes keep resizing the window. Cleared by
-;; `repeat-exit-timeout' (2 s, set in init-core.el).
+;; After `C-x ^', `C-x }', or `C-x {', single `^', `v', `}', or `{'
+;; keystrokes keep resizing the window. `shrink-window' has no
+;; default key binding but joins the overlay once any other entry
+;; command has fired, so `C-x ^ ^ v v' overshoots and corrects.
+;; Cleared by `repeat-exit-timeout' (2 s, set in init-core.el).
 (defvar-keymap jotain-window-resize-repeat-map
   :doc "Repeat map for window-resize commands."
   :repeat t
   "^" #'enlarge-window
+  "v" #'shrink-window
   "}" #'enlarge-window-horizontally
   "{" #'shrink-window-horizontally)
 
