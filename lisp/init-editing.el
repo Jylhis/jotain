@@ -36,6 +36,16 @@
   :ensure nil
   :hook ((prog-mode . subword-mode)))
 
+;;; @doc Emacs 30 ships `replace-regexp-as-diff' and
+;;; `multi-file-replace-regexp-as-diff' — run a regex replacement, but
+;;; see the result as a unified diff first and either apply it as a
+;;; patch or abort. Worth reaching for on any non-trivial refactor.
+;;; The dired-marked variant is bound in `init-navigation.el'.
+(use-package replace
+  :ensure nil
+  :bind (("M-s R"   . replace-regexp-as-diff)
+         ("M-s M-R" . multi-file-replace-regexp-as-diff)))
+
 ;;; @doc Treesit-aware semantic region expansion. Smaller, faster
 ;;; successor to expand-region; produces better expansions with
 ;;; much less code now that treesit is everywhere.
