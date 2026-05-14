@@ -133,18 +133,34 @@
 
   ;; rassumfrassum (`rass`) multiplexes several real LSP servers behind a
   ;; single stdio connection so eglot effectively drives multiple servers
-  ;; per buffer.  Provided by the devenv shell; on bare hosts where `rass'
-  ;; is missing, eglot falls back to its built-in lookup.
+  ;; per buffer.  Entries are registered only when `rass' and the
+  ;; underlying servers are actually on PATH; eglot falls back to its
+  ;; built-in lookup otherwise, so a missing companion server never
+  ;; breaks LSP entirely.
   (when (executable-find "rass")
-    (add-to-list 'eglot-server-programs
-                 '((tsx-ts-mode typescript-ts-mode)
-                   . ("rass"
-                      "--" "typescript-language-server" "--stdio"
-                      "--" "eslint-lsp" "--stdio"
-                      "--" "tailwindcss-language-server" "--stdio")))
-    (add-to-list 'eglot-server-programs
-                 '((python-mode python-ts-mode)
-                   . ("rass" "python"))))
+    ;; TS/TSX/typescript-mode: typescript-language-server is the primary;
+    ;; eslint-lsp and tailwindcss-language-server are layered in when
+    ;; available.  We only register the rass entry when at least one
+    ;; companion is present — with just tsserver, the plain eglot path
+    ;; is cheaper than spawning rass for no reason.
+    (when (executable-find "typescript-language-server")
+      (let (extras)
+        (dolist (s '("eslint-lsp" "tailwindcss-language-server"))
+          (when (executable-find s)
+            (setq extras (append extras (list "--" s "--stdio")))))
+        (when extras
+          (add-to-list
+           'eglot-server-programs
+           (cons '(tsx-ts-mode typescript-ts-mode typescript-mode)
+                 (append '("rass"
+                           "--" "typescript-language-server" "--stdio")
+                         extras))))))
+    ;; Python: the bundled `rass python' preset assumes basedpyright +
+    ;; ruff.  Projects on pylsp/pyright keep eglot's default lookup.
+    (when (and (executable-find "basedpyright")
+               (executable-find "ruff"))
+      (add-to-list 'eglot-server-programs
+                   '((python-mode python-ts-mode) . ("rass" "python")))))
 
   ;; Silence eglot's JSON-RPC event log entirely.
   (fset #'jsonrpc--log-event #'ignore))
