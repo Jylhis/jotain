@@ -74,22 +74,11 @@
 ;; the read buffer cuts the number of read(2) calls dramatically.
 (setopt read-process-output-max (* 4 1024 1024))
 
-;;; @doc Built-in LSP client. Per-language `eglot-ensure` hooks live
-;;; here so all LSP wiring is visible in one place; per-language
-;;; mode regexes stay in their `init-lang-*` file. C-c r is the
-;;; refactor prefix (rename/format/code-actions).
+;;; @doc Built-in LSP client. Start manually with `M-x eglot` in
+;;; trusted projects. C-c r is the refactor prefix
+;;; (rename/format/code-actions).
 (use-package eglot
   :ensure nil
-  ;; Per-language modules register modes only; auto-start lives here.
-  :hook
-  ((dockerfile-mode
-    go-mode go-ts-mode
-    nix-ts-mode
-    python-mode python-ts-mode
-    rust-mode rust-ts-mode
-    tsx-ts-mode
-    typescript-mode typescript-ts-mode)
-   . eglot-ensure)
   :custom
   (eglot-autoshutdown t)
   (eglot-extend-to-xref t)
