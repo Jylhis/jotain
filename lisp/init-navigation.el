@@ -11,8 +11,9 @@
 ;;; @doc Built-in directory editor — Jotain's primary file manager.
 ;;; The custom block below tames cross-platform ls quirks (BSD on
 ;;; macOS lacks `--group-directories-first` and `--dired`). `M-s R`
-;;; previews a regex rename across all marked files as a unified
-;;; diff (Emacs 30's `dired-do-replace-regexp-as-diff').
+;;; previews a regex replacement across the contents of all marked
+;;; files as a unified diff (Emacs 30's
+;;; `dired-do-replace-regexp-as-diff').
 (use-package dired
   :ensure nil
   :custom
