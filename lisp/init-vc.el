@@ -170,26 +170,36 @@ Each value is a plist (:changes N :commits M :ts TIMESTAMP :busy BOOL).")
 (defun jotain-git-stats--run (root args parse-fn callback)
   "Run \"git ARGS\" with `default-directory' set to ROOT.
 PARSE-FN is applied to stdout; CALLBACK receives the parsed value.
-Errors and non-zero exits are mapped to 0."
+Errors and non-zero exits are mapped to 0. If `make-process' itself
+fails (e.g. `git' is missing on PATH), the buffer is killed and
+CALLBACK is still invoked with 0 so the cache never deadlocks."
   (let* ((buffer (generate-new-buffer " *jotain-git-stats*"))
          (default-directory root))
-    (make-process
-     :name "jotain-git-stats"
-     :buffer buffer
-     :command (cons "git" args)
-     :noquery t
-     :sentinel
-     (lambda (proc _event)
-       (when (memq (process-status proc) '(exit signal))
-         (let ((value
-                (condition-case nil
-                    (if (eq 0 (process-exit-status proc))
-                        (with-current-buffer (process-buffer proc)
-                          (funcall parse-fn (buffer-string)))
-                      0)
-                  (error 0))))
-           (kill-buffer (process-buffer proc))
-           (funcall callback value)))))))
+    (condition-case nil
+        (make-process
+         :name "jotain-git-stats"
+         :buffer buffer
+         :command (cons "git" args)
+         :noquery t
+         :sentinel
+         (lambda (proc _event)
+           (when (memq (process-status proc) '(exit signal))
+             (let* ((buf (process-buffer proc))
+                    (value
+                     (condition-case nil
+                         (if (and (eq 0 (process-exit-status proc))
+                                  (buffer-live-p buf))
+                             (with-current-buffer buf
+                               (funcall parse-fn (buffer-string)))
+                           0)
+                       (error 0))))
+               (when (buffer-live-p buf)
+                 (kill-buffer buf))
+               (funcall callback value)))))
+      (error
+       (when (buffer-live-p buffer)
+         (kill-buffer buffer))
+       (funcall callback 0)))))
 
 (defun jotain-git-stats--refresh (root)
   "Kick off the two async git probes that populate the cache for ROOT."
@@ -240,9 +250,12 @@ Errors and non-zero exits are mapped to 0."
               " "))))
 
 (defun jotain-git-stats--invalidate-current-buffer (&rest _)
-  "Drop the cached freshness for this buffer's repo so the next render refreshes."
-  (when-let* ((file buffer-file-name)
-              (root (vc-git-root file)))
+  "Drop the cached freshness for this buffer's repo so the next render refreshes.
+Falls back to `default-directory' when `buffer-file-name' is nil so
+that magit status buffers (which have no file) still trigger an
+invalidation after `magit-post-refresh-hook'."
+  (when-let* ((file-or-dir (or buffer-file-name default-directory))
+              (root (vc-git-root file-or-dir)))
     (let ((entry (jotain-git-stats--entry (expand-file-name root))))
       (plist-put entry :ts 0))))
 
@@ -252,20 +265,24 @@ Errors and non-zero exits are mapped to 0."
            jotain-git-stats--cache)
   (force-mode-line-update t))
 
-(declare-function doom-modeline-def-segment "doom-modeline" t t)
-(declare-function doom-modeline-def-modeline "doom-modeline" t t)
+(declare-function vc-git-root "vc-git" (file))
+;; `doom-modeline-def-segment' and `doom-modeline-def-modeline' are
+;; macros; make them available at byte-compile time so their forms
+;; below get expanded instead of treated as unknown function calls.
+(eval-when-compile (require 'doom-modeline))
 
 (with-eval-after-load 'doom-modeline
   (doom-modeline-def-segment jotain-git-stats
     "Uncommitted-changes / commits-today counters."
-    (let ((root (and (mode-line-window-selected-p)
-                     buffer-file-name
-                     (vc-git-root buffer-file-name))))
-      (if (not root)
+    (let* ((file buffer-file-name)
+           (raw-root (and (mode-line-window-selected-p)
+                          file
+                          (vc-git-root file))))
+      (if (not raw-root)
           ""
-        (setq root (expand-file-name root))
-        (jotain-git-stats--maybe-refresh root)
-        (or (jotain-git-stats--render root) ""))))
+        (let ((root (expand-file-name raw-root)))
+          (jotain-git-stats--maybe-refresh root)
+          (or (jotain-git-stats--render root) "")))))
 
   ;; Re-declare the `main' modeline with the new segment appended to the
   ;; right-hand list, just before `time'. Mirrors doom-modeline's default
