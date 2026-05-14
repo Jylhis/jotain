@@ -110,6 +110,16 @@ let
 
   systemdWantedBy =
     if cfg.startWithUserSession == "graphical" then "graphical-session.target" else "default.target";
+
+  # Short aliases inspired by https://rahuljuliato.com/posts/launching-emacs-terminal :
+  # `emd` brings up a foreground daemon, `em` connects a terminal client, `emg`
+  # connects a graphical client. All three reuse the wrappers already built
+  # above so --init-directory and runtime PATH stay consistent.
+  shellAliasMap = {
+    "${cfg.shellAliases.prefix}emd" = "${emacsWrapper}/bin/emacs --fg-daemon";
+    "${cfg.shellAliases.prefix}em" = "${lib.getBin editorScript}/bin/jotain-editor";
+    "${cfg.shellAliases.prefix}emg" = "${lib.getBin visualScript}/bin/jotain-visual";
+  };
 in
 {
   options.services.jotain = {
@@ -177,6 +187,21 @@ in
     sonarlint = {
       enable = lib.mkEnableOption "SonarLint language server ({command}`M-x jotain-sonarlint`)";
     };
+
+    shellAliases = {
+      enable = lib.mkEnableOption "shell aliases for the Jotain daemon and clients";
+
+      prefix = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        example = "j";
+        description = ''
+          Optional prefix to namespace the {command}`emd` / {command}`em` /
+          {command}`emg` aliases (e.g. set to `"j"` to get {command}`jemd`,
+          {command}`jem`, {command}`jemg`).
+        '';
+      };
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -191,6 +216,10 @@ in
       EDITOR = "${lib.getBin editorScript}/bin/jotain-editor";
       VISUAL = "${lib.getBin visualScript}/bin/jotain-visual";
     };
+
+    programs.bash.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
+    programs.zsh.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
+    programs.fish.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
 
     home.packages = [
       cfg.package
