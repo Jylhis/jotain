@@ -194,6 +194,10 @@ immediately for writes."
   (require 'ansi-color)
   (ansi-color-apply-on-region (point-min) (point-max)))
 
+(declare-function profiler-start "profiler" (mode))
+(declare-function profiler-stop "profiler")
+(declare-function profiler-report "profiler")
+
 (defvar jotain-profiler--running nil
   "Non-nil when `jotain-profile-toggle' is mid-recording.")
 
