@@ -36,6 +36,19 @@
   :ensure nil
   :hook ((prog-mode . subword-mode)))
 
+;;; @doc Bindings for the two transpose commands Emacs ships without
+;;; defaults, so the prose-level family (sentence, paragraph) is
+;;; reachable alongside the built-in C-t (chars), M-t (words),
+;;; C-x C-t (lines), and C-M-t (sexps, tree-sitter aware in Emacs
+;;; 30+). Caveat: transpose-lines works on real newlines, so it
+;;; gives surprising results under visual-line-mode where wrapped
+;;; "lines" are visual only.
+(use-package emacs
+  :ensure nil
+  :bind
+  (("C-x M-t"   . transpose-sentences)
+   ("C-x C-M-t" . transpose-paragraphs)))
+
 ;;; @doc Defaults for the built-in comment commands (M-;, C-x C-;, M-j).
 ;;; `comment-multi-line' makes M-j continue inside an open block
 ;;; comment instead of closing/reopening; `extra-line' style puts
