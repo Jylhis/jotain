@@ -20,11 +20,40 @@
 
 ;;;; project.el (built-in)
 
+(defcustom jotain-projects-directories
+  (list (expand-file-name "~/Projects")
+        (expand-file-name "~/code")
+        (expand-file-name "~/src"))
+  "Directories whose immediate subdirs are candidates for `jotain-find-projects-and-switch'."
+  :type '(repeat directory)
+  :group 'project)
+
+(defun jotain-find-projects-and-switch ()
+  "Scan `jotain-projects-directories', pick a project, remember and open it."
+  (interactive)
+  (let* ((dirs (cl-loop for root in jotain-projects-directories
+                        when (file-directory-p root)
+                        nconc (directory-files root t "\\`[^.]" t)))
+         (choices (cl-loop for d in dirs
+                           when (file-directory-p d)
+                           collect (cons (file-name-nondirectory d) d))))
+    (unless choices
+      (user-error "No project candidates under %s" jotain-projects-directories))
+    (let* ((pick (completing-read "Project: " choices nil t))
+           (dir  (cdr (assoc pick choices))))
+      (when dir
+        (when-let* ((proj (project-current nil dir)))
+          (project-remember-project proj))
+        (project-switch-project dir)))))
+
 ;;; @doc Built-in project tracker. Extra root markers below mean a
 ;;; project is recognised when any of these is present, not just
-;;; on a VCS root. Project list lives under var/.
+;;; on a VCS root. Project list lives under var/. `C-x p P' scans
+;;; `jotain-projects-directories' to add+open projects not yet in
+;;; the known list.
 (use-package project
   :ensure nil
+  :bind (:map project-prefix-map ("P" . jotain-find-projects-and-switch))
   :custom
   (project-list-file (jotain-var-file "projects.el"))
   (project-buffers-viewer 'project-list-buffers-ibuffer)
