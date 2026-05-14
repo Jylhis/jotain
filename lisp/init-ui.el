@@ -144,11 +144,12 @@ Without this, code points like U+1F389 render as tofu when the
 default face's font lacks them.  FRAME is used to probe font
 availability on the right display."
   (when (display-graphic-p frame)
-    (when-let* ((family (cl-loop for f in jotain-emoji-font-preferences
-                                 when (find-font (font-spec :family f) frame)
-                                 return f)))
-      (set-fontset-font t 'emoji  (font-spec :family family) frame 'prepend)
-      (set-fontset-font t 'symbol (font-spec :family family) frame 'append))))
+    (let ((family (cl-loop for f in jotain-emoji-font-preferences
+                           when (find-font (font-spec :family f) frame)
+                           return f)))
+      (when family
+        (set-fontset-font t 'emoji  (font-spec :family family) frame 'prepend)
+        (set-fontset-font t 'symbol (font-spec :family family) frame 'append)))))
 
 (jotain-ui-apply-emoji-font)
 (add-hook 'server-after-make-frame-hook #'jotain-ui-apply-emoji-font)
