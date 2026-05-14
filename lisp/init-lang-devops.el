@@ -50,15 +50,15 @@ inside a running container."
          (jotain--apply-docker-backend)))
 
 ;;; @doc Dockerfile major mode — syntax highlighting plus build
-;;; commands (`M-x dockerfile-build-buffer'). The runtime command
-;;; name comes from `jotain-docker-backend'.
+;;; commands (`M-x dockerfile-build-buffer`). The runtime command
+;;; name comes from `jotain-docker-backend`.
 (use-package dockerfile-mode
   :defer t
   :config (jotain--apply-docker-backend))
 
 ;;; @doc Magit-style transient menu for containers, images, volumes
-;;; and networks. `C-c d' opens the dispatcher; commands respect
-;;; `jotain-docker-backend' (docker vs podman, including compose and
+;;; and networks. `C-c d` opens the dispatcher; commands respect
+;;; `jotain-docker-backend` (docker vs podman, including compose and
 ;;; the TRAMP method used to open files inside a running container).
 (use-package docker
   :defer t
