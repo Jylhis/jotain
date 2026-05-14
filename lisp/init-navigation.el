@@ -53,23 +53,25 @@
            "\\|^\\.stversions\\'"
            "\\|^__pycache__\\'")))
 
-;;; @doc Async file ops for dired — wraps `dired-do-copy', `-rename',
-;;; `-symlink', `-hardlink' so they fork into a subprocess instead of
-;;; blocking the main Emacs.  Multi-GB copies no longer freeze the UI;
-;;; the mode-line shows progress and a notification fires on completion.
-(use-package async
+;;; @doc Async file ops for dired — wraps `dired-do-copy`, `dired-do-rename`,
+;;; `dired-do-symlink`, `dired-do-hardlink` so they fork into a subprocess
+;;; instead of blocking the main Emacs. Multi-GB copies no longer freeze
+;;; the UI; the mode-line shows progress and a message fires on completion.
+(use-package dired-async
+  :ensure async
   :after dired
-  :functions (dired-async-mode)
   :config (dired-async-mode 1))
 
-;;; @doc rsync from dired — bound to `C-c C-r' in `dired-mode-map'.
-;;; Best for very large transfers or TRAMP sources/destinations: hands
-;;; marked files to `rsync' in an async shell buffer with live progress.
+;;; @doc rsync from dired — bound to `C-c C-r` in `dired-mode-map`. Best
+;;; for very large transfers or TRAMP sources/destinations: hands marked
+;;; files to `rsync` in an async shell buffer with live progress. Uses
+;;; `--progress` (not `--info=progress2`) so stock macOS rsync 2.6.9 still
+;;; works; noisier output, but portable.
 (use-package dired-rsync
   :after dired
   :bind (:map dired-mode-map ("C-c C-r" . dired-rsync))
   :custom
-  (dired-rsync-options "-az --info=progress2 --human-readable"))
+  (dired-rsync-options "-az --progress --human-readable"))
 
 ;;; @doc Pure-Lisp ls emulation. Fallback for macOS without GNU coreutils
 ;;; — gives us folders-first sorting that BSD ls cannot produce.
