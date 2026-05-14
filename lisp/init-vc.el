@@ -92,6 +92,200 @@
   ;; Live, pre-save diff indicators.
   (diff-hl-flydiff-mode 1))
 
+;;; @doc Adds `N/M` counters to the doom-modeline showing
+;;; uncommitted line-level changes against HEAD and commits made
+;;; today (since local midnight, merges excluded). The counter
+;;; switches to a warning/urgent face above configurable
+;;; thresholds — a nudge that the WIP is getting too large to
+;;; squash into one coherent commit. Git invocations run async via
+;;; `make-process` so the modeline render never blocks.
+(defgroup jotain-vc nil
+  "Version-control modeline knobs for the Jotain configuration."
+  :group 'jotain-ui)
+
+(defcustom jotain-git-stats-update-interval 30
+  "Seconds between background refreshes of the git-stats counters."
+  :type 'integer
+  :group 'jotain-vc)
+
+(defcustom jotain-git-stats-warning-threshold 250
+  "Uncommitted-change count above which the counter uses `jotain-git-stats-warning'."
+  :type 'integer
+  :group 'jotain-vc)
+
+(defcustom jotain-git-stats-urgent-threshold 500
+  "Uncommitted-change count above which the counter uses `jotain-git-stats-urgent'."
+  :type 'integer
+  :group 'jotain-vc)
+
+(defface jotain-git-stats-normal '((t :inherit success))
+  "Face for the uncommitted-changes counter below the warning threshold."
+  :group 'jotain-vc)
+
+(defface jotain-git-stats-warning '((t :inherit warning))
+  "Face for the uncommitted-changes counter above the warning threshold."
+  :group 'jotain-vc)
+
+(defface jotain-git-stats-urgent '((t :inherit error))
+  "Face for the uncommitted-changes counter above the urgent threshold."
+  :group 'jotain-vc)
+
+(defface jotain-git-stats-commits '((t :inherit font-lock-keyword-face))
+  "Face for the commits-today counter."
+  :group 'jotain-vc)
+
+(defvar jotain-git-stats--cache (make-hash-table :test 'equal)
+  "Hash table keyed by git repo root.
+Each value is a plist (:changes N :commits M :ts TIMESTAMP :busy BOOL).")
+
+(defvar jotain-git-stats--timer nil
+  "Idle timer that walks the cache and invalidates stale entries.")
+
+(defun jotain-git-stats--entry (root)
+  "Return the cache plist for ROOT, creating a zeroed one if missing."
+  (or (gethash root jotain-git-stats--cache)
+      (puthash root (list :changes 0 :commits 0 :ts 0 :busy nil)
+               jotain-git-stats--cache)))
+
+(defun jotain-git-stats--fresh-p (entry)
+  "Return non-nil if ENTRY's cached values are still within the update interval."
+  (< (- (float-time) (plist-get entry :ts))
+     jotain-git-stats-update-interval))
+
+(defun jotain-git-stats--parse-shortstat (output)
+  "Extract the total of insertions + deletions from `git diff --shortstat' OUTPUT."
+  (let ((sum 0))
+    (when (string-match "\\([0-9]+\\) insertion" output)
+      (setq sum (+ sum (string-to-number (match-string 1 output)))))
+    (when (string-match "\\([0-9]+\\) deletion" output)
+      (setq sum (+ sum (string-to-number (match-string 1 output)))))
+    sum))
+
+(defun jotain-git-stats--count-lines (output)
+  "Count non-empty lines in OUTPUT."
+  (if (string-empty-p (string-trim output))
+      0
+    (length (split-string output "\n" t))))
+
+(defun jotain-git-stats--run (root args parse-fn callback)
+  "Run \"git ARGS\" with `default-directory' set to ROOT.
+PARSE-FN is applied to stdout; CALLBACK receives the parsed value.
+Errors and non-zero exits are mapped to 0."
+  (let* ((buffer (generate-new-buffer " *jotain-git-stats*"))
+         (default-directory root))
+    (make-process
+     :name "jotain-git-stats"
+     :buffer buffer
+     :command (cons "git" args)
+     :noquery t
+     :sentinel
+     (lambda (proc _event)
+       (when (memq (process-status proc) '(exit signal))
+         (let ((value
+                (condition-case nil
+                    (if (eq 0 (process-exit-status proc))
+                        (with-current-buffer (process-buffer proc)
+                          (funcall parse-fn (buffer-string)))
+                      0)
+                  (error 0))))
+           (kill-buffer (process-buffer proc))
+           (funcall callback value)))))))
+
+(defun jotain-git-stats--refresh (root)
+  "Kick off the two async git probes that populate the cache for ROOT."
+  (let ((entry (jotain-git-stats--entry root)))
+    (unless (plist-get entry :busy)
+      (plist-put entry :busy t)
+      (let* ((pending 2)
+             (after (lambda ()
+                      (setq pending (1- pending))
+                      (when (zerop pending)
+                        (plist-put entry :busy nil)
+                        (plist-put entry :ts (float-time))
+                        (force-mode-line-update t)))))
+        (jotain-git-stats--run
+         root '("diff" "--shortstat" "HEAD")
+         #'jotain-git-stats--parse-shortstat
+         (lambda (n) (plist-put entry :changes n) (funcall after)))
+        (jotain-git-stats--run
+         root '("log" "--since=midnight" "--oneline" "--no-merges")
+         #'jotain-git-stats--count-lines
+         (lambda (n) (plist-put entry :commits n) (funcall after)))))))
+
+(defun jotain-git-stats--maybe-refresh (root)
+  "Refresh ROOT's cache if it's stale and no refresh is already in flight."
+  (let ((entry (jotain-git-stats--entry root)))
+    (unless (or (plist-get entry :busy)
+                (jotain-git-stats--fresh-p entry))
+      (jotain-git-stats--refresh root))))
+
+(defun jotain-git-stats--face-for-changes (n)
+  "Pick the appropriate face for N uncommitted changes."
+  (cond ((>= n jotain-git-stats-urgent-threshold)  'jotain-git-stats-urgent)
+        ((>= n jotain-git-stats-warning-threshold) 'jotain-git-stats-warning)
+        (t                                         'jotain-git-stats-normal)))
+
+(defun jotain-git-stats--render (root)
+  "Return the propertised `N/M' string for ROOT, or nil when empty."
+  (let* ((entry (jotain-git-stats--entry root))
+         (n (plist-get entry :changes))
+         (m (plist-get entry :commits)))
+    (when (or (> n 0) (> m 0))
+      (concat " "
+              (propertize (number-to-string n)
+                          'face (jotain-git-stats--face-for-changes n))
+              (propertize "/" 'face 'shadow)
+              (propertize (number-to-string m)
+                          'face 'jotain-git-stats-commits)
+              " "))))
+
+(defun jotain-git-stats--invalidate-current-buffer (&rest _)
+  "Drop the cached freshness for this buffer's repo so the next render refreshes."
+  (when-let* ((file buffer-file-name)
+              (root (vc-git-root file)))
+    (let ((entry (jotain-git-stats--entry (expand-file-name root))))
+      (plist-put entry :ts 0))))
+
+(defun jotain-git-stats--tick ()
+  "Idle-timer callback: invalidate every cache entry so visible buffers re-fetch."
+  (maphash (lambda (_root entry) (plist-put entry :ts 0))
+           jotain-git-stats--cache)
+  (force-mode-line-update t))
+
+(declare-function doom-modeline-def-segment "doom-modeline" t t)
+(declare-function doom-modeline-def-modeline "doom-modeline" t t)
+
+(with-eval-after-load 'doom-modeline
+  (doom-modeline-def-segment jotain-git-stats
+    "Uncommitted-changes / commits-today counters."
+    (let ((root (and (mode-line-window-selected-p)
+                     buffer-file-name
+                     (vc-git-root buffer-file-name))))
+      (if (not root)
+          ""
+        (setq root (expand-file-name root))
+        (jotain-git-stats--maybe-refresh root)
+        (or (jotain-git-stats--render root) ""))))
+
+  ;; Re-declare the `main' modeline with the new segment appended to the
+  ;; right-hand list, just before `time'. Mirrors doom-modeline's default
+  ;; main definition; only the trailing segment list differs.
+  (doom-modeline-def-modeline 'main
+    '(eldoc bar workspace-name window-number modals matches follow
+            buffer-info remote-host buffer-position word-count
+            parrot selection-info)
+    '(compilation objed-state misc-info battery grip irc mu4e gnus github
+                  debug repl lsp minor-modes input-method indent-info
+                  buffer-encoding major-mode process vcs jotain-git-stats
+                  check time))
+
+  (add-hook 'after-save-hook #'jotain-git-stats--invalidate-current-buffer)
+  (add-hook 'magit-post-refresh-hook #'jotain-git-stats--invalidate-current-buffer)
+  (unless jotain-git-stats--timer
+    (setq jotain-git-stats--timer
+          (run-with-idle-timer jotain-git-stats-update-interval t
+                               #'jotain-git-stats--tick))))
+
 ;;; @doc Built-in conflict-marker editor. Custom prefix C-c ^ groups
 ;;; upper/lower/next/prev so resolving merges doesn't require
 ;;; scrolling through the smerge menu.
