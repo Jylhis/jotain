@@ -93,6 +93,10 @@ let
       out = "compilation-mode.texi";
     }
     {
+      src = "keybindings.mdx";
+      out = "keybindings.texi";
+    }
+    {
       src = "setting-variables.mdx";
       out = "setting-variables.texi";
     }
