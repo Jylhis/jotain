@@ -58,5 +58,29 @@ positions, and focus are preserved during the swap."
   :ensure nil
   :config (windmove-default-keybindings))
 
+;;;; Repeat maps — Emacs-native "one-shot modifier" pattern
+;;
+;; `repeat-mode' (enabled in init-core.el) lets a tagged command be
+;; repeated with single keystrokes immediately after its first
+;; invocation: type the chord once, then keep typing the trailing
+;; key.  Many built-in commands ship their own repeat-maps already
+;; (`other-window', `next-buffer', `undo', `next-error', …) — so
+;; `M-o o o' and `C-/ /' Just Work.  The maps below fill the
+;; remaining gap for commands that don't have one out of the box.
+;; See the "Ergonomics" chapter of the Info manual for background.
+
+;; After `C-x ^', `C-x }', or `C-x {', single `^', `v', `}', or `{'
+;; keystrokes keep resizing the window. `shrink-window' has no
+;; default key binding but joins the overlay once any other entry
+;; command has fired, so `C-x ^ ^ v v' overshoots and corrects.
+;; Cleared by `repeat-exit-timeout' (2 s, set in init-core.el).
+(defvar-keymap jotain-window-resize-repeat-map
+  :doc "Repeat map for window-resize commands."
+  :repeat t
+  "^" #'enlarge-window
+  "v" #'shrink-window
+  "}" #'enlarge-window-horizontally
+  "{" #'shrink-window-horizontally)
+
 (provide 'init-keys)
 ;;; init-keys.el ends here
