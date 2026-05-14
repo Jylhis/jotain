@@ -133,11 +133,23 @@ attributes are applied globally so all frames see the update."
 (setopt cursor-in-non-selected-windows nil)
 (setopt highlight-nonselected-windows nil)
 
+(defcustom jotain-line-numbers-in-prog t
+  "When non-nil, show line numbers in `prog-mode' and `conf-mode' buffers."
+  :type 'boolean
+  :group 'jotain-ui)
+
+(defun jotain-ui--maybe-line-numbers ()
+  "Enable `display-line-numbers-mode' when `jotain-line-numbers-in-prog' is non-nil."
+  (when jotain-line-numbers-in-prog
+    (display-line-numbers-mode 1)))
+
 ;;; @doc Built-in line numbers — only on programming and config buffers,
-;;; never on prose or org files where they're noise.
+;;; never on prose or org files where they're noise. Honour the
+;;; `jotain-line-numbers-in-prog' toggle so users can flip it off
+;;; without editing this file.
 (use-package display-line-numbers
   :ensure nil
-  :hook ((prog-mode conf-mode) . display-line-numbers-mode))
+  :hook ((prog-mode conf-mode) . jotain-ui--maybe-line-numbers))
 
 ;;; @doc Built-in pixel-precision smooth scrolling. Required for usable
 ;;; trackpad / smooth-mouse scrolling.
@@ -261,9 +273,16 @@ attributes are applied globally so all frames see the update."
 (use-package rainbow-delimiters
   :hook ((lisp-mode emacs-lisp-mode) . rainbow-delimiters-mode))
 
+(defcustom jotain-indent-bars-enabled t
+  "When non-nil, enable `indent-bars-mode' in `prog-mode'."
+  :type 'boolean
+  :group 'jotain-ui)
+
 ;;; @doc Vertical indent guides for code, treesit-aware so the bars
-;;; follow real syntactic indentation.
+;;; follow real syntactic indentation. Toggle via
+;;; `jotain-indent-bars-enabled'.
 (use-package indent-bars
+  :if jotain-indent-bars-enabled
   :custom (indent-bars-treesit-support t)
   :hook (prog-mode . indent-bars-mode))
 
