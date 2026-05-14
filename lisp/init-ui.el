@@ -139,7 +139,7 @@ attributes are applied globally so all frames see the update."
   :group 'jotain-ui)
 
 (defun jotain-ui--maybe-line-numbers ()
-  "Enable `display-line-numbers-mode' when `jotain-line-numbers-in-prog' is non-nil."
+  "Enable `display-line-numbers-mode' if `jotain-line-numbers-in-prog' is set."
   (when jotain-line-numbers-in-prog
     (display-line-numbers-mode 1)))
 
@@ -278,13 +278,19 @@ attributes are applied globally so all frames see the update."
   :type 'boolean
   :group 'jotain-ui)
 
+(declare-function indent-bars-mode "indent-bars" (&optional arg))
+
+(defun jotain-ui--maybe-indent-bars ()
+  "Enable `indent-bars-mode' when `jotain-indent-bars-enabled' is non-nil."
+  (when jotain-indent-bars-enabled
+    (indent-bars-mode 1)))
+
 ;;; @doc Vertical indent guides for code, treesit-aware so the bars
 ;;; follow real syntactic indentation. Toggle via
 ;;; `jotain-indent-bars-enabled'.
 (use-package indent-bars
-  :if jotain-indent-bars-enabled
   :custom (indent-bars-treesit-support t)
-  :hook (prog-mode . indent-bars-mode))
+  :hook (prog-mode . jotain-ui--maybe-indent-bars))
 
 ;;;; Terminal compatibility (no-ops in GUI)
 
