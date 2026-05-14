@@ -74,7 +74,8 @@ let
       direnv # envrc
       coreutils # gls, used by dirvish-listing-switches on darwin
     ]
-    ++ lib.optional cfg.sonarlint.enable pkgs.sonarlintLs;
+    ++ lib.optional cfg.sonarlint.enable pkgs.sonarlintLs
+    ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfileLs;
 
   runtimePath = lib.makeBinPath runtimeDeps;
 
@@ -176,6 +177,10 @@ in
 
     sonarlint = {
       enable = lib.mkEnableOption "SonarLint language server ({command}`M-x jotain-sonarlint`)";
+    };
+
+    dockerfileLsp = {
+      enable = lib.mkEnableOption "Dockerfile language server ({command}`docker-langserver`), auto-attached by Eglot in {command}`dockerfile-mode`";
     };
   };
 

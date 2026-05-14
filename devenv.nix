@@ -26,6 +26,10 @@ in
     # Start in Emacs with M-x jotain-sonarlint.
     sonarlint-ls
 
+    # Dockerfile language server (`docker-langserver`) — Eglot auto-attaches
+    # it in dockerfile-mode via the entry registered in init-prog.el.
+    dockerfile-language-server-nodejs
+
     # Documentation build chain (`just info`, `just docs`).  Declared
     # here so both the recipe and interactive invocations have them on
     # PATH; the Nix derivations still pull their own copies.
