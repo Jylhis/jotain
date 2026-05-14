@@ -66,7 +66,7 @@ Otherwise call regular `keyboard-quit'."
   :bind
   (("C-z" . nil)
    ("C-x C-z" . nil)
-   ("C-g" . jotain-keyboard-quit-dwim)
+   ([remap keyboard-quit] . jotain-keyboard-quit-dwim)
    ("M-o" . other-window)
    ("C-x j" . jotain-toggle-window-split)))
 
