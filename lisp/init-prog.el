@@ -131,6 +131,21 @@
   (add-to-list 'eglot-server-programs
                '(dockerfile-mode . ("docker-langserver" "--stdio")))
 
+  ;; rassumfrassum (`rass`) multiplexes several real LSP servers behind a
+  ;; single stdio connection so eglot effectively drives multiple servers
+  ;; per buffer.  Provided by the devenv shell; on bare hosts where `rass'
+  ;; is missing, eglot falls back to its built-in lookup.
+  (when (executable-find "rass")
+    (add-to-list 'eglot-server-programs
+                 '((tsx-ts-mode typescript-ts-mode)
+                   . ("rass"
+                      "--" "typescript-language-server" "--stdio"
+                      "--" "eslint-lsp" "--stdio"
+                      "--" "tailwindcss-language-server" "--stdio")))
+    (add-to-list 'eglot-server-programs
+                 '((python-mode python-ts-mode)
+                   . ("rass" "python"))))
+
   ;; Silence eglot's JSON-RPC event log entirely.
   (fset #'jsonrpc--log-event #'ignore))
 
