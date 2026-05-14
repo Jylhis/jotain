@@ -42,12 +42,13 @@
 ;;; opening and closing delimiters on their own lines for
 ;;; `comment-region'; `comment-empty-lines' makes `comment-region'
 ;;; treat blank lines the same as content lines;
-;;; `comment-auto-fill-only-comments' keeps M-q in a prog-mode buffer
-;;; with `auto-fill-mode' on confined to comments. C-c ; is an
+;;; `comment-auto-fill-only-comments' keeps automatic line wrapping
+;;; (when `auto-fill-mode' is on) confined to comments. C-c ; is an
 ;;; ergonomic alias for `comment-line' — C-; is taken by embark-dwim.
-;;; Per-mode overrides go in the language module via a mode hook:
-;;;   (add-hook 'foo-mode-hook
-;;;             (lambda () (setq-local comment-multi-line nil)))
+;;; Per-mode overrides go in the language module via a named hook:
+;;;   (defun my-foo-mode-setup ()
+;;;     (setq-local comment-multi-line nil))
+;;;   (add-hook 'foo-mode-hook #'my-foo-mode-setup)
 (use-package newcomment
   :ensure nil
   :bind ("C-c ;" . comment-line)
