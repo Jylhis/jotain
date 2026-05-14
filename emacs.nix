@@ -4,7 +4,7 @@
 # tree-sitter grammars, use default.nix instead.
 #
 # Usage:
-#   nix-build emacs.nix                                            # Emacs 30 (uses binary cache)
+#   nix-build emacs.nix                                            # Emacs 31 (uses binary cache)
 #   nix-build emacs.nix --arg noGui true                           # terminal-only
 #   nix-build emacs.nix --arg withPgtk true                        # pure GTK (Wayland)
 #   nix-build emacs.nix --arg withGTK3 true                        # GTK3 + X11
@@ -152,9 +152,9 @@ let
       branch = "master";
     };
     unstable = {
-      srcRev = if rev != null then rev else "emacs-30.2";
+      srcRev = if rev != null then rev else "emacs-31.0.92";
       srcHash = if hash != null then hash else lib.fakeHash;
-      branch = "emacs-30";
+      branch = "emacs-31";
     };
     igc = {
       srcRev = if rev != null then rev else "feature/igc3";
@@ -174,7 +174,7 @@ let
   # ── Base package from nixpkgs ────────────────────────────────────
   # macport uses a separate derivation with macport-specific configure
   # flags (--enable-mac-app, --with-mac, etc.) and Darwin-only source.
-  basePackage = if variant == "macport" then pkgs.emacs30-macport else pkgs.emacs30;
+  basePackage = if variant == "macport" then pkgs.emacs31-macport else pkgs.emacs31;
 
   # ── Forward all boolean flags to nixpkgs make-emacs.nix ──────────
   #
@@ -185,7 +185,7 @@ let
   #     import ./emacs.nix {}                  # mainline variant
   #     import ./emacs.nix { noGui = true; }   # any standard override
   #
-  # produces the *exact* store path of `pkgs.emacs30(.override { ... })`,
+  # produces the *exact* store path of `pkgs.emacs31(.override { ... })`,
   # so the cachix.org / cache.nixos.org binary cache hits and we never
   # rebuild Emacs from source. Only the git/unstable/igc/macport
   # variants and the Darwin patch flags are expected to diverge — those
@@ -197,7 +197,7 @@ let
   #       'let lock = builtins.fromJSON (builtins.readFile ./flake.lock);
   #            n = lock.nodes.nixpkgs.locked;
   #            nixpkgs = fetchTarball { url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz"; sha256 = n.narHash; };
-  #        in (import ./emacs.nix {}).outPath == (import nixpkgs {}).emacs30.outPath'
+  #        in (import ./emacs.nix {}).outPath == (import nixpkgs {}).emacs31.outPath'
   overridden = basePackage.override {
     inherit
       noGui
@@ -234,8 +234,8 @@ let
   };
 
   # ── Darwin patches (fetched from nix-giant/nix-darwin-emacs) ─────
-  # Patch directory: "30" for Emacs 30.x, "unstable" for master/31+
-  patchBranch = if variant == "git" || variant == "igc" then "unstable" else "30";
+  # Patch directory: "31" for Emacs 31.x, "unstable" for master/32+
+  patchBranch = if variant == "git" || variant == "igc" then "unstable" else "31";
 
   darwinPatchUrl =
     name:
