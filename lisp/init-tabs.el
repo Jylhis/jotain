@@ -46,8 +46,8 @@
         (progn (tab-bar-select-tab (1+ idx))
                (funcall orig dir))
       (tab-bar-new-tab)
-      (funcall orig dir)
-      (tab-bar-rename-tab name))))
+      (tab-bar-rename-tab name)
+      (funcall orig dir))))
 
 (advice-add 'project-switch-project :around
             #'jotain-tabs--switch-project-in-tab)

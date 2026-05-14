@@ -24,19 +24,27 @@
   (list (expand-file-name "~/Projects")
         (expand-file-name "~/code")
         (expand-file-name "~/src"))
-  "Directories whose immediate subdirs are candidates for `jotain-find-projects-and-switch'."
+  "Roots whose immediate subdirs feed `jotain-find-projects-and-switch'."
   :type '(repeat directory)
   :group 'project)
 
+(declare-function project-remember-project "project" (pr &optional no-write))
+
 (defun jotain-find-projects-and-switch ()
-  "Scan `jotain-projects-directories', pick a project, remember and open it."
+  "Scan `jotain-projects-directories', pick a project, remember and open it.
+Completion labels include the parent root in parentheses so projects with
+the same base name in different roots stay distinguishable."
   (interactive)
   (let* ((dirs (cl-loop for root in jotain-projects-directories
                         when (file-directory-p root)
                         nconc (directory-files root t "\\`[^.]" t)))
          (choices (cl-loop for d in dirs
                            when (file-directory-p d)
-                           collect (cons (file-name-nondirectory d) d))))
+                           for name = (file-name-nondirectory d)
+                           for parent = (file-name-nondirectory
+                                         (directory-file-name
+                                          (file-name-directory d)))
+                           collect (cons (format "%s (%s)" name parent) d))))
     (unless choices
       (user-error "No project candidates under %s" jotain-projects-directories))
     (let* ((pick (completing-read "Project: " choices nil t))
