@@ -36,6 +36,27 @@
   :ensure nil
   :hook ((prog-mode . subword-mode)))
 
+;;; @doc Defaults for the built-in comment commands (M-;, C-x C-;, M-j).
+;;; `comment-multi-line' makes M-j continue inside an open block
+;;; comment instead of closing/reopening; `extra-line' style puts
+;;; opening and closing delimiters on their own lines for
+;;; `comment-region'; `comment-empty-lines' makes `comment-region'
+;;; treat blank lines the same as content lines;
+;;; `comment-auto-fill-only-comments' keeps M-q in a prog-mode buffer
+;;; with `auto-fill-mode' on confined to comments. C-c ; is an
+;;; ergonomic alias for `comment-line' — C-; is taken by embark-dwim.
+;;; Per-mode overrides go in the language module via a mode hook:
+;;;   (add-hook 'foo-mode-hook
+;;;             (lambda () (setq-local comment-multi-line nil)))
+(use-package newcomment
+  :ensure nil
+  :bind ("C-c ;" . comment-line)
+  :custom
+  (comment-multi-line t)
+  (comment-style 'extra-line)
+  (comment-empty-lines t)
+  (comment-auto-fill-only-comments t))
+
 ;;; @doc Treesit-aware semantic region expansion. Smaller, faster
 ;;; successor to expand-region; produces better expansions with
 ;;; much less code now that treesit is everywhere.
