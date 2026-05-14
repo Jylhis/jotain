@@ -13,19 +13,10 @@
   "Docker/Podman and infrastructure-as-code settings."
   :group 'convenience)
 
-(defcustom jotain-docker-backend 'podman
-  "Container runtime that Docker-aware packages should drive.
-`podman' (default) is rootless and daemonless; `docker' uses the
-classic dockerd/docker-compose pair.  Changing this re-applies
-the relevant command-name variables for `dockerfile-mode' and the
-`docker' package, including the TRAMP method used to open files
-inside a running container."
-  :type '(choice (const :tag "Podman" podman)
-                 (const :tag "Docker" docker))
-  :group 'jotain-devops
-  :set (lambda (sym val)
-         (set-default-toplevel-value sym val)
-         (jotain--apply-docker-backend)))
+;; Forward declaration so `jotain--apply-docker-backend' byte-compiles
+;; cleanly under `byte-compile-error-on-warn'.  The defcustom below
+;; supplies the real binding; this only silences the compiler.
+(defvar jotain-docker-backend)
 
 (defun jotain--apply-docker-backend ()
   "Apply `jotain-docker-backend' to dockerfile-mode and docker.el.
@@ -43,6 +34,20 @@ package has been loaded, so this is safe to call before or after."
       (setq docker-compose-command compose))
     (when (boundp 'docker-container-tramp-method)
       (setq docker-container-tramp-method cmd))))
+
+(defcustom jotain-docker-backend 'podman
+  "Container runtime that Docker-aware packages should drive.
+`podman' (default) is rootless and daemonless; `docker' uses the
+classic dockerd/docker-compose pair.  Changing this re-applies
+the relevant command-name variables for `dockerfile-mode' and the
+`docker' package, including the TRAMP method used to open files
+inside a running container."
+  :type '(choice (const :tag "Podman" podman)
+                 (const :tag "Docker" docker))
+  :group 'jotain-devops
+  :set (lambda (sym val)
+         (set-default-toplevel-value sym val)
+         (jotain--apply-docker-backend)))
 
 ;;; @doc Dockerfile major mode — syntax highlighting plus build
 ;;; commands (`M-x dockerfile-build-buffer'). The runtime command
