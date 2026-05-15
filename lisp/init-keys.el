@@ -47,15 +47,15 @@ positions, and focus are preserved during the swap."
 ;; before falling back to plain `keyboard-quit'.
 (defun jotain-keyboard-quit-dwim ()
   "Do-What-I-Mean `keyboard-quit'.
-Region active → deactivate it.  Completions buffer focused → close
-it.  Minibuffer open but not focused → abort recursive edit.
-Otherwise call regular `keyboard-quit'."
+Completions window visible → close it.  Minibuffer open (even
+when point is in another window) → abort recursive edit.  Region
+active → deactivate it.  Otherwise call regular `keyboard-quit'."
   (interactive)
   (cond
-   ((region-active-p)                       (keyboard-quit))
-   ((derived-mode-p 'completion-list-mode)  (delete-completion-window))
-   ((> (minibuffer-depth) 0)                (abort-recursive-edit))
-   (t                                       (keyboard-quit))))
+   ((get-buffer-window "*Completions*" 'visible) (delete-completion-window))
+   ((> (minibuffer-depth) 0)                     (abort-recursive-edit))
+   ((region-active-p)                            (keyboard-quit))
+   (t                                            (keyboard-quit))))
 
 ;;; @doc Top-level rebindings — disable accidental suspend (C-z and
 ;;; C-x C-z), put other-window on M-o for one-key window switching,
