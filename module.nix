@@ -20,6 +20,7 @@
 }:
 let
   cfg = config.services.jotain;
+  pkgsWithOverlay = pkgs.extend (import ./overlay.nix);
   inherit (pkgs.stdenv.hostPlatform) isLinux;
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
   startWithSession =
@@ -74,7 +75,8 @@ let
       direnv # envrc
       coreutils # gls, used by dirvish-listing-switches on darwin
     ]
-    ++ lib.optional cfg.sonarlint.enable pkgs.sonarlintLs;
+    ++ lib.optional cfg.sonarlint.enable pkgs.sonarlintLs
+    ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server;
 
   # Colour-emoji fallback for the `emoji' / `symbol' fontsets wired in
   # lisp/init-ui.el.  macOS ships Apple Color Emoji system-wide, so the
@@ -132,7 +134,7 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = (pkgs.extend (import ./overlay.nix)).jotainEmacsPackages;
+      default = pkgsWithOverlay.jotainEmacsPackages;
       defaultText = lib.literalExpression "(pkgs.extend (import ./overlay.nix)).jotainEmacsPackages";
       description = "The Jotain Emacs package to use.";
     };
@@ -207,6 +209,10 @@ in
         '';
       };
     };
+
+    dockerfileLsp = {
+      enable = lib.mkEnableOption "Dockerfile language server ({command}`docker-langserver`), auto-attached by Eglot in {command}`dockerfile-mode`";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -225,6 +231,8 @@ in
     programs.bash.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
     programs.zsh.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
     programs.fish.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
+
+    fonts.fontconfig.enable = lib.mkIf isLinux true;
 
     home.packages = [
       cfg.package
