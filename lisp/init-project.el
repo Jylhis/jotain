@@ -20,11 +20,48 @@
 
 ;;;; project.el (built-in)
 
+(defcustom jotain-projects-directories
+  (list (expand-file-name "~/Projects")
+        (expand-file-name "~/code")
+        (expand-file-name "~/src"))
+  "Roots whose immediate subdirs feed `jotain-find-projects-and-switch'."
+  :type '(repeat directory)
+  :group 'project)
+
+(declare-function project-remember-project "project" (pr &optional no-write))
+
+(defun jotain-find-projects-and-switch ()
+  "Scan `jotain-projects-directories', pick a project, remember and open it.
+Completion labels include the full abbreviated parent root, so two
+projects sharing a basename across different roots stay distinct."
+  (interactive)
+  (let* ((dirs (cl-loop for root in jotain-projects-directories
+                        when (file-directory-p root)
+                        nconc (directory-files root t "\\`[^.]" t)))
+         (choices (cl-loop for d in dirs
+                           when (file-directory-p d)
+                           for name = (file-name-nondirectory d)
+                           for parent = (abbreviate-file-name
+                                         (directory-file-name
+                                          (file-name-directory d)))
+                           collect (cons (format "%s (%s)" name parent) d))))
+    (unless choices
+      (user-error "No project candidates under %s" jotain-projects-directories))
+    (let* ((pick (completing-read "Project: " choices nil t))
+           (dir  (cdr (assoc pick choices))))
+      (when dir
+        (when-let* ((proj (project-current nil dir)))
+          (project-remember-project proj))
+        (project-switch-project dir)))))
+
 ;;; @doc Built-in project tracker. Extra root markers below mean a
 ;;; project is recognised when any of these is present, not just
-;;; on a VCS root. Project list lives under var/.
+;;; on a VCS root. Project list lives under var/. `C-x p P' scans
+;;; `jotain-projects-directories' to add+open projects not yet in
+;;; the known list.
 (use-package project
   :ensure nil
+  :bind (:map project-prefix-map ("P" . jotain-find-projects-and-switch))
   :custom
   (project-list-file (jotain-var-file "projects.el"))
   (project-buffers-viewer 'project-list-buffers-ibuffer)

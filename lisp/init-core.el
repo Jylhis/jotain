@@ -194,6 +194,28 @@ immediately for writes."
   (require 'ansi-color)
   (ansi-color-apply-on-region (point-min) (point-max)))
 
+(declare-function profiler-start "profiler" (mode))
+(declare-function profiler-stop "profiler")
+(declare-function profiler-report "profiler")
+
+(defvar jotain-profiler--running nil
+  "Non-nil when `jotain-profile-toggle' is mid-recording.")
+
+(defun jotain-profile-toggle ()
+  "Toggle CPU+memory profiling; show the report on the second call.
+First call starts the profiler; second call stops it and pops the
+`*CPU/Memory Profiler Report*' buffer.  Useful for diagnosing
+freezes — start, reproduce, stop."
+  (interactive)
+  (if jotain-profiler--running
+      (progn (profiler-stop)
+             (setq jotain-profiler--running nil)
+             (profiler-report)
+             (message "Profiler stopped — see *CPU/Memory Profiler Report*"))
+    (profiler-start 'cpu+mem)
+    (setq jotain-profiler--running t)
+    (message "Profiler started — run `M-x jotain-profile-toggle' again to report")))
+
 ;;;; macOS — minimal modifier-key fix
 ;;
 ;; Reachable Meta is non-negotiable. The Cocoa default of Option-as-Meta
