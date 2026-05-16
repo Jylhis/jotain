@@ -127,6 +127,40 @@ attributes are applied globally so all frames see the update."
 (jotain-ui-apply-font)
 (add-hook 'server-after-make-frame-hook #'jotain-ui-apply-font)
 
+(defcustom jotain-emoji-font-preferences
+  (if (eq system-type 'darwin)
+      '("Apple Color Emoji" "Noto Color Emoji" "Symbola")
+    '("Noto Color Emoji" "Segoe UI Emoji" "Symbola"))
+  "Ordered list of family names to try for the `emoji' and `symbol' charsets.
+The first installed family wins.  macOS ships Apple Color Emoji
+system-wide; Linux/Home-Manager pulls in Noto Color Emoji through
+`services.jotain' so the default is available without extra setup."
+  :type '(repeat string)
+  :group 'jotain-ui)
+
+(defun jotain-ui-apply-emoji-font (&optional frame)
+  "Install a colour-emoji fallback for the `emoji' and `symbol' fontsets.
+Without this, code points like U+1F389 render as tofu when the
+default face's font lacks them.  FRAME is used to probe font
+availability on the right display."
+  (when (display-graphic-p frame)
+    (let ((family (cl-loop for f in jotain-emoji-font-preferences
+                           when (find-font (font-spec :family f) frame)
+                           return f)))
+      (when family
+        (set-fontset-font t 'emoji  (font-spec :family family) frame 'prepend)
+        (set-fontset-font t 'symbol (font-spec :family family) frame 'prepend)))))
+
+(jotain-ui-apply-emoji-font)
+(add-hook 'server-after-make-frame-hook #'jotain-ui-apply-emoji-font)
+
+;;; @doc Built-in emoji picker (Emacs 29+): `C-x 8 e e' inserts by name,
+;;; `C-x 8 e s' searches, `C-x 8 e l' opens the full list, `C-x 8 e d'
+;;; describes the emoji at point.  `which-key' surfaces the prefix.
+(use-package emoji
+  :ensure nil
+  :defer t)
+
 ;;;; Built-in display tweaks
 
 ;; Don't draw cursors or highlight selections in non-focused windows.

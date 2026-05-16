@@ -78,6 +78,13 @@ in
       editorScript
       visualScript
     ];
+    # Colour-emoji fallback for the `emoji' / `symbol' fontsets wired
+    # in lisp/init-ui.el.  Skipped on Darwin: macOS provides Apple
+    # Color Emoji system-wide, and nix-darwin's `fonts.packages' has a
+    # different shape from NixOS's.
+    fonts.packages = lib.mkIf pkgs.stdenv.hostPlatform.isLinux [
+      pkgs.noto-fonts-color-emoji
+    ];
     environment.variables = lib.mkIf cfg.defaultEditor {
       EDITOR = lib.mkOverride 900 "${lib.getBin editorScript}/bin/jotain-editor";
       VISUAL = lib.mkOverride 900 "${lib.getBin visualScript}/bin/jotain-visual";

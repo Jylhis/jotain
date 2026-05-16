@@ -76,6 +76,11 @@ let
     ]
     ++ lib.optional cfg.sonarlint.enable pkgs.sonarlintLs;
 
+  # Colour-emoji fallback for the `emoji' / `symbol' fontsets wired in
+  # lisp/init-ui.el.  macOS ships Apple Color Emoji system-wide, so the
+  # Nix font would just bloat the closure there.
+  emojiFontPackages = lib.optional isLinux pkgs.noto-fonts-color-emoji;
+
   runtimePath = lib.makeBinPath runtimeDeps;
 
   # Wrapper around `emacs` that always passes --init-directory, so the
@@ -200,6 +205,7 @@ in
       # that ships inside cfg.package.
       (lib.hiPrio emacsWrapper)
     ]
+    ++ emojiFontPackages
     ++ lib.optional (cfg.client.enable && pkgs.stdenv.isLinux) (lib.hiPrio clientDesktopItem);
 
     # Install the Jotain Emacs configuration into ~/.config/emacs so the
