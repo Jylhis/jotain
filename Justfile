@@ -33,6 +33,30 @@ debug *ARGS:
 tty *ARGS:
     emacs -nw --init-directory={{config_dir}} {{ARGS}}
 
+# Run a foreground Emacs daemon with this config. Stop with C-c or
+# `emacsclient -e '(kill-emacs)'`. See docs/usage/launching.mdx.
+[group('run')]
+daemon *ARGS:
+    emacs --fg-daemon --init-directory={{config_dir}} {{ARGS}}
+
+# Connect a graphical emacsclient frame to the running daemon. Falls
+# back to a fresh Emacs (with the repo config) if no daemon is running.
+[group('run')]
+client *ARGS:
+    emacsclient -c --alternate-editor='emacs --init-directory={{config_dir}}' {{ARGS}}
+
+# Connect a terminal emacsclient frame to the running daemon. Falls
+# back to a fresh -nw Emacs (with the repo config) if no daemon is running.
+[group('run')]
+client-tty *ARGS:
+    emacsclient -t --alternate-editor='emacs -nw --init-directory={{config_dir}}' {{ARGS}}
+
+# Lightweight `emacs -Q -nw` for quick edits, no Jotain config. The
+# wombat theme keeps the buffer readable on dark terminals.
+[group('run')]
+quick *ARGS:
+    emacs -Q -nw --eval "(load-theme 'wombat t)" {{ARGS}}
+
 
 # ── Check / compile ─────────────────────────────────────────────────
 
