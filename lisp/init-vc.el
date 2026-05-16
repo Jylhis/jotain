@@ -24,6 +24,71 @@
   (vc-follow-symlinks t)
   (vc-handled-backends '(Git)))
 
+;;; @doc Quick jump to a file git status reports as changed. Runs
+;;; `git status --porcelain=v1 -z -uall' (-z keeps spaces and
+;;; non-ASCII paths intact; -uall forces untracked listing
+;;; regardless of status.showUntrackedFiles) and offers
+;;; M/A/R/C/U/T/?? entries through `completing-read'. Adapted
+;;; from Rahul M. Juliato's emacs-solo/switch-git-status-buffer.
+(use-package vc-git
+  :ensure nil
+  :bind ("C-x C-g" . jotain-switch-git-status-buffer)
+  :preface
+  (declare-function vc-git-root "vc-git" (file))
+  (defun jotain-switch-git-status-buffer ()
+    "Switch to a file git status reports as changed in this repo.
+Candidates are parsed from `git status --porcelain=v1 -z -uall' so
+paths containing spaces or non-ASCII characters arrive verbatim
+and untracked files appear regardless of the user's
+`status.showUntrackedFiles' setting. Modified, added, renamed,
+copied, unmerged, type-changed, and untracked files are offered
+through `completing-read'; pure deletions are omitted since the
+working-tree file no longer exists to open."
+    (interactive)
+    (require 'vc-git)
+    (let ((repo-root (vc-git-root default-directory)))
+      (if (not repo-root)
+          (message "Not inside a Git repository.")
+        (let* ((expanded-root (expand-file-name repo-root))
+               (default-directory expanded-root)
+               (cmd-output (shell-command-to-string
+                            "git status --porcelain=v1 -z -uall"))
+               (target-files
+                (let ((files nil)
+                      (rest (split-string cmd-output "\0" t)))
+                  (while rest
+                    (let ((entry (pop rest)))
+                      (when (> (length entry) 3)
+                        (let ((status (substring entry 0 2))
+                              (path-info (substring entry 3)))
+                          (cond
+                           ;; Rename/copy in -z mode: PATH (new) is
+                           ;; on this entry, ORIG_PATH (old) is the
+                           ;; next NUL chunk. See git-status(1).
+                           ((string-match-p "^[RC]" status)
+                            (let ((orig-path (and rest (pop rest))))
+                              (push (cons (format "%s %s -> %s"
+                                                  status
+                                                  (or orig-path "?")
+                                                  path-info)
+                                          path-info)
+                                    files)))
+                           ((string-match-p "[MAUT?]" status)
+                            (push (cons (format "%s %s"
+                                                status path-info)
+                                        path-info)
+                                  files)))))))
+                  (nreverse files))))
+          (if (not target-files)
+              (message "No changed files in this repository.")
+            (let* ((selection (completing-read
+                               "Switch to git-changed file: "
+                               target-files nil t))
+                   (file-path (cdr (assoc selection target-files))))
+              (when file-path
+                (find-file (expand-file-name file-path
+                                             expanded-root))))))))))
+
 ;;; @doc The Git porcelain. Bound C-x g for status, C-x M-g for global
 ;;; dispatch, C-c g for the file-specific menu. Refined hunks +
 ;;; whitespace-ignoring diffs are turned on globally.
