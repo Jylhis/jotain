@@ -152,13 +152,21 @@ Each value is a plist (:changes N :commits M :ts TIMESTAMP :busy BOOL).")
   (< (- (float-time) (plist-get entry :ts))
      jotain-git-stats-update-interval))
 
-(defun jotain-git-stats--parse-shortstat (output)
-  "Extract the total of insertions + deletions from `git diff --shortstat' OUTPUT."
+(defun jotain-git-stats--parse-numstat (output)
+  "Sum the added + deleted columns from `git diff --numstat' OUTPUT.
+Format is TAB-separated \"ADDED<TAB>DELETED<TAB>FILE\" per line; binary
+files report a literal \"-\" in the count columns and are skipped.
+This is locale-independent — unlike `--shortstat', whose English
+prose breaks under `LANG=de_DE.UTF-8' etc."
   (let ((sum 0))
-    (when (string-match "\\([0-9]+\\) insertion" output)
-      (setq sum (+ sum (string-to-number (match-string 1 output)))))
-    (when (string-match "\\([0-9]+\\) deletion" output)
-      (setq sum (+ sum (string-to-number (match-string 1 output)))))
+    (dolist (line (split-string output "\n" t))
+      (let ((cols (split-string line "\t")))
+        (when (and (>= (length cols) 2)
+                   (string-match-p "\\`[0-9]+\\'" (nth 0 cols))
+                   (string-match-p "\\`[0-9]+\\'" (nth 1 cols)))
+          (setq sum (+ sum
+                       (string-to-number (nth 0 cols))
+                       (string-to-number (nth 1 cols)))))))
     sum))
 
 (defun jotain-git-stats--count-lines (output)
@@ -214,8 +222,8 @@ CALLBACK is still invoked with 0 so the cache never deadlocks."
                         (plist-put entry :ts (float-time))
                         (force-mode-line-update t)))))
         (jotain-git-stats--run
-         root '("diff" "--shortstat" "HEAD")
-         #'jotain-git-stats--parse-shortstat
+         root '("diff" "--numstat" "HEAD")
+         #'jotain-git-stats--parse-numstat
          (lambda (n) (plist-put entry :changes n) (funcall after)))
         (jotain-git-stats--run
          root '("log" "--since=midnight" "--oneline" "--no-merges")
