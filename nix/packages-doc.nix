@@ -39,6 +39,10 @@ let
       title = "UI: theme, modeline, fonts";
     }
     {
+      file = "init-tabs.el";
+      title = "Workspace tabs";
+    }
+    {
       file = "init-help.el";
       title = "Help system";
     }
