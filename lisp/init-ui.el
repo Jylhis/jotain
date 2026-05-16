@@ -149,7 +149,7 @@ availability on the right display."
                            return f)))
       (when family
         (set-fontset-font t 'emoji  (font-spec :family family) frame 'prepend)
-        (set-fontset-font t 'symbol (font-spec :family family) frame 'append)))))
+        (set-fontset-font t 'symbol (font-spec :family family) frame 'prepend)))))
 
 (jotain-ui-apply-emoji-font)
 (add-hook 'server-after-make-frame-hook #'jotain-ui-apply-emoji-font)
