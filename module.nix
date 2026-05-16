@@ -75,7 +75,7 @@ let
       coreutils # gls, used by dirvish-listing-switches on darwin
     ]
     ++ lib.optional cfg.sonarlint.enable pkgs.sonarlintLs
-    ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfileLs;
+    ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server;
 
   runtimePath = lib.makeBinPath runtimeDeps;
 
