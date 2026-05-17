@@ -194,6 +194,28 @@ immediately for writes."
   (require 'ansi-color)
   (ansi-color-apply-on-region (point-min) (point-max)))
 
+(declare-function profiler-start "profiler" (mode))
+(declare-function profiler-stop "profiler")
+(declare-function profiler-report "profiler")
+
+(defvar jotain-profiler--running nil
+  "Non-nil when `jotain-profile-toggle' is mid-recording.")
+
+(defun jotain-profile-toggle ()
+  "Toggle CPU+memory profiling; show the report on the second call.
+First call starts the profiler; second call stops it and pops the
+`*CPU/Memory Profiler Report*' buffer.  Useful for diagnosing
+freezes — start, reproduce, stop."
+  (interactive)
+  (if jotain-profiler--running
+      (progn (profiler-stop)
+             (setq jotain-profiler--running nil)
+             (profiler-report)
+             (message "Profiler stopped — see *CPU/Memory Profiler Report*"))
+    (profiler-start 'cpu+mem)
+    (setq jotain-profiler--running t)
+    (message "Profiler started — run `M-x jotain-profile-toggle' again to report")))
+
 ;;;; macOS — minimal modifier-key fix
 ;;
 ;; Reachable Meta is non-negotiable. The Cocoa default of Option-as-Meta
@@ -245,8 +267,26 @@ immediately for writes."
 ;;; across sessions. Built-in, enabled globally.
 (use-package savehist
   :ensure nil
-  :custom (savehist-file (jotain-var-file "savehist.el"))
-  :config (savehist-mode 1))
+  :custom
+  (savehist-file (jotain-var-file "savehist.el"))
+  (savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
+  :config
+  (savehist-mode 1)
+
+  ;; Strip text properties from every ring savehist persists, so the
+  ;; savehist file doesn't bloat with face/font-lock metadata from
+  ;; whatever buffer the strings were copied out of. Named so the hook
+  ;; can be removed cleanly when the config is re-evaluated.
+  (defun jotain-core--savehist-strip-properties ()
+    "Strip text properties from persisted rings before serialization."
+    (dolist (ring '(kill-ring search-ring regexp-search-ring))
+      (set ring (mapcar (lambda (entry)
+                          (if (stringp entry)
+                              (substring-no-properties entry)
+                            entry))
+                        (symbol-value ring)))))
+
+  (add-hook 'savehist-save-hook #'jotain-core--savehist-strip-properties))
 
 ;;; @doc Built-in bookmark store. State file is themed under var/ so it
 ;;; joins the rest of Jotain's persistent state.

@@ -85,12 +85,20 @@ let
     # round-trip and use the texinfo fragment that derivation already
     # produces; it is copied into docs/ below.
     {
+      src = "usage/launching.mdx";
+      out = "usage-launching.texi";
+    }
+    {
       src = "finding-information-in-emacs.mdx";
       out = "finding-information-in-emacs.texi";
     }
     {
       src = "compilation-mode.mdx";
       out = "compilation-mode.texi";
+    }
+    {
+      src = "keybindings.mdx";
+      out = "keybindings.texi";
     }
     {
       src = "setting-variables.mdx";

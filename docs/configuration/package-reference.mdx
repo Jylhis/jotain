@@ -127,10 +127,18 @@ A dense, IDE-style modeline with LSP/eglot status, project
 buffer info, and Nerd Font glyphs. Loaded after init so the
 primary frame doesn't redraw before fonts are ready.
 
+### `emoji` *(built-in / Nix)*
+
+Built-in emoji picker (Emacs 29+): `C-x 8 e e' inserts by name,
+`C-x 8 e s' searches, `C-x 8 e l' opens the full list, `C-x 8 e d'
+describes the emoji at point.  `which-key' surfaces the prefix.
+
 ### `display-line-numbers` *(built-in / Nix)*
 
 Built-in line numbers — only on programming and config buffers,
-never on prose or org files where they're noise.
+never on prose or org files where they're noise. Honour the
+`jotain-line-numbers-in-prog' toggle so users can flip it off
+without editing this file.
 
 ### `pixel-scroll` *(built-in / Nix)*
 
@@ -205,7 +213,8 @@ essential for navigating deeply nested forms.
 ### `indent-bars`
 
 Vertical indent guides for code, treesit-aware so the bars
-follow real syntactic indentation.
+follow real syntactic indentation. Toggle via
+`jotain-indent-bars-enabled'.
 
 ### `kkp`
 
@@ -218,6 +227,14 @@ unconditionally.
 
 OSC 52 clipboard integration. Yank/kill in terminal Emacs
 reaches the system clipboard even through ssh + tmux.
+
+## `init-tabs.el` — Workspace tabs
+
+### `tab-bar` *(built-in / Nix)*
+
+Built-in frame-local tab bar — used as a workspace switcher.
+Bar hides itself when only one tab exists, so single-window
+sessions are unaffected.
 
 ## `init-help.el` — Help system
 
@@ -266,6 +283,22 @@ Treats CamelCase / snake_case word parts as separate words for
 M-f / M-b / M-d. Built-in. Programming-mode only — prose still
 gets whole-word motion.
 
+### `newcomment` *(built-in / Nix)*
+
+Defaults for the built-in comment commands (M-;, C-x C-;, M-j).
+`comment-multi-line' makes M-j continue inside an open block
+comment instead of closing/reopening; `extra-line' style puts
+opening and closing delimiters on their own lines for
+`comment-region'; `comment-empty-lines' makes `comment-region'
+treat blank lines the same as content lines;
+`comment-auto-fill-only-comments' keeps automatic line wrapping
+(when `auto-fill-mode' is on) confined to comments. C-c ; is an
+ergonomic alias for `comment-line' — C-; is taken by embark-dwim.
+Per-mode overrides go in the language module via a named hook:
+  (defun my-foo-mode-setup ()
+    (setq-local comment-multi-line nil))
+  (add-hook 'foo-mode-hook #'my-foo-mode-setup)
+
 ### `expreg`
 
 Treesit-aware semantic region expansion. Smaller, faster
@@ -289,6 +322,12 @@ Auto-saves buffers when idle and on focus loss, writing the
 actual file rather than #foo# auto-save side files. Also strips
 trailing whitespace except on the current line so you don't
 fight your own cursor.
+
+### `re-builder` *(built-in / Nix)*
+
+Make `M-x re-builder' use string syntax — the same form you'd
+paste into `re-search-forward' — instead of the default `read'
+syntax that requires escaping every backslash twice.
 
 ## `init-completion.el` — Minibuffer + in-buffer completion
 
@@ -333,6 +372,11 @@ grep family so candidates have room to breathe.
 Adds annotation columns (file size, mode, docstring, …) to every
 completion list. Pairs with vertico to make minibuffer choices
 self-explanatory.
+
+### `isearch` *(built-in / Nix)*
+
+Show match counts like `(3/12)' in the isearch prompt while
+typing. Built-in (Emacs 27+); replaces what `anzu' used to provide.
 
 ### `consult`
 
@@ -396,6 +440,21 @@ Built-in dired extras — `dired-omit-mode` hides dotfiles and
 cache directories so dired listings show only the things you
 actually want to see.
 
+### `dired-async`
+
+Async file ops for dired — wraps `dired-do-copy`, `dired-do-rename`,
+`dired-do-symlink`, `dired-do-hardlink` so they fork into a subprocess
+instead of blocking the main Emacs. Multi-GB copies no longer freeze
+the UI; the mode-line shows progress and a message fires on completion.
+
+### `dired-rsync`
+
+rsync from dired — bound to `C-c C-r` in `dired-mode-map`. Best
+for very large transfers or TRAMP sources/destinations: hands marked
+files to `rsync` in an async shell buffer with live progress. Uses
+`--progress` (not `--info=progress2`) so stock macOS rsync 2.6.9 still
+works; noisier output, but portable.
+
 ### `ls-lisp` *(built-in / Nix)*
 
 Pure-Lisp ls emulation. Fallback for macOS without GNU coreutils
@@ -452,6 +511,15 @@ command.
 Built-in version control. Pinned to Git only — every other
 backend is a slow startup tax (probes every visited file's
 parents) you almost never benefit from.
+
+### `vc-git` *(built-in / Nix)*
+
+Quick jump to a file git status reports as changed. Runs
+`git status --porcelain=v1 -z -uall' (-z keeps spaces and
+non-ASCII paths intact; -uall forces untracked listing
+regardless of status.showUntrackedFiles) and offers
+M/A/R/C/U/T/?? entries through `completing-read'. Adapted
+from Rahul M. Juliato's emacs-solo/switch-git-status-buffer.
 
 ### `magit`
 
@@ -607,7 +675,9 @@ having to special-case every project's tab/space convention.
 
 Built-in project tracker. Extra root markers below mean a
 project is recognised when any of these is present, not just
-on a VCS root. Project list lives under var/.
+on a VCS root. Project list lives under var/. `C-x p P' scans
+`jotain-projects-directories' to add+open projects not yet in
+the known list.
 
 ### `projection`
 
@@ -847,8 +917,16 @@ other-window binding.
 
 ### `dockerfile-mode`
 
-Dockerfile major mode — syntax for the file you edit every
-time you change a container image.
+Dockerfile major mode — syntax highlighting plus build
+commands (`M-x dockerfile-build-buffer`). The runtime command
+name comes from `jotain-docker-backend`.
+
+### `docker`
+
+Magit-style transient menu for containers, images, volumes
+and networks. `C-c d` opens the dispatcher; commands respect
+`jotain-docker-backend` (docker vs podman, including compose and
+the TRAMP method used to open files inside a running container).
 
 ### `docker-compose-mode`
 
