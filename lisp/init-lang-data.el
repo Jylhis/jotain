@@ -15,16 +15,28 @@ numbers, flymake, editorconfig, dtrt-indent, hl-todo,
 breadcrumb, indent-bars, fill-column indicator — ever fire in
 YAML buffers.  Re-running the hook reaches them without having
 to enumerate every minor mode separately, and without changing
-the mode's upstream parent."
-  (run-hooks 'prog-mode-hook))
+the mode's upstream parent.  The `derived-mode-p' guard makes
+this a no-op if the buffer's mode ever (re)parents onto
+`prog-mode', preventing the hook from firing twice."
+  (unless (derived-mode-p 'prog-mode)
+    (run-hooks 'prog-mode-hook)))
 
-;;; @doc YAML major mode. Loaded on demand for the dozens of YAML-shaped
-;;; files in any modern repo (CI, k8s, helm). YAML derives from
-;;; `text-mode' upstream, so we re-fire `prog-mode-hook' to get the
-;;; full editor surface (line numbers, flymake, indent guides, …).
+;;; @doc YAML major mode (MELPA). Loaded on demand for the dozens of
+;;; YAML-shaped files in any modern repo (CI, k8s, helm). YAML derives
+;;; from `text-mode' upstream, so we re-fire `prog-mode-hook' to get
+;;; the full editor surface (line numbers, flymake, indent guides, …).
 (use-package yaml-mode
   :defer t
-  :hook ((yaml-mode yaml-ts-mode) . jotain-lang-data--enable-prog-mode-features))
+  :hook (yaml-mode . jotain-lang-data--enable-prog-mode-features))
+
+;;; @doc Built-in tree-sitter YAML mode (Emacs 29+). Same prog-mode
+;;; hook tweak as `yaml-mode'; kept in its own use-package block so
+;;; users running the built-in mode aren't forced to install the
+;;; MELPA `yaml-mode' package by `use-package-always-ensure'.
+(use-package yaml-ts-mode
+  :ensure nil
+  :defer t
+  :hook (yaml-ts-mode . jotain-lang-data--enable-prog-mode-features))
 
 ;;; @doc CSV major mode with column alignment. csv-align-mode renders
 ;;; separators visually so wide files become readable without
