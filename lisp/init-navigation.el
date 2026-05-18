@@ -27,6 +27,7 @@
                               "-alh"
                             "-alh --group-directories-first"))
   (dired-dwim-target t)
+  (dired-kill-when-opening-new-dired-buffer t)
   (dired-recursive-copies 'always)
   (dired-recursive-deletes 'top)
   (dired-auto-revert-buffer #'dired-buffer-stale-p)
