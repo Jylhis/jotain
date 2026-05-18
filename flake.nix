@@ -1,5 +1,5 @@
 {
-  description = "Jotain — GNU Emacs 30+ configuration with Nix build layer";
+  description = "Jotain — GNU Emacs 31+ configuration with Nix build layer";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
