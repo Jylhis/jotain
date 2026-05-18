@@ -46,7 +46,7 @@
       },
 
   # ── Source variant ────────────────────────────────────────────────
-  #   "mainline"  — Emacs 30 release tarball (default, binary-cached)
+  #   "mainline"  — Emacs 31 release tarball (default, binary-cached)
   #   "git"       — bleeding-edge master from git.savannah.gnu.org
   #   "unstable"  — latest release tag built from git source (srcRepo)
   #   "macport"   — jdtsmith/emacs-mac fork (Darwin only)
