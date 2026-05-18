@@ -96,7 +96,7 @@ let
   # Fallback script for EDITOR when the daemon is not running.
   # Goes through emacsWrapper so --init-directory is preserved.
   editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
-    exec ${emacsWrapper}/bin/emacs -nw "$@"
+    exec ${emacsWrapper}/bin/emacs -nw -- "$@"
   '';
 
   # EDITOR — terminal-friendly emacsclient (works over SSH, in git commit, etc.)
@@ -104,6 +104,7 @@ let
     exec ${lib.getBin cfg.package}/bin/emacsclient \
       --tty \
       --alternate-editor=${editorFallback} \
+      -- \
       "$@"
   '';
 
@@ -112,6 +113,7 @@ let
     exec ${lib.getBin cfg.package}/bin/emacsclient \
       --create-frame \
       --alternate-editor=${emacsWrapper}/bin/emacs \
+      -- \
       "$@"
   '';
 
