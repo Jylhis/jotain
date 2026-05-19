@@ -17,9 +17,21 @@ YAML buffers.  Re-running the hook reaches them without having
 to enumerate every minor mode separately, and without changing
 the mode's upstream parent.  The `derived-mode-p' guard makes
 this a no-op if the buffer's mode ever (re)parents onto
-`prog-mode', preventing the hook from firing twice."
+`prog-mode', preventing the hook from firing twice.
+
+`text-mode-hook' also runs first and enables prose niceties
+that are wrong for code-shaped YAML: variable-pitch fonts,
+visual-line wrapping, and on-the-fly spell check.  Disable
+those after the parent hook ran so the buffer ends up looking
+like code, not prose."
   (unless (derived-mode-p 'prog-mode)
-    (run-hooks 'prog-mode-hook)))
+    (run-hooks 'prog-mode-hook))
+  (variable-pitch-mode -1)
+  (visual-line-mode -1)
+  (when (bound-and-true-p visual-wrap-prefix-mode)
+    (visual-wrap-prefix-mode -1))
+  (when (bound-and-true-p jinx-mode)
+    (jinx-mode -1)))
 
 ;;; @doc YAML major mode (MELPA). Loaded on demand for the dozens of
 ;;; YAML-shaped files in any modern repo (CI, k8s, helm). YAML derives
