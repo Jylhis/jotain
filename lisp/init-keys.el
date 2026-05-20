@@ -47,13 +47,16 @@ positions, and focus are preserved during the swap."
 ;; before falling back to plain `keyboard-quit'.
 (defun jotain-keyboard-quit-dwim ()
   "Do-What-I-Mean `keyboard-quit'.
-Completions window visible → close it.  Minibuffer open (even
-when point is in another window) → abort recursive edit.  Region
-active → deactivate it.  Otherwise call regular `keyboard-quit'."
+Minibuffer open (even when point is in another window) → abort
+recursive edit (this also dismisses any `*Completions*' popup).
+Completions window visible with no minibuffer (user popped it via
+`display-completion-list' or focused it directly) → close it.
+Region active → deactivate it.  Otherwise call regular
+`keyboard-quit'."
   (interactive)
   (cond
-   ((get-buffer-window "*Completions*" 'visible) (delete-completion-window))
    ((> (minibuffer-depth) 0)                     (abort-recursive-edit))
+   ((get-buffer-window "*Completions*" 'visible) (delete-completion-window))
    ((region-active-p)                            (keyboard-quit))
    (t                                            (keyboard-quit))))
 
