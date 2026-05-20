@@ -1,10 +1,12 @@
-{ pkgs, ... }:
+{ pkgs, inputs, ... }:
 
 let
   # pkgs is what devenv resolved from devenv.lock, which `just update` keeps
-  # in sync with flake.lock. Apply the project overlay so the devenv shell
+  # in sync with flake.lock. Layer the emacs-overlay first (it supplies
+  # Emacs 31 via emacs-git), then the project overlay so the devenv shell
   # gets the exact same jotainEmacsPackages derivation as flake consumers.
-  pkgsWithOverlay = pkgs.extend (import ./overlay.nix);
+  emacsOverlay = import inputs.emacs-overlay;
+  pkgsWithOverlay = (pkgs.extend emacsOverlay).extend (import ./overlay.nix);
   jotainEmacs = pkgsWithOverlay.jotainEmacsPackages;
 
   # rassumfrassum (`rass`) — LSP multiplexer by João Távora that lets eglot
@@ -88,13 +90,17 @@ in
   };
 
   # https://devenv.sh/binary-caching/
-  # Pull from the personal jylhis cache. devenv automatically adds
-  # `devenv` and `nixpkgs` caches to the substituter list, so we only
-  # need to declare the project-specific one here. Pushing is opt-in
-  # and configured in CI (or via devenv.local.nix).
+  # Pull from the personal jylhis cache and nix-community (the latter
+  # hosts the emacs-overlay binaries used for Emacs 31). devenv
+  # automatically adds `devenv` and `nixpkgs` caches, so only the
+  # project-specific ones are declared here. Pushing is opt-in and
+  # configured in CI (or via devenv.local.nix).
   cachix = {
     enable = true;
-    pull = [ "jylhis" ];
+    pull = [
+      "jylhis"
+      "nix-community"
+    ];
   };
 
   # https://devenv.sh/integrations/claude-code/
