@@ -77,5 +77,45 @@ active → deactivate it.  Otherwise call regular `keyboard-quit'."
   :ensure nil
   :config (windmove-default-keybindings))
 
+;;; @doc Prefix labels for `which-key'. Adopts the "memorable,
+;;; discoverable, categorised" spirit of leader-key frameworks like
+;;; `general.el' without the dependency: each prefix below acquires a
+;;; short noun-phrase label that `which-key' surfaces in place of
+;;; `+prefix' when the user pauses after the prefix key. The actual
+;;; bindings themselves stay colocated with their `use-package' blocks
+;;; (per the convention documented at the top of this file); only the
+;;; cross-cutting prefix metadata lives here.
+;;;
+;;; `which-key' is enabled in init-ui.el — we register through
+;;; `with-eval-after-load' so this module can stay independent of load
+;;; order while still taking effect the moment which-key starts.
+(with-eval-after-load 'which-key
+  (which-key-add-key-based-replacements
+    ;; C-c <letter> — global user namespace.
+    "C-c a"     "org-agenda"
+    "C-c c"     "org-capture"
+    "C-c d"     "dirvish"
+    "C-c D"     "dirvish-side"
+    "C-c g"     "magit-file"
+    "C-c h"     "consult-history"
+    "C-c i"     "consult-info"
+    "C-c k"     "consult-kmacro"
+    "C-c l"     "org-store-link"
+    "C-c n"     "org-roam"
+    "C-c o"     "combobulate"
+    "C-c r"     "eglot-refactor"
+    "C-c t"     "toggle-theme"
+    ;; C-c <punct> — AI and special leaves.
+    "C-c RET"   "gptel-send"
+    "C-c M-RET" "gptel-menu"
+    "C-c C-'"   "claude-code-ide"
+    "C-c M-x"   "consult-mode-command"
+    ;; C-x namespace.
+    "C-x g"     "magit-status"
+    "C-x M-g"   "magit-dispatch"
+    "C-x j"     "rotate-window-split"
+    "C-x u"     "vundo"
+    "C-x P"     "project (projection)"))
+
 (provide 'init-keys)
 ;;; init-keys.el ends here

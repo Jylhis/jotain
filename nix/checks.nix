@@ -44,6 +44,14 @@ let
         type = lib.types.attrsOf lib.types.anything;
         default = { };
       };
+      programs = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        default = { };
+      };
+      fonts = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        default = { };
+      };
     };
   };
 

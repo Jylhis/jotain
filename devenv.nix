@@ -6,6 +6,27 @@ let
   # gets the exact same jotainEmacsPackages derivation as flake consumers.
   pkgsWithOverlay = pkgs.extend (import ./overlay.nix);
   jotainEmacs = pkgsWithOverlay.jotainEmacsPackages;
+
+  # rassumfrassum (`rass`) — LSP multiplexer by João Távora that lets eglot
+  # drive multiple real language servers per buffer. Pure-Python, zero
+  # runtime deps; not in nixpkgs so we build it from PyPI here. Consumed by
+  # lisp/init-prog.el's eglot-server-programs (TS/TSX and Python).
+  rassumfrassum = pkgs.python3Packages.buildPythonApplication rec {
+    pname = "rassumfrassum";
+    version = "0.3.3";
+    pyproject = true;
+    build-system = [ pkgs.python3Packages.setuptools ];
+    src = pkgs.fetchPypi {
+      inherit pname version;
+      hash = "sha256-Gs2Qgwafj9m1tdVcw1k4UXTbxgbS5awTCINBkb5HIhc=";
+    };
+    meta = {
+      description = "LSP/JSONRPC multiplexer for connecting one LSP client to multiple servers";
+      homepage = "https://github.com/joaotavora/rassumfrassum";
+      license = pkgs.lib.licenses.gpl3Plus;
+      mainProgram = "rass";
+    };
+  };
 in
 {
   # The custom emacs-lisp language module lives in nix/. Importing it
@@ -25,6 +46,14 @@ in
     # SonarLint language server for in-editor code quality analysis.
     # Start in Emacs with M-x jotain-sonarlint.
     sonarlint-ls
+
+    # rassumfrassum (`rass`) LSP multiplexer.  init-prog.el routes TS/TSX
+    # and Python eglot connections through it when this binary is on PATH.
+    rassumfrassum
+
+    # Dockerfile language server (`docker-langserver`) — Eglot auto-attaches
+    # it in dockerfile-mode via the entry registered in init-prog.el.
+    dockerfile-language-server
 
     # Documentation build chain (`just info`, `just docs`).  Declared
     # here so both the recipe and interactive invocations have them on

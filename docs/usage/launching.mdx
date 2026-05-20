@@ -1,0 +1,119 @@
+---
+title: Launching Emacs
+description: Pick the right launch pattern for the task — one-shot, daemon + client, or `-Q -nw` quick edit
+---
+
+# Launching Emacs
+
+Jotain supports three launch patterns. Pick the one that matches the
+task — they're complementary, not alternatives.
+
+## One-shot
+
+A fresh `emacs` process every time. Loads the full Jotain config; pays
+package-init cost on every launch.
+
+```bash
+just run            # GUI, full config
+just debug          # GUI with --debug-init and debug-on-error
+just tty            # -nw, full config
+```
+
+Best for sanity checks, CI, and `just bench` runs. Avoid for day-to-day
+editing — the startup cost adds up.
+
+## Daemon + client
+
+Start Emacs once as a server; reuse it via lightweight clients. The
+first frame is slow; every frame after is instant.
+
+### In the repo (development)
+
+```bash
+just daemon         # foreground daemon with --init-directory=<repo>
+just client         # graphical emacsclient frame
+just client-tty     # terminal emacsclient frame
+```
+
+`just daemon` blocks; run it in another terminal (or under `tmux`) and
+connect with `just client` / `just client-tty` from elsewhere. Each
+client passes an `--alternate-editor` fallback that spawns a fresh
+Emacs with `--init-directory=<repo>`, so isolation from `~/.emacs.d`
+is preserved even when the daemon isn't running yet.
+
+Stop the daemon with `C-c` in its terminal, or from any client:
+
+```bash
+emacsclient -e '(kill-emacs)'
+```
+
+### As an installed user (home-manager)
+
+The `services.jotain` module ships:
+
+- A systemd user service (Linux) or launchd agent (macOS) that runs
+  `emacs --fg-daemon`. Enabled via `services.jotain.startWithUserSession`.
+- `jotain-editor` — `emacsclient --tty` with a `-nw` fallback. Set as
+  `$EDITOR` when `services.jotain.defaultEditor = true`.
+- `jotain-visual` — `emacsclient --create-frame`. Set as `$VISUAL`.
+- A `.desktop` entry (`jotain-client.desktop`) for launching a GUI
+  client from your application menu, enabled by
+  `services.jotain.client.enable`.
+
+See *Module Options* in the appendix for the full option reference.
+
+### Shell aliases
+
+Inspired by [Rahul Juliato's launching-emacs-terminal post][article-1],
+the module can install short aliases for the daemon and clients:
+
+```nix
+services.jotain = {
+  enable = true;
+  shellAliases.enable = true;
+  # shellAliases.prefix = "j";   # for "jemd"/"jem"/"jemg"
+};
+```
+
+| Alias | Expands to                              |
+| ----- | --------------------------------------- |
+| `emd` | `emacs --fg-daemon` (wrapped)           |
+| `em`  | `jotain-editor` (`emacsclient --tty`)   |
+| `emg` | `jotain-visual` (`emacsclient -c`)      |
+
+The aliases are written to `programs.bash.shellAliases`,
+`programs.zsh.shellAliases`, and `programs.fish.shellAliases` — pick
+up whichever shell home-manager already manages.
+
+## Quick edit (`-Q -nw`)
+
+When you need a stripped-down Emacs — editing `/etc/hosts` over SSH,
+fixing a typo in a 200 MB log file, demonstrating something with no
+muscle-memory key bindings — bypass Jotain entirely:
+
+```bash
+just quick          # emacs -Q -nw with the wombat theme
+```
+
+This is the pattern [Rahul Juliato describes in basic-emacs-alias][article-2].
+`-Q` skips `early-init.el`, `init.el`, site-lisp, and `~/.emacs.d/`;
+`-nw` keeps it in the current terminal; the wombat theme line is the
+one concession to readability on dark terminals.
+
+To get the same effect outside the repo, add an alias to your shell:
+
+```bash
+alias eq='emacs -Q -nw --eval "(load-theme '\''wombat t)"'
+```
+
+## Which one to use
+
+| Situation                               | Use          |
+| --------------------------------------- | ------------ |
+| First-time setup, CI, benchmarking      | `just run`   |
+| Day-to-day editing, fast frame opens    | daemon + `em`/`emg` |
+| Sysadmin SSH session, ad-hoc edit       | `just quick` |
+| Debugging a config regression           | `just debug` |
+
+[article-1]: https://rahuljuliato.com/posts/launching-emacs-terminal
+[article-2]: https://rahuljuliato.com/posts/basic-emacs-alias

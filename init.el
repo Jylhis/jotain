@@ -53,6 +53,7 @@
 (require 'init-core)         ; GC, encoding, var/ paths, sane defaults
 (require 'init-keys)         ; Global keymap and leader-key setup
 (require 'init-ui)           ; Theme, modeline, fonts, frame tweaks
+(require 'init-tabs)         ; Workspace tabs via tab-bar-mode
 (require 'init-help)         ; helpful + built-in help tweaks
 (require 'init-docs)         ; Surface jotain.info under C-h i
 (require 'init-editing)      ; Electric pairs, delsel, whitespace, region tools

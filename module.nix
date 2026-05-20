@@ -20,6 +20,7 @@
 }:
 let
   cfg = config.services.jotain;
+  pkgsWithOverlay = pkgs.extend (import ./overlay.nix);
   inherit (pkgs.stdenv.hostPlatform) isLinux;
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
   startWithSession =
@@ -74,7 +75,13 @@ let
       direnv # envrc
       coreutils # gls, used by dirvish-listing-switches on darwin
     ]
-    ++ lib.optional cfg.sonarlint.enable pkgs.sonarlintLs;
+    ++ lib.optional cfg.sonarlint.enable pkgs.sonarlintLs
+    ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server;
+
+  # Colour-emoji fallback for the `emoji' / `symbol' fontsets wired in
+  # lisp/init-ui.el.  macOS ships Apple Color Emoji system-wide, so the
+  # Nix font would just bloat the closure there.
+  emojiFontPackages = lib.optional isLinux pkgs.noto-fonts-color-emoji;
 
   runtimePath = lib.makeBinPath runtimeDeps;
 
@@ -110,6 +117,16 @@ let
 
   systemdWantedBy =
     if cfg.startWithUserSession == "graphical" then "graphical-session.target" else "default.target";
+
+  # Short aliases inspired by https://rahuljuliato.com/posts/launching-emacs-terminal :
+  # `emd` brings up a foreground daemon, `em` connects a terminal client, `emg`
+  # connects a graphical client. All three reuse the wrappers already built
+  # above so --init-directory and runtime PATH stay consistent.
+  shellAliasMap = {
+    "${cfg.shellAliases.prefix}emd" = "${emacsWrapper}/bin/emacs --fg-daemon";
+    "${cfg.shellAliases.prefix}em" = "${lib.getBin editorScript}/bin/jotain-editor";
+    "${cfg.shellAliases.prefix}emg" = "${lib.getBin visualScript}/bin/jotain-visual";
+  };
 in
 {
   options.services.jotain = {
@@ -117,7 +134,7 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = (pkgs.extend (import ./overlay.nix)).jotainEmacsPackages;
+      default = pkgsWithOverlay.jotainEmacsPackages;
       defaultText = lib.literalExpression "(pkgs.extend (import ./overlay.nix)).jotainEmacsPackages";
       description = "The Jotain Emacs package to use.";
     };
@@ -177,6 +194,25 @@ in
     sonarlint = {
       enable = lib.mkEnableOption "SonarLint language server ({command}`M-x jotain-sonarlint`)";
     };
+
+    shellAliases = {
+      enable = lib.mkEnableOption "shell aliases for the Jotain daemon and clients";
+
+      prefix = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        example = "j";
+        description = ''
+          Optional prefix to namespace the {command}`emd` / {command}`em` /
+          {command}`emg` aliases (e.g. set to `"j"` to get {command}`jemd`,
+          {command}`jem`, {command}`jemg`).
+        '';
+      };
+    };
+
+    dockerfileLsp = {
+      enable = lib.mkEnableOption "Dockerfile language server ({command}`docker-langserver`), auto-attached by Eglot in {command}`dockerfile-mode`";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -192,6 +228,12 @@ in
       VISUAL = "${lib.getBin visualScript}/bin/jotain-visual";
     };
 
+    programs.bash.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
+    programs.zsh.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
+    programs.fish.shellAliases = lib.mkIf cfg.shellAliases.enable shellAliasMap;
+
+    fonts.fontconfig.enable = lib.mkIf isLinux true;
+
     home.packages = [
       cfg.package
       editorScript
@@ -200,6 +242,7 @@ in
       # that ships inside cfg.package.
       (lib.hiPrio emacsWrapper)
     ]
+    ++ emojiFontPackages
     ++ lib.optional (cfg.client.enable && pkgs.stdenv.isLinux) (lib.hiPrio clientDesktopItem);
 
     # Install the Jotain Emacs configuration into ~/.config/emacs so the
