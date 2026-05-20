@@ -3,14 +3,21 @@
 # This file builds a bare Emacs binary. For the full distribution with
 # tree-sitter grammars, use default.nix instead.
 #
+# Emacs 31 is not yet shipped in nixpkgs; the base package comes from
+# nix-community/emacs-overlay, which supplies emacs-git (master),
+# emacs-igc (feature/igc3), and emacs-macport. The overlay is wired up
+# in flake.nix and devenv.nix; this file also re-applies it when called
+# standalone via `nix-build emacs.nix` (the overlays attr is derived
+# from flake.lock).
+#
 # Usage:
-#   nix-build emacs.nix                                            # Emacs 31 (uses binary cache)
+#   nix-build emacs.nix                                            # Emacs 31 (emacs-git)
 #   nix-build emacs.nix --arg noGui true                           # terminal-only
 #   nix-build emacs.nix --arg withPgtk true                        # pure GTK (Wayland)
 #   nix-build emacs.nix --arg withGTK3 true                        # GTK3 + X11
 #   nix-build emacs.nix --arg withNativeCompilation false          # disable native-comp
-#   nix-build emacs.nix --arg variant '"git"'                      # bleeding-edge master
-#   nix-build emacs.nix --arg variant '"macport"'                  # macOS macport fork
+#   nix-build emacs.nix --arg variant '"git"'                      # bleeding-edge master (alias for default)
+#   nix-build emacs.nix --arg variant '"macport"'                  # macOS macport fork (still Emacs 30)
 #   nix-build emacs.nix --arg variant '"igc"'                      # incremental GC branch
 #   nix-build emacs.nix --arg withSystemAppearancePatch true       # macOS dark mode hooks
 #
@@ -43,6 +50,18 @@
       {
         inherit system;
         config.allowUnfree = true;
+        overlays = [
+          (import (
+            let
+              lock = builtins.fromJSON (builtins.readFile ./flake.lock);
+              n = lock.nodes.emacs-overlay.locked;
+            in
+            fetchTarball {
+              url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz";
+              sha256 = n.narHash;
+            }
+          ))
+        ];
       },
 
   # ── Source variant ────────────────────────────────────────────────
@@ -81,7 +100,11 @@
   # --with-native-compilation (libgccjit AOT)
   withCompressInstall ? true, # --with-compress-install (gzip .el files)
   withCsrc ? true, # install C sources for find-function-C-source
-  srcRepo ? (variant == "git" || variant == "unstable" || variant == "igc" || variant == "macport"),
+  # emacs-overlay's emacs-git / emacs-igc are git checkouts, so they
+  # need autoreconfHook (srcRepo = true). emacs-unstable ships the
+  # tagged release tarball, so srcRepo = false. macport has its own
+  # autotools setup and also wants srcRepo = false.
+  srcRepo ? (variant == "git" || variant == "unstable" || variant == "igc" || variant == "mainline"),
   # source is a git checkout (runs autoreconf)
 
   # ── Image formats ────────────────────────────────────────────────
@@ -171,22 +194,24 @@ let
       hash = gitMeta.${vname}.srcHash;
     };
 
-  # ── Base package from nixpkgs ────────────────────────────────────
-  # macport uses a separate derivation with macport-specific configure
-  # flags (--enable-mac-app, --with-mac, etc.) and Darwin-only source.
-  basePackage = if variant == "macport" then pkgs.emacs31-macport else pkgs.emacs31;
+  # ── Base package from emacs-overlay ──────────────────────────────
+  # All bases come from nix-community/emacs-overlay (master is Emacs 31).
+  #   * emacs-git     — master / Emacs 31 (default mainline build)
+  #   * emacs-macport — jdtsmith/emacs-mac fork (still Emacs 30.2.50 upstream)
+  basePackage = if variant == "macport" then pkgs.emacs-macport else pkgs.emacs-git;
 
-  # ── Forward all boolean flags to nixpkgs make-emacs.nix ──────────
+  # ── Forward all boolean flags to make-emacs.nix ──────────────────
   #
   # CACHE-PARITY INVARIANT: every default in this file's argument list
-  # must match the corresponding default in upstream nixpkgs's
-  # make-emacs.nix. When that holds, calling
+  # must match the corresponding default in emacs-overlay's
+  # emacs-git derivation (which itself mirrors upstream nixpkgs
+  # make-emacs.nix). When that holds, calling
   #
   #     import ./emacs.nix {}                  # mainline variant
   #     import ./emacs.nix { noGui = true; }   # any standard override
   #
-  # produces the *exact* store path of `pkgs.emacs31(.override { ... })`,
-  # so the cachix.org / cache.nixos.org binary cache hits and we never
+  # produces the *exact* store path of `pkgs.emacs-git(.override { ... })`
+  # so binary caches (nix-community.cachix.org, jylhis) hit and we never
   # rebuild Emacs from source. Only the git/unstable/igc/macport
   # variants and the Darwin patch flags are expected to diverge — those
   # paths run through `overrideAttrs` below and intentionally bust the
@@ -196,8 +221,11 @@ let
   #     nix-instantiate --eval --strict -E \
   #       'let lock = builtins.fromJSON (builtins.readFile ./flake.lock);
   #            n = lock.nodes.nixpkgs.locked;
+  #            ov = lock.nodes.emacs-overlay.locked;
   #            nixpkgs = fetchTarball { url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz"; sha256 = n.narHash; };
-  #        in (import ./emacs.nix {}).outPath == (import nixpkgs {}).emacs31.outPath'
+  #            overlay = fetchTarball { url = "https://github.com/${ov.owner}/${ov.repo}/archive/${ov.rev}.tar.gz"; sha256 = ov.narHash; };
+  #            pkgs = import nixpkgs { overlays = [ (import overlay) ]; };
+  #        in (import ./emacs.nix {}).outPath == pkgs.emacs-git.outPath'
   overridden = basePackage.override {
     inherit
       noGui
