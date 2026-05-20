@@ -264,7 +264,7 @@ fmt:
 # ── Lock synchronization ────────────────────────────────────────────
 
 # Inputs shared between flake.nix and devenv.yaml — both locks must agree on these revs.
-shared_inputs := "nixpkgs treefmt-nix"
+shared_inputs := "nixpkgs treefmt-nix emacs-overlay"
 
 # Update flake inputs and sync matching devenv.yaml URLs to the new revs.
 [group('pins')]
