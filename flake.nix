@@ -11,6 +11,14 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Emacs 31 is not yet in nixpkgs; pull it from emacs-overlay's
+    # emacs-git attribute (current master). The overlay also supplies
+    # emacs-unstable / emacs-igc / emacs-*-pgtk variants used by
+    # emacs.nix.
+    emacs-overlay = {
+      url = "github:nix-community/emacs-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -18,6 +26,7 @@
       self,
       nixpkgs,
       treefmt-nix,
+      emacs-overlay,
       ...
     }:
     let
@@ -32,7 +41,10 @@
         system:
         import nixpkgs {
           inherit system;
-          overlays = [ self.overlays.default ];
+          overlays = [
+            emacs-overlay.overlays.default
+            self.overlays.default
+          ];
         };
       treefmtEval =
         system:
