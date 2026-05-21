@@ -46,7 +46,11 @@ auto-creates missing parent directories on find-file.
 
 Repeat-mode lets you press the trailing key alone after a prefix
 command (e.g. C-x o o o instead of C-x o C-x o). Built-in,
-enabled globally.
+enabled globally. `repeat-exit-timeout' clears the transient map
+after two idle seconds so the user doesn't have to think about
+exiting it — the ergonomic "one-shot modifier" pattern. A
+window-resize repeat-map filling the one gap in the built-in
+coverage lives in init-keys.el.
 
 ### `uniquify` *(built-in / Nix)*
 
@@ -96,7 +100,21 @@ across sessions. Built-in, enabled globally.
 ### `bookmark` *(built-in / Nix)*
 
 Built-in bookmark store. State file is themed under var/ so it
-joins the rest of Jotain's persistent state.
+joins the rest of Jotain's persistent state. `save-flag 1` writes
+on every change so an Emacs crash never loses bookmarks; the fringe
+glyph is suppressed because it adds visual noise without info.
+
+### `isearch` *(built-in / Nix)*
+
+Lazy-count isearch matches in the prompt — "(3/12)" tells you
+where you are without leaving the search.
+
+### `shr` *(built-in / Nix)*
+
+Built-in HTML renderer used by eww, gnus, elfeed. Suppress page
+colours and proportional fonts so rendered HTML inherits the
+theme and the user's monospace face — better contrast,
+predictable layout.
 
 ## `init-keys.el` — Global keys
 
@@ -104,7 +122,8 @@ joins the rest of Jotain's persistent state.
 
 Top-level rebindings — disable accidental suspend (C-z and
 C-x C-z), put other-window on M-o for one-key window switching,
-and bind C-x j to the two-window rotate helper above.
+bind C-x j to the two-window rotate helper above, and rebind
+C-g to the DWIM quit so it closes minibuffers from elsewhere.
 
 ### `windmove` *(built-in / Nix)*
 
@@ -283,6 +302,16 @@ Treats CamelCase / snake_case word parts as separate words for
 M-f / M-b / M-d. Built-in. Programming-mode only — prose still
 gets whole-word motion.
 
+### `emacs` *(built-in / Nix)*
+
+Bindings for the two transpose commands Emacs ships without
+defaults, so the prose-level family (sentence, paragraph) is
+reachable alongside the built-in C-t (chars), M-t (words),
+C-x C-t (lines), and C-M-t (sexps, tree-sitter aware in Emacs
+30+). Caveat: transpose-lines works on real newlines, so it
+gives surprising results under visual-line-mode where wrapped
+"lines" are visual only.
+
 ### `newcomment` *(built-in / Nix)*
 
 Defaults for the built-in comment commands (M-;, C-x C-;, M-j).
@@ -298,6 +327,14 @@ Per-mode overrides go in the language module via a named hook:
   (defun my-foo-mode-setup ()
     (setq-local comment-multi-line nil))
   (add-hook 'foo-mode-hook #'my-foo-mode-setup)
+
+### `replace` *(built-in / Nix)*
+
+Emacs 30 ships `replace-regexp-as-diff' and
+`multi-file-replace-regexp-as-diff' — run a regex replacement, but
+see the result as a unified diff first and either apply it as a
+patch or abort. Worth reaching for on any non-trivial refactor.
+The dired-marked variant is bound in `init-navigation.el'.
 
 ### `expreg`
 
@@ -432,7 +469,10 @@ capf finds nothing useful.
 
 Built-in directory editor — Jotain's primary file manager.
 The custom block below tames cross-platform ls quirks (BSD on
-macOS lacks `--group-directories-first` and `--dired`).
+macOS lacks `--group-directories-first` and `--dired`). `M-s R`
+previews a regex replacement across the contents of all marked
+files as a unified diff (Emacs 30's
+`dired-do-replace-regexp-as-diff').
 
 ### `dired-x` *(built-in / Nix)*
 
@@ -959,8 +999,17 @@ files. Adds module-name completion and Jinja2 highlighting.
 
 ### `yaml-mode`
 
-YAML major mode. Loaded on demand for the dozens of YAML-shaped
-files in any modern repo (CI, k8s, helm).
+YAML major mode (MELPA). Loaded on demand for the dozens of
+YAML-shaped files in any modern repo (CI, k8s, helm). YAML derives
+from `text-mode' upstream, so we re-fire `prog-mode-hook' to get
+the full editor surface (line numbers, flymake, indent guides, …).
+
+### `yaml-ts-mode` *(built-in / Nix)*
+
+Built-in tree-sitter YAML mode (Emacs 29+). Same prog-mode
+hook tweak as `yaml-mode'; kept in its own use-package block so
+users running the built-in mode aren't forced to install the
+MELPA `yaml-mode' package by `use-package-always-ensure'.
 
 ### `csv-mode`
 

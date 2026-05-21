@@ -11,11 +11,11 @@ Jotain uses Nix for reproducible Emacs builds with fine-grained control over com
 
 ### emacs.nix
 
-The core build expression. It takes `pkgs.emacs30` (or `pkgs.emacs30-macport` for the macport variant) and calls `.override { ... }` with every upstream build flag exposed as a file-level argument.
+The core build expression. It takes `pkgs.emacs-git` (or `pkgs.emacs-macport` for the macport variant) from [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay) and calls `.override { ... }` with every upstream build flag exposed as a file-level argument. The overlay is added in `flake.nix`/`devenv.nix` because Emacs 31 is not yet shipped in nixpkgs.
 
 Supported:
 
-- **Source variants**: `mainline` (Emacs 30 release, default, binary-cached), `git` (bleeding-edge master from git.savannah.gnu.org), `unstable` (latest release tag built from git source), `macport` (jdtsmith/emacs-mac fork), `igc` (feature/igc3 — the Memory Pool System incremental GC branch).
+- **Source variants**: `mainline` (emacs-overlay's `emacs-git` = current master, default), `git` (alias for `mainline`), `unstable` (`emacs-unstable`, latest tagged release), `macport` (`emacs-macport`, jdtsmith/emacs-mac fork), `igc` (`emacs-igc`, the feature/igc3 Memory Pool System incremental GC branch).
 - **GUI toolkits**: GTK3, pgtk (pure GTK for Wayland), NS (Cocoa/NeXTstep on macOS), Motif, Athena, X11, or no GUI at all (`noGui = true`).
 - **Compilation**: native compilation (libgccjit AOT, default when the build platform can execute the host), compressed install, C sources for `find-function-C-source`, `srcRepo` (run autoreconf on git-based sources).
 - **Image formats**: WebP (default), Cairo (X11 default), optionally ImageMagick.
@@ -24,14 +24,14 @@ Supported:
 
 ### Cache-parity invariant
 
-`emacs.nix` is written so that every argument default matches the corresponding default in upstream nixpkgs' `make-emacs.nix`. As long as that holds,
+`emacs.nix` is written so that every argument default matches the corresponding default in `emacs-overlay`'s `emacs-git` derivation (which mirrors upstream nixpkgs' `make-emacs.nix`). As long as that holds,
 
 ```nix
 import ./emacs.nix {}                  # mainline
 import ./emacs.nix { noGui = true; }   # any standard override
 ```
 
-produces the *exact* store path of `pkgs.emacs30(.override { ... })`, so the public binary cache hits and nothing recompiles from source. Only the `git` / `unstable` / `igc` / `macport` variants and the Darwin patch flags are expected to diverge — those paths run through `overrideAttrs` and intentionally bust the cache.
+produces the *exact* store path of `pkgs.emacs-git(.override { ... })`, so the `nix-community.cachix.org` (and project `jylhis`) binary caches hit and nothing recompiles from source. Only the `unstable` / `igc` / `macport` variants and the Darwin patch flags are expected to diverge — those paths run through `overrideAttrs` and intentionally bust the cache.
 
 Verify after any change to defaults:
 
@@ -39,11 +39,17 @@ Verify after any change to defaults:
 nix-instantiate --eval --strict -E '
   let lock = builtins.fromJSON (builtins.readFile ./flake.lock);
       n = lock.nodes.nixpkgs.locked;
+      ov = lock.nodes.emacs-overlay.locked;
       nixpkgs = fetchTarball {
         url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz";
         sha256 = n.narHash;
       };
-  in (import ./emacs.nix {}).outPath == (import nixpkgs {}).emacs30.outPath'
+      overlay = fetchTarball {
+        url = "https://github.com/${ov.owner}/${ov.repo}/archive/${ov.rev}.tar.gz";
+        sha256 = ov.narHash;
+      };
+      pkgs = import nixpkgs { overlays = [ (import overlay) ]; };
+  in (import ./emacs.nix {}).outPath == pkgs.emacs-git.outPath'
 ```
 
 ### default.nix

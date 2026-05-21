@@ -10,7 +10,10 @@
 
 ;;; @doc Built-in directory editor — Jotain's primary file manager.
 ;;; The custom block below tames cross-platform ls quirks (BSD on
-;;; macOS lacks `--group-directories-first` and `--dired`).
+;;; macOS lacks `--group-directories-first` and `--dired`). `M-s R`
+;;; previews a regex replacement across the contents of all marked
+;;; files as a unified diff (Emacs 30's
+;;; `dired-do-replace-regexp-as-diff').
 (use-package dired
   :ensure nil
   :custom
@@ -27,6 +30,7 @@
                               "-alh"
                             "-alh --group-directories-first"))
   (dired-dwim-target t)
+  (dired-kill-when-opening-new-dired-buffer t)
   (dired-recursive-copies 'always)
   (dired-recursive-deletes 'top)
   (dired-auto-revert-buffer #'dired-buffer-stale-p)
@@ -34,7 +38,9 @@
   (dired-create-destination-dirs 'ask)
   (dired-free-space nil)
   (dired-vc-rename-file t)
-  :hook (dired-mode . dired-hide-details-mode))
+  :hook (dired-mode . dired-hide-details-mode)
+  :bind (:map dired-mode-map
+              ("M-s R" . dired-do-replace-regexp-as-diff)))
 
 ;;; @doc Built-in dired extras — `dired-omit-mode` hides dotfiles and
 ;;; cache directories so dired listings show only the things you
