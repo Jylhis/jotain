@@ -36,6 +36,19 @@
   :ensure nil
   :hook ((prog-mode . subword-mode)))
 
+;;; @doc Bindings for the two transpose commands Emacs ships without
+;;; defaults, so the prose-level family (sentence, paragraph) is
+;;; reachable alongside the built-in C-t (chars), M-t (words),
+;;; C-x C-t (lines), and C-M-t (sexps, tree-sitter aware in Emacs
+;;; 30+). Caveat: transpose-lines works on real newlines, so it
+;;; gives surprising results under visual-line-mode where wrapped
+;;; "lines" are visual only.
+(use-package emacs
+  :ensure nil
+  :bind
+  (("C-x M-t"   . transpose-sentences)
+   ("C-x C-M-t" . transpose-paragraphs)))
+
 ;;; @doc Defaults for the built-in comment commands (M-;, C-x C-;, M-j).
 ;;; `comment-multi-line' makes M-j continue inside an open block
 ;;; comment instead of closing/reopening; `extra-line' style puts
@@ -57,6 +70,16 @@
   (comment-style 'extra-line)
   (comment-empty-lines t)
   (comment-auto-fill-only-comments t))
+
+;;; @doc Emacs 30 ships `replace-regexp-as-diff' and
+;;; `multi-file-replace-regexp-as-diff' — run a regex replacement, but
+;;; see the result as a unified diff first and either apply it as a
+;;; patch or abort. Worth reaching for on any non-trivial refactor.
+;;; The dired-marked variant is bound in `init-navigation.el'.
+(use-package replace
+  :ensure nil
+  :bind (("M-s R"   . replace-regexp-as-diff)
+         ("M-s M-R" . multi-file-replace-regexp-as-diff)))
 
 ;;; @doc Treesit-aware semantic region expansion. Smaller, faster
 ;;; successor to expand-region; produces better expansions with
