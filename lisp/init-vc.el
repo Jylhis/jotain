@@ -332,7 +332,7 @@ Falls back to `default-directory' when `buffer-file-name' is nil so
 that magit status buffers (which have no file) still trigger an
 invalidation after `magit-post-refresh-hook'."
   (when-let* ((file-or-dir (or buffer-file-name default-directory))
-              (root (vc-git-root file-or-dir)))
+              (root (locate-dominating-file file-or-dir ".git")))
     (let ((entry (jotain-git-stats--entry (expand-file-name root))))
       (plist-put entry :ts 0))))
 
@@ -342,7 +342,6 @@ invalidation after `magit-post-refresh-hook'."
            jotain-git-stats--cache)
   (force-mode-line-update t))
 
-(declare-function vc-git-root "vc-git" (file))
 ;; `doom-modeline-def-segment' and `doom-modeline-def-modeline' are
 ;; macros; make them available at byte-compile time so their forms
 ;; below get expanded instead of treated as unknown function calls.
@@ -354,7 +353,7 @@ invalidation after `magit-post-refresh-hook'."
     (let* ((file buffer-file-name)
            (raw-root (and (mode-line-window-selected-p)
                           file
-                          (vc-git-root file))))
+                          (locate-dominating-file file ".git"))))
       (if (not raw-root)
           ""
         (let ((root (expand-file-name raw-root)))
