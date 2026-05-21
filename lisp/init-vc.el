@@ -253,6 +253,7 @@ CALLBACK is still invoked with 0 so the cache never deadlocks."
          :name "jotain-git-stats"
          :buffer buffer
          :command (append '("git"
+                            "--no-pager"
                             "-c" "core.fsmonitor=false"
                             "-c" "diff.external=")
                           args)
@@ -290,7 +291,7 @@ CALLBACK is still invoked with 0 so the cache never deadlocks."
                         (plist-put entry :ts (float-time))
                         (force-mode-line-update t)))))
         (jotain-git-stats--run
-         root '("diff" "--no-ext-diff" "--no-textconv" "--numstat" "HEAD")
+         root '("diff-index" "--numstat" "HEAD")
          #'jotain-git-stats--parse-numstat
          (lambda (n) (plist-put entry :changes n) (funcall after)))
         (jotain-git-stats--run
