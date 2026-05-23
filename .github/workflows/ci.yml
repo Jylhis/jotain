@@ -44,17 +44,38 @@ jobs:
           name: jylhis
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
-      - name: Lightweight flake checks
+      # Each check is a separate step so a failure surfaces by name in
+      # the GitHub Actions UI without needing log access.
+      - name: Debug — confirm flake checks resolve
         run: |
-          nix build --print-build-logs \
-            .#checks.x86_64-linux.formatting \
-            .#checks.x86_64-linux.statix \
-            .#checks.x86_64-linux.deadnix \
-            .#checks.x86_64-linux.module-eval \
-            .#checks.x86_64-linux.packages-doc-in-sync \
-            .#checks.x86_64-linux.packages-doc \
-            .#checks.x86_64-linux.options-doc \
-            .#checks.x86_64-linux.elisp-lint
+          nix --version
+          nix eval --raw .#checks.x86_64-linux \
+            --apply 'cs: builtins.concatStringsSep "\n" (builtins.attrNames cs)'
+          echo
+
+      - name: Check — formatting
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.formatting
+
+      - name: Check — statix
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.statix
+
+      - name: Check — deadnix
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.deadnix
+
+      - name: Check — module-eval
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.module-eval
+
+      - name: Check — packages-doc-in-sync
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.packages-doc-in-sync
+
+      - name: Check — packages-doc
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.packages-doc
+
+      - name: Check — options-doc
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.options-doc
+
+      - name: Check — elisp-lint
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.elisp-lint
 
   test:
     name: Dev environment
