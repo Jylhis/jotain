@@ -18,7 +18,7 @@
 #
 #   imports = [ jotain.darwinModules.default ];
 #   services.jotain.enable = true;
-{
+args@{
   config,
   lib,
   pkgs,
@@ -26,15 +26,24 @@
 }:
 let
   cfg = config.services.jotain;
+  jotainOverlay = args.jotainOverlay or (import ./overlay.nix);
+  pkgsWithOverlay = pkgs.extend jotainOverlay;
+  selectedPackage =
+    if cfg.package != null then
+      cfg.package
+    else if cfg.emacsBackend == "jylhis" then
+      pkgsWithOverlay.jylhisEmacsPackages
+    else
+      pkgsWithOverlay.jotainEmacsPackages;
 
   # Fallback script for EDITOR when the daemon is not running.
   editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
-    exec ${lib.getBin cfg.package}/bin/emacs -nw "$@"
+    exec ${lib.getBin selectedPackage}/bin/emacs -nw "$@"
   '';
 
   # EDITOR — terminal-friendly emacsclient (works over SSH, in git commit, etc.)
   editorScript = pkgs.writeShellScriptBin "jotain-editor" ''
-    exec ${lib.getBin cfg.package}/bin/emacsclient \
+    exec ${lib.getBin selectedPackage}/bin/emacsclient \
       --tty \
       --alternate-editor=${editorFallback} \
       "$@"
@@ -42,9 +51,9 @@ let
 
   # VISUAL — opens a GUI emacsclient frame.
   visualScript = pkgs.writeShellScriptBin "jotain-visual" ''
-    exec ${lib.getBin cfg.package}/bin/emacsclient \
+    exec ${lib.getBin selectedPackage}/bin/emacsclient \
       --create-frame \
-      --alternate-editor=${lib.getBin cfg.package}/bin/emacs \
+      --alternate-editor=${lib.getBin selectedPackage}/bin/emacs \
       "$@"
   '';
 in
@@ -52,11 +61,30 @@ in
   options.services.jotain = {
     enable = lib.mkEnableOption "the Jotain Emacs configuration";
 
+    emacsBackend = lib.mkOption {
+      type = lib.types.enum [
+        "mainline"
+        "jylhis"
+        "custom"
+      ];
+      default = "mainline";
+      example = "jylhis";
+      description = ''
+        Which Emacs backend to install. `"mainline"` uses the
+        cache-friendly Emacs build from `emacs.nix`; `"jylhis"` uses
+        the pinned `github:jylhis/emacs` Meson fork; `"custom"` uses
+        `services.jotain.package`.
+      '';
+    };
+
     package = lib.mkOption {
-      type = lib.types.package;
-      default = (pkgs.extend (import ./overlay.nix)).jotainEmacsPackages;
-      defaultText = lib.literalExpression "(pkgs.extend (import ./overlay.nix)).jotainEmacsPackages";
-      description = "The Jotain Emacs package to use.";
+      type = lib.types.nullOr lib.types.package;
+      default = null;
+      defaultText = lib.literalExpression "null";
+      description = ''
+        Custom Jotain Emacs package to use. Leave this unset to use
+        `services.jotain.emacsBackend`.
+      '';
     };
 
     defaultEditor = lib.mkOption {
@@ -72,9 +100,16 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    nixpkgs.overlays = [ (import ./overlay.nix) ];
+    assertions = [
+      {
+        assertion = cfg.emacsBackend != "custom" || cfg.package != null;
+        message = "services.jotain.emacsBackend = \"custom\" requires services.jotain.package.";
+      }
+    ];
+
+    nixpkgs.overlays = [ jotainOverlay ];
     environment.systemPackages = [
-      cfg.package
+      selectedPackage
       editorScript
       visualScript
     ];

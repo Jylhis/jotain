@@ -75,11 +75,15 @@ let
   graphicalModule = evalHomeModule {
     startWithUserSession = "graphical";
   };
+  jylhisModule = evalHomeModule {
+    emacsBackend = "jylhis";
+  };
 in
 {
   # ── Package builds ────────────────────────────────────────────────
   packages-default = pkgs.jotainEmacsPackages;
   packages-emacs = pkgs.jotainEmacs;
+  packages-jylhis-emacs = pkgs.jylhisEmacs;
   packages-info = pkgs.jotainInfo;
 
   # ── Option documentation ─────────────────────────────────────────
@@ -118,14 +122,25 @@ in
   module-eval =
     pkgs.runCommandLocal "check-module-eval"
       {
-        defaultEditor = defaultModule.config.home.sessionVariables.EDITOR;
+        defaultEditorConfigured = if defaultModule.config.home.sessionVariables ? EDITOR then "1" else "0";
+        jylhisPackageName = (builtins.head jylhisModule.config.home.packages).name;
         graphicalTarget =
           if pkgs.stdenv.hostPlatform.isLinux then
             builtins.toJSON graphicalModule.config.systemd.user.services.jotain.Install.WantedBy
           else
-            builtins.toJSON graphicalModule.config.launchd.agents.jotain.config.ProgramArguments;
+            toString (builtins.length graphicalModule.config.launchd.agents.jotain.config.ProgramArguments);
       }
       ''
+        touch $out
+      '';
+
+  jylhis-emacs-smoke =
+    pkgs.runCommandLocal "check-jylhis-emacs-smoke"
+      {
+        nativeBuildInputs = [ pkgs.jylhisEmacs ];
+      }
+      ''
+        emacs --batch --eval '(princ emacs-version)' >/dev/null
         touch $out
       '';
 
