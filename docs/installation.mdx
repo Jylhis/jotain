@@ -32,6 +32,7 @@ Every `emacs.nix` argument is forwarded through `default.nix`. The `Justfile` pr
 ```bash
 just build          # mainline Emacs 31 + every grammar (default)
 just build-bare     # bare Emacs from emacs.nix — no grammars
+just build-jylhis   # bare github:jylhis/emacs Meson fork
 just build-pgtk     # --with-pgtk (pure GTK, Wayland)
 just build-gtk3     # --with-x-toolkit=gtk3 (X11 + GTK3)
 just build-nox      # --without-x --without-ns (terminal only)
@@ -55,6 +56,44 @@ nix-build emacs.nix  --arg variant '"macport"'           # macOS macport fork
 <Note>
 For `git`/`unstable`/`igc` variants the first build will fail and report the expected hash. Re-run with `--argstr hash "sha256-..."` (or edit `emacs.nix` to pin it).
 </Note>
+
+## Installing from a Consumer Flake
+
+Jotain exposes Home Manager, NixOS, and nix-darwin modules. The default backend stays on the cache-friendly `emacs.nix` build:
+
+```nix
+{
+  imports = [ inputs.jotain.homeManagerModules.default ];
+
+  services.jotain.enable = true;
+}
+```
+
+To install the same Jotain setup on the `github:jylhis/emacs` Meson fork, select the fork backend:
+
+```nix
+{
+  imports = [ inputs.jotain.homeManagerModules.default ];
+
+  services.jotain = {
+    enable = true;
+    emacsBackend = "jylhis";
+  };
+}
+```
+
+Downstream flakes can override the fork source by following the `jylhis-emacs` input:
+
+```nix
+inputs.jotain.url = "github:jylhis/jotain";
+inputs.my-emacs-fork = {
+  url = "github:jylhis/emacs/my-branch-or-rev";
+  flake = false;
+};
+inputs.jotain.inputs.jylhis-emacs.follows = "my-emacs-fork";
+```
+
+The bare fork package is checked directly. The full fork-backed package set is exposed as `.#jylhis-emacs-packages` and `just build-jylhis-full`, but remains experimental until the Meson fork reliably byte-compiles all bundled Emacs packages.
 
 ## Running
 
