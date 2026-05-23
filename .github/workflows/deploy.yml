@@ -1,0 +1,123 @@
+# Full validation + deploy for protected branches.
+#
+# On push to main:  check (full nix flake check) → test (devenv test) →
+#                   build-pages → deploy-pages.  GitHub Pages publishes
+#                   the option-reference docs and the jotain.info
+#                   manual; the jylhis cachix cache is repopulated with
+#                   any newly built artifacts.
+#
+# On push to next:  check + test only (no Pages deploy).
+#
+# This workflow is the only place where heavy artifacts (full grammar
+# distribution, jotainInfo, options-doc) are re-validated and pushed
+# back to cachix, so downstream PRs running ci.yml hit the cache.
+name: Deploy
+
+on:
+  push:
+    branches: [main, next]
+  workflow_dispatch:
+
+# Do NOT cancel protected-branch runs — post-merge cache pushes must
+# finish.  Pages deploys are additionally serialized below.
+concurrency:
+  group: deploy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  check:
+    name: Check
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: cachix/install-nix-action@v31
+
+      - uses: cachix/cachix-action@v17
+        with:
+          name: jylhis
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: nix flake check
+        run: nix flake check --print-build-logs
+
+  test:
+    name: Dev environment
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - uses: cachix/cachix-action@v17
+        with:
+          name: jylhis
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          extraPullNames: devenv
+
+      - name: Install devenv.sh
+        run: nix profile add nixpkgs#devenv
+
+      - name: devenv test
+        run: devenv test
+
+  build-pages:
+    name: Build docs
+    if: github.ref == 'refs/heads/main'
+    needs: check
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    # Serialize Pages builds so concurrent main pushes queue instead of
+    # racing the upload-pages-artifact step.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: cachix/install-nix-action@v31
+
+      - uses: cachix/cachix-action@v17
+        with:
+          name: jylhis
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Build option docs
+        run: nix build .#docs -o result-docs
+
+      - name: Build Info manual
+        run: nix build .#info -o result-info
+
+      - name: Assemble Pages artifact
+        run: |
+          mkdir -p site
+          cp -rL result-docs/. site/
+          cp result-info/share/info/jotain.info site/
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy-pages:
+    name: Deploy
+    if: github.ref == 'refs/heads/main'
+    needs: build-pages
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
