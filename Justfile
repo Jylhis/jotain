@@ -162,6 +162,17 @@ build:
 build-bare:
     nix-build --argstr system {{system}} emacs.nix
 
+# Build the bare github:jylhis/emacs Meson fork.
+[group('build')]
+build-jylhis:
+    nix build .#jylhis-emacs -o result-jylhis-emacs
+
+# Build Jotain's full package set on the github:jylhis/emacs fork.
+# Experimental until the fork reliably byte-compiles all Emacs packages.
+[group('build')]
+build-jylhis-full:
+    nix build .#jylhis-emacs-packages -o result-jylhis-emacs-full
+
 # Build with --with-pgtk for Wayland.
 [group('build')]
 build-pgtk:
