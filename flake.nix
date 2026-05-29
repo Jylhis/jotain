@@ -19,10 +19,7 @@
       url = "github:nix-community/emacs-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    jylhis-emacs = {
-      url = "github:jylhis/emacs/eaf289b4f7414744a23912ab7aae0a518d998242";
-      flake = false;
-    };
+    jylhis-emacs.url = "github:jylhis/emacs/dev";
   };
 
   outputs =
