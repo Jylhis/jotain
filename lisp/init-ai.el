@@ -7,6 +7,11 @@
 ;;   claude-code-ide  C-c C-'       Agentic editing — autonomous multi-file
 ;;                                  changes via the Claude Code CLI.
 ;;
+;;   eca              C-c C-e       Editor Code Assistant — chat, inline
+;;                                  completion, rewrite, and MCP through an
+;;                                  external `eca' server (C-c . for the menu
+;;                                  inside eca windows).
+;;
 ;;   gptel            C-c RET       Send region/buffer to an LLM.
 ;;                    C-c M-RET     Full menu (model, backend, system prompt).
 ;;
@@ -16,7 +21,8 @@
 ;; Auth: API keys come from the environment first
 ;; (ANTHROPIC_API_KEY / GEMINI_API_KEY) and fall back to auth-source —
 ;; auth-source-1password (configured in init-systems.el) makes that
-;; transparent.
+;; transparent.  The eca server reads the same provider keys from the
+;; environment.
 
 ;;; Code:
 
@@ -30,6 +36,15 @@
   :bind ("C-c C-'" . claude-code-ide-menu)
   :config
   (claude-code-ide-emacs-tools-setup))
+
+;;; @doc Editor Code Assistant — AI pair-programming client (chat, inline
+;;; completion, rewrite, MCP) talking to an external `eca' server over
+;;; JSONRPC. The server binary is provided by Nix and found on $PATH, so
+;;; nothing is downloaded; provider keys come from the environment, same as
+;;; gptel. C-c C-e starts a session and opens the chat.
+(use-package eca
+  :defer t
+  :bind ("C-c C-e" . eca))
 
 ;;; @doc Conversational LLM front-end with multiple backends (Anthropic,
 ;;; Gemini, local Ollama) configured below. Bound to C-c RET / C-c
