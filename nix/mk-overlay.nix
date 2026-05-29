@@ -22,6 +22,7 @@ let
           epkgs.combobulate
           epkgs.jylhis-emacs-themes
           epkgs.nix-ts-mode
+          epkgs.tagref
           epkgs.treesit-grammars.with-all-grammars
         ];
       };
@@ -68,6 +69,11 @@ in
   );
 
   sonarlintLs = final.sonarlint-ls;
+
+  # Prebuilt ECA server binary for the eca-emacs client (lisp/init-ai.el).
+  # Surfaced on the overlay so module-system / Home Manager consumers can put
+  # it on the wrapper PATH.
+  eca = import ./eca-server.nix { pkgs = final; };
 
   jotainInfo = import ./info-manual.nix {
     pkgs = final;

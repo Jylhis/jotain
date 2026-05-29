@@ -41,4 +41,18 @@ efinal: _eprev: {
       sha256 = "0j647m17bwj4hia32nq650z7bpnxcg5bflk0z8r867qzmg8j6vc1";
     };
   };
+
+  # Emacs integration for the tagref CLI ([tag:x]/[ref:x] cross-references):
+  # completion, xref navigation, and M-x tagref-check.  Not on MELPA; depends
+  # only on Emacs built-ins, so no packageRequires.
+  tagref = efinal.trivialBuild {
+    pname = "tagref";
+    version = "0.1.0";
+    src = pkgs.fetchFromGitHub {
+      owner = "vedang";
+      repo = "tagref.el";
+      rev = "8356b83afee687b1d4011e6dc79716055aa20e7f";
+      sha256 = "0zki2d7c4vsaq68s9rac6zcr5q3gagpgdvrcshnkdniw7r8ph8ww";
+    };
+  };
 }
