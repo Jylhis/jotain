@@ -34,6 +34,12 @@ let
       mainProgram = "rass";
     };
   };
+
+  # ECA (Editor Code Assistant) server binary. The eca-emacs client
+  # (lisp/init-ai.el) auto-detects `eca' on PATH instead of downloading it.
+  # Built inline (not via the overlay) because the dev shell's `pkgs' has no
+  # overlay applied — same approach as rassumfrassum above.
+  eca = import ./nix/eca-server.nix { inherit pkgs; };
 in
 {
   # The custom emacs-lisp language module lives in nix/. Importing it
@@ -58,6 +64,14 @@ in
     # rassumfrassum (`rass`) LSP multiplexer.  init-prog.el routes TS/TSX
     # and Python eglot connections through it when this binary is on PATH.
     rassumfrassum
+
+    # ECA server (`eca`) for the eca-emacs client.  On PATH so eca-emacs
+    # uses it directly instead of downloading a server at runtime.
+    eca
+
+    # tagref (`tagref`) cross-reference checker.  Backs the tagref.el Emacs
+    # integration (M-x tagref-check, xref navigation) wired in init-prog.el.
+    tagref
 
     # Dockerfile language server (`docker-langserver`) — Eglot auto-attaches
     # it in dockerfile-mode via the entry registered in init-prog.el.
@@ -155,7 +169,7 @@ in
   enterTest = ''
     set -euo pipefail
 
-    echo "[1/4] core Nix tools on PATH"
+    echo "[1/6] core Nix tools on PATH"
     for bin in nil nixfmt statix deadnix; do
       real="$(readlink -f "$(command -v "$bin")")"
       case "$real" in
@@ -164,21 +178,21 @@ in
       esac
     done
 
-    echo "[2/4] sonarlint-ls on PATH and lives in the Nix store"
+    echo "[2/6] sonarlint-ls on PATH and lives in the Nix store"
     real_sonar="$(readlink -f "$(command -v sonarlint-ls)")"
     case "$real_sonar" in
       /nix/store/*) ;;
       *) echo "FAIL: sonarlint-ls resolved to $real_sonar"; exit 1 ;;
     esac
 
-    echo "[3/4] rassumfrassum (rass) on PATH and lives in the Nix store"
+    echo "[3/6] rassumfrassum (rass) on PATH and lives in the Nix store"
     real_rass="$(readlink -f "$(command -v rass)")"
     case "$real_rass" in
       /nix/store/*) ;;
       *) echo "FAIL: rass resolved to $real_rass"; exit 1 ;;
     esac
 
-    echo "[4/4] docs toolchain (pandoc + makeinfo) on PATH"
+    echo "[4/6] docs toolchain (pandoc + makeinfo) on PATH"
     real_pandoc="$(readlink -f "$(command -v pandoc)")"
     case "$real_pandoc" in
       /nix/store/*) ;;
@@ -188,6 +202,20 @@ in
     case "$real_makeinfo" in
       /nix/store/*) ;;
       *) echo "FAIL: makeinfo resolved to $real_makeinfo"; exit 1 ;;
+    esac
+
+    echo "[5/6] eca server on PATH and lives in the Nix store"
+    real_eca="$(readlink -f "$(command -v eca)")"
+    case "$real_eca" in
+      /nix/store/*) ;;
+      *) echo "FAIL: eca resolved to $real_eca"; exit 1 ;;
+    esac
+
+    echo "[6/6] tagref on PATH and lives in the Nix store"
+    real_tagref="$(readlink -f "$(command -v tagref)")"
+    case "$real_tagref" in
+      /nix/store/*) ;;
+      *) echo "FAIL: tagref resolved to $real_tagref"; exit 1 ;;
     esac
 
     # NOTE: there's no longer a runtime assertion that `emacs` is absent
