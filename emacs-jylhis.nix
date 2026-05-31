@@ -85,6 +85,7 @@ stdenv.mkDerivation (_finalAttrs: {
       jansson
       lcms2
       libjpeg
+      libgcrypt
       libpng
       librsvg
       libtiff
@@ -131,6 +132,7 @@ stdenv.mkDerivation (_finalAttrs: {
     "-Dimagemagick=${feature withImageMagick}"
     "-Dcairo=${feature withCairo}"
     "-Dxft=disabled"
+    "-Dxim=disabled"
     "-Dxpm=disabled"
     "-Dxinput2=disabled"
     "-Dxdbe=disabled"
