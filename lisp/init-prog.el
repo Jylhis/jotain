@@ -327,6 +327,11 @@ connection alongside any existing language server."
   :diminish apheleia-mode
   :functions (apheleia-global-mode)
   :config
+  (add-to-list 'apheleia-formatters
+               '(meson-format . ("meson" "format"
+                                  "--source-file-path" filepath
+                                  "-")))
+  (add-to-list 'apheleia-mode-alist '(meson-mode . meson-format))
   (apheleia-global-mode 1)
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
