@@ -260,6 +260,17 @@ connection alongside any existing language server."
   :custom
   (xref-search-program 'ripgrep))
 
+;;;; tagref
+
+;;; @doc Cross-reference checker for `[tag:x]'/`[ref:x]' directives. Adds
+;;; completion, xref navigation (M-. jumps from a ref to its tag, M-? finds
+;;; references), and `M-x tagref-check' (clickable compilation buffer).
+;;; Needs the `tagref' CLI on PATH (dev shell / Home Manager wrapper).
+;;; Provided by Nix (not on MELPA).
+(use-package tagref
+  :ensure nil ; Provided by Nix
+  :hook (prog-mode . tagref-mode))
+
 ;;;; Compile
 
 ;;; @doc Built-in compile / recompile. Auto-scroll until the first error
