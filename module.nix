@@ -12,7 +12,7 @@
 #
 # Modelled after the home-manager services.emacs module, but uses the
 # Jotain-built Emacs and `jotain` naming throughout.
-{
+args@{
   config,
   lib,
   pkgs,
@@ -20,14 +20,22 @@
 }:
 let
   cfg = config.services.jotain;
-  pkgsWithOverlay = pkgs.extend (import ./overlay.nix);
+  jotainOverlay = args.jotainOverlay or (import ./overlay.nix);
+  pkgsWithOverlay = pkgs.extend jotainOverlay;
+  selectedPackage =
+    if cfg.package != null then
+      cfg.package
+    else if cfg.emacsBackend == "jylhis" then
+      pkgsWithOverlay.jylhisEmacsPackages
+    else
+      pkgsWithOverlay.jotainEmacsPackages;
   inherit (pkgs.stdenv.hostPlatform) isLinux;
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
   startWithSession =
     if cfg.startWithUserSession == "graphical" then true else cfg.startWithUserSession;
 
-  emacsBinPath = "${cfg.package}/bin";
-  emacsVersion = lib.getVersion cfg.package;
+  emacsBinPath = "${selectedPackage}/bin";
+  emacsVersion = lib.getVersion selectedPackage;
 
   clientWMClass = if lib.versionAtLeast emacsVersion "28" then "Emacsd" else "Emacs";
 
@@ -101,7 +109,7 @@ let
 
   # EDITOR — terminal-friendly emacsclient (works over SSH, in git commit, etc.)
   editorScript = pkgs.writeShellScriptBin "jotain-editor" ''
-    exec ${lib.getBin cfg.package}/bin/emacsclient \
+    exec ${lib.getBin selectedPackage}/bin/emacsclient \
       --tty \
       --alternate-editor=${editorFallback} \
       "$@"
@@ -109,7 +117,7 @@ let
 
   # VISUAL — opens a GUI emacsclient frame.
   visualScript = pkgs.writeShellScriptBin "jotain-visual" ''
-    exec ${lib.getBin cfg.package}/bin/emacsclient \
+    exec ${lib.getBin selectedPackage}/bin/emacsclient \
       --create-frame \
       --alternate-editor=${emacsWrapper}/bin/emacs \
       "$@"
@@ -132,11 +140,30 @@ in
   options.services.jotain = {
     enable = lib.mkEnableOption "the Jotain Emacs daemon";
 
+    emacsBackend = lib.mkOption {
+      type = lib.types.enum [
+        "mainline"
+        "jylhis"
+        "custom"
+      ];
+      default = "mainline";
+      example = "jylhis";
+      description = ''
+        Which Emacs backend to install. `"mainline"` uses the
+        cache-friendly Emacs build from `emacs.nix`; `"jylhis"` uses
+        the pinned `github:jylhis/emacs` Meson fork; `"custom"` uses
+        `services.jotain.package`.
+      '';
+    };
+
     package = lib.mkOption {
-      type = lib.types.package;
-      default = pkgsWithOverlay.jotainEmacsPackages;
-      defaultText = lib.literalExpression "(pkgs.extend (import ./overlay.nix)).jotainEmacsPackages";
-      description = "The Jotain Emacs package to use.";
+      type = lib.types.nullOr lib.types.package;
+      default = null;
+      defaultText = lib.literalExpression "null";
+      description = ''
+        Custom Jotain Emacs package to use. Leave this unset to use
+        `services.jotain.emacsBackend`.
+      '';
     };
 
     extraOptions = lib.mkOption {
@@ -218,6 +245,10 @@ in
   config = lib.mkIf cfg.enable {
     assertions = [
       {
+        assertion = cfg.emacsBackend != "custom" || cfg.package != null;
+        message = "services.jotain.emacsBackend = \"custom\" requires services.jotain.package.";
+      }
+      {
         assertion = !cfg.socketActivation.enable || isLinux;
         message = "services.jotain.socketActivation.enable is only supported on Linux/systemd.";
       }
@@ -235,11 +266,11 @@ in
     fonts.fontconfig.enable = lib.mkIf isLinux true;
 
     home.packages = [
-      cfg.package
+      selectedPackage
       editorScript
       visualScript
       # hiPrio so the wrapped `emacs` shadows the unwrapped binary
-      # that ships inside cfg.package.
+      # that ships inside the selected package.
       (lib.hiPrio emacsWrapper)
     ]
     ++ emojiFontPackages

@@ -217,6 +217,36 @@ Each value is a plist (:changes N :commits M :ts TIMESTAMP :busy BOOL).")
   (< (- (float-time) (plist-get entry :ts))
      jotain-git-stats-update-interval))
 
+(defun jotain-git-stats--git-dir (root)
+  "Resolve the git-dir for ROOT.
+Handles both normal repos (`.git' is a directory) and worktrees
+(`.git' is a regular file holding `gitdir: <path>'). Returns nil
+when ROOT is not under git control."
+  (let ((dotgit (expand-file-name ".git" root)))
+    (cond
+     ((file-directory-p dotgit) dotgit)
+     ((file-regular-p dotgit)
+      (with-temp-buffer
+        (insert-file-contents dotgit)
+        (goto-char (point-min))
+        (when (re-search-forward "^gitdir: \\(.+\\)$" nil t)
+          (expand-file-name (string-trim (match-string 1)) root))))
+     (t nil))))
+
+(defun jotain-git-stats--git-busy-p (root)
+  "Return non-nil if ROOT has a long-running git op in progress.
+Probes the sentinel files git drops while rebase / merge / bisect /
+cherry-pick are mid-flight. The modeline skips its refresh in that
+window — running our read-only `diff --numstat' against a foreground
+`git rebase' is what lets our `make-process' calls race the user's
+own `.git/index.lock' churn on the same checkout."
+  (when-let* ((git-dir (jotain-git-stats--git-dir root)))
+    (or (file-exists-p (expand-file-name "rebase-merge" git-dir))
+        (file-exists-p (expand-file-name "rebase-apply" git-dir))
+        (file-exists-p (expand-file-name "MERGE_HEAD" git-dir))
+        (file-exists-p (expand-file-name "BISECT_LOG" git-dir))
+        (file-exists-p (expand-file-name "CHERRY_PICK_HEAD" git-dir)))))
+
 (defun jotain-git-stats--parse-numstat (output)
   "Sum the added + deleted columns from `git diff --numstat' OUTPUT.
 Format is TAB-separated \"ADDED<TAB>DELETED<TAB>FILE\" per line; binary
@@ -245,9 +275,17 @@ prose breaks under `LANG=de_DE.UTF-8' etc."
 PARSE-FN is applied to stdout; CALLBACK receives the parsed value.
 Errors and non-zero exits are mapped to 0. If `make-process' itself
 fails (e.g. `git' is missing on PATH), the buffer is killed and
-CALLBACK is still invoked with 0 so the cache never deadlocks."
+CALLBACK is still invoked with 0 so the cache never deadlocks.
+
+`GIT_OPTIONAL_LOCKS=0' is prepended to `process-environment' so the
+read paths (`diff --numstat', `log') decline to take `.git/index.lock'
+for an opportunistic refresh — that lock is what races the user's own
+`git rebase' / `git commit' on the same checkout when N modeline
+refreshes fire in parallel across sibling Emacs / Claude sessions."
   (let* ((buffer (generate-new-buffer " *jotain-git-stats*"))
-         (default-directory root))
+         (default-directory root)
+         (process-environment
+          (cons "GIT_OPTIONAL_LOCKS=0" process-environment)))
     (condition-case nil
         (make-process
          :name "jotain-git-stats"
@@ -300,10 +338,15 @@ CALLBACK is still invoked with 0 so the cache never deadlocks."
          (lambda (n) (plist-put entry :commits n) (funcall after)))))))
 
 (defun jotain-git-stats--maybe-refresh (root)
-  "Refresh ROOT's cache if it's stale and no refresh is already in flight."
+  "Refresh ROOT's cache if it's stale and no refresh is already in flight.
+Also skips entirely while a long-running git op (rebase / merge / bisect /
+cherry-pick) is in progress under ROOT — our read-only probes there are
+the same calls the user's foreground rebase is racing, so just hold the
+cached counts until the operation clears."
   (let ((entry (jotain-git-stats--entry root)))
     (unless (or (plist-get entry :busy)
-                (jotain-git-stats--fresh-p entry))
+                (jotain-git-stats--fresh-p entry)
+                (jotain-git-stats--git-busy-p root))
       (jotain-git-stats--refresh root))))
 
 (defun jotain-git-stats--face-for-changes (n)

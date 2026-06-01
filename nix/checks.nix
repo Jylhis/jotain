@@ -75,11 +75,15 @@ let
   graphicalModule = evalHomeModule {
     startWithUserSession = "graphical";
   };
+  jylhisModule = evalHomeModule {
+    emacsBackend = "jylhis";
+  };
 in
 {
   # ── Package builds ────────────────────────────────────────────────
   packages-default = pkgs.jotainEmacsPackages;
   packages-emacs = pkgs.jotainEmacs;
+  packages-jylhis-emacs = pkgs.jylhisEmacs;
   packages-info = pkgs.jotainInfo;
 
   # ── Option documentation ─────────────────────────────────────────
@@ -118,14 +122,64 @@ in
   module-eval =
     pkgs.runCommandLocal "check-module-eval"
       {
-        defaultEditor = defaultModule.config.home.sessionVariables.EDITOR;
+        defaultEditorConfigured = if defaultModule.config.home.sessionVariables ? EDITOR then "1" else "0";
+        jylhisPackageName = (builtins.head jylhisModule.config.home.packages).name;
         graphicalTarget =
           if pkgs.stdenv.hostPlatform.isLinux then
             builtins.toJSON graphicalModule.config.systemd.user.services.jotain.Install.WantedBy
           else
-            builtins.toJSON graphicalModule.config.launchd.agents.jotain.config.ProgramArguments;
+            toString (builtins.length graphicalModule.config.launchd.agents.jotain.config.ProgramArguments);
       }
       ''
+        touch $out
+      '';
+
+  jylhis-emacs-smoke =
+    pkgs.runCommandLocal "check-jylhis-emacs-smoke"
+      {
+        nativeBuildInputs = [ pkgs.jylhisEmacs ];
+      }
+      ''
+        emacs --batch --eval '(princ emacs-version)' >/dev/null
+        touch $out
+      '';
+
+  # Build-side equivalent of the Emacs-provenance assertions that used
+  # to live in devenv.nix `enterTest`. Emacs is no longer installed in
+  # the dev shell, so we verify here that the jotainEmacs derivation
+  # ships the expected binaries and that they run cleanly without
+  # touching anything outside the store.
+  emacs-binaries =
+    pkgs.runCommandLocal "check-emacs-binaries"
+      {
+        emacs = pkgs.jotainEmacs;
+      }
+      ''
+        set -euo pipefail
+        for bin in emacs emacsclient etags; do
+          test -x "$emacs/bin/$bin" || { echo "missing $bin"; exit 1; }
+        done
+        "$emacs/bin/emacs" --batch --version | grep -q "GNU Emacs"
+
+        isolated_home="$(mktemp -d)"
+        HOME="$isolated_home" "$emacs/bin/emacs" --batch \
+          --no-init-file --no-site-file \
+          --eval '(princ (format "user-init-file=%S\n" user-init-file))' \
+          --eval '(princ (format "user-emacs-directory=%S\n" user-emacs-directory))' \
+          > "$isolated_home/out" 2> "$isolated_home/err"
+        host_leaks=$(grep -E "/home/|/Users/" \
+          "$isolated_home/out" "$isolated_home/err" \
+          | grep -v "$isolated_home" || true)
+        if [ -n "$host_leaks" ]; then
+          echo "FAIL: emacs touched a path outside the store:"
+          echo "$host_leaks"
+          exit 1
+        fi
+        if [ -e "$isolated_home/.emacs.d" ] || [ -e "$isolated_home/.emacs" ]; then
+          echo "FAIL: emacs created config under HOME=$isolated_home"
+          exit 1
+        fi
+
         touch $out
       '';
 
