@@ -57,6 +57,11 @@ in
     statix
     deadnix
 
+    # Meson build tooling.  meson-mode and apheleia use the Meson CLI for
+    # formatting, and compile-multi commands assume Ninja-backed builddirs.
+    meson
+    ninja
+
     # SonarLint language server for in-editor code quality analysis.
     # Start in Emacs with M-x jotain-sonarlint.
     sonarlint-ls
@@ -169,7 +174,7 @@ in
   enterTest = ''
     set -euo pipefail
 
-    echo "[1/6] core Nix tools on PATH"
+    echo "[1/7] core Nix tools on PATH"
     for bin in nil nixfmt statix deadnix; do
       real="$(readlink -f "$(command -v "$bin")")"
       case "$real" in
@@ -178,21 +183,30 @@ in
       esac
     done
 
-    echo "[2/6] sonarlint-ls on PATH and lives in the Nix store"
+    echo "[2/7] Meson build tools on PATH and live in the Nix store"
+    for bin in meson ninja; do
+      real="$(readlink -f "$(command -v "$bin")")"
+      case "$real" in
+        /nix/store/*) ;;
+        *) echo "FAIL: $bin resolved to $real"; exit 1 ;;
+      esac
+    done
+
+    echo "[3/7] sonarlint-ls on PATH and lives in the Nix store"
     real_sonar="$(readlink -f "$(command -v sonarlint-ls)")"
     case "$real_sonar" in
       /nix/store/*) ;;
       *) echo "FAIL: sonarlint-ls resolved to $real_sonar"; exit 1 ;;
     esac
 
-    echo "[3/6] rassumfrassum (rass) on PATH and lives in the Nix store"
+    echo "[4/7] rassumfrassum (rass) on PATH and lives in the Nix store"
     real_rass="$(readlink -f "$(command -v rass)")"
     case "$real_rass" in
       /nix/store/*) ;;
       *) echo "FAIL: rass resolved to $real_rass"; exit 1 ;;
     esac
 
-    echo "[4/6] docs toolchain (pandoc + makeinfo) on PATH"
+    echo "[5/7] docs toolchain (pandoc + makeinfo) on PATH"
     real_pandoc="$(readlink -f "$(command -v pandoc)")"
     case "$real_pandoc" in
       /nix/store/*) ;;
@@ -204,14 +218,14 @@ in
       *) echo "FAIL: makeinfo resolved to $real_makeinfo"; exit 1 ;;
     esac
 
-    echo "[5/6] eca server on PATH and lives in the Nix store"
+    echo "[6/7] eca server on PATH and lives in the Nix store"
     real_eca="$(readlink -f "$(command -v eca)")"
     case "$real_eca" in
       /nix/store/*) ;;
       *) echo "FAIL: eca resolved to $real_eca"; exit 1 ;;
     esac
 
-    echo "[6/6] tagref on PATH and lives in the Nix store"
+    echo "[7/7] tagref on PATH and lives in the Nix store"
     real_tagref="$(readlink -f "$(command -v tagref)")"
     case "$real_tagref" in
       /nix/store/*) ;;
