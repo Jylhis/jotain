@@ -22,6 +22,7 @@
         config.allowUnfree = true;
       },
 
+  src ? null,
   rev ? "eaf289b4f7414744a23912ab7aae0a518d998242",
   hash ? "sha256-ZbwX8kKNWpV6BbaqEFE6ZB4oNuqwtdg6QTNcKX1qPBY=",
 
@@ -43,17 +44,23 @@
 let
   inherit (pkgs) lib stdenv;
   feature = enabled: if enabled then "enabled" else "disabled";
-  shortRev = builtins.substring 0 7 rev;
+  sourceRev = src.rev or rev;
+  shortRev = builtins.substring 0 7 sourceRev;
+  source =
+    if src != null then
+      src
+    else
+      pkgs.fetchFromGitHub {
+        owner = "jylhis";
+        repo = "emacs";
+        inherit rev hash;
+      };
 in
 stdenv.mkDerivation (_finalAttrs: {
   pname = "jylhis-emacs";
   version = "31.0.50-${shortRev}";
 
-  src = pkgs.fetchFromGitHub {
-    owner = "jylhis";
-    repo = "emacs";
-    inherit rev hash;
-  };
+  src = source;
 
   strictDeps = true;
 
@@ -78,6 +85,7 @@ stdenv.mkDerivation (_finalAttrs: {
       jansson
       lcms2
       libjpeg
+      libgcrypt
       libpng
       librsvg
       libtiff
@@ -124,6 +132,7 @@ stdenv.mkDerivation (_finalAttrs: {
     "-Dimagemagick=${feature withImageMagick}"
     "-Dcairo=${feature withCairo}"
     "-Dxft=disabled"
+    "-Dxim=disabled"
     "-Dxpm=disabled"
     "-Dxinput2=disabled"
     "-Dxdbe=disabled"
@@ -141,7 +150,7 @@ stdenv.mkDerivation (_finalAttrs: {
 
   postPatch = ''
     substituteInPlace lisp/loadup.el \
-      --replace-warn '(emacs-repository-get-version)' '"${rev}"' \
+      --replace-warn '(emacs-repository-get-version)' '"${sourceRev}"' \
       --replace-warn '(emacs-repository-get-branch)' '"dev"'
   '';
 

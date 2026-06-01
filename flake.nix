@@ -19,10 +19,11 @@
       url = "github:nix-community/emacs-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    jylhis-emacs.url = "github:jylhis/emacs/dev";
   };
 
   outputs =
-    {
+    inputs@{
       self,
       nixpkgs,
       treefmt-nix,
@@ -54,17 +55,31 @@
         };
     in
     {
-      overlays.default = import ./overlay.nix;
+      overlays.default = import ./nix/mk-overlay.nix {
+        jylhisEmacsSrc = inputs."jylhis-emacs";
+      };
 
-      homeManagerModules.default = import ./module.nix;
-      nixosModules.default = import ./module-system.nix;
-      darwinModules.default = import ./module-system.nix;
+      homeManagerModules.default =
+        { ... }:
+        {
+          imports = [ ./module.nix ];
+          _module.args.jotainOverlay = self.overlays.default;
+        };
+      nixosModules.default =
+        { ... }:
+        {
+          imports = [ ./module-system.nix ];
+          _module.args.jotainOverlay = self.overlays.default;
+        };
+      darwinModules.default = self.nixosModules.default;
 
       lib = import ./nix/use-package.nix { inherit (nixpkgs) lib; };
 
       packages = forAllSystems (system: {
         default = (pkgsFor system).jotainEmacsPackages;
         emacs = (pkgsFor system).jotainEmacs;
+        emacs-jylhis = (pkgsFor system).jylhisEmacs;
+        jotain-jylhis = (pkgsFor system).jylhisEmacsPackages;
         jylhis-emacs = (pkgsFor system).jylhisEmacs;
         jylhis-emacs-packages = (pkgsFor system).jylhisEmacsPackages;
         info = (pkgsFor system).jotainInfo;

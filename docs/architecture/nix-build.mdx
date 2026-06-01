@@ -52,6 +52,17 @@ nix-instantiate --eval --strict -E '
   in (import ./emacs.nix {}).outPath == pkgs.emacs-git.outPath'
 ```
 
+### emacs-jylhis.nix
+
+The fork build expression. It builds the pinned `github:jylhis/emacs` Meson branch and stays separate from `emacs.nix` so the default cache-parity path remains unchanged. In the flake, the fork source comes from the non-flake input `jylhis-emacs`; standalone `nix-build emacs-jylhis.nix` falls back to the pinned `rev` / `hash` arguments in the file.
+
+The overlay exposes both bare and full fork-backed packages:
+
+- `jylhisEmacs` / `packages.${system}.jylhis-emacs`
+- `jylhisEmacsPackages` / `packages.${system}.jylhis-emacs-packages`
+
+The full fork-backed package set is still experimental because the Meson fork has previously crashed while byte-compiling downstream Emacs packages. Use `just build-jylhis-full` to exercise that path explicitly.
+
 ### default.nix
 
 The distribution layer. It imports `emacs.nix` (forwarding every argument it does not consume itself) and, when `withTreeSitterGrammars` is `true` (default), wraps the result with `emacsPackagesFor emacs |> withPackages (epkgs: [ epkgs.treesit-grammars.with-all-grammars ])`. The resulting Emacs loads all ~275 grammars out of the box; `early-init.el` wires them in via `TREE_SITTER_DIR` / `treesit-extra-load-path`.
@@ -82,3 +93,24 @@ The `igc` variant builds Emacs's `feature/igc3` branch, which replaces the defau
 ## Git Variants
 
 For `git`, `unstable`, and `igc`, `emacs.nix` fetches from `https://git.savannah.gnu.org/git/emacs.git` via `fetchgit`. The first build reports the correct hash; re-run with `--argstr hash "sha256-..."` (or edit the `gitMeta` attrset). `postPatch` substitutes the recorded revision into `lisp/loadup.el` so `emacs-repository-get-version` returns the expected value without a `.git` directory in the build tree. On `aarch64-linux`, git builds automatically get `--enable-check-lisp-object-type` added to avoid segfaults.
+
+## Consumer Flake Backend Selection
+
+Home Manager, NixOS, and nix-darwin consumers choose the fork with:
+
+```nix
+services.jotain.emacsBackend = "jylhis";
+```
+
+The default remains `"mainline"`. Use `"custom"` only when also setting `services.jotain.package`.
+
+Downstream flakes can replace the pinned fork input:
+
+```nix
+inputs.jotain.url = "github:jylhis/jotain";
+inputs.my-emacs-fork = {
+  url = "github:jylhis/emacs/my-branch-or-rev";
+  flake = false;
+};
+inputs.jotain.inputs.jylhis-emacs.follows = "my-emacs-fork";
+```
