@@ -12,7 +12,7 @@ system := `nix eval --impure --raw --expr 'builtins.currentSystem'`
 
 # List available recipes.
 default:
-    @just --list --justfile {{justfile()}}
+    @just --list --justfile "{{justfile()}}"
 
 
 # ── Run ─────────────────────────────────────────────────────────────
@@ -20,36 +20,36 @@ default:
 # Launch Emacs with this config in isolation (--init-directory).
 [group('run')]
 run *ARGS:
-    emacs --init-directory={{config_dir}} {{ARGS}}
+    emacs --init-directory="{{config_dir}}" {{ARGS}}
 
 # Launch with --debug-init and debug-on-error.
 [group('run')]
 debug *ARGS:
-    emacs --init-directory={{config_dir}} --debug-init \
+    emacs --init-directory="{{config_dir}}" --debug-init \
           --eval '(setq debug-on-error t)' {{ARGS}}
 
 # Launch in the terminal (-nw) — exercises kkp + clipetty.
 [group('run')]
 tty *ARGS:
-    emacs -nw --init-directory={{config_dir}} {{ARGS}}
+    emacs -nw --init-directory="{{config_dir}}" {{ARGS}}
 
 # Run a foreground Emacs daemon with this config. Stop with C-c or
 # `emacsclient -e '(kill-emacs)'`. See docs/usage/launching.mdx.
 [group('run')]
 daemon *ARGS:
-    emacs --fg-daemon --init-directory={{config_dir}} {{ARGS}}
+    emacs --fg-daemon --init-directory="{{config_dir}}" {{ARGS}}
 
 # Connect a graphical emacsclient frame to the running daemon. Falls
 # back to a fresh Emacs (with the repo config) if no daemon is running.
 [group('run')]
 client *ARGS:
-    emacsclient -c --alternate-editor='emacs --init-directory={{config_dir}}' {{ARGS}}
+    emacsclient -c --alternate-editor='emacs --init-directory="{{config_dir}}"' {{ARGS}}
 
 # Connect a terminal emacsclient frame to the running daemon. Falls
 # back to a fresh -nw Emacs (with the repo config) if no daemon is running.
 [group('run')]
 client-tty *ARGS:
-    emacsclient -t --alternate-editor='emacs -nw --init-directory={{config_dir}}' {{ARGS}}
+    emacsclient -t --alternate-editor='emacs -nw --init-directory="{{config_dir}}"' {{ARGS}}
 
 # Lightweight `emacs -Q -nw` for quick edits, no Jotain config. The
 # wombat theme keeps the buffer readable on dark terminals.
@@ -91,7 +91,7 @@ compile:
     #!/usr/bin/env bash
     set -euo pipefail
     emacs --batch \
-        --init-directory={{config_dir}} \
+        --init-directory="{{config_dir}}" \
         --eval '(setq byte-compile-error-on-warn t)' \
         --eval '(byte-recompile-directory "{{config_dir}}/lisp" 0 t)' \
         -f batch-byte-compile early-init.el init.el
@@ -215,7 +215,7 @@ run-built *ARGS:
     echo "Launching Emacs from result/bin/emacs..."
     ./result/bin/emacs --debug-init \
         --eval '(setq debug-on-error t)' \
-        --init-directory={{config_dir}} {{ARGS}}
+        --init-directory="{{config_dir}}" {{ARGS}}
 
 
 # Build option reference documentation (HTML for GitHub Pages).
@@ -314,13 +314,13 @@ verify:
 clean:
     #!/usr/bin/env bash
     set -euo pipefail
-    find {{config_dir}} -name '*.elc' -type f -delete 2>/dev/null || true
-    find {{config_dir}} -name '*~'    -type f -delete 2>/dev/null || true
-    find {{config_dir}} -name '#*#'   -type f -delete 2>/dev/null || true
-    find {{config_dir}} -name '.#*'   -type f -delete 2>/dev/null || true
-    rm -rf {{config_dir}}/var/eln-cache 2>/dev/null || true
-    rm -rf {{config_dir}}/eln-cache     2>/dev/null || true
-    rm -f  {{config_dir}}/result        2>/dev/null || true
+    find "{{config_dir}}" -name '*.elc' -type f -delete 2>/dev/null || true
+    find "{{config_dir}}" -name '*~'    -type f -delete 2>/dev/null || true
+    find "{{config_dir}}" -name '#*#'   -type f -delete 2>/dev/null || true
+    find "{{config_dir}}" -name '.#*'   -type f -delete 2>/dev/null || true
+    rm -rf "{{config_dir}}/var/eln-cache" 2>/dev/null || true
+    rm -rf "{{config_dir}}/eln-cache"     2>/dev/null || true
+    rm -f  "{{config_dir}}/result"        2>/dev/null || true
     echo "Cleaned compiled artifacts."
 
 # Nuke installed packages and persistent state — forces a full re-fetch.
@@ -328,7 +328,7 @@ clean:
 clean-all: clean
     #!/usr/bin/env bash
     set -euo pipefail
-    rm -rf {{config_dir}}/elpa      2>/dev/null || true
-    rm -rf {{config_dir}}/var       2>/dev/null || true
-    rm -rf {{config_dir}}/.dev-home 2>/dev/null || true
+    rm -rf "{{config_dir}}/elpa"      2>/dev/null || true
+    rm -rf "{{config_dir}}/var"       2>/dev/null || true
+    rm -rf "{{config_dir}}/.dev-home" 2>/dev/null || true
     echo "Nuked elpa/, var/, .dev-home/."
