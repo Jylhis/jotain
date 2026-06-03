@@ -35,7 +35,6 @@
   withTreeSitter ? true,
   withSQLite3 ? true,
   withWebP ? true,
-  withImageMagick ? false,
   withCairo ? !noGui && withGTK3,
   withDbus ? pkgs.stdenv.hostPlatform.isLinux,
   withSystemd ? pkgs.stdenv.hostPlatform.isLinux,
@@ -129,7 +128,6 @@ stdenv.mkDerivation (_finalAttrs: {
     "-Dtree-sitter=${feature withTreeSitter}"
     "-Dsqlite3=${feature withSQLite3}"
     "-Dwebp=${feature withWebP}"
-    "-Dimagemagick=${feature withImageMagick}"
     "-Dcairo=${feature withCairo}"
     "-Dxft=disabled"
     "-Dxim=disabled"
