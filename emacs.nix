@@ -40,7 +40,8 @@
       (
         let
           lock = builtins.fromJSON (builtins.readFile ./flake.lock);
-          n = lock.nodes.nixpkgs.locked;
+          nixpkgsNode = lock.nodes.root.inputs.nixpkgs;
+          n = lock.nodes.${nixpkgsNode}.locked;
         in
         fetchTarball {
           url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz";
@@ -220,7 +221,8 @@ let
   # Verify after any change to defaults:
   #     nix-instantiate --eval --strict -E \
   #       'let lock = builtins.fromJSON (builtins.readFile ./flake.lock);
-  #            n = lock.nodes.nixpkgs.locked;
+  #            nixpkgsNode = lock.nodes.root.inputs.nixpkgs;
+  #            n = lock.nodes.${nixpkgsNode}.locked;
   #            ov = lock.nodes.emacs-overlay.locked;
   #            nixpkgs = fetchTarball { url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz"; sha256 = n.narHash; };
   #            overlay = fetchTarball { url = "https://github.com/${ov.owner}/${ov.repo}/archive/${ov.rev}.tar.gz"; sha256 = ov.narHash; };
