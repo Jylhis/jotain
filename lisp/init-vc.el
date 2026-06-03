@@ -206,6 +206,13 @@ Each value is a plist (:changes N :commits M :ts TIMESTAMP :busy BOOL).")
 (defvar jotain-git-stats--timer nil
   "Idle timer that walks the cache and invalidates stale entries.")
 
+(defcustom jotain-git-stats-max-dotgit-bytes 4096
+  "Maximum number of bytes read from a regular `.git' file.
+Worktree indirection files are tiny; larger files are treated as
+untrusted and ignored by `jotain-git-stats--git-dir'."
+  :type 'integer
+  :group 'jotain-vc)
+
 (defun jotain-git-stats--entry (root)
   "Return the cache plist for ROOT, creating a zeroed one if missing."
   (or (gethash root jotain-git-stats--cache)
@@ -221,16 +228,20 @@ Each value is a plist (:changes N :commits M :ts TIMESTAMP :busy BOOL).")
   "Resolve the git-dir for ROOT.
 Handles both normal repos (`.git' is a directory) and worktrees
 (`.git' is a regular file holding `gitdir: <path>'). Returns nil
-when ROOT is not under git control."
+when ROOT is not under git control or parsing fails."
   (let ((dotgit (expand-file-name ".git" root)))
     (cond
      ((file-directory-p dotgit) dotgit)
      ((file-regular-p dotgit)
-      (with-temp-buffer
-        (insert-file-contents dotgit)
-        (goto-char (point-min))
-        (when (re-search-forward "^gitdir: \\(.+\\)$" nil t)
-          (expand-file-name (string-trim (match-string 1)) root))))
+      (condition-case nil
+          (with-temp-buffer
+            (insert-file-contents dotgit nil 0 jotain-git-stats-max-dotgit-bytes)
+            (goto-char (point-min))
+            (when (re-search-forward "^gitdir: \\(.+\\)$" nil t)
+              (let ((git-dir (expand-file-name (string-trim (match-string 1)) root)))
+                (unless (file-remote-p git-dir)
+                  git-dir))))
+        (file-error nil)))
      (t nil))))
 
 (defun jotain-git-stats--git-busy-p (root)
