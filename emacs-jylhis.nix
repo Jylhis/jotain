@@ -10,7 +10,8 @@
       (
         let
           lock = builtins.fromJSON (builtins.readFile ./flake.lock);
-          n = lock.nodes.nixpkgs.locked;
+          nixpkgsNode = lock.nodes.root.inputs.nixpkgs;
+          n = lock.nodes.${nixpkgsNode}.locked;
         in
         fetchTarball {
           url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz";
