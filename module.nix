@@ -82,6 +82,7 @@ let
       git # magit, vc
       direnv # envrc
       coreutils # gls, used by dirvish-listing-switches on darwin
+      pkgsWithOverlay.eca # eca-emacs server; prevents runtime download fallback
     ]
     ++ lib.optional cfg.sonarlint.enable pkgs.sonarlintLs
     ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server;
