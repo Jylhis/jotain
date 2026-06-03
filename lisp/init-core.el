@@ -269,24 +269,8 @@ freezes — start, reproduce, stop."
   :ensure nil
   :custom
   (savehist-file (jotain-var-file "savehist.el"))
-  (savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
   :config
-  (savehist-mode 1)
-
-  ;; Strip text properties from every ring savehist persists, so the
-  ;; savehist file doesn't bloat with face/font-lock metadata from
-  ;; whatever buffer the strings were copied out of. Named so the hook
-  ;; can be removed cleanly when the config is re-evaluated.
-  (defun jotain-core--savehist-strip-properties ()
-    "Strip text properties from persisted rings before serialization."
-    (dolist (ring '(kill-ring search-ring regexp-search-ring))
-      (set ring (mapcar (lambda (entry)
-                          (if (stringp entry)
-                              (substring-no-properties entry)
-                            entry))
-                        (symbol-value ring)))))
-
-  (add-hook 'savehist-save-hook #'jotain-core--savehist-strip-properties))
+  (savehist-mode 1))
 
 ;;; @doc Built-in bookmark store. State file is themed under var/ so it
 ;;; joins the rest of Jotain's persistent state.
