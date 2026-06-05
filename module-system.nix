@@ -112,6 +112,7 @@ in
       selectedPackage
       editorScript
       visualScript
+      pkgsWithOverlay.eca
     ];
     # Colour-emoji fallback for the `emoji' / `symbol' fontsets wired
     # in lisp/init-ui.el.  Skipped on Darwin: macOS provides Apple
