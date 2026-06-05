@@ -12,7 +12,7 @@ system := `nix eval --impure --raw --expr 'builtins.currentSystem'`
 
 # List available recipes.
 default:
-    @just --list --justfile {{justfile()}}
+    @just --list --justfile "{{justfile()}}"
 
 
 # ── Run ─────────────────────────────────────────────────────────────
@@ -208,7 +208,7 @@ run-built *ARGS:
     echo "Launching Emacs from result/bin/emacs..."
     ./result/bin/emacs --debug-init \
         --eval '(setq debug-on-error t)' \
-        --init-directory={{config_dir}} {{ARGS}}
+        --init-directory="{{config_dir}}" {{ARGS}}
 
 
 # Build option reference documentation (HTML for GitHub Pages).
@@ -307,13 +307,13 @@ verify:
 clean:
     #!/usr/bin/env bash
     set -euo pipefail
-    find {{config_dir}} -name '*.elc' -type f -delete 2>/dev/null || true
-    find {{config_dir}} -name '*~'    -type f -delete 2>/dev/null || true
-    find {{config_dir}} -name '#*#'   -type f -delete 2>/dev/null || true
-    find {{config_dir}} -name '.#*'   -type f -delete 2>/dev/null || true
-    rm -rf {{config_dir}}/var/eln-cache 2>/dev/null || true
-    rm -rf {{config_dir}}/eln-cache     2>/dev/null || true
-    rm -f  {{config_dir}}/result        2>/dev/null || true
+    find "{{config_dir}}" -name '*.elc' -type f -delete 2>/dev/null || true
+    find "{{config_dir}}" -name '*~'    -type f -delete 2>/dev/null || true
+    find "{{config_dir}}" -name '#*#'   -type f -delete 2>/dev/null || true
+    find "{{config_dir}}" -name '.#*'   -type f -delete 2>/dev/null || true
+    rm -rf "{{config_dir}}/var/eln-cache" 2>/dev/null || true
+    rm -rf "{{config_dir}}/eln-cache"     2>/dev/null || true
+    rm -f  "{{config_dir}}/result"        2>/dev/null || true
     echo "Cleaned compiled artifacts."
 
 # Nuke installed packages and persistent state — forces a full re-fetch.
@@ -321,7 +321,7 @@ clean:
 clean-all: clean
     #!/usr/bin/env bash
     set -euo pipefail
-    rm -rf {{config_dir}}/elpa      2>/dev/null || true
-    rm -rf {{config_dir}}/var       2>/dev/null || true
-    rm -rf {{config_dir}}/.dev-home 2>/dev/null || true
+    rm -rf "{{config_dir}}/elpa"      2>/dev/null || true
+    rm -rf "{{config_dir}}/var"       2>/dev/null || true
+    rm -rf "{{config_dir}}/.dev-home" 2>/dev/null || true
     echo "Nuked elpa/, var/, .dev-home/."
