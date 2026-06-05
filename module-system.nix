@@ -38,7 +38,7 @@ let
 
   # Fallback script for EDITOR when the daemon is not running.
   editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
-    exec ${lib.getBin selectedPackage}/bin/emacs -nw "$@"
+    exec ${lib.getBin selectedPackage}/bin/emacs -nw -- "$@"
   '';
 
   # EDITOR — terminal-friendly emacsclient (works over SSH, in git commit, etc.)
@@ -46,6 +46,7 @@ let
     exec ${lib.getBin selectedPackage}/bin/emacsclient \
       --tty \
       --alternate-editor=${editorFallback} \
+      -- \
       "$@"
   '';
 
@@ -54,6 +55,7 @@ let
     exec ${lib.getBin selectedPackage}/bin/emacsclient \
       --create-frame \
       --alternate-editor=${lib.getBin selectedPackage}/bin/emacs \
+      -- \
       "$@"
   '';
 in
