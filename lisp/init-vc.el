@@ -290,7 +290,11 @@ refreshes fire in parallel across sibling Emacs / Claude sessions."
         (make-process
          :name "jotain-git-stats"
          :buffer buffer
-         :command (cons "git" args)
+         :command (append '("git"
+                            "--no-pager"
+                            "-c" "core.fsmonitor=false"
+                            "-c" "diff.external=")
+                          args)
          :noquery t
          :sentinel
          (lambda (proc _event)
@@ -325,7 +329,7 @@ refreshes fire in parallel across sibling Emacs / Claude sessions."
                         (plist-put entry :ts (float-time))
                         (force-mode-line-update t)))))
         (jotain-git-stats--run
-         root '("diff" "--numstat" "HEAD")
+         root '("diff-index" "--numstat" "HEAD")
          #'jotain-git-stats--parse-numstat
          (lambda (n) (plist-put entry :changes n) (funcall after)))
         (jotain-git-stats--run
