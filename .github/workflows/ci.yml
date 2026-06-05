@@ -1,31 +1,31 @@
-# CI for the Jotain Emacs configuration.
+# CI for the Jotain Emacs configuration — pull requests only.
 #
-# Two jobs run in parallel on x86_64-linux:
+# Runs the lightweight subset of nix/checks.nix on every PR. The heavy
+# checks (elisp-compile, packages-default, packages-info) are deferred
+# to deploy.yml on main so PR latency stays low even on cache miss.
 #
-#   check — nix flake check (formatting, statix, deadnix, elisp-lint,
-#           elisp-compile, and package builds — jotainEmacs,
-#           jotainEmacsPackages, jotainInfo, options-doc are all flake
-#           checks, so running a separate `nix build` job would
-#           duplicate work)
-#   test  — devenv test (dev environment assertions from devenv.nix)
+# Two parallel jobs on x86_64-linux:
 #
-# The jylhis cachix cache is used for pulling pre-built artifacts and
-# pushing newly built ones (when CACHIX_AUTH_TOKEN is available).
+#   check — formatting, statix, deadnix, module-eval,
+#           packages-doc-in-sync, packages-doc, options-doc, elisp-lint
+#           (paren check; transitively builds the bare jotainEmacs from
+#           cache).  Skips elisp-compile and the full grammar
+#           distribution — those run in deploy.yml.
+#   test  — devenv test (dev environment assertions from devenv.nix).
+#
+# The jylhis cachix cache is pull-only here: PR runs (including from
+# forks) get no CACHIX_AUTH_TOKEN, so the writer token is never exposed
+# to untrusted code.  Cache *pushes* happen in deploy.yml on protected
+# branches.
 name: CI
 
 on:
   pull_request:
-  push:
-    branches:
-      - next
-      - main
-      - master
 
-# Cancel superseded runs on PR branches; keep protected-branch runs
-# intact so post-merge cache pushes always finish.
+# Cancel superseded runs on the same PR.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' && github.ref != 'refs/heads/next' }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -33,7 +33,7 @@ permissions:
 jobs:
   check:
     name: Check
-    timeout-minutes: 30
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -41,18 +41,41 @@ jobs:
       - uses: cachix/install-nix-action@v31
 
       - uses: cachix/cachix-action@v17
-        if: github.event_name == 'pull_request'
         with:
           name: jylhis
 
-      - uses: cachix/cachix-action@v17
-        if: github.event_name == 'push'
-        with:
-          name: jylhis
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      # Each check is a separate step so a failure surfaces by name in
+      # the GitHub Actions UI without needing log access.
+      - name: Debug — confirm flake checks resolve
+        run: |
+          nix --version
+          nix eval --raw .#checks.x86_64-linux \
+            --apply 'cs: builtins.concatStringsSep "\n" (builtins.attrNames cs)'
+          echo
 
-      - name: nix flake check
-        run: nix flake check --print-build-logs
+      - name: Check — formatting
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.formatting
+
+      - name: Check — statix
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.statix
+
+      - name: Check — deadnix
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.deadnix
+
+      - name: Check — module-eval
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.module-eval
+
+      - name: Check — packages-doc-in-sync
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.packages-doc-in-sync
+
+      - name: Check — packages-doc
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.packages-doc
+
+      - name: Check — options-doc
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.options-doc
+
+      - name: Check — elisp-lint
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.elisp-lint
 
   test:
     name: Dev environment
@@ -66,16 +89,8 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - uses: cachix/cachix-action@v17
-        if: github.event_name == 'pull_request'
         with:
           name: jylhis
-          extraPullNames: devenv
-
-      - uses: cachix/cachix-action@v17
-        if: github.event_name == 'push'
-        with:
-          name: jylhis
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: devenv
 
       - name: Install devenv.sh
