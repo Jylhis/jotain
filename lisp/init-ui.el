@@ -83,7 +83,8 @@ and the result is a face-attribute soup."
 (defcustom jotain-font-scale 1.0
   "Multiplier applied to every height in the font preference lists.
 Increase above 1.0 on large or high-density displays where the
-default sizes feel small (e.g. set 1.25 in custom.el for 4K)."
+default sizes feel small (for example, set it to 1.25 in your
+machine-local config)."
   :type 'float
   :group 'jotain-ui)
 
