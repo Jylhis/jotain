@@ -75,7 +75,7 @@ let
       direnv # envrc
       coreutils # gls, used by dirvish-listing-switches on darwin
     ]
-    ++ lib.optional cfg.sonarlint.enable pkgs.sonarlintLs
+    ++ lib.optional cfg.sonarlint.enable pkgs.sonarlint-ls
     ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server;
 
   # Colour-emoji fallback for the `emoji' / `symbol' fontsets wired in
