@@ -40,14 +40,14 @@ and the result is a face-attribute soup."
 
 ;; Register the Jylhis theme directory on custom-theme-load-path.
 ;; The package ships jylhis-themes.el as the entry point for this.
-(require 'jylhis-themes)
-
-;; Pre-load both themes so auto-dark can flip between them without
-;; re-evaluating the .el files on every appearance change.  Guarded
-;; against batch mode where custom-theme-load-path may be incomplete.
-(unless noninteractive
-  (load-theme jotain-theme-light t t)
-  (load-theme jotain-theme-dark  t t))
+(if (require 'jylhis-themes nil t)
+    ;; Pre-load both themes so auto-dark can flip between them without
+    ;; re-evaluating the .el files on every appearance change.  Guarded
+    ;; against batch mode where custom-theme-load-path may be incomplete.
+    (unless noninteractive
+      (load-theme jotain-theme-light t t)
+      (load-theme jotain-theme-dark  t t))
+  (message "jylhis-themes is unavailable; keeping Emacs default theme"))
 
 ;;; @doc Flips between `jotain-theme-light` and `jotain-theme-dark`
 ;;; following the system appearance — works on macOS, GNOME, and
