@@ -54,7 +54,6 @@
         default = (pkgsFor system).jotainEmacsPackages;
         emacs = (pkgsFor system).jotainEmacs;
         jylhis-emacs = (pkgsFor system).jylhisEmacs;
-        jylhis-emacs-packages = (pkgsFor system).jylhisEmacsPackages;
         info = (pkgsFor system).jotainInfo;
         docs = import ./nix/options-doc.nix {
           pkgs = pkgsFor system;
