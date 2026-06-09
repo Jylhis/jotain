@@ -53,9 +53,11 @@ that share a basename across different roots get distinct tabs."
                (funcall orig dir))
       (tab-bar-new-tab)
       (tab-bar-rename-tab name)
-      (let ((current (assq 'current-tab (tab-bar-tabs))))
+      (let ((current (cl-find-if (lambda (tab)
+                                   (alist-get 'current-tab tab))
+                                 (tab-bar-tabs))))
         (when current
-          (push (cons 'jotain-tabs-project-dir dir-key) (cdr current))))
+          (setf (alist-get 'jotain-tabs-project-dir current) dir-key)))
       (funcall orig dir))))
 
 (advice-add 'project-switch-project :around
