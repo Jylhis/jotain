@@ -277,7 +277,17 @@ connection alongside any existing language server."
 ;;; Provided by Nix (not on MELPA).
 (use-package tagref
   :ensure nil ; Provided by Nix
-  :hook (prog-mode . tagref-mode))
+  :commands (tagref-mode)
+  :hook (prog-mode . jotain-tagref--maybe-enable)
+  :init
+  (defun jotain-tagref--maybe-enable ()
+    "Enable `tagref-mode' only inside a project.
+`tagref-mode' signals a `user-error' when there is no project (e.g. the
+daemon's *scratch* buffer in `lisp-interaction-mode'), which aborts
+daemon startup before `server-start' with exit 255.  Decline silently
+outside a project."
+    (when (project-current)
+      (tagref-mode 1))))
 
 ;;;; Compile
 
