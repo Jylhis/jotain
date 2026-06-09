@@ -116,7 +116,6 @@
   # ── Libraries & features ─────────────────────────────────────────
   withTreeSitter ? true, # --with-tree-sitter
   withSQLite3 ? true, # --with-sqlite3
-  withJansson ? false, # --with-jansson (Emacs 30+ has built-in JSON)
   withDbus ? pkgs.stdenv.hostPlatform.isLinux,
   # --with-dbus
   withSelinux ? pkgs.stdenv.hostPlatform.isLinux,
@@ -249,7 +248,6 @@ let
       withWebP
       withImageMagick
       withCairo
-      withJansson
       withDbus
       withSelinux
       withGpm
