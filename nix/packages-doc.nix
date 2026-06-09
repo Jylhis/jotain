@@ -220,7 +220,8 @@ pkgs.runCommand "jotain-packages-doc"
 
         # Mintlify .mdx — frontmatter + body, with no extra blank line
         # the awk roundtripper would have to fix later.
-        cat ${mdxFront} combined.md > $out/package-reference.mdx
+        sed -e 's/</\&lt;/g' -e 's/>/\&gt;/g' combined.md > combined.mdx
+        cat ${mdxFront} combined.mdx > $out/package-reference.mdx
 
         cat > $out/style.css <<'CSS'
     :root {
