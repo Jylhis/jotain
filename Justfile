@@ -175,7 +175,7 @@ build-nox:
 build-macport:
     nix-build --arg variant '"macport"' --argstr system {{system}} emacs.nix
 
-# Build from current git master (first run will report a hash to fill in).
+# Build from git master (the revision pinned by emacs-overlay, binary-cached).
 [group('build')]
 build-git:
     nix-build --arg variant '"git"' --argstr system {{system}} emacs.nix
