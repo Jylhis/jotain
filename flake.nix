@@ -11,10 +11,10 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Emacs 31 is not yet in nixpkgs; pull it from emacs-overlay's
-    # emacs-git attribute (current master). The overlay also supplies
-    # emacs-unstable / emacs-igc / emacs-*-pgtk variants used by
-    # emacs.nix.
+    # Supplies the git-based variants used by emacs.nix: emacs-git
+    # (master), emacs-unstable (latest release tag), emacs-igc
+    # (feature/igc3). The default mainline build uses nixpkgs' emacs31
+    # and does not need the overlay.
     emacs-overlay = {
       url = "github:nix-community/emacs-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
