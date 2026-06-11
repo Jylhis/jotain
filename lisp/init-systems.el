@@ -30,8 +30,11 @@
 
 ;; sops-mode has no built-in keymap, so we declare one ourselves
 ;; before registering it on `minor-mode-map-alist'.
-(defvar sops-mode-map (make-sparse-keymap)
-  "Keymap for `sops-mode'.")
+(defvar-keymap sops-mode-map
+  :doc "Keymap for `sops-mode'."
+  "C-c C-c" #'sops-save-file
+  "C-c C-k" #'sops-cancel
+  "C-c C-d" #'sops-edit-file)
 
 ;;; @doc Transparent SOPS encrypt/decrypt for YAML/JSON/env files. C-c
 ;;; C-c saves an encrypted edit; C-c C-d toggles into the editing
@@ -41,9 +44,6 @@
   :functions (global-sops-mode sops-save-file sops-cancel sops-edit-file)
   :config
   (global-sops-mode 1)
-  (define-key sops-mode-map (kbd "C-c C-c") #'sops-save-file)
-  (define-key sops-mode-map (kbd "C-c C-k") #'sops-cancel)
-  (define-key sops-mode-map (kbd "C-c C-d") #'sops-edit-file)
   (let ((entry (assq 'sops-mode minor-mode-map-alist)))
     (if entry
         (setcdr entry sops-mode-map)

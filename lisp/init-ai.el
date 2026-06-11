@@ -66,7 +66,7 @@
                        (auth-source-pick-first-password
                         :host "api.anthropic.com"
                         :user "apikey"))))
-          gptel-model 'claude-sonnet-4-20250514)
+          gptel-model 'claude-sonnet-4-6)
 
   ;; Google Gemini — secondary backend.
   (gptel-make-gemini "Gemini"

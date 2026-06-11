@@ -77,6 +77,25 @@
 ;; the read buffer cuts the number of read(2) calls dramatically.
 (setopt read-process-output-max (* 4 1024 1024))
 
+;; Modes that should get inlay hints once eglot manages the buffer.
+(defvar jotain-eglot-inlay-hint-modes
+  '(go-mode go-ts-mode
+    rust-mode rust-ts-mode
+    typescript-mode typescript-ts-mode
+    python-mode python-ts-mode)
+  "Major modes for which `eglot-inlay-hints-mode' is enabled.")
+
+(defun jotain-eglot-compose-eldoc ()
+  "Compose eldoc sources eagerly for the current eglot buffer.
+More readable than Eglot's default in most modes."
+  (setq-local eldoc-documentation-strategy
+              #'eldoc-documentation-compose-eagerly))
+
+(defun jotain-eglot-maybe-enable-inlay-hints ()
+  "Enable `eglot-inlay-hints-mode' in `jotain-eglot-inlay-hint-modes'."
+  (when (apply #'derived-mode-p jotain-eglot-inlay-hint-modes)
+    (eglot-inlay-hints-mode 1)))
+
 ;;; @doc Built-in LSP client. Per-language `eglot-ensure` hooks live
 ;;; here so all LSP wiring is visible in one place; per-language
 ;;; mode regexes stay in their `init-lang-*` file. C-c r is the
@@ -90,6 +109,7 @@
     nix-ts-mode
     python-mode python-ts-mode
     rust-mode rust-ts-mode
+    terraform-mode
     tsx-ts-mode
     typescript-mode typescript-ts-mode)
    . eglot-ensure)
@@ -111,21 +131,13 @@
   :config
   ;; Compose eldoc sources eagerly — it's the more readable variant
   ;; than Eglot's default in most modes.
-  (add-hook 'eglot-managed-mode-hook
-            (lambda ()
-              (setq-local eldoc-documentation-strategy
-                          #'eldoc-documentation-compose-eagerly)))
+  (add-hook 'eglot-managed-mode-hook #'jotain-eglot-compose-eldoc)
 
-  ;; Inlay hints, opt-in per major mode. Add to this list as you grow.
+  ;; Inlay hints, opt-in per major mode (see
+  ;; `jotain-eglot-inlay-hint-modes').
   (when (fboundp 'eglot-inlay-hints-mode)
     (add-hook 'eglot-managed-mode-hook
-              (lambda ()
-                (when (apply #'derived-mode-p
-                             '(go-mode go-ts-mode
-                               rust-mode rust-ts-mode
-                               typescript-mode typescript-ts-mode
-                               python-mode python-ts-mode))
-                  (eglot-inlay-hints-mode 1)))))
+              #'jotain-eglot-maybe-enable-inlay-hints))
 
   ;; Server overrides — most languages don't need an entry, eglot has
   ;; sensible defaults. Add only when you want a specific server name.

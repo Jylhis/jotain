@@ -106,7 +106,7 @@ working-tree file no longer exists to open."
   (magit-repository-directories '(("~/Developer" . 2)))
   :config
   ;; Show worktrees as a section in magit-status when more than one exists.
-  (add-hook 'magit-status-sections-hook 'magit-insert-worktrees t))
+  (add-hook 'magit-status-sections-hook #'magit-insert-worktrees t))
 
 ;;; @doc Surfaces TODO/FIXME/HACK comments as a section in magit-status.
 ;;; Scan depth pinned to 1 so it stays fast on large repos.
