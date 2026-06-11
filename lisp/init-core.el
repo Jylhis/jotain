@@ -35,17 +35,26 @@ immediately for writes."
 ;; common compromise: high enough that typing/scrolling never trips a GC,
 ;; low enough that an idle GC actually completes quickly. Combined with
 ;; the idle-timer below, total pause time stays well under perceptible.
-(setq gc-cons-threshold (* 16 1024 1024)
+(defconst jotain-gc-cons-threshold (* 16 1024 1024)
+  "Steady-state value for `gc-cons-threshold' outside the minibuffer.")
+
+(setq gc-cons-threshold jotain-gc-cons-threshold
       gc-cons-percentage 0.1)
 (run-with-idle-timer 5 t #'garbage-collect)
 
 ;; Pause GC entirely while the minibuffer is open. Completion frameworks
 ;; allocate aggressively and a GC mid-keystroke is the single biggest
 ;; source of perceptible input lag.
-(add-hook 'minibuffer-setup-hook
-          (lambda () (setq gc-cons-threshold most-positive-fixnum)))
-(add-hook 'minibuffer-exit-hook
-          (lambda () (setq gc-cons-threshold (* 16 1024 1024))))
+(defun jotain-minibuffer-raise-gc-threshold ()
+  "Disable GC while the minibuffer is active."
+  (setq gc-cons-threshold most-positive-fixnum))
+
+(defun jotain-minibuffer-restore-gc-threshold ()
+  "Restore the steady-state GC threshold on minibuffer exit."
+  (setq gc-cons-threshold jotain-gc-cons-threshold))
+
+(add-hook 'minibuffer-setup-hook #'jotain-minibuffer-raise-gc-threshold)
+(add-hook 'minibuffer-exit-hook #'jotain-minibuffer-restore-gc-threshold)
 
 ;; UTF-8 everywhere. Modern systems are UTF-8; the locale dance only
 ;; matters if you ssh into something ancient.

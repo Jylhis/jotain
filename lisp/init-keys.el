@@ -57,7 +57,6 @@ Region active → deactivate it.  Otherwise call regular
   (cond
    ((> (minibuffer-depth) 0)                     (abort-recursive-edit))
    ((get-buffer-window "*Completions*" 'visible) (delete-completion-window))
-   ((region-active-p)                            (keyboard-quit))
    (t                                            (keyboard-quit))))
 
 ;;; @doc Top-level rebindings — disable accidental suspend (C-z and
@@ -108,6 +107,7 @@ Region active → deactivate it.  Otherwise call regular
     "C-c o"     "combobulate"
     "C-c r"     "eglot-refactor"
     "C-c t"     "toggle-theme"
+    "C-c w"     "docker"
     ;; C-c <punct> — AI and special leaves.
     "C-c RET"   "gptel-send"
     "C-c M-RET" "gptel-menu"

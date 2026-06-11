@@ -18,7 +18,9 @@ jotain/
 ├── default.nix         # Distribution wrapper (Emacs + tree-sitter grammars)
 ├── module.nix          # Home Manager module for the daemon
 ├── nix/
-│   ├── devenv-emacs-lisp.nix  # devenv language module for Elisp
+│   ├── mk-overlay.nix         # the nixpkgs overlay (jotainEmacs, …)
+│   ├── extra-packages.nix     # non-archive Elisp packages (trivialBuild)
+│   ├── devenv-emacs-lisp.nix  # devenv language module for Elisp (currently disabled)
 │   ├── ellsp.nix              # ellsp (Emacs LSP) package definition
 │   └── elsa.nix               # elsa (Elisp static analyser)
 ├── devenv.nix          # Development shell
@@ -55,6 +57,6 @@ The Nix layer provides reproducible Emacs builds:
 
 ### Development Layer
 
-- **`devenv.nix`** — development shell. Provides the local Emacs build (so `emacs` in the shell matches `just build-bare`), Nerd Fonts, `nil`, `nixfmt-rfc-style`, and `treefmt`. Enables the custom `languages.emacs-lisp` module from `nix/devenv-emacs-lisp.nix`, which provides Emacs + `eask-cli` (with `ellsp` and `elsa` off by default).
-- **`Justfile`** — every recipe you run day-to-day: `run`, `debug`, `tty`, `check`, `compile`, `test`, the `build-*` matrix, `fmt`, `update`, `verify`, `clean`, `clean-all`.
+- **`devenv.nix`** — development shell. Provides the Nix tooling (`nil`, `nixfmt-rfc-style`, `statix`, `deadnix`, `treefmt`), Meson/Ninja, `sonarlint-ls`, `rass`, `eca`, `tagref`, `docker-langserver`, the docs chain, and the UI fonts. **Emacs itself is temporarily out of the shell** (its ~1 GB closure dominated `direnv allow` time), so the `languages.emacs-lisp` module from `nix/devenv-emacs-lisp.nix` (which would supply Emacs + `eask-cli`, optionally `ellsp`/`elsa`) is commented out — see the top-of-file note in `devenv.nix`.
+- **`Justfile`** — the recipes you run day-to-day. The Nix-side ones (`check`, the `build-*` matrix, `fmt`, `update`, `verify`, `clean`, `clean-all`, `docs`/`info`) work as normal; the Emacs-dependent ones (`run`, `debug`, `tty`, `daemon`, `client`, `compile`, `test`, `bench`) are temporarily disabled stubs while Emacs is out of the shell — use `just run-built` to launch.
 - **Pinning** — `flake.lock` is the single source of truth; `default.nix` and `emacs.nix` read it directly via `fetchTarball` so non-flake `nix-build` consumers get the same pin. `devenv.yaml` mirrors the flake's shared input revs (`nixpkgs`, `treefmt-nix`), and `just update` keeps `devenv.lock` in lockstep.

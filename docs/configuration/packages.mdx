@@ -5,12 +5,12 @@ description: How packages are managed in Jotain
 
 # Packages
 
-Jotain is a "use-package + Nix" configuration: Nix (or, in development, the devenv shell) provides most packages on `load-path`, so `use-package` finds them without touching the network; anything Nix does not ship falls through to MELPA at install time.
+Jotain is a "use-package + Nix" configuration: when Emacs is built through Nix (`just build`, the flake `packages.<system>.default`) most packages are already on `load-path`, so `use-package` finds them without touching the network; anything Nix does not ship falls through to MELPA at install time.
 
 ## Provenance
 
 - **Built-in to Emacs 30+** — always opt out of installation with `:ensure nil`.
-- **Provided by Nix** — built through `emacsPackagesFor` in `devenv.nix` (e.g. `claude-code-ide`, `combobulate`, the tree-sitter grammars). These also use `:ensure nil` because Nix already put them on the load path.
+- **Provided by Nix** — built through the overlay (`nix/mk-overlay.nix`, which wires in `nix/extra-packages.nix` and the tree-sitter grammars). Examples: `claude-code-ide`, `combobulate`, `tagref`, `jylhis-emacs-themes`, `nix-ts-mode`. These also use `:ensure nil` because Nix already put them on the load path.
 - **MELPA / NonGNU ELPA fallback** — every other `use-package` block. `use-package-always-ensure` is `t` (set in `early-init.el`), so these default to "install if missing" without any extra boilerplate. Archives are registered in `init.el`:
 
   ```elisp
@@ -25,16 +25,18 @@ When built with `default.nix` (the full distribution — `just build` and friend
 
 ## Packages that live in Nix
 
-`devenv.nix` defines a small set of Elisp packages that are not on any archive (MELPA, GNU ELPA, NonGNU ELPA), so Nix builds them directly and puts them on `load-path`:
+`nix/extra-packages.nix` defines a small set of Elisp packages that are not on any archive (MELPA, GNU ELPA, NonGNU ELPA), built with `trivialBuild` and put on `load-path` by the overlay (`nix/mk-overlay.nix`). Currently four:
 
 - **`claude-code-ide`** — fetched from `manzaltu/claude-code-ide.el`, built with `websocket` and `web-server` as runtime dependencies (`transient` is built in to Emacs 30+).
 - **`combobulate`** — fetched from `mickeynp/combobulate`; all its dependencies (`seq`, `map`, `treesit`) are built in to Emacs 30+.
+- **`tagref`** — the Elisp client for the `tagref` CLI (`[tag:x]`/`[ref:x]` cross-references); depends only on built-ins.
+- **`jylhis-emacs-themes`** — the Jotain theme pack from the `Jylhis/design` repo.
 
-Both are consumed by `use-package ... :ensure nil` blocks in the relevant `init-*.el` module.
+Each is consumed by a `use-package ... :ensure nil` block in the relevant `init-*.el` module.
 
 ## The devenv shell
 
-Running inside `devenv shell` (or via `direnv` / `.envrc`) gives you the same Emacs that `just build-bare` produces, plus `claude-code-ide`, `combobulate`, and all tree-sitter grammars. `devenv.nix` enables the custom `languages.emacs-lisp` module (from `nix/devenv-emacs-lisp.nix`) which also provides `eask-cli`; `ellsp` (LSP) and `elsa` (static analyser) are off by default — toggle them in `devenv.nix` if you want them.
+Emacs is **currently not installed into `devenv shell`** — its ~1 GB closure dominated `direnv allow` time, so `devenv.nix` comments out the `jotainEmacs` binding and the `languages.emacs-lisp` module (which would otherwise supply `eask-cli`, and optionally `ellsp`/`elsa`). The shell still provides the Nix tooling, Meson/Ninja, `sonarlint-ls`, `rass`, `eca`, `tagref`, `docker-langserver`, the docs chain, and the UI fonts. To launch the editor, use `just run-built` (build via Nix, then launch). See the top-of-file note in `devenv.nix` for how to re-enable Emacs in the shell.
 
 ## Adding a new package
 
@@ -50,4 +52,4 @@ Most of the time you just need a `use-package` block in the appropriate `init-*.
   )
 ```
 
-If the package is not on any archive, add it to the `overrideScope` block in `devenv.nix` with `trivialBuild` so it is built from a pinned GitHub revision and available on `load-path`, then declare it with `:ensure nil` in the module.
+If the package is not on any archive, add it to `nix/extra-packages.nix` with `trivialBuild` so it is built from a pinned GitHub revision and put on `load-path` by the overlay, then declare it with `:ensure nil` in the module.

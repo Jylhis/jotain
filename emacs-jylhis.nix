@@ -2,7 +2,8 @@
 #
 # This is intentionally separate from emacs.nix.  The pinned jylhis/emacs
 # branch has removed the upstream autotools build system and cannot use the
-# cache-parity wrapper around pkgs.emacs30.
+# cache-parity wrapper that emacs.nix builds around emacs-overlay's
+# emacs-git.
 {
   system ? builtins.currentSystem,
   pkgs ?

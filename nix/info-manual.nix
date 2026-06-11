@@ -127,8 +127,8 @@ pkgs.runCommand "jotain-info"
       pkgs.texinfo
     ];
     src = docsSrc;
-    optionsFragment = "${optionsDoc}/jotain-options.texi";
-    packagesFragment = "${packagesDoc}/jotain-packages.texi";
+    optionsFragment = "${optionsDoc}/${optionsDoc.texinfoFragment}";
+    packagesFragment = "${packagesDoc}/${packagesDoc.texinfoFragment}";
     meta = {
       description = "Jotain Info manual (generated from docs/)";
     };

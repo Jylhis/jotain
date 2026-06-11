@@ -42,10 +42,9 @@
         system:
         import nixpkgs {
           inherit system;
-          overlays = [
-            emacs-overlay.overlays.default
-            self.overlays.default
-          ];
+          # self.overlays.default already composes emacs-overlay, so it is
+          # the only overlay needed here.
+          overlays = [ self.overlays.default ];
         };
       treefmtEval =
         system:
@@ -55,9 +54,18 @@
         };
     in
     {
-      overlays.default = import ./nix/mk-overlay.nix {
-        jylhisEmacsSrc = inputs."jylhis-emacs";
-      };
+      # Compose emacs-overlay first so `emacs-git` (and the other
+      # overlay-supplied variants emacs.nix builds on) exist in `final`
+      # before mk-overlay.nix references them. This makes the exported
+      # overlay self-contained: NixOS / nix-darwin / Home Manager
+      # consumers that apply only `self.overlays.default` still get a
+      # working `jotainEmacs`/`jotainEmacsPackages`.
+      overlays.default = nixpkgs.lib.composeManyExtensions [
+        emacs-overlay.overlays.default
+        (import ./nix/mk-overlay.nix {
+          jylhisEmacsSrc = inputs."jylhis-emacs";
+        })
+      ];
 
       homeManagerModules.default =
         { ... }:
@@ -78,8 +86,6 @@
       packages = forAllSystems (system: {
         default = (pkgsFor system).jotainEmacsPackages;
         emacs = (pkgsFor system).jotainEmacs;
-        emacs-jylhis = (pkgsFor system).jylhisEmacs;
-        jotain-jylhis = (pkgsFor system).jylhisEmacsPackages;
         jylhis-emacs = (pkgsFor system).jylhisEmacs;
         jylhis-emacs-packages = (pkgsFor system).jylhisEmacsPackages;
         info = (pkgsFor system).jotainInfo;

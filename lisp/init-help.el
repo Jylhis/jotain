@@ -2,7 +2,7 @@
 
 ;;; Commentary:
 
-;; Built-in help tweaks plus `helpful' \u2014 the modern replacement for the
+;; Built-in help tweaks plus `helpful' — the modern replacement for the
 ;; default `describe-*' commands. Helpful's buffers show source, callers,
 ;; usage examples, and active keybindings inline.
 

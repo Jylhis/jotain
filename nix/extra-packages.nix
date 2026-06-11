@@ -1,5 +1,7 @@
 # Extra Emacs Lisp packages not available on any archive (MELPA,
-# GNU ELPA, NonGNU ELPA).  Shared between default.nix and devenv.nix.
+# GNU ELPA, NonGNU ELPA).  Imported by nix/mk-overlay.nix as the
+# emacsPackages override, so every overlay consumer (the flake's
+# packages, default.nix, and devenv.nix) picks these up.
 { pkgs }:
 
 efinal: _eprev: {

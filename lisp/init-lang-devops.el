@@ -57,12 +57,13 @@ inside a running container."
   :config (jotain--apply-docker-backend))
 
 ;;; @doc Magit-style transient menu for containers, images, volumes
-;;; and networks. `C-c d` opens the dispatcher; commands respect
-;;; `jotain-docker-backend` (docker vs podman, including compose and
-;;; the TRAMP method used to open files inside a running container).
+;;; and networks. `C-c w` (w for Docker's whale) opens the dispatcher;
+;;; commands respect `jotain-docker-backend` (docker vs podman, including
+;;; compose and the TRAMP method used to open files inside a running
+;;; container).  `C-c d' stays with dirvish (init-navigation.el).
 (use-package docker
   :defer t
-  :bind ("C-c d" . docker)
+  :bind ("C-c w" . docker)
   :config (jotain--apply-docker-backend))
 
 ;;; @doc YAML-flavoured docker-compose syntax with awareness of compose
