@@ -18,11 +18,12 @@
 ;;   mcp              M-x mcp-connect-server + gptel-mcp-connect
 ;;                                  Model Context Protocol tool use via gptel.
 ;;
-;; Auth: API keys come from the environment first
-;; (ANTHROPIC_API_KEY / GEMINI_API_KEY) and fall back to auth-source —
+;; Auth: API keys come from the environment first (OPENROUTER_API_KEY /
+;; ANTHROPIC_API_KEY / GEMINI_API_KEY) and fall back to auth-source —
 ;; auth-source-1password (configured in init-systems.el) makes that
 ;; transparent.  The eca server reads the same provider keys from the
-;; environment.
+;; environment; its OpenRouter provider is defined in config/eca/config.json
+;; (opt-in via services.jotain.openrouter.enable in the Home Manager module).
 
 ;;; Code:
 
@@ -46,29 +47,49 @@
   :defer t
   :bind ("C-c C-e" . eca))
 
-;;; @doc Conversational LLM front-end with multiple backends (Anthropic,
-;;; Gemini, local Ollama) configured below. Bound to C-c RET / C-c
-;;; M-RET for quick send and full menu. Keys come from the
-;;; environment first, then auth-source via auth-source-1password.
+;;; @doc Conversational LLM front-end with multiple backends. OpenRouter
+;;; — an OpenAI-compatible aggregator fronting Claude, GPT, Gemini,
+;;; DeepSeek, Llama and more behind one key — is the default; direct
+;;; Anthropic, Gemini and local Ollama backends stay selectable from the
+;;; C-c M-RET menu. Bound to C-c RET / C-c M-RET for quick send and full
+;;; menu. Keys come from the environment first, then auth-source via
+;;; auth-source-1password.
 (use-package gptel
   :defer t
-  :functions (gptel-make-anthropic gptel-make-gemini gptel-make-ollama)
+  :functions (gptel-make-openai gptel-make-anthropic gptel-make-gemini
+                                gptel-make-ollama)
   :bind
   (("C-c RET"   . gptel-send)
    ("C-c M-RET" . gptel-menu))
   :config
-  ;; Anthropic (Claude) — primary backend.
+  ;; OpenRouter — OpenAI-compatible aggregator, primary backend.
   (setopt gptel-backend
-          (gptel-make-anthropic "Claude"
+          (gptel-make-openai "OpenRouter"
+            :host "openrouter.ai"
+            :endpoint "/api/v1/chat/completions"
             :stream t
             :key (lambda ()
-                   (or (getenv "ANTHROPIC_API_KEY")
+                   (or (getenv "OPENROUTER_API_KEY")
                        (auth-source-pick-first-password
-                        :host "api.anthropic.com"
-                        :user "apikey"))))
-          gptel-model 'claude-sonnet-4-20250514)
+                        :host "openrouter.ai"
+                        :user "apikey")))
+            :models '(anthropic/claude-sonnet-4
+                      openai/gpt-4o
+                      google/gemini-2.5-pro
+                      deepseek/deepseek-chat
+                      meta-llama/llama-3.3-70b-instruct))
+          gptel-model 'anthropic/claude-sonnet-4)
 
-  ;; Google Gemini — secondary backend.
+  ;; Anthropic (Claude) — direct backend, no aggregator.
+  (gptel-make-anthropic "Claude"
+    :stream t
+    :key (lambda ()
+           (or (getenv "ANTHROPIC_API_KEY")
+               (auth-source-pick-first-password
+                :host "api.anthropic.com"
+                :user "apikey"))))
+
+  ;; Google Gemini — direct backend.
   (gptel-make-gemini "Gemini"
     :stream t
     :key (lambda ()
