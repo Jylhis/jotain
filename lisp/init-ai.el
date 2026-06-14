@@ -49,7 +49,7 @@
 
 ;;; @doc Conversational LLM front-end with multiple backends. OpenRouter
 ;;; — an OpenAI-compatible aggregator fronting Claude, GPT, Gemini,
-;;; DeepSeek, Llama and more behind one key — is the default; direct
+;;; DeepSeek, Qwen, GLM and more behind one key — is the default; direct
 ;;; Anthropic, Gemini and local Ollama backends stay selectable from the
 ;;; C-c M-RET menu. Bound to C-c RET / C-c M-RET for quick send and full
 ;;; menu. Keys come from the environment first, then auth-source via
@@ -73,12 +73,14 @@
                        (auth-source-pick-first-password
                         :host "openrouter.ai"
                         :user "apikey")))
-            :models '(anthropic/claude-sonnet-4
-                      openai/gpt-4o
-                      google/gemini-2.5-pro
-                      deepseek/deepseek-chat
-                      meta-llama/llama-3.3-70b-instruct))
-          gptel-model 'anthropic/claude-sonnet-4)
+            :models '(anthropic/claude-opus-4.8
+                      anthropic/claude-sonnet-4.6
+                      openai/gpt-5.5
+                      google/gemini-3.5-flash
+                      deepseek/deepseek-v4-pro
+                      qwen/qwen3.5-35b-a3b
+                      z-ai/glm-4.7))
+          gptel-model 'anthropic/claude-sonnet-4.6)
 
   ;; Anthropic (Claude) — direct backend, no aggregator.
   (gptel-make-anthropic "Claude"
