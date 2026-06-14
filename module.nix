@@ -8,6 +8,7 @@
 #     enable = true;
 #     defaultEditor = true;
 #     client.enable = true;
+#     openrouter.enable = true;  # eca OpenRouter provider; needs OPENROUTER_API_KEY
 #   };
 #
 # Modelled after the home-manager services.emacs module, but uses the
@@ -225,6 +226,15 @@ in
       enable = lib.mkEnableOption "SonarLint language server ({command}`M-x jotain-sonarlint`)";
     };
 
+    openrouter = {
+      enable = lib.mkEnableOption ''
+        the OpenRouter provider for {command}`eca` by installing
+        {file}`~/.config/eca/config.json`. Requires {env}`OPENROUTER_API_KEY`
+        in the environment. gptel already defaults to OpenRouter
+        regardless of this option
+      '';
+    };
+
     shellAliases = {
       enable = lib.mkEnableOption "shell aliases for the Jotain daemon and clients";
 
@@ -285,6 +295,12 @@ in
       "emacs/early-init.el".source = ./early-init.el;
       "emacs/init.el".source = ./init.el;
       "emacs/lisp".source = ./lisp;
+    }
+    // lib.optionalAttrs cfg.openrouter.enable {
+      # OpenRouter provider for the eca server (lisp/init-ai.el). The key is
+      # read from $OPENROUTER_API_KEY at runtime via eca's ${env:…} syntax,
+      # so no secret is written to the store.
+      "eca/config.json".source = ./config/eca/config.json;
     };
 
     systemd.user.services.jotain = lib.mkIf isLinux (
