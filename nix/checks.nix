@@ -78,6 +78,44 @@ let
   jylhisModule = evalHomeModule {
     emacsBackend = "jylhis";
   };
+
+  # Minimal stand-in for the nix-on-droid module system so the Jotain
+  # nix-on-droid module evaluates here on x86_64 (eval only — the actual
+  # aarch64 activation package is built on-device, not in CI).
+  nixOnDroidStubModule = {
+    options = {
+      assertions = lib.mkOption {
+        type = lib.types.listOf lib.types.unspecified;
+        default = [ ];
+      };
+      environment.packages = lib.mkOption {
+        type = lib.types.listOf lib.types.package;
+        default = [ ];
+      };
+      environment.sessionVariables = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { };
+      };
+    };
+  };
+
+  evalNixOnDroidModule =
+    jotainConfig:
+    lib.evalModules {
+      modules = [
+        nixOnDroidStubModule
+        ../module-nix-on-droid.nix
+        {
+          services.jotain = {
+            enable = true;
+          }
+          // jotainConfig;
+        }
+      ];
+      specialArgs = { inherit pkgs; };
+    };
+
+  nixOnDroidModule = evalNixOnDroidModule { };
 in
 {
   # ── Package builds ────────────────────────────────────────────────
@@ -131,6 +169,23 @@ in
             toString (builtins.length graphicalModule.config.launchd.agents.jotain.config.ProgramArguments);
       }
       ''
+        touch $out
+      '';
+
+  # ── nix-on-droid module evaluation ───────────────────────────────
+  # Eval-only: the terminal Jotain Emacs the module selects builds on
+  # aarch64 (on-device), but here we only assert the module evaluates
+  # and wires EDITOR through environment.sessionVariables.
+  nix-on-droid-module-eval =
+    pkgs.runCommandLocal "check-nix-on-droid-module-eval"
+      {
+        editorConfigured =
+          if nixOnDroidModule.config.environment.sessionVariables ? EDITOR then "1" else "0";
+        packageCount = toString (builtins.length nixOnDroidModule.config.environment.packages);
+      }
+      ''
+        test "$editorConfigured" = "1" || { echo "EDITOR not set"; exit 1; }
+        test "$packageCount" -ge 1 || { echo "no packages installed"; exit 1; }
         touch $out
       '';
 
