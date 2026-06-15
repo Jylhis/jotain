@@ -57,6 +57,8 @@ nix-instantiate --eval --strict -E '
   }'
 ```
 
+The `basePackage.override` call is split into `baseOverrideArgs` (flags present in `make-emacs.nix` since nixpkgs 24.05) and `modernOverrideArgs` (flags added later, ≈24.11). The modern set is merged in only when `lib.versionAtLeast lib.version "24.11"`, so the build still evaluates when a downstream flake overrides `nixpkgs` with an older release. On the pinned unstable the gate is always true, so the full arg set is forwarded and cache parity is unaffected.
+
 ### emacs-jylhis.nix
 
 The fork build expression. It builds the pinned `github:jylhis/emacs` Meson branch and stays separate from `emacs.nix` so the default cache-parity path remains unchanged. In the flake, the fork source comes from the non-flake input `jylhis-emacs`; standalone `nix-build emacs-jylhis.nix` falls back to the pinned `rev` / `hash` arguments in the file.
@@ -119,3 +121,19 @@ inputs.my-emacs-fork = {
 };
 inputs.jotain.inputs.jylhis-emacs.follows = "my-emacs-fork";
 ```
+
+## nix-on-droid
+
+`nixOnDroidModules.default` (from `module-nix-on-droid.nix`) installs Jotain on Android via [nix-on-droid](https://github.com/nix-community/nix-on-droid). Because Android runs headless under proot, the module is a trimmed cousin of `module-system.nix`: it `pkgs.extend`s the overlay and adds a **terminal-only** build (`jotainEmacsPackagesNoGui`, a `noGui = true` Emacs) plus an `emacsclient` `EDITOR`/`VISUAL` wrapper to `environment.packages` and `environment.sessionVariables`. There is no systemd service, launchd agent, `fonts.packages`, or GUI frame.
+
+`flake.nix` exposes an example `nixOnDroidConfigurations.default` (aarch64-linux). It activates only on-device or under aarch64 emulation, so `nix flake check` does not realise it (CI is x86_64); the module itself is eval-checked on x86_64 via `nix-on-droid-module-eval` in `nix/checks.nix`.
+
+## Overriding nixpkgs
+
+A downstream flake can follow a different nixpkgs (release branches **24.05+** through unstable):
+
+```nix
+inputs.jotain.inputs.nixpkgs.follows = "nixpkgs";
+```
+
+The version-gated override split (see [Cache-parity invariant](#cache-parity-invariant)) keeps the modules evaluating and building on older releases. The caveat is Emacs version: 24.05's `pkgs.emacs` is Emacs 29 while Jotain's Elisp targets 30/31, so the build succeeds but runtime behaviour is only guaranteed on the pinned unstable.

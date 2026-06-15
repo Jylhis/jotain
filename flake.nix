@@ -20,6 +20,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     jylhis-emacs.url = "github:jylhis/emacs/dev";
+    # Android (Termux/proot) Nix environment. Only consumed by
+    # `nixOnDroidModules` / the example `nixOnDroidConfigurations`; other
+    # outputs do not depend on it.
+    nix-on-droid = {
+      url = "github:nix-community/nix-on-droid/master";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -87,6 +94,12 @@
           _module.args.jotainOverlay = self.overlays.default;
         };
       darwinModules.default = self.nixosModules.default;
+      nixOnDroidModules.default =
+        { ... }:
+        {
+          imports = [ ./module-nix-on-droid.nix ];
+          _module.args.jotainOverlay = self.overlays.default;
+        };
 
       lib = import ./nix/use-package.nix { inherit (nixpkgs) lib; };
 
@@ -119,5 +132,22 @@
           treefmtCheck = (treefmtEval system).config.build.check self;
         }
       );
+
+      # Example nix-on-droid configuration wiring up the Jotain module.
+      # nix-on-droid runs on aarch64-linux (Android under proot), so this
+      # builds/activates only on-device or via aarch64 emulation —
+      # `nix flake check` does not realise it (unknown output type), and
+      # CI is x86_64-only. Copy this shape into your own nix-on-droid
+      # flake and run `nix-on-droid switch --flake .#default`.
+      nixOnDroidConfigurations.default = inputs.nix-on-droid.lib.nixOnDroidConfiguration {
+        pkgs = import nixpkgs {
+          system = "aarch64-linux";
+          overlays = [ inputs.nix-on-droid.overlays.default ];
+        };
+        modules = [
+          self.nixOnDroidModules.default
+          { services.jotain.enable = true; }
+        ];
+      };
     };
 }

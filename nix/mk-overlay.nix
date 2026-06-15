@@ -76,7 +76,9 @@ let
     final.runCommand name
       {
         nativeBuildInputs = [
-          final.lndir
+          # Top-level `lndir` only exists on recent nixpkgs; on older
+          # releases (24.05+) it lives under the xorg package set.
+          (final.lndir or final.xorg.lndir)
           final.makeBinaryWrapper
         ];
         meta = (core.meta or { }) // {
@@ -105,6 +107,15 @@ let
 in
 {
   jotainEmacs = import ../emacs.nix { pkgs = final; };
+
+  # Terminal-only (`-nw`) build, used by the nix-on-droid module: Android
+  # under proot is headless, so a GUI Emacs would only bloat the closure
+  # with unusable X/Wayland libraries.
+  jotainEmacsNoGui = import ../emacs.nix {
+    pkgs = final;
+    noGui = true;
+  };
+
   jylhisEmacs = import ../emacs-jylhis.nix (
     {
       pkgs = final;
@@ -139,6 +150,12 @@ in
   jotainEmacsPackages = mkJotainEmacsPackages {
     name = "jotain-emacs-full";
     package = final.jotainEmacs;
+  };
+
+  # Full distribution on the terminal-only base (nix-on-droid / headless).
+  jotainEmacsPackagesNoGui = mkJotainEmacsPackages {
+    name = "jotain-emacs-full-nox";
+    package = final.jotainEmacsNoGui;
   };
 
   jylhisEmacsPackages = mkJotainEmacsPackages {
