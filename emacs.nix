@@ -205,7 +205,7 @@ let
     else if variant == "igc" then
       pkgs.emacs-igc
     else
-      pkgs.emacs31;
+      pkgs.emacs;
 
   # ── Forward all boolean flags to make-emacs.nix ──────────────────
   #
