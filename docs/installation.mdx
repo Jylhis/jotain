@@ -95,6 +95,30 @@ inputs.jotain.inputs.jylhis-emacs.follows = "my-emacs-fork";
 
 The bare fork package is checked directly. The full fork-backed package set is exposed as `.#jylhis-emacs-packages` and `just build-jylhis-full`, but remains experimental until the Meson fork reliably byte-compiles all bundled Emacs packages.
 
+### nix-on-droid (Android)
+
+Jotain also ships a [nix-on-droid](https://github.com/nix-community/nix-on-droid) module for running Emacs on Android (Termux/proot). Android is headless under proot, so the module installs a **terminal-only** (`-nw`) Emacs into `environment.packages` and wires `EDITOR`/`VISUAL` to an `emacsclient` wrapper — there is no systemd daemon, launchd agent, or GUI frame.
+
+```nix
+{
+  imports = [ jotain.nixOnDroidModules.default ];
+
+  services.jotain.enable = true;
+}
+```
+
+Switch it in with `nix-on-droid switch --flake .#default`. See `nixOnDroidConfigurations.default` in Jotain's `flake.nix` for a complete example wiring.
+
+### Overriding nixpkgs
+
+Downstream flakes may pin a different nixpkgs (release branches **24.05+** through unstable) by following the input:
+
+```nix
+inputs.jotain.inputs.nixpkgs.follows = "nixpkgs";
+```
+
+`emacs.nix` gates the Emacs build flags that newer `make-emacs.nix` versions introduced, so the modules still evaluate and build on older releases. Note that on 24.05 `pkgs.emacs` is Emacs 29 while Jotain's Elisp targets Emacs 30/31 — the build succeeds, but full runtime behaviour is only guaranteed on the pinned unstable.
+
 ## Running
 
 Jotain is designed to be launched out of its own checkout via `--init-directory`, so it never touches `~/.emacs.d`.
