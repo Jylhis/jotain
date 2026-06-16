@@ -149,11 +149,11 @@ build-bare:
 build-jylhis:
     nix build .#jylhis-emacs -o result-jylhis-emacs
 
-# Build Jotain's full package set on the github:jylhis/emacs fork.
-# Experimental until the fork reliably byte-compiles all Emacs packages.
-[group('build')]
-build-jylhis-full:
-    nix build .#jylhis-emacs-packages -o result-jylhis-emacs-full
+# Note: the full fork-backed package set (`jylhisEmacsPackages`) is no
+# longer exposed as a flake `packages` output — the Meson fork still
+# crashes byte-compiling some bundled Emacs packages. It remains
+# reachable via the Home Manager `services.jotain.emacsBackend = "jylhis"`
+# option, which consumes the overlay attribute directly.
 
 # Build with --with-pgtk for Wayland.
 [group('build')]

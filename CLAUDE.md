@@ -93,7 +93,6 @@ nix-instantiate --eval --strict -E '
 - `packages.<system>.default` — full distribution (`jotainEmacsPackages`)
 - `packages.<system>.emacs` — bare Emacs (`jotainEmacs`)
 - `packages.<system>.jylhis-emacs` — bare `github:jylhis/emacs` Meson fork
-- `packages.<system>.jylhis-emacs-packages` — full Jotain setup on the fork (experimental)
 - `packages.<system>.info` — `jotain.info` manual alone (`jotainInfo`), for `just info`
 - `packages.<system>.docs` — HTML option reference (for GitHub Pages)
 - `overlays.default` — the nixpkgs overlay from `overlay.nix`
