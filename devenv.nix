@@ -1,11 +1,18 @@
 { pkgs, ... }:
 
 let
-  # pkgs is what devenv resolved from devenv.lock, which `just update` keeps
-  # in sync with flake.lock. Apply the project overlay so the devenv shell
-  # gets the exact same jotainEmacsPackages derivation as flake consumers.
-  pkgsWithOverlay = pkgs.extend (import ./overlay.nix);
-  jotainEmacs = pkgsWithOverlay.jotainEmacsPackages;
+  # Emacs is temporarily NOT installed into the devenv shell — the
+  # ~1 GB jotainEmacsPackages closure dominated `direnv allow` time.
+  # The Nix-side builds (flake `packages.<system>.{default,emacs,…}`,
+  # `just build*`, `nix flake check`) are unaffected; flake checks
+  # still verify Emacs binaries via `checks.<system>.emacs-binaries`
+  # (see nix/checks.nix). To re-enable, restore the bindings below,
+  # the `imports` entry, the `languages.emacs-lisp` block, the
+  # emacs-smoke/emacs-run scripts, and the Emacs-checking enterTest.
+  #
+  # emacsOverlay = import inputs.emacs-overlay;
+  # pkgsWithOverlay = (pkgs.extend emacsOverlay).extend (import ./overlay.nix);
+  # jotainEmacs = pkgsWithOverlay.jotainEmacsPackages;
 
   # rassumfrassum (`rass`) — LSP multiplexer by João Távora that lets eglot
   # drive multiple real language servers per buffer. Pure-Python, zero
@@ -27,11 +34,18 @@ let
       mainProgram = "rass";
     };
   };
+
+  # ECA (Editor Code Assistant) server binary. The eca-emacs client
+  # (lisp/init-ai.el) auto-detects `eca' on PATH instead of downloading it.
+  # Built inline (not via the overlay) because the dev shell's `pkgs' has no
+  # overlay applied — same approach as rassumfrassum above.
+  eca = import ./nix/eca-server.nix { inherit pkgs; };
 in
 {
   # The custom emacs-lisp language module lives in nix/. Importing it
-  # adds `languages.emacs-lisp` to the option tree below.
-  imports = [ ./nix/devenv-emacs-lisp.nix ];
+  # adds `languages.emacs-lisp` to the option tree below. Disabled
+  # while Emacs is removed from the dev shell (see top-of-file note).
+  # imports = [ ./nix/devenv-emacs-lisp.nix ];
 
   # https://devenv.sh/packages/
   packages = with pkgs; [
@@ -43,6 +57,11 @@ in
     statix
     deadnix
 
+    # Meson build tooling.  meson-mode and apheleia use the Meson CLI for
+    # formatting, and compile-multi commands assume Ninja-backed builddirs.
+    meson
+    ninja
+
     # SonarLint language server for in-editor code quality analysis.
     # Start in Emacs with M-x jotain-sonarlint.
     sonarlint-ls
@@ -50,6 +69,14 @@ in
     # rassumfrassum (`rass`) LSP multiplexer.  init-prog.el routes TS/TSX
     # and Python eglot connections through it when this binary is on PATH.
     rassumfrassum
+
+    # ECA server (`eca`) for the eca-emacs client.  On PATH so eca-emacs
+    # uses it directly instead of downloading a server at runtime.
+    eca
+
+    # tagref (`tagref`) cross-reference checker.  Backs the tagref.el Emacs
+    # integration (M-x tagref-check, xref navigation) wired in init-prog.el.
+    tagref
 
     # Dockerfile language server (`docker-langserver`) — Eglot auto-attaches
     # it in dockerfile-mode via the entry registered in init-prog.el.
@@ -73,28 +100,30 @@ in
   languages = {
     nix.enable = true;
 
-    # Provides emacs + eask-cli. lsp (ellsp) and elsa are off by
-    # default — both have `default = true' in the module's
-    # mkEnableOption, so we have to flip them off explicitly. Toggle
-    # to `true' if you want them in your shell.
-    emacs-lisp = {
-      enable = true;
-      # Override the module's emacs-nox default with the local
-      # emacs.nix build, defined in the let-binding above.
-      package = jotainEmacs;
-      lsp.enable = false;
-      elsa.enable = false;
-    };
+    # emacs-lisp language support is temporarily disabled — see
+    # top-of-file note. Re-enabling: uncomment, restore the
+    # `imports` entry, and the `jotainEmacs` let-binding.
+    #
+    # emacs-lisp = {
+    #   enable = true;
+    #   package = jotainEmacs;
+    #   lsp.enable = false;
+    #   elsa.enable = false;
+    # };
   };
 
   # https://devenv.sh/binary-caching/
-  # Pull from the personal jylhis cache. devenv automatically adds
-  # `devenv` and `nixpkgs` caches to the substituter list, so we only
-  # need to declare the project-specific one here. Pushing is opt-in
-  # and configured in CI (or via devenv.local.nix).
+  # Pull from the personal jylhis cache and nix-community (the latter
+  # hosts the emacs-overlay binaries used for Emacs 31). devenv
+  # automatically adds `devenv` and `nixpkgs` caches, so only the
+  # project-specific ones are declared here. Pushing is opt-in and
+  # configured in CI (or via devenv.local.nix).
   cachix = {
     enable = true;
-    pull = [ "jylhis" ];
+    pull = [
+      "jylhis"
+      "nix-community"
+    ];
   };
 
   # https://devenv.sh/integrations/claude-code/
@@ -109,126 +138,106 @@ in
   };
 
   # https://devenv.sh/scripts/
-  scripts = {
-    emacs-smoke = {
-      description = "Byte-compile the whole configuration, error on any warning.";
-      exec = ''
-        set -euo pipefail
-        emacs --batch \
-          --eval "(setq byte-compile-error-on-warn t)" \
-          -f batch-byte-compile early-init.el init.el lisp/*.el
-      '';
-    };
-
-    emacs-run = {
-      description = "Launch this configuration in isolation (ignores ~/.emacs.d).";
-      exec = ''
-        set -euo pipefail
-        emacs --init-directory="$DEVENV_ROOT" "$@"
-      '';
-    };
-  };
+  # emacs-smoke and emacs-run are disabled while Emacs is out of the
+  # dev shell. Re-enable alongside the languages.emacs-lisp block.
+  #
+  # scripts = {
+  #   emacs-smoke = {
+  #     description = "Byte-compile the whole configuration, error on any warning.";
+  #     exec = ''
+  #       set -euo pipefail
+  #       emacs --batch \
+  #         --eval "(setq byte-compile-error-on-warn t)" \
+  #         -f batch-byte-compile early-init.el init.el lisp/*.el
+  #     '';
+  #   };
+  #
+  #   emacs-run = {
+  #     description = "Launch this configuration in isolation (ignores ~/.emacs.d).";
+  #     exec = ''
+  #       set -euo pipefail
+  #       emacs --init-directory="$DEVENV_ROOT" "$@"
+  #     '';
+  #   };
+  # };
 
   # https://devenv.sh/tests/
-  # Seven assertions that lock down the dev environment:
+  # Emacs is no longer installed into the dev shell, so the previous
+  # seven Emacs-provenance assertions have moved into a Nix-side flake
+  # check — see `checks.<system>.emacs-binaries` in nix/checks.nix.
+  # The flake-check version builds jotainEmacs and verifies binaries
+  # exist + run cleanly without leaking host config, which is the
+  # build-side equivalent.
   #
-  #   1. `emacs` on PATH resolves to the jotainEmacs derivation built
-  #      from emacs.nix (no host-system Emacs leaks in).
-  #   2. `emacsclient` on PATH resolves to the same store path prefix
-  #      as `emacs` — both must come from the same Nix package.
-  #   3. `etags`, the auxiliary binary shipped by Emacs, also lives in
-  #      the jotainEmacs store path.
-  #   4. `emacs --version` reports a recognisable GNU Emacs banner and
-  #      exits cleanly under `--batch`.
-  #   5. Running Emacs with HOME pointed at an empty directory and
-  #      `--no-init-file --no-site-file` produces *no* references to
-  #      `.emacs.d`, `~/.emacs`, or anything outside the store — i.e.
-  #      Emacs doesn't try to load any user configuration from outside
-  #      the project.
-  #   6. With `--init-directory=$DEVENV_ROOT` Emacs successfully loads
-  #      `early-init.el` / `init.el` from this repo (this is what the
-  #      `emacs-run` script does), proving the local config is the
-  #      only thing in scope.
-  #   7. The `eask` companion tool is on PATH, points into the Nix
-  #      store, and reports a version (it ships alongside Emacs from
-  #      the `languages.emacs-lisp` module).
+  # The remaining shell tooling still gets a sanity check so CI's
+  # `devenv test` job doesn't pass green for the wrong reason.
   enterTest = ''
     set -euo pipefail
 
-    echo "[1/7] emacs on PATH must come from jotainEmacs"
-    actual_emacs="$(command -v emacs)"
-    real_emacs="$(readlink -f "$actual_emacs")"
-    case "$real_emacs" in
-      ${jotainEmacs}/*) ;;
-      *)
-        echo "FAIL: emacs resolved to $real_emacs (expected prefix ${jotainEmacs})"
-        exit 1
-        ;;
-    esac
+    echo "[1/7] core Nix tools on PATH"
+    for bin in nil nixfmt statix deadnix; do
+      real="$(readlink -f "$(command -v "$bin")")"
+      case "$real" in
+        /nix/store/*) ;;
+        *) echo "FAIL: $bin resolved to $real"; exit 1 ;;
+      esac
+    done
 
-    echo "[2/7] emacsclient must come from the same store path"
-    real_emacsclient="$(readlink -f "$(command -v emacsclient)")"
-    case "$real_emacsclient" in
-      ${jotainEmacs}/*) ;;
-      *)
-        echo "FAIL: emacsclient resolved to $real_emacsclient"
-        exit 1
-        ;;
-    esac
+    echo "[2/7] Meson build tools on PATH and live in the Nix store"
+    for bin in meson ninja; do
+      real="$(readlink -f "$(command -v "$bin")")"
+      case "$real" in
+        /nix/store/*) ;;
+        *) echo "FAIL: $bin resolved to $real"; exit 1 ;;
+      esac
+    done
 
-    echo "[3/7] etags must come from the same store path"
-    real_etags="$(readlink -f "$(command -v etags)")"
-    case "$real_etags" in
-      ${jotainEmacs}/*) ;;
-      *)
-        echo "FAIL: etags resolved to $real_etags"
-        exit 1
-        ;;
-    esac
-
-    echo "[4/7] emacs --version reports GNU Emacs"
-    emacs --batch --version | grep -q "GNU Emacs"
-
-    echo "[5/7] emacs must not load anything from outside the store"
-    isolated_home="$(mktemp -d)"
-    trap 'rm -rf "$isolated_home"' EXIT
-    HOME="$isolated_home" emacs --batch --no-init-file --no-site-file \
-      --eval '(princ (format "user-init-file=%S\n" user-init-file))' \
-      --eval '(princ (format "user-emacs-directory=%S\n" user-emacs-directory))' \
-      > "$isolated_home/out" 2> "$isolated_home/err"
-    # With HOME pointed at the temp dir, Emacs will naturally report
-    # user-emacs-directory *inside* $isolated_home — that's fine. What
-    # we're guarding against is any reference to a real user home
-    # (/home/... or /Users/...) that isn't the isolated temp dir.
-    host_leaks=$(grep -E "/home/|/Users/" "$isolated_home/out" "$isolated_home/err" \
-      | grep -v "$isolated_home" || true)
-    if [ -n "$host_leaks" ]; then
-      echo "FAIL: emacs touched a path outside the store:"
-      echo "$host_leaks"
-      exit 1
-    fi
-    if [ -e "$isolated_home/.emacs.d" ] || [ -e "$isolated_home/.emacs" ]; then
-      echo "FAIL: emacs created config under HOME=$isolated_home"
-      exit 1
-    fi
-
-    echo "[6/7] emacs --init-directory loads this repo's config"
-    HOME="$isolated_home" emacs --batch \
-      --init-directory="$DEVENV_ROOT" \
-      --eval '(message "init-loaded:%s" user-emacs-directory)' \
-      --kill 2>&1 | grep -q "init-loaded:$DEVENV_ROOT"
-
-    echo "[7/7] eask is on PATH and lives in the Nix store"
-    real_eask="$(readlink -f "$(command -v eask)")"
-    case "$real_eask" in
+    echo "[3/7] sonarlint-ls on PATH and lives in the Nix store"
+    real_sonar="$(readlink -f "$(command -v sonarlint-ls)")"
+    case "$real_sonar" in
       /nix/store/*) ;;
-      *)
-        echo "FAIL: eask resolved to $real_eask"
-        exit 1
-        ;;
+      *) echo "FAIL: sonarlint-ls resolved to $real_sonar"; exit 1 ;;
     esac
-    eask --version >/dev/null
 
-    echo "All seven dev-environment checks passed."
+    echo "[4/7] rassumfrassum (rass) on PATH and lives in the Nix store"
+    real_rass="$(readlink -f "$(command -v rass)")"
+    case "$real_rass" in
+      /nix/store/*) ;;
+      *) echo "FAIL: rass resolved to $real_rass"; exit 1 ;;
+    esac
+
+    echo "[5/7] docs toolchain (pandoc + makeinfo) on PATH"
+    real_pandoc="$(readlink -f "$(command -v pandoc)")"
+    case "$real_pandoc" in
+      /nix/store/*) ;;
+      *) echo "FAIL: pandoc resolved to $real_pandoc"; exit 1 ;;
+    esac
+    real_makeinfo="$(readlink -f "$(command -v makeinfo)")"
+    case "$real_makeinfo" in
+      /nix/store/*) ;;
+      *) echo "FAIL: makeinfo resolved to $real_makeinfo"; exit 1 ;;
+    esac
+
+    echo "[6/7] eca server on PATH and lives in the Nix store"
+    real_eca="$(readlink -f "$(command -v eca)")"
+    case "$real_eca" in
+      /nix/store/*) ;;
+      *) echo "FAIL: eca resolved to $real_eca"; exit 1 ;;
+    esac
+
+    echo "[7/7] tagref on PATH and lives in the Nix store"
+    real_tagref="$(readlink -f "$(command -v tagref)")"
+    case "$real_tagref" in
+      /nix/store/*) ;;
+      *) echo "FAIL: tagref resolved to $real_tagref"; exit 1 ;;
+    esac
+
+    # NOTE: there's no longer a runtime assertion that `emacs` is absent
+    # from the dev shell — a host Emacs installed via home-manager would
+    # show up under /nix/store/ and trip the check on dev machines.
+    # The build-side guarantee (jotainEmacs produces working binaries)
+    # lives in `checks.<system>.emacs-binaries` in nix/checks.nix.
+
+    echo "Dev-shell tooling checks passed."
   '';
 }

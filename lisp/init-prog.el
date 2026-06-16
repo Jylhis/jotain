@@ -66,13 +66,25 @@
   :ensure nil ; Provided by Nix
   :defer t
   :commands combobulate-mode
-  :custom (combobulate-key-prefix "C-c o"))
+  :custom (combobulate-key-prefix "C-c o")
+  :bind (:map combobulate-key-map
+              ("M-P" . combobulate-drag-up)
+              ("M-N" . combobulate-drag-down)))
 
 ;;;; Eglot
 
 ;; Modern LSP servers routinely send multi-megabyte responses.  Bumping
 ;; the read buffer cuts the number of read(2) calls dramatically.
 (setopt read-process-output-max (* 4 1024 1024))
+
+;;; @doc Security gate for JavaScript-config-evaluating language servers.
+;;; ESLint and Tailwind LSPs can execute project-controlled JS config, so
+;;; keep them opt-in.
+(defcustom jotain-prog-enable-risky-js-lsp nil
+  "When non-nil, include ESLint and Tailwind LSP servers in TS/TSX `rass` sessions.
+These servers may evaluate project JavaScript configuration files."
+  :type 'boolean
+  :group 'jotain)
 
 ;;; @doc Built-in LSP client. Per-language `eglot-ensure` hooks live
 ;;; here so all LSP wiring is visible in one place; per-language
@@ -138,23 +150,22 @@
   ;; built-in lookup otherwise, so a missing companion server never
   ;; breaks LSP entirely.
   (when (executable-find "rass")
-    ;; TS/TSX/typescript-mode: typescript-language-server is the primary;
-    ;; eslint-lsp and tailwindcss-language-server are layered in when
-    ;; available.  We only register the rass entry when at least one
-    ;; companion is present — with just tsserver, the plain eglot path
-    ;; is cheaper than spawning rass for no reason.
+    ;; TS/TSX/typescript-mode: typescript-language-server is the primary.
+    ;; ESLint/Tailwind companions are optional and gated behind
+    ;; `jotain-prog-enable-risky-js-lsp' because they may evaluate
+    ;; project-controlled JavaScript config.
     (when (executable-find "typescript-language-server")
       (let (extras)
-        (dolist (s '("eslint-lsp" "tailwindcss-language-server"))
-          (when (executable-find s)
-            (setq extras (append extras (list "--" s "--stdio")))))
-        (when extras
-          (add-to-list
-           'eglot-server-programs
-           (cons '(tsx-ts-mode typescript-ts-mode typescript-mode)
-                 (append '("rass"
-                           "--" "typescript-language-server" "--stdio")
-                         extras))))))
+        (when jotain-prog-enable-risky-js-lsp
+          (dolist (s '("eslint-lsp" "tailwindcss-language-server"))
+            (when (executable-find s)
+              (setq extras (append extras (list "--" s "--stdio"))))))
+        (add-to-list
+         'eglot-server-programs
+         (cons '(tsx-ts-mode typescript-ts-mode typescript-mode)
+               (append '("rass"
+                         "--" "typescript-language-server" "--stdio")
+                       extras)))))
     ;; Python: the bundled `rass python' preset assumes basedpyright +
     ;; ruff.  Projects on pylsp/pyright keep eglot's default lookup.
     (when (and (executable-find "basedpyright")
@@ -257,6 +268,27 @@ connection alongside any existing language server."
   :custom
   (xref-search-program 'ripgrep))
 
+;;;; tagref
+
+;;; @doc Cross-reference checker for `[tag:x]'/`[ref:x]' directives. Adds
+;;; completion, xref navigation (M-. jumps from a ref to its tag, M-? finds
+;;; references), and `M-x tagref-check' (clickable compilation buffer).
+;;; Needs the `tagref' CLI on PATH (dev shell / Home Manager wrapper).
+;;; Provided by Nix (not on MELPA).
+(use-package tagref
+  :ensure nil ; Provided by Nix
+  :commands (tagref-mode)
+  :hook (prog-mode . jotain-tagref--maybe-enable)
+  :init
+  (defun jotain-tagref--maybe-enable ()
+    "Enable `tagref-mode' only inside a project.
+`tagref-mode' signals a `user-error' when there is no project (e.g. the
+daemon's *scratch* buffer in `lisp-interaction-mode'), which aborts
+daemon startup before `server-start' with exit 255.  Decline silently
+outside a project."
+    (when (project-current)
+      (tagref-mode 1))))
+
 ;;;; Compile
 
 ;;; @doc Built-in compile / recompile. Auto-scroll until the first error
@@ -313,6 +345,11 @@ connection alongside any existing language server."
   :diminish apheleia-mode
   :functions (apheleia-global-mode)
   :config
+  (add-to-list 'apheleia-formatters
+               '(meson-format . ("meson" "format"
+                                  "--source-file-path" filepath
+                                  "-")))
+  (add-to-list 'apheleia-mode-alist '(meson-mode . meson-format))
   (apheleia-global-mode 1)
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 

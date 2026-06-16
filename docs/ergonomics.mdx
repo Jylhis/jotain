@@ -1,0 +1,125 @@
+---
+title: Ergonomics
+description: One-shot modifiers, repeat-maps, and reducing chord strain in Jotain
+---
+
+# Ergonomics
+
+Long Emacs sessions punish the modifier-holding fingers. Protesilaos
+Stavrou's [keyboard ergonomics writing](https://protesilaos.com/keeb/)
+argues for replacing **held** modifier chords with **one-shot
+modifiers** — tap-then-press — so that the only fingers under load
+are the ones actually typing characters. Most of Prot's solution lives
+in keyboard firmware (split keyboards, QMK one-shot mods, thumb
+clusters). The Emacs side of the same idea is **`repeat-mode`** plus a
+small set of `repeat-map`s.
+
+This page explains what Jotain enables out of the box, how to extend
+it, and what to look at next if you want to push further.
+
+## Repeat-mode: the Emacs-native one-shot
+
+`repeat-mode` is built into Emacs 28+ and enabled globally in
+`init-core.el`. After running a command tagged with a `repeat-map`,
+Emacs installs that map as a transient overlay: the *bare* trailing
+keys keep running related commands until you press anything else (or
+2 s pass — configured via `repeat-exit-timeout`).
+
+The everyday wins are all built-in:
+
+| Type once    | Then keep typing | What happens                  |
+| ------------ | ---------------- | ----------------------------- |
+| `M-o`        | `o o o`          | Cycle through windows         |
+| `C-/`        | `/ / /`          | Undo, undo, undo              |
+| `C-x →`      | `→ →`            | Cycle through buffers         |
+| `M-g n`      | `n n n`          | Jump through compilation errors |
+| `C-x o`      | `o O`            | `other-window` forward/back   |
+
+These come from Emacs itself; Jotain just turns the mode on. Run `M-x
+describe-repeat-maps` to see every active map at any moment.
+
+## Jotain-specific maps
+
+The only built-in command family missing a sensible repeat-map is
+window resizing. Jotain adds one in `lisp/init-keys.el`:
+
+```elisp
+(defvar-keymap jotain-window-resize-repeat-map
+  :repeat t
+  "^" #'enlarge-window
+  "v" #'shrink-window
+  "}" #'enlarge-window-horizontally
+  "{" #'shrink-window-horizontally)
+```
+
+So `C-x ^ ^ ^ v` overshoots vertically then corrects, and
+`C-x } } } { {` widens then narrows horizontally — all without
+re-pressing `C-x`. `shrink-window` has no default key binding, so `v`
+only activates *inside* the repeat overlay (after another entry
+command has already fired). The 2-second `repeat-exit-timeout` (in
+`init-core.el`) clears the overlay automatically — no `C-g` needed.
+
+## Extending repeat-maps
+
+To add your own, drop a `defvar-keymap` into `lisp/init-keys.el` (or
+the module owning the commands) and tag it with `:repeat t`. Every
+command bound in the map gets `repeat-map` set automatically. For
+example, paragraph navigation:
+
+```elisp
+(defvar-keymap my-paragraph-repeat-map
+  :repeat t
+  "{" #'backward-paragraph
+  "}" #'forward-paragraph)
+```
+
+Now `M-{ { {` walks backward through paragraphs without holding Meta.
+
+## Pinky-stretch escape hatches Jotain already takes
+
+A few existing bindings are quiet ergonomic wins:
+
+- **`M-o` → `other-window`** (instead of `C-x o`) — one chord, no
+  prefix sequence, both hands involved.
+- **`C-z` and `C-x C-z` disabled** — removes a foot-gun and frees `C-z`
+  for personal use.
+- **`windmove-default-keybindings`** — `Shift-<arrow>` to move
+  directionally between windows, no chord required.
+- **macOS `Cmd` → Meta** (`init-core.el`) — Meta lives under the
+  thumb, not the pinky.
+
+## Beyond Emacs: the rest of Prot's advice
+
+Most of Prot's recommendations are outside Emacs's reach:
+
+- **Caps Lock → Ctrl** is fine, but reinforces left-pinky overuse.
+  Prefer a keyboard with thumb-reachable Ctrl (or remap *both* sides).
+- **Split keyboards** (Prot uses an Iris) let each hand stay in its
+  natural posture and put modifiers under the thumbs.
+- **Firmware one-shot mods** (QMK, ZMK) let any key act as a modifier
+  for a single subsequent press. This is the hardware analogue of
+  `repeat-mode`.
+
+These are out of scope for an Emacs config, but worth knowing about
+when the in-editor wins above stop being enough.
+
+## Optional: `modifier-bar-mode`
+
+Emacs 30 ships `modifier-bar-mode`, a tool-bar widget that lets you
+tap `Ctrl`/`Meta`/`Super`/`Hyper` and have it apply to the next
+keypress — a clickable one-shot modifier. Jotain disables the
+tool-bar entirely in `early-init.el` for a clean UI, so this is
+**off by default**. To enable it for yourself, add to your
+`custom.el` or a personal init fragment:
+
+```elisp
+(tool-bar-mode 1)
+(modifier-bar-mode 1)
+```
+
+## Further reading
+
+- [Irreal: "Emacs Keyboard Ergonomics"](https://irreal.org/blog/?p=13788) — the post that prompted this page.
+- [Protesilaos's mechanical keyboards index](https://protesilaos.com/keeb/) — RSI background, Iris choice, QMK config.
+- `M-x describe-repeat-maps` — list every repeat-map currently active.
+- `(info "(emacs) Repeating")` — the official Emacs manual section.
