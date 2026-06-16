@@ -84,6 +84,7 @@ let
       direnv # envrc
       coreutils # gls, used by dirvish-listing-switches on darwin
       pkgsWithOverlay.eca # eca-emacs server; prevents runtime download fallback
+      rsync # dired-rsync (C-c C-r)
     ]
     ++ lib.optional cfg.sonarlint.enable pkgs.sonarlint-ls
     ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server;
