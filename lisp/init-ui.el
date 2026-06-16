@@ -47,8 +47,8 @@ and the result is a face-attribute soup."
     (unless noninteractive
       (load-theme jotain-theme-light t t)
       (load-theme jotain-theme-dark  t t))
-  (setq jotain-theme-light 'modus-operandi
-        jotain-theme-dark 'modus-vivendi)
+  (setopt jotain-theme-light 'modus-operandi
+          jotain-theme-dark 'modus-vivendi)
   (message "jylhis-themes is unavailable; falling back to Modus themes"))
 
 ;;; @doc Flips between `jotain-theme-light` and `jotain-theme-dark`
