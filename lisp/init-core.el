@@ -60,6 +60,8 @@ immediately for writes."
   :custom
   (fill-column 100)
   (use-short-answers t)
+  (read-answer-short t)
+  (list-matching-lines-jump-to-current-line nil)
   (use-dialog-box nil)
   (create-lockfiles nil)
   (delete-by-moving-to-trash t)
@@ -150,9 +152,15 @@ immediately for writes."
 
 ;;; @doc Repeat-mode lets you press the trailing key alone after a prefix
 ;;; command (e.g. C-x o o o instead of C-x o C-x o). Built-in,
-;;; enabled globally.
+;;; enabled globally. `repeat-exit-timeout' clears the transient map
+;;; after two idle seconds so the user doesn't have to think about
+;;; exiting it — the ergonomic "one-shot modifier" pattern. A
+;;; window-resize repeat-map filling the one gap in the built-in
+;;; coverage lives in init-keys.el.
 (use-package repeat
   :ensure nil
+  :custom
+  (repeat-exit-timeout 2)
   :config (repeat-mode 1))
 
 ;;; @doc Disambiguate same-name buffers by directory prefix instead of
@@ -269,30 +277,38 @@ freezes — start, reproduce, stop."
   :ensure nil
   :custom
   (savehist-file (jotain-var-file "savehist.el"))
-  (savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
   :config
-  (savehist-mode 1)
-
-  ;; Strip text properties from every ring savehist persists, so the
-  ;; savehist file doesn't bloat with face/font-lock metadata from
-  ;; whatever buffer the strings were copied out of. Named so the hook
-  ;; can be removed cleanly when the config is re-evaluated.
-  (defun jotain-core--savehist-strip-properties ()
-    "Strip text properties from persisted rings before serialization."
-    (dolist (ring '(kill-ring search-ring regexp-search-ring))
-      (set ring (mapcar (lambda (entry)
-                          (if (stringp entry)
-                              (substring-no-properties entry)
-                            entry))
-                        (symbol-value ring)))))
-
-  (add-hook 'savehist-save-hook #'jotain-core--savehist-strip-properties))
+  (savehist-mode 1))
 
 ;;; @doc Built-in bookmark store. State file is themed under var/ so it
-;;; joins the rest of Jotain's persistent state.
+;;; joins the rest of Jotain's persistent state. `save-flag 1` writes
+;;; on every change so an Emacs crash never loses bookmarks; the fringe
+;;; glyph is suppressed because it adds visual noise without info.
 (use-package bookmark
   :ensure nil
-  :custom (bookmark-default-file (jotain-var-file "bookmarks.el")))
+  :custom
+  (bookmark-default-file (jotain-var-file "bookmarks.el"))
+  (bookmark-fringe-mark nil)
+  (bookmark-save-flag 1))
+
+;;; @doc Lazy-count isearch matches in the prompt — "(3/12)" tells you
+;;; where you are without leaving the search.
+(use-package isearch
+  :ensure nil
+  :custom
+  (isearch-lazy-count t)
+  (lazy-count-prefix-format "(%s/%s) ")
+  (lazy-count-suffix-format nil))
+
+;;; @doc Built-in HTML renderer used by eww, gnus, elfeed. Suppress page
+;;; colours and proportional fonts so rendered HTML inherits the
+;;; theme and the user's monospace face — better contrast,
+;;; predictable layout.
+(use-package shr
+  :ensure nil
+  :custom
+  (shr-use-colors nil)
+  (shr-use-fonts nil))
 
 (provide 'init-core)
 ;;; init-core.el ends here

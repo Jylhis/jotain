@@ -45,11 +45,13 @@ The Elisp configuration is split into three parts:
 
 The Nix layer provides reproducible Emacs builds:
 
-1. **`emacs.nix`** — wraps `pkgs.emacs30` (or `pkgs.emacs30-macport`) with the full set of build flags exposed as arguments. A cache-parity invariant guarantees that `import ./emacs.nix {}` produces the same store path as `pkgs.emacs30`, so the default build is a cache hit. Divergent variants (`git`, `unstable`, `igc`, `macport`, Darwin patches) run through `overrideAttrs` and intentionally rebuild from source.
+1. **`emacs.nix`** — wraps nixpkgs' `emacs31` (default), the git-based attrs from [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay) (`git`/`unstable`/`igc`), or `pkgs.emacs-macport` with the full set of build flags exposed as arguments. A cache-parity invariant guarantees that `import ./emacs.nix {}` produces the same store path as `pkgs.emacs31` (and each overlay variant the matching overlay attr), so default-rev builds are cache hits against Hydra and `nix-community.cachix.org`. Only custom `rev` pins and Darwin patches run through `overrideAttrs` and intentionally rebuild from source.
 
-2. **`default.nix`** — distribution wrapper. Imports `emacs.nix`, forwards every argument, and (by default) calls `emacsPackagesFor emacs |> withPackages (ep: [ ep.treesit-grammars.with-all-grammars ])` to produce an Emacs that ships every tree-sitter grammar in nixpkgs.
+2. **`emacs-jylhis.nix`** — builds the pinned `github:jylhis/emacs` Meson fork. The flake exposes it as a non-default opt-in backend so consumer flakes can install the same Jotain setup on the fork without changing the stable default.
 
-3. **`module.nix`** — Home Manager module that runs Jotain as a user-session Emacs daemon (`services.jotain`), generates a desktop entry for `emacsclient`, and can install itself as `EDITOR`/`VISUAL`. Supports systemd on Linux and launchd on macOS.
+3. **`default.nix`** — flake-compat wrapper for the default package set.
+
+4. **`module.nix`** — Home Manager module that runs Jotain as a user-session Emacs daemon (`services.jotain`), generates a desktop entry for `emacsclient`, and can install itself as `EDITOR`/`VISUAL`. Supports systemd on Linux and launchd on macOS, with `services.jotain.emacsBackend = "jylhis"` for the fork backend.
 
 ### Development Layer
 

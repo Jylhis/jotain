@@ -12,50 +12,68 @@ system := `nix eval --impure --raw --expr 'builtins.currentSystem'`
 
 # List available recipes.
 default:
-    @just --list --justfile {{justfile()}}
+    @just --list --justfile "{{justfile()}}"
 
 
 # ── Run ─────────────────────────────────────────────────────────────
+#
+# All recipes in this section depend on `emacs` / `emacsclient` being
+# on PATH. Emacs is temporarily not installed into the devenv shell
+# (see top-of-file note in devenv.nix), so they print a notice and
+# exit 0 instead of failing cryptically. Use `just run-built` to build
+# Emacs via Nix and launch it with this configuration.
 
-# Launch Emacs with this config in isolation (--init-directory).
+# [DISABLED] Launch Emacs with this config in isolation (--init-directory).
 [group('run')]
 run *ARGS:
-    emacs --init-directory={{config_dir}} {{ARGS}}
+    @echo "just run is disabled — emacs is not in the devenv shell."
+    @echo "Try: just run-built  (builds Emacs via Nix, then launches it)"
+# Original:
+#   emacs --init-directory={{config_dir}} {{ARGS}}
 
-# Launch with --debug-init and debug-on-error.
+# [DISABLED] Launch with --debug-init and debug-on-error.
 [group('run')]
 debug *ARGS:
-    emacs --init-directory={{config_dir}} --debug-init \
-          --eval '(setq debug-on-error t)' {{ARGS}}
+    @echo "just debug is disabled — emacs is not in the devenv shell."
+    @echo "Try: just run-built  (then re-enable when wired back up)"
+# Original:
+#   emacs --init-directory={{config_dir}} --debug-init \
+#         --eval '(setq debug-on-error t)' {{ARGS}}
 
-# Launch in the terminal (-nw) — exercises kkp + clipetty.
+# [DISABLED] Launch in the terminal (-nw) — exercises kkp + clipetty.
 [group('run')]
 tty *ARGS:
-    emacs -nw --init-directory={{config_dir}} {{ARGS}}
+    @echo "just tty is disabled — emacs is not in the devenv shell."
+# Original:
+#   emacs -nw --init-directory={{config_dir}} {{ARGS}}
 
-# Run a foreground Emacs daemon with this config. Stop with C-c or
-# `emacsclient -e '(kill-emacs)'`. See docs/usage/launching.mdx.
+# [DISABLED] Run a foreground Emacs daemon with this config.
 [group('run')]
 daemon *ARGS:
-    emacs --fg-daemon --init-directory={{config_dir}} {{ARGS}}
+    @echo "just daemon is disabled — emacs is not in the devenv shell."
+# Original:
+#   emacs --fg-daemon --init-directory={{config_dir}} {{ARGS}}
 
-# Connect a graphical emacsclient frame to the running daemon. Falls
-# back to a fresh Emacs (with the repo config) if no daemon is running.
+# [DISABLED] Connect a graphical emacsclient frame to the running daemon.
 [group('run')]
 client *ARGS:
-    emacsclient -c --alternate-editor='emacs --init-directory={{config_dir}}' {{ARGS}}
+    @echo "just client is disabled — emacsclient is not in the devenv shell."
+# Original:
+#   emacsclient -c --alternate-editor='emacs --init-directory={{config_dir}}' {{ARGS}}
 
-# Connect a terminal emacsclient frame to the running daemon. Falls
-# back to a fresh -nw Emacs (with the repo config) if no daemon is running.
+# [DISABLED] Connect a terminal emacsclient frame to the running daemon.
 [group('run')]
 client-tty *ARGS:
-    emacsclient -t --alternate-editor='emacs -nw --init-directory={{config_dir}}' {{ARGS}}
+    @echo "just client-tty is disabled — emacsclient is not in the devenv shell."
+# Original:
+#   emacsclient -t --alternate-editor='emacs -nw --init-directory={{config_dir}}' {{ARGS}}
 
-# Lightweight `emacs -Q -nw` for quick edits, no Jotain config. The
-# wombat theme keeps the buffer readable on dark terminals.
+# [DISABLED] Lightweight `emacs -Q -nw` for quick edits.
 [group('run')]
 quick *ARGS:
-    emacs -Q -nw --eval "(load-theme 'wombat t)" {{ARGS}}
+    @echo "just quick is disabled — emacs is not in the devenv shell."
+# Original:
+#   emacs -Q -nw --eval "(load-theme 'wombat t)" {{ARGS}}
 
 
 # ── Check / compile ─────────────────────────────────────────────────
@@ -65,89 +83,53 @@ quick *ARGS:
 check:
     nix flake check
 
-# Parse every .el file (no compile, no package install).
+# Equivalent coverage lives in the `elisp-lint` flake check; `just check`
+# runs it via `nix flake check`.
+# [DISABLED] Parse every .el file (no compile, no package install).
 [group('check')]
 check-elisp:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    emacs -Q --batch --eval '
-      (let ((failed nil))
-        (dolist (f (append (list "early-init.el" "init.el")
-                           (directory-files "lisp" t "^init-.*\\.el$")))
-          (condition-case err
-              (with-temp-buffer
-                (insert-file-contents f)
-                (emacs-lisp-mode)
-                (check-parens)
-                (message "OK: %s" (file-name-nondirectory f)))
-            (error
-             (message "FAIL %s: %S" (file-name-nondirectory f) err)
-             (setq failed t))))
-        (when failed (kill-emacs 1)))'
+    @echo "just check-elisp is disabled — emacs is not in the devenv shell."
+    @echo "Equivalent: just check  (runs the elisp-lint flake check)"
+# Original:
+#   emacs -Q --batch --eval '(check-parens for early-init.el init.el lisp/init-*.el)'
 
-# Byte-compile everything; requires packages installed (run `just run` first).
+# Equivalent coverage lives in the `elisp-compile` flake check.
+# [DISABLED] Byte-compile everything; requires packages installed.
 [group('check')]
 compile:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    emacs --batch \
-        --init-directory={{config_dir}} \
-        --eval '(setq byte-compile-error-on-warn t)' \
-        --eval '(byte-recompile-directory "{{config_dir}}/lisp" 0 t)' \
-        -f batch-byte-compile early-init.el init.el
+    @echo "just compile is disabled — emacs is not in the devenv shell."
+    @echo "Equivalent: just check  (runs the elisp-compile flake check)"
+# Original:
+#   emacs --batch --init-directory={{config_dir}} \
+#       --eval '(setq byte-compile-error-on-warn t)' \
+#       --eval '(byte-recompile-directory "{{config_dir}}/lisp" 0 t)' \
+#       -f batch-byte-compile early-init.el init.el
 
-# Run ERT tests under test/ if any exist.
+# [DISABLED] Run ERT tests under test/ if any exist.
 [group('check')]
 test:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if [ ! -d test ]; then
-        echo "No test/ directory yet."
-        exit 0
-    fi
-    emacs --batch \
-        -L lisp -L test \
-        -l ert \
-        $(find test -name 'test-*.el' -exec echo -l {} \;) \
-        -f ert-run-tests-batch-and-exit
+    @echo "just test is disabled — emacs is not in the devenv shell."
+    @echo "(There is no test/ directory yet; re-enable alongside Emacs.)"
+# Original:
+#   emacs --batch -L lisp -L test -l ert \
+#       $(find test -name 'test-*.el' -exec echo -l {} \;) \
+#       -f ert-run-tests-batch-and-exit
 
 
-# Benchmark startup: launch Emacs, collect metrics, print results.
-# Wrapper init files live in bench/ — see bench/early-init.el.
+# Wrapper init files live in bench/ — kept on disk for when re-enabled.
+# [DISABLED] Benchmark startup: launch Emacs, collect metrics, print results.
 [group('check')]
 bench output="":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    results="$(mktemp "${TMPDIR:-/tmp}/jotain-bench-results.XXXXXX")"
-    trap 'rm -f "$results"' EXIT
+    @echo "just bench is disabled — emacs is not in the devenv shell."
+# Original:
+#   JOTAIN_BENCH_OUTPUT=... emacs --init-directory={{config_dir}}/bench
 
-    JOTAIN_BENCH_OUTPUT="$results" \
-        emacs --init-directory="{{config_dir}}/bench" 2>/dev/null
-
-    cat "$results"
-    if [ -n "{{output}}" ]; then
-        cp "$results" "{{output}}"
-        echo ""
-        echo "Results saved to {{output}}"
-    fi
-
-# Benchmark file-open: open representative files and time each hook.
+# [DISABLED] Benchmark file-open: open representative files and time each hook.
 [group('check')]
 bench-open output="":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    results="$(mktemp "${TMPDIR:-/tmp}/jotain-bench-open.XXXXXX")"
-    trap 'rm -f "$results"' EXIT
-
-    JOTAIN_BENCH_OPEN_OUTPUT="$results" \
-        emacs --init-directory="{{config_dir}}/bench" 2>/dev/null
-
-    cat "$results"
-    if [ -n "{{output}}" ]; then
-        cp "$results" "{{output}}"
-        echo ""
-        echo "Results saved to {{output}}"
-    fi
+    @echo "just bench-open is disabled — emacs is not in the devenv shell."
+# Original:
+#   JOTAIN_BENCH_OPEN_OUTPUT=... emacs --init-directory={{config_dir}}/bench
 
 
 # ── Build (nix) ─────────────────────────────────────────────────────
@@ -161,6 +143,17 @@ build:
 [group('build')]
 build-bare:
     nix-build --argstr system {{system}} emacs.nix
+
+# Build the bare github:jylhis/emacs Meson fork.
+[group('build')]
+build-jylhis:
+    nix build .#jylhis-emacs -o result-jylhis-emacs
+
+# Build Jotain's full package set on the github:jylhis/emacs fork.
+# Experimental until the fork reliably byte-compiles all Emacs packages.
+[group('build')]
+build-jylhis-full:
+    nix build .#jylhis-emacs-packages -o result-jylhis-emacs-full
 
 # Build with --with-pgtk for Wayland.
 [group('build')]
@@ -182,7 +175,7 @@ build-nox:
 build-macport:
     nix-build --arg variant '"macport"' --argstr system {{system}} emacs.nix
 
-# Build from current git master (first run will report a hash to fill in).
+# Build from git master (the revision pinned by emacs-overlay, binary-cached).
 [group('build')]
 build-git:
     nix-build --arg variant '"git"' --argstr system {{system}} emacs.nix
@@ -215,7 +208,7 @@ run-built *ARGS:
     echo "Launching Emacs from result/bin/emacs..."
     ./result/bin/emacs --debug-init \
         --eval '(setq debug-on-error t)' \
-        --init-directory={{config_dir}} {{ARGS}}
+        --init-directory="{{config_dir}}" {{ARGS}}
 
 
 # Build option reference documentation (HTML for GitHub Pages).
@@ -264,7 +257,7 @@ fmt:
 # ── Lock synchronization ────────────────────────────────────────────
 
 # Inputs shared between flake.nix and devenv.yaml — both locks must agree on these revs.
-shared_inputs := "nixpkgs treefmt-nix"
+shared_inputs := "nixpkgs treefmt-nix emacs-overlay"
 
 # Update flake inputs and sync matching devenv.yaml URLs to the new revs.
 [group('pins')]
@@ -314,13 +307,13 @@ verify:
 clean:
     #!/usr/bin/env bash
     set -euo pipefail
-    find {{config_dir}} -name '*.elc' -type f -delete 2>/dev/null || true
-    find {{config_dir}} -name '*~'    -type f -delete 2>/dev/null || true
-    find {{config_dir}} -name '#*#'   -type f -delete 2>/dev/null || true
-    find {{config_dir}} -name '.#*'   -type f -delete 2>/dev/null || true
-    rm -rf {{config_dir}}/var/eln-cache 2>/dev/null || true
-    rm -rf {{config_dir}}/eln-cache     2>/dev/null || true
-    rm -f  {{config_dir}}/result        2>/dev/null || true
+    find "{{config_dir}}" -name '*.elc' -type f -delete 2>/dev/null || true
+    find "{{config_dir}}" -name '*~'    -type f -delete 2>/dev/null || true
+    find "{{config_dir}}" -name '#*#'   -type f -delete 2>/dev/null || true
+    find "{{config_dir}}" -name '.#*'   -type f -delete 2>/dev/null || true
+    rm -rf "{{config_dir}}/var/eln-cache" 2>/dev/null || true
+    rm -rf "{{config_dir}}/eln-cache"     2>/dev/null || true
+    rm -f  "{{config_dir}}/result"        2>/dev/null || true
     echo "Cleaned compiled artifacts."
 
 # Nuke installed packages and persistent state — forces a full re-fetch.
@@ -328,7 +321,7 @@ clean:
 clean-all: clean
     #!/usr/bin/env bash
     set -euo pipefail
-    rm -rf {{config_dir}}/elpa      2>/dev/null || true
-    rm -rf {{config_dir}}/var       2>/dev/null || true
-    rm -rf {{config_dir}}/.dev-home 2>/dev/null || true
+    rm -rf "{{config_dir}}/elpa"      2>/dev/null || true
+    rm -rf "{{config_dir}}/var"       2>/dev/null || true
+    rm -rf "{{config_dir}}/.dev-home" 2>/dev/null || true
     echo "Nuked elpa/, var/, .dev-home/."

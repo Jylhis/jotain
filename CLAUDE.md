@@ -14,7 +14,7 @@ All recipes assume the devenv shell is active. `direnv` handles this via `.envrc
 devenv shell -- just check
 ```
 
-CI (`.github/workflows/ci.yml`) runs two parallel jobs across all four supported platforms (`x86_64-linux`, `aarch64-linux`, `x86_64-darwin`, `aarch64-darwin`): `check` (`nix flake check`, which already builds `packages-default`, `packages-emacs`, `packages-info`, and `options-doc` as flake checks — so a separate `nix build` job would duplicate work) and `test` (`devenv test` — the seven `enterTest` assertions in `devenv.nix`). A workflow-level `concurrency` group cancels superseded runs on PR branches while preserving protected-branch runs so post-merge cache pushes always finish. The `jylhis` cachix cache is used for pulling and pushing artifacts.
+CI (`.github/workflows/ci.yml`) runs two parallel jobs on `x86_64-linux` (Darwin and aarch64 are not exercised in CI): `check` (`nix flake check`, which already builds `packages-default`, `packages-emacs`, `packages-info`, and `options-doc` as flake checks — so a separate `nix build` job would duplicate work) and `test` (`devenv test` — the seven `enterTest` assertions in `devenv.nix`). A workflow-level `concurrency` group cancels superseded runs on PR branches while preserving protected-branch runs so post-merge cache pushes always finish. The `jylhis` cachix cache is used for pulling and pushing artifacts.
 
 ## Common commands
 
@@ -36,7 +36,7 @@ Build recipes (all via `nix-build`, targeting current system by default; overrid
 
 - `just build` — full distribution (Emacs + all ~275 tree-sitter grammars) via plain `nix-build`.
 - `just build-bare` — bare Emacs via `emacs.nix`, no grammars.
-- `just build-pgtk` / `build-gtk3` / `build-nox` / `build-macport` / `build-git` / `build-igc` / `build-android` — variant builds targeting `emacs.nix` directly (bare Emacs only). Git/unstable/igc/macport variants will fail on first run and report the hash to pass back via `--argstr hash`.
+- `just build-pgtk` / `build-gtk3` / `build-nox` / `build-macport` / `build-git` / `build-igc` / `build-android` — variant builds targeting `emacs.nix` directly (bare Emacs only). Default revisions are binary-cache hits; only when pinning a custom commit via `--argstr rev` does the first run fail and report the hash to pass back via `--argstr hash`.
 - `just run-built [ARGS]` — auto-detect platform, build, then launch from `./result/bin/emacs`.
 - `just docs` / `just info` / `just docs-all` — build the Nix-options HTML reference, the bundled `jotain.info` manual, or both. HTML goes to `result-docs/`; Info goes to `result-info/share/info/jotain.info`.
 
@@ -65,25 +65,35 @@ There's also an `emacs-smoke` script (defined in `devenv.nix`) that byte-compile
 
 ### Nix build layer — cache-parity invariant
 
-**This is the most important invariant in the repo:** every default in `emacs.nix`'s argument list must match the corresponding default in upstream nixpkgs `make-emacs.nix`. When that holds, `import ./emacs.nix {}` produces the **exact same store path** as `pkgs.emacs30`, so the default build is a binary-cache hit (from `cache.nixos.org` + the `jylhis` cachix cache) and nothing is rebuilt from source.
+**This is the most important invariant in the repo:** every default in `emacs.nix`'s argument list must match the corresponding default in upstream nixpkgs `make-emacs.nix` (and the explicit args `emacs-overlay` passes to its prebuilt attrs). When that holds, `import ./emacs.nix {}` produces the **exact same store path** as `pkgs.emacs31`, and the `git`/`unstable`/`igc` variants the store paths of `pkgs.emacs-git`/`emacs-unstable`/`emacs-igc`, so every default-rev build is a binary-cache hit (Hydra for mainline, `nix-community.cachix.org` for the overlay variants, plus the `jylhis` cachix cache) and nothing is rebuilt from source.
 
-Divergent variants (`git`, `unstable`, `igc`, `macport`, Darwin patch flags) go through `overrideAttrs` and *intentionally* bust the cache. Any edit to `emacs.nix` that touches the `basePackage.override { … }` block must preserve parity for the mainline variant. Verify with:
+The base package map: `mainline` (default) is nixpkgs `emacs31` (release branch); `git`/`unstable`/`igc` come from [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay), wired in as a flake input alongside `nixpkgs`; `macport` is nixpkgs' `emacs-macport` alias (→ `emacs30-macport`, the jdtsmith/emacs-mac fork — emacs-overlay does not ship a macport). Only custom `rev` pins and the Darwin patch flags go through `overrideAttrs` and *intentionally* bust the cache. Any edit to `emacs.nix` that touches the `basePackage.override { … }` block must preserve parity for the mainline variant (and ideally the overlay variants). Verify with:
 
 ```
 nix-instantiate --eval --strict -E '
   let lock = builtins.fromJSON (builtins.readFile ./flake.lock);
       n = lock.nodes.nixpkgs.locked;
+      ov = lock.nodes.emacs-overlay.locked;
       nixpkgs = fetchTarball { url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz"; sha256 = n.narHash; };
-  in (import ./emacs.nix {}).outPath == (import nixpkgs {}).emacs30.outPath'
+      overlay = fetchTarball { url = "https://github.com/${ov.owner}/${ov.repo}/archive/${ov.rev}.tar.gz"; sha256 = ov.narHash; };
+      pkgs = import nixpkgs { overlays = [ (import overlay) ]; };
+  in {
+    mainline = (import ./emacs.nix {}).outPath == pkgs.emacs31.outPath;
+    git      = (import ./emacs.nix { variant = "git"; }).outPath == pkgs.emacs-git.outPath;
+    unstable = (import ./emacs.nix { variant = "unstable"; }).outPath == pkgs.emacs-unstable.outPath;
+    igc      = (import ./emacs.nix { variant = "igc"; }).outPath == pkgs.emacs-igc.outPath;
+  }'
 ```
 
-**`overlay.nix`** is a nixpkgs overlay providing four attributes: `jotainEmacs` (bare Emacs from `emacs.nix`), `jotainInfo` (the `jotain.info` manual generated by `nix/info-manual.nix`), `jotainEmacsPackages` (full distribution — use-package auto-mapping + tree-sitter grammars + a makeBinaryWrapper that prepends `${jotainInfo}/share/info` to `INFOPATH` so `C-h i d m Jotain RET` works out of the box), and `sonarlintLs` (the SonarLint language server from nixpkgs, for `M-x jotain-sonarlint`).
+**`overlay.nix`** is a nixpkgs overlay providing `jotainEmacs` (bare Emacs from `emacs.nix`), `jylhisEmacs` (bare Emacs from the pinned `github:jylhis/emacs` Meson fork), `jotainInfo` (the `jotain.info` manual generated by `nix/info-manual.nix`), `jotainEmacsPackages` (full distribution — use-package auto-mapping + tree-sitter grammars + a makeBinaryWrapper that prepends `${jotainInfo}/share/info` to `INFOPATH` so `C-h i d m Jotain RET` works out of the box), `jylhisEmacsPackages` (the same package/config layer on the fork, currently experimental), and `sonarlintLs` (the SonarLint language server from nixpkgs, for `M-x jotain-sonarlint`).
 
 **`default.nix`** is a thin flake-compat wrapper. It reads the pinned `flake-compat` rev from `flake.lock`, evaluates `flake.nix`, and promotes the current system's packages to the top level. `nix-build` builds the full distribution; `nix-build -A emacs` builds bare Emacs. Variant builds still target `emacs.nix` directly (e.g. `nix-build emacs.nix --arg withPgtk true`).
 
 **`flake.nix`** is a thin wrapper — no inline derivations, just wiring. It exposes:
 - `packages.<system>.default` — full distribution (`jotainEmacsPackages`)
 - `packages.<system>.emacs` — bare Emacs (`jotainEmacs`)
+- `packages.<system>.jylhis-emacs` — bare `github:jylhis/emacs` Meson fork
+- `packages.<system>.jylhis-emacs-packages` — full Jotain setup on the fork (experimental)
 - `packages.<system>.info` — `jotain.info` manual alone (`jotainInfo`), for `just info`
 - `packages.<system>.docs` — HTML option reference (for GitHub Pages)
 - `overlays.default` — the nixpkgs overlay from `overlay.nix`
@@ -97,7 +107,7 @@ nix-instantiate --eval --strict -E '
 
 `devenv.nix` builds `jotainEmacs` by applying `overlay.nix` to devenv's ambient `pkgs` (two MELPA-absent packages, `claude-code-ide` and `combobulate`, are added via `trivialBuild` in `nix/extra-packages.nix`). This derivation is exposed as the `emacs` binary on `PATH`. The custom `languages.emacs-lisp` module from `nix/devenv-emacs-lisp.nix` provides `eask-cli` alongside; `ellsp` and `elsa` are available but opt-in (both defaulted off in `devenv.nix`). The dev shell also includes `statix` and `deadnix` for Nix linting, and `sonarlint-ls` for SonarLint code-quality analysis (`M-x jotain-sonarlint`).
 
-`module.nix` is a Home Manager module (`services.jotain`) for running Jotain as a user-session Emacs daemon with `emacsclient`; it supports systemd on Linux and launchd on macOS. The optional `services.jotain.sonarlint.enable` adds the SonarLint language server to the Emacs wrapper's `PATH` (opt-in because `sonarlint-ls` pulls in JDK 21). `module-system.nix` is a shared NixOS / nix-darwin module that applies the overlay and adds packages to `environment.systemPackages` — it is intentionally a single file reused by both `nixosModules.default` and `darwinModules.default`.
+`module.nix` is a Home Manager module (`services.jotain`) for running Jotain as a user-session Emacs daemon with `emacsclient`; it supports systemd on Linux and launchd on macOS. The optional `services.jotain.sonarlint.enable` adds the SonarLint language server to the Emacs wrapper's `PATH` (opt-in because `sonarlint-ls` pulls in JDK 21). The optional `services.jotain.openrouter.enable` installs `config/eca/config.json` to `~/.config/eca/config.json`, defining the OpenRouter (`openai-chat`) provider for the eca server (opt-in so it never clobbers a user's own eca config; the key is read from `$OPENROUTER_API_KEY` at runtime via eca's `${env:…}` syntax). gptel itself defaults to the OpenRouter backend (`lisp/init-ai.el`) regardless of this option. `module-system.nix` is a shared NixOS / nix-darwin module that applies the overlay and adds packages to `environment.systemPackages` — it is intentionally a single file reused by both `nixosModules.default` and `darwinModules.default`.
 
 ### Pinning
 

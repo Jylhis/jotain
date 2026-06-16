@@ -11,27 +11,27 @@ Jotain uses Nix for reproducible Emacs builds with fine-grained control over com
 
 ### emacs.nix
 
-The core build expression. It takes `pkgs.emacs30` (or `pkgs.emacs30-macport` for the macport variant) and calls `.override { ... }` with every upstream build flag exposed as a file-level argument.
+The core build expression. It selects a base package per variant — nixpkgs' `emacs31` for the default `mainline`, emacs-overlay's `emacs-git`/`emacs-unstable`/`emacs-igc` for the git-based variants, and nixpkgs' `emacs-macport` alias for macport — and calls `.override { ... }` with every upstream build flag exposed as a file-level argument. The [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay) is added in `flake.nix`/`devenv.nix` to supply the git-based variants.
 
 Supported:
 
-- **Source variants**: `mainline` (Emacs 30 release, default, binary-cached), `git` (bleeding-edge master from git.savannah.gnu.org), `unstable` (latest release tag built from git source), `macport` (jdtsmith/emacs-mac fork), `igc` (feature/igc3 — the Memory Pool System incremental GC branch).
+- **Source variants**: `mainline` (nixpkgs `emacs31`, the Emacs 31 release branch, default), `git` (emacs-overlay's `emacs-git`, current master), `unstable` (`emacs-unstable`, latest tagged release), `macport` (`emacs-macport` → nixpkgs `emacs30-macport`, jdtsmith/emacs-mac fork), `igc` (`emacs-igc`, the feature/igc3 Memory Pool System incremental GC branch).
 - **GUI toolkits**: GTK3, pgtk (pure GTK for Wayland), NS (Cocoa/NeXTstep on macOS), Motif, Athena, X11, or no GUI at all (`noGui = true`).
 - **Compilation**: native compilation (libgccjit AOT, default when the build platform can execute the host), compressed install, C sources for `find-function-C-source`, `srcRepo` (run autoreconf on git-based sources).
 - **Image formats**: WebP (default), Cairo (X11 default), optionally ImageMagick.
-- **Libraries**: tree-sitter, SQLite3, Jansson (off — Emacs 30+ ships JSON), dbus, selinux, gpm, ALSA, ACL, mailutils, systemd, GLib networking.
-- **Darwin patches**: optional `system-appearance`, `round-undecorated-frame`, and `fix-window-role` patches fetched from `nix-giant/nix-darwin-emacs`, applied via `overrideAttrs`.
+- **Libraries**: tree-sitter, SQLite3, dbus, selinux, gpm, ALSA, ACL, mailutils, systemd, GLib networking.
+- **Darwin patches**: optional `system-appearance`, `round-undecorated-frame`, and `adjust-ns-init-colors` (master/32+ only) patches fetched from `nix-giant/nix-darwin-emacs`, applied via `overrideAttrs`.
 
 ### Cache-parity invariant
 
-`emacs.nix` is written so that every argument default matches the corresponding default in upstream nixpkgs' `make-emacs.nix`. As long as that holds,
+`emacs.nix` is written so that every argument default matches the corresponding default in upstream nixpkgs' `make-emacs.nix` (and the explicit args emacs-overlay passes to its prebuilt attrs). As long as that holds,
 
 ```nix
 import ./emacs.nix {}                  # mainline
 import ./emacs.nix { noGui = true; }   # any standard override
 ```
 
-produces the *exact* store path of `pkgs.emacs30(.override { ... })`, so the public binary cache hits and nothing recompiles from source. Only the `git` / `unstable` / `igc` / `macport` variants and the Darwin patch flags are expected to diverge — those paths run through `overrideAttrs` and intentionally bust the cache.
+produces the *exact* store path of `pkgs.emacs31(.override { ... })` — and `variant = "git"`/`"unstable"`/`"igc"` the store paths of the matching emacs-overlay attrs — so the Hydra, `nix-community.cachix.org`, and project `jylhis` binary caches hit and nothing recompiles from source. Only custom `rev` pins and the Darwin patch flags are expected to diverge — those paths run through `overrideAttrs` and intentionally bust the cache.
 
 Verify after any change to defaults:
 
@@ -39,12 +39,34 @@ Verify after any change to defaults:
 nix-instantiate --eval --strict -E '
   let lock = builtins.fromJSON (builtins.readFile ./flake.lock);
       n = lock.nodes.nixpkgs.locked;
+      ov = lock.nodes.emacs-overlay.locked;
       nixpkgs = fetchTarball {
         url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz";
         sha256 = n.narHash;
       };
-  in (import ./emacs.nix {}).outPath == (import nixpkgs {}).emacs30.outPath'
+      overlay = fetchTarball {
+        url = "https://github.com/${ov.owner}/${ov.repo}/archive/${ov.rev}.tar.gz";
+        sha256 = ov.narHash;
+      };
+      pkgs = import nixpkgs { overlays = [ (import overlay) ]; };
+  in {
+    mainline = (import ./emacs.nix {}).outPath == pkgs.emacs31.outPath;
+    git      = (import ./emacs.nix { variant = "git"; }).outPath == pkgs.emacs-git.outPath;
+    unstable = (import ./emacs.nix { variant = "unstable"; }).outPath == pkgs.emacs-unstable.outPath;
+    igc      = (import ./emacs.nix { variant = "igc"; }).outPath == pkgs.emacs-igc.outPath;
+  }'
 ```
+
+### emacs-jylhis.nix
+
+The fork build expression. It builds the pinned `github:jylhis/emacs` Meson branch and stays separate from `emacs.nix` so the default cache-parity path remains unchanged. In the flake, the fork source comes from the non-flake input `jylhis-emacs`; standalone `nix-build emacs-jylhis.nix` falls back to the pinned `rev` / `hash` arguments in the file.
+
+The overlay exposes both bare and full fork-backed packages:
+
+- `jylhisEmacs` / `packages.${system}.jylhis-emacs`
+- `jylhisEmacsPackages` / `packages.${system}.jylhis-emacs-packages`
+
+The full fork-backed package set is still experimental because the Meson fork has previously crashed while byte-compiling downstream Emacs packages. Use `just build-jylhis-full` to exercise that path explicitly.
 
 ### default.nix
 
@@ -71,8 +93,29 @@ See `emacs.nix` for the complete argument list and defaults.
 
 ## IGC Variant
 
-The `igc` variant builds Emacs's `feature/igc3` branch, which replaces the default mark-and-sweep garbage collector with the [Memory Pool System](https://memory-pool-system.readthedocs.io). `emacs.nix` adds `--with-mps=yes` to `configureFlags` and `pkgs.mps` to `buildInputs` when `variant = "igc"`, so the only manual step is providing the source hash on first build.
+The `igc` variant builds Emacs's `feature/igc3` branch, which replaces the default mark-and-sweep garbage collector with the [Memory Pool System](https://memory-pool-system.readthedocs.io). The base package is emacs-overlay's `emacs-igc`, which already carries `--with-mps=yes` and the `mps` build input, so no manual steps are needed — the overlay-pinned revision is a binary-cache hit.
 
 ## Git Variants
 
-For `git`, `unstable`, and `igc`, `emacs.nix` fetches from `https://git.savannah.gnu.org/git/emacs.git` via `fetchgit`. The first build reports the correct hash; re-run with `--argstr hash "sha256-..."` (or edit the `gitMeta` attrset). `postPatch` substitutes the recorded revision into `lisp/loadup.el` so `emacs-repository-get-version` returns the expected value without a `.git` directory in the build tree. On `aarch64-linux`, git builds automatically get `--enable-check-lisp-object-type` added to avoid segfaults.
+The `git`, `unstable`, and `igc` variants build the revision pinned inside emacs-overlay (updated daily upstream, advanced here by `just update`) and are binary-cache hits from `nix-community.cachix.org`. To pin a different commit, pass `--argstr rev "..."` — `emacs.nix` then fetches it from `https://git.savannah.gnu.org/git/emacs.git` via `fetchgit`; the first build reports the correct hash to pass back via `--argstr hash "sha256-..."`. In that case `postPatch` substitutes the pinned revision into `lisp/loadup.el` so `emacs-repository-get-version` returns the expected value without a `.git` directory in the build tree. On `aarch64-linux`, the overlay's bases include `--enable-check-lisp-object-type` to avoid segfaults.
+
+## Consumer Flake Backend Selection
+
+Home Manager, NixOS, and nix-darwin consumers choose the fork with:
+
+```nix
+services.jotain.emacsBackend = "jylhis";
+```
+
+The default remains `"mainline"`. Use `"custom"` only when also setting `services.jotain.package`.
+
+Downstream flakes can replace the pinned fork input:
+
+```nix
+inputs.jotain.url = "github:jylhis/jotain";
+inputs.my-emacs-fork = {
+  url = "github:jylhis/emacs/my-branch-or-rev";
+  flake = false;
+};
+inputs.jotain.inputs.jylhis-emacs.follows = "my-emacs-fork";
+```

@@ -1,9 +1,9 @@
-;;; init-lang-systems.el --- Systems language modes: Go, C/C++, CMake, Haskell -*- lexical-binding: t; -*-
+;;; init-lang-systems.el --- Systems language modes: Go, C/C++, CMake, Meson, Haskell -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 
 ;; Compiled/systems-programming modes. Go and cc-mode are built in
-;; (ensure nil); cmake-mode and haskell-mode come from MELPA.
+;; (ensure nil); cmake-mode, meson-mode, and haskell-mode come from MELPA.
 ;;
 ;; eglot wiring for go + rust is in `init-prog.el'. If you add hooks
 ;; for more servers, keep them there so all LSP wiring is in one place.
@@ -41,6 +41,14 @@
 ;;; covers both file conventions.
 (use-package cmake-mode
   :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
+
+;;; @doc Meson mode for `meson.build`, `meson_options.txt`, and
+;;; `meson.options` files. Formatting is configured centrally through
+;;; apheleia, using the Meson CLI supplied by the dev shell.
+(use-package meson-mode
+  :mode (("/meson\\.build\\'" . meson-mode)
+         ("/meson_options\\.txt\\'" . meson-mode)
+         ("/meson\\.options\\'" . meson-mode)))
 
 ;;; @doc Haskell major mode. Loaded on demand only — keeps the rare
 ;;; Haskell editing session from costing every Emacs start.

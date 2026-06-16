@@ -40,18 +40,40 @@ positions, and focus are preserved during the swap."
           (when this-win-2nd (other-window 1))))
     (user-error "Can only toggle split with exactly 2 windows")))
 
+;; DWIM C-g: the default `keyboard-quit' doesn't close a minibuffer that
+;; isn't the selected window, which is a frequent papercut once you
+;; enable `enable-recursive-minibuffers'. This version aborts whatever
+;; the obvious target is — region, completions buffer, or minibuffer —
+;; before falling back to plain `keyboard-quit'.
+(defun jotain-keyboard-quit-dwim ()
+  "Do-What-I-Mean `keyboard-quit'.
+Minibuffer open (even when point is in another window) → abort
+recursive edit (this also dismisses any `*Completions*' popup).
+Completions window visible with no minibuffer (user popped it via
+`display-completion-list' or focused it directly) → close it.
+Region active → deactivate it.  Otherwise call regular
+`keyboard-quit'."
+  (interactive)
+  (cond
+   ((> (minibuffer-depth) 0)                     (abort-recursive-edit))
+   ((get-buffer-window "*Completions*" 'visible) (delete-completion-window))
+   ((region-active-p)                            (keyboard-quit))
+   (t                                            (keyboard-quit))))
+
 ;;; @doc Top-level rebindings — disable accidental suspend (C-z and
 ;;; C-x C-z), put other-window on M-o for one-key window switching,
-;;; and bind C-x j to the two-window rotate helper above.
+;;; bind C-x j to the two-window rotate helper above, and rebind
+;;; C-g to the DWIM quit so it closes minibuffers from elsewhere.
 (use-package emacs
   :ensure nil
   :bind
   (("C-z" . nil)
    ("C-x C-z" . nil)
+   ([remap keyboard-quit] . jotain-keyboard-quit-dwim)
    ("M-o" . other-window)
    ("C-x j" . jotain-toggle-window-split)))
 
-;;; @doc Built-in directional window switching — Shift-<arrow> moves
+;;; @doc Built-in directional window switching — `Shift-<arrow>` moves
 ;;; focus between split windows. Ships with Emacs; no reason not
 ;;; to turn it on globally.
 (use-package windmove
@@ -97,6 +119,30 @@ positions, and focus are preserved during the swap."
     "C-x j"     "rotate-window-split"
     "C-x u"     "vundo"
     "C-x P"     "project (projection)"))
+
+;;;; Repeat maps — Emacs-native "one-shot modifier" pattern
+;;
+;; `repeat-mode' (enabled in init-core.el) lets a tagged command be
+;; repeated with single keystrokes immediately after its first
+;; invocation: type the chord once, then keep typing the trailing
+;; key.  Many built-in commands ship their own repeat-maps already
+;; (`other-window', `next-buffer', `undo', `next-error', …) — so
+;; `M-o o o' and `C-/ /' Just Work.  The maps below fill the
+;; remaining gap for commands that don't have one out of the box.
+;; See the "Ergonomics" chapter of the Info manual for background.
+
+;; After `C-x ^', `C-x }', or `C-x {', single `^', `v', `}', or `{'
+;; keystrokes keep resizing the window. `shrink-window' has no
+;; default key binding but joins the overlay once any other entry
+;; command has fired, so `C-x ^ ^ v v' overshoots and corrects.
+;; Cleared by `repeat-exit-timeout' (2 s, set in init-core.el).
+(defvar-keymap jotain-window-resize-repeat-map
+  :doc "Repeat map for window-resize commands."
+  :repeat t
+  "^" #'enlarge-window
+  "v" #'shrink-window
+  "}" #'enlarge-window-horizontally
+  "{" #'shrink-window-horizontally)
 
 (provide 'init-keys)
 ;;; init-keys.el ends here

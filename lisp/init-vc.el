@@ -206,6 +206,13 @@ Each value is a plist (:changes N :commits M :ts TIMESTAMP :busy BOOL).")
 (defvar jotain-git-stats--timer nil
   "Idle timer that walks the cache and invalidates stale entries.")
 
+(defcustom jotain-git-stats-max-dotgit-bytes 4096
+  "Maximum number of bytes read from a regular `.git' file.
+Worktree indirection files are tiny; larger files are treated as
+untrusted and ignored by `jotain-git-stats--git-dir'."
+  :type 'integer
+  :group 'jotain-vc)
+
 (defun jotain-git-stats--entry (root)
   "Return the cache plist for ROOT, creating a zeroed one if missing."
   (or (gethash root jotain-git-stats--cache)
@@ -216,6 +223,40 @@ Each value is a plist (:changes N :commits M :ts TIMESTAMP :busy BOOL).")
   "Return non-nil if ENTRY's cached values are still within the update interval."
   (< (- (float-time) (plist-get entry :ts))
      jotain-git-stats-update-interval))
+
+(defun jotain-git-stats--git-dir (root)
+  "Resolve the git-dir for ROOT.
+Handles both normal repos (`.git' is a directory) and worktrees
+(`.git' is a regular file holding `gitdir: <path>'). Returns nil
+when ROOT is not under git control or parsing fails."
+  (let ((dotgit (expand-file-name ".git" root)))
+    (cond
+     ((file-directory-p dotgit) dotgit)
+     ((file-regular-p dotgit)
+      (condition-case nil
+          (with-temp-buffer
+            (insert-file-contents dotgit nil 0 jotain-git-stats-max-dotgit-bytes)
+            (goto-char (point-min))
+            (when (re-search-forward "^gitdir: \\(.+\\)$" nil t)
+              (let ((git-dir (expand-file-name (string-trim (match-string 1)) root)))
+                (unless (file-remote-p git-dir)
+                  git-dir))))
+        (file-error nil)))
+     (t nil))))
+
+(defun jotain-git-stats--git-busy-p (root)
+  "Return non-nil if ROOT has a long-running git op in progress.
+Probes the sentinel files git drops while rebase / merge / bisect /
+cherry-pick are mid-flight. The modeline skips its refresh in that
+window — running our read-only `diff --numstat' against a foreground
+`git rebase' is what lets our `make-process' calls race the user's
+own `.git/index.lock' churn on the same checkout."
+  (when-let* ((git-dir (jotain-git-stats--git-dir root)))
+    (or (file-exists-p (expand-file-name "rebase-merge" git-dir))
+        (file-exists-p (expand-file-name "rebase-apply" git-dir))
+        (file-exists-p (expand-file-name "MERGE_HEAD" git-dir))
+        (file-exists-p (expand-file-name "BISECT_LOG" git-dir))
+        (file-exists-p (expand-file-name "CHERRY_PICK_HEAD" git-dir)))))
 
 (defun jotain-git-stats--parse-numstat (output)
   "Sum the added + deleted columns from `git diff --numstat' OUTPUT.
@@ -245,14 +286,26 @@ prose breaks under `LANG=de_DE.UTF-8' etc."
 PARSE-FN is applied to stdout; CALLBACK receives the parsed value.
 Errors and non-zero exits are mapped to 0. If `make-process' itself
 fails (e.g. `git' is missing on PATH), the buffer is killed and
-CALLBACK is still invoked with 0 so the cache never deadlocks."
+CALLBACK is still invoked with 0 so the cache never deadlocks.
+
+`GIT_OPTIONAL_LOCKS=0' is prepended to `process-environment' so the
+read paths (`diff --numstat', `log') decline to take `.git/index.lock'
+for an opportunistic refresh — that lock is what races the user's own
+`git rebase' / `git commit' on the same checkout when N modeline
+refreshes fire in parallel across sibling Emacs / Claude sessions."
   (let* ((buffer (generate-new-buffer " *jotain-git-stats*"))
-         (default-directory root))
+         (default-directory root)
+         (process-environment
+          (cons "GIT_OPTIONAL_LOCKS=0" process-environment)))
     (condition-case nil
         (make-process
          :name "jotain-git-stats"
          :buffer buffer
-         :command (cons "git" args)
+         :command (append '("git"
+                            "--no-pager"
+                            "-c" "core.fsmonitor=false"
+                            "-c" "diff.external=")
+                          args)
          :noquery t
          :sentinel
          (lambda (proc _event)
@@ -287,7 +340,7 @@ CALLBACK is still invoked with 0 so the cache never deadlocks."
                         (plist-put entry :ts (float-time))
                         (force-mode-line-update t)))))
         (jotain-git-stats--run
-         root '("diff" "--numstat" "HEAD")
+         root '("diff-index" "--numstat" "HEAD")
          #'jotain-git-stats--parse-numstat
          (lambda (n) (plist-put entry :changes n) (funcall after)))
         (jotain-git-stats--run
@@ -296,10 +349,15 @@ CALLBACK is still invoked with 0 so the cache never deadlocks."
          (lambda (n) (plist-put entry :commits n) (funcall after)))))))
 
 (defun jotain-git-stats--maybe-refresh (root)
-  "Refresh ROOT's cache if it's stale and no refresh is already in flight."
+  "Refresh ROOT's cache if it's stale and no refresh is already in flight.
+Also skips entirely while a long-running git op (rebase / merge / bisect /
+cherry-pick) is in progress under ROOT — our read-only probes there are
+the same calls the user's foreground rebase is racing, so just hold the
+cached counts until the operation clears."
   (let ((entry (jotain-git-stats--entry root)))
     (unless (or (plist-get entry :busy)
-                (jotain-git-stats--fresh-p entry))
+                (jotain-git-stats--fresh-p entry)
+                (jotain-git-stats--git-busy-p root))
       (jotain-git-stats--refresh root))))
 
 (defun jotain-git-stats--face-for-changes (n)
@@ -328,7 +386,7 @@ Falls back to `default-directory' when `buffer-file-name' is nil so
 that magit status buffers (which have no file) still trigger an
 invalidation after `magit-post-refresh-hook'."
   (when-let* ((file-or-dir (or buffer-file-name default-directory))
-              (root (vc-git-root file-or-dir)))
+              (root (locate-dominating-file file-or-dir ".git")))
     (let ((entry (jotain-git-stats--entry (expand-file-name root))))
       (plist-put entry :ts 0))))
 
@@ -338,7 +396,6 @@ invalidation after `magit-post-refresh-hook'."
            jotain-git-stats--cache)
   (force-mode-line-update t))
 
-(declare-function vc-git-root "vc-git" (file))
 ;; `doom-modeline-def-segment' and `doom-modeline-def-modeline' are
 ;; macros; make them available at byte-compile time so their forms
 ;; below get expanded instead of treated as unknown function calls.
@@ -350,7 +407,7 @@ invalidation after `magit-post-refresh-hook'."
     (let* ((file buffer-file-name)
            (raw-root (and (mode-line-window-selected-p)
                           file
-                          (vc-git-root file))))
+                          (locate-dominating-file file ".git"))))
       (if (not raw-root)
           ""
         (let ((root (expand-file-name raw-root)))

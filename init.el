@@ -39,16 +39,44 @@
 ;; `M-x customize' has somewhere to scribble without touching init.el.
 (setq custom-file (locate-user-emacs-file "var/custom.el"))
 
-;; Don't refresh archives eagerly — it hits the network and drags in
-;; the entire url/tls/gpg stack (~8 s on a cold start).  use-package's
-;; :ensure machinery already calls `package-refresh-contents' on demand
-;; when a package-install fails because archives are stale.
+;; Package archive fetching is OPTIONAL and must never block startup or
+;; crash the daemon.  Nix (and, in dev, the devenv shell) provides every
+;; package this config `:ensure's, so a fresh archive download is only
+;; needed for ad-hoc hand installs.  We therefore (a) never refresh
+;; eagerly — it hits the network and drags in the whole url/tls/gpg stack
+;; (~8 s cold) — (b) wrap any refresh in `with-demoted-errors' so a dead
+;; network downgrades to a log line instead of a fatal error, and (c)
+;; optionally warm the archive cache in the background after startup.
+;; Per-host opt-out via the JOTAIN_NO_PACKAGE_REFRESH env var (e.g. set
+;; it in the systemd unit on offline machines) — no need to edit this
+;; shared config.
+(defvar jotain-refresh-package-archives
+  (not (getenv "JOTAIN_NO_PACKAGE_REFRESH"))
+  "When non-nil, warm package archives in the background after startup.")
+
+;; use-package's :ensure machinery calls `package-install' on demand when
+;; a package is missing; refresh the archives once, non-fatally, the first
+;; time that happens with an empty cache.
 (defun jotain--package-refresh-once (&rest _)
-  "Refresh package archives once, then remove this advice."
-  (package-refresh-contents)
-  (advice-remove 'package-install #'jotain--package-refresh-once))
+  "Refresh package archives once, non-fatally, then remove this advice."
+  (advice-remove 'package-install #'jotain--package-refresh-once)
+  (with-demoted-errors "jotain: package archive refresh failed: %S"
+    (package-refresh-contents)))
 (unless package-archive-contents
   (advice-add 'package-install :before #'jotain--package-refresh-once))
+
+;; Warm the archive cache in the background once Emacs is idle, so the
+;; first hand install doesn't pay the network cost.  Async download +
+;; demoted errors: never blocks the daemon, never fails the service.
+(when jotain-refresh-package-archives
+  (add-hook 'emacs-startup-hook
+            (lambda ()
+              (run-with-idle-timer
+               2 nil
+               (lambda ()
+                 (unless package-archive-contents
+                   (with-demoted-errors "jotain: background package refresh failed: %S"
+                     (package-refresh-contents t))))))))
 
 (require 'init-core)         ; GC, encoding, var/ paths, sane defaults
 (require 'init-keys)         ; Global keymap and leader-key setup

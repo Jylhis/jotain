@@ -14,6 +14,15 @@
 ;;; monospaced.
 (use-package text-mode
   :ensure nil
+  :custom
+  ;; Emacs 30 added `ispell-completion-at-point' to every text-mode
+  ;; buffer's `completion-at-point-functions' (this option defaults to
+  ;; `completion-at-point'). With no word list at the
+  ;; `ispell-alternate-dictionary' default (/usr/share/dict/words is
+  ;; absent on NixOS), every corfu auto-completion in a text/YAML/
+  ;; markdown/commit buffer throws "No plain word-list found". We spell
+  ;; check with jinx (below), not the ispell capf, so turn it off.
+  (text-mode-ispell-word-completion nil)
   :hook
   ((text-mode . visual-line-mode)
    (text-mode . visual-wrap-prefix-mode)

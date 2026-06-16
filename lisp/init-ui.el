@@ -40,14 +40,16 @@ and the result is a face-attribute soup."
 
 ;; Register the Jylhis theme directory on custom-theme-load-path.
 ;; The package ships jylhis-themes.el as the entry point for this.
-(require 'jylhis-themes)
-
-;; Pre-load both themes so auto-dark can flip between them without
-;; re-evaluating the .el files on every appearance change.  Guarded
-;; against batch mode where custom-theme-load-path may be incomplete.
-(unless noninteractive
-  (load-theme jotain-theme-light t t)
-  (load-theme jotain-theme-dark  t t))
+(if (require 'jylhis-themes nil t)
+    ;; Pre-load both themes so auto-dark can flip between them without
+    ;; re-evaluating the .el files on every appearance change.  Guarded
+    ;; against batch mode where custom-theme-load-path may be incomplete.
+    (unless noninteractive
+      (load-theme jotain-theme-light t t)
+      (load-theme jotain-theme-dark  t t))
+  (setopt jotain-theme-light 'modus-operandi
+          jotain-theme-dark 'modus-vivendi)
+  (message "jylhis-themes is unavailable; falling back to Modus themes"))
 
 ;;; @doc Flips between `jotain-theme-light` and `jotain-theme-dark`
 ;;; following the system appearance — works on macOS, GNOME, and
@@ -83,7 +85,8 @@ and the result is a face-attribute soup."
 (defcustom jotain-font-scale 1.0
   "Multiplier applied to every height in the font preference lists.
 Increase above 1.0 on large or high-density displays where the
-default sizes feel small (e.g. set 1.25 in custom.el for 4K)."
+default sizes feel small (for example, set it to 1.25 in your
+machine-local config)."
   :type 'float
   :group 'jotain-ui)
 
