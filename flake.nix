@@ -79,7 +79,6 @@
         default = (pkgsFor system).jotainEmacsPackages;
         emacs = (pkgsFor system).jotainEmacs;
         emacs-jylhis = (pkgsFor system).jylhisEmacs;
-        jotain-jylhis = (pkgsFor system).jylhisEmacsPackages;
         jylhis-emacs = (pkgsFor system).jylhisEmacs;
         info = (pkgsFor system).jotainInfo;
         docs = import ./nix/options-doc.nix {
