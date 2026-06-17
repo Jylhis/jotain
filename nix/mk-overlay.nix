@@ -21,6 +21,7 @@ let
           epkgs.claude-code-ide
           epkgs.combobulate
           epkgs.jylhis-emacs-themes
+          epkgs.majutsu
           epkgs.nix-ts-mode
           epkgs.tagref
           epkgs.treesit-grammars.with-all-grammars

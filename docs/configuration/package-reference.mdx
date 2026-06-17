@@ -302,6 +302,22 @@ Treats CamelCase / snake_case word parts as separate words for
 M-f / M-b / M-d. Built-in. Programming-mode only — prose still
 gets whole-word motion.
 
+### `newcomment` *(built-in / Nix)*
+
+Defaults for the built-in comment commands (M-;, C-x C-;, M-j).
+`comment-multi-line' makes M-j continue inside an open block
+comment instead of closing/reopening; `extra-line' style puts
+opening and closing delimiters on their own lines for
+`comment-region'; `comment-empty-lines' makes `comment-region'
+treat blank lines the same as content lines;
+`comment-auto-fill-only-comments' keeps automatic line wrapping
+(when `auto-fill-mode' is on) confined to comments. C-c ; is an
+ergonomic alias for `comment-line' — C-; is taken by embark-dwim.
+Per-mode overrides go in the language module via a named hook:
+  (defun my-foo-mode-setup ()
+    (setq-local comment-multi-line nil))
+  (add-hook 'foo-mode-hook #'my-foo-mode-setup)
+
 ### `emacs` *(built-in / Nix)*
 
 Bindings for the two transpose commands Emacs ships without
@@ -409,11 +425,6 @@ grep family so candidates have room to breathe.
 Adds annotation columns (file size, mode, docstring, …) to every
 completion list. Pairs with vertico to make minibuffer choices
 self-explanatory.
-
-### `isearch` *(built-in / Nix)*
-
-Show match counts like `(3/12)' in the isearch prompt while
-typing. Built-in (Emacs 27+); replaces what `anzu' used to provide.
 
 ### `consult`
 
@@ -548,9 +559,11 @@ command.
 
 ### `vc` *(built-in / Nix)*
 
-Built-in version control. Pinned to Git only — every other
-backend is a slow startup tax (probes every visited file's
-parents) you almost never benefit from.
+Built-in version control. Pinned to Git + Jujutsu — every
+other backend is a slow startup tax (probes every visited file's
+parents) you almost never benefit from. JJ is supplied by `vc-jj'
+below; without it in this list the backend never gets consulted
+and project.el won't discover `.jj' roots.
 
 ### `vc-git` *(built-in / Nix)*
 
@@ -561,11 +574,36 @@ regardless of status.showUntrackedFiles) and offers
 M/A/R/C/U/T/?? entries through `completing-read'. Adapted
 from Rahul M. Juliato's emacs-solo/switch-git-status-buffer.
 
-### `magit`
+### `vc-jj`
+
+Jujutsu (jj) backend for built-in `vc' and `project'. Adds the
+JJ entry pinned in `vc-handled-backends' above, so `C-x v …', the
+modeline VC state, and `project.el' all light up on jj repos
+(typically colocated with git). The jj side wants
+  [ui]
+  diff-formatter = ":git"
+  conflict-marker-style = "git"
+set via `jj config edit --user' so vc/diff-hl/smerge read jj diffs
+and conflicts in the format they expect.
+
+`jotain-switch-jj-status-buffer' (C-x C-j) is the jj twin of the
+git status jump above: it parses `jj diff --summary -r @' and offers
+the changed files (deletions omitted — the file is gone) through
+`completing-read'. The richer interactive view is `majutsu' (C-c j).
+
+### `magit` *(built-in / Nix)*
 
 The Git porcelain. Bound C-x g for status, C-x M-g for global
 dispatch, C-c g for the file-specific menu. Refined hunks +
 whitespace-ignoring diffs are turned on globally.
+
+### `majutsu` *(built-in / Nix)*
+
+The Jujutsu porcelain — a magit-style interface for jj, sitting
+alongside magit (jj is normally colocated with git, so both apply).
+C-c j opens the status/log buffer (`majutsu-log', aliased `majutsu');
+C-c M-j opens the top-level transient dispatcher. Provided by Nix
+(nix/extra-packages.nix), so `:ensure nil'.
 
 ### `magit-todos`
 

@@ -102,6 +102,7 @@ Region active → deactivate it.  Otherwise call regular
     "C-c g"     "magit-file"
     "C-c h"     "consult-history"
     "C-c i"     "consult-info"
+    "C-c j"     "jujutsu"
     "C-c k"     "consult-kmacro"
     "C-c l"     "org-store-link"
     "C-c n"     "org-roam"
@@ -111,6 +112,7 @@ Region active → deactivate it.  Otherwise call regular
     ;; C-c <punct> — AI and special leaves.
     "C-c RET"   "gptel-send"
     "C-c M-RET" "gptel-menu"
+    "C-c M-j"   "jujutsu-dispatch"
     "C-c C-'"   "claude-code-ide"
     "C-c M-x"   "consult-mode-command"
     ;; C-x namespace.
