@@ -237,7 +237,25 @@ let
   #            overlay = fetchTarball { url = "https://github.com/${ov.owner}/${ov.repo}/archive/${ov.rev}.tar.gz"; sha256 = ov.narHash; };
   #            pkgs = import nixpkgs { overlays = [ (import overlay) ]; };
   #        in (import ./emacs.nix {}).outPath == pkgs.emacs31.outPath'
-  overridden = basePackage.override {
+  #
+  # ── nixpkgs-version-portable override ────────────────────────────
+  #
+  # `make-emacs.nix` has grown arguments over nixpkgs releases. Passing
+  # an argument the base derivation does not define makes `.override`
+  # throw "called with unexpected argument", which would break the flake
+  # for a downstream consumer that overrides nixpkgs with an older
+  # release (24.05+) — notably via the Home Manager / NixOS / nix-on-droid
+  # modules, which apply this overlay to the *consumer's* pkgs. We
+  # therefore filter the override set down to the arguments the base
+  # actually accepts, discovered from `lib.functionArgs
+  # basePackage.override` (the make-emacs formals carry through
+  # `makeOverridable`). On the pinned nixpkgs-unstable every argument is
+  # accepted, so the intersection is a no-op and the cache-parity
+  # invariant documented above is preserved exactly; on 24.05 the
+  # not-yet-existing flags (noGui, srcRepo, withGcMarkTrace, …) are
+  # dropped, and terminal/GUI selection still flows through the explicit
+  # `with*` flags that have existed all along.
+  overrideArgs = {
     inherit
       noGui
       srcRepo
@@ -270,6 +288,10 @@ let
       withGlibNetworking
       ;
   };
+
+  overridden = basePackage.override (
+    lib.intersectAttrs (lib.functionArgs basePackage.override) overrideArgs
+  );
 
   # ── Darwin patches (fetched from nix-giant/nix-darwin-emacs) ─────
   # Patch directory: "unstable" for master/32+, "30" for the macport
