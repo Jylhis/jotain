@@ -42,6 +42,27 @@ efinal: _eprev: {
     };
   };
 
+  # Magit-style porcelain for Jujutsu (jj), wired in lisp/init-vc.el.  Not on
+  # MELPA.  `evil' is listed even though Jotain doesn't use it: trivialBuild
+  # byte-compiles every .el in the source, including majutsu-evil.el whose
+  # top-level `(require 'evil)' would otherwise fail to compile.
+  majutsu = efinal.trivialBuild {
+    pname = "majutsu";
+    version = "0.6.0";
+    src = pkgs.fetchFromGitHub {
+      owner = "0WD0";
+      repo = "majutsu";
+      rev = "97169be899dca13d08212dc88993fbb7b8272b2f";
+      sha256 = "043d3vcd19wzc7hpr20d83kwi5973wii08wfbhp69lab8shzaimn";
+    };
+    packageRequires = with efinal; [
+      compat
+      transient
+      magit
+      evil
+    ];
+  };
+
   # Emacs integration for the tagref CLI ([tag:x]/[ref:x] cross-references):
   # completion, xref navigation, and M-x tagref-check.  Not on MELPA; depends
   # only on Emacs built-ins, so no packageRequires.
