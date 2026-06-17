@@ -105,6 +105,21 @@ compile:
 #       --eval '(byte-recompile-directory "{{config_dir}}/lisp" 0 t)' \
 #       -f batch-byte-compile early-init.el init.el
 
+# Equivalent AOT coverage belongs in the Nix/home-manager deploy of the
+# config so the daemon loads precompiled .eln instead of JIT-compiling
+# each module every session (the eln-cache otherwise holds only a
+# trampoline). This recipe is the interim, in-tree way to warm it.
+# [DISABLED] Native-compile every config module ahead of time.
+[group('check')]
+compile-native:
+    @echo "just compile-native is disabled — emacs is not in the devenv shell."
+    @echo "Try: just run-built  (builds Emacs via Nix, then launches it)"
+# Original:
+#   emacs --batch --init-directory={{config_dir}} \
+#       --eval '(setq native-comp-speed 2)' \
+#       --eval '(native-compile-async (list "{{config_dir}}/early-init.el" "{{config_dir}}/init.el" "{{config_dir}}/lisp") (quote recursively))' \
+#       --eval '(while (or comp-files-queue (> (comp-async-runnings) 0)) (sleep-for 1))'
+
 # [DISABLED] Run ERT tests under test/ if any exist.
 [group('check')]
 test:
