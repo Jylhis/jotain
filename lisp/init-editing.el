@@ -36,6 +36,28 @@
   :ensure nil
   :hook ((prog-mode . subword-mode)))
 
+;;; @doc Defaults for the built-in comment commands (M-;, C-x C-;, M-j).
+;;; `comment-multi-line' makes M-j continue inside an open block
+;;; comment instead of closing/reopening; `extra-line' style puts
+;;; opening and closing delimiters on their own lines for
+;;; `comment-region'; `comment-empty-lines' makes `comment-region'
+;;; treat blank lines the same as content lines;
+;;; `comment-auto-fill-only-comments' keeps automatic line wrapping
+;;; (when `auto-fill-mode' is on) confined to comments. C-c ; is an
+;;; ergonomic alias for `comment-line' — C-; is taken by embark-dwim.
+;;; Per-mode overrides go in the language module via a named hook:
+;;;   (defun my-foo-mode-setup ()
+;;;     (setq-local comment-multi-line nil))
+;;;   (add-hook 'foo-mode-hook #'my-foo-mode-setup)
+(use-package newcomment
+  :ensure nil
+  :bind ("C-c ;" . comment-line)
+  :custom
+  (comment-multi-line t)
+  (comment-style 'extra-line)
+  (comment-empty-lines t)
+  (comment-auto-fill-only-comments t))
+
 ;;; @doc Bindings for the two transpose commands Emacs ships without
 ;;; defaults, so the prose-level family (sentence, paragraph) is
 ;;; reachable alongside the built-in C-t (chars), M-t (words),
