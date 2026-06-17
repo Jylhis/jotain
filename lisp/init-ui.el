@@ -189,9 +189,12 @@ availability on the right display."
   :hook ((prog-mode conf-mode) . jotain-ui--maybe-line-numbers))
 
 ;;; @doc Built-in pixel-precision smooth scrolling. Required for usable
-;;; trackpad / smooth-mouse scrolling.
+;;; trackpad / smooth-mouse scrolling. `fast-but-imprecise-scrolling'
+;;; lets large jumps skip exact intermediate fontification — a worthwhile
+;;; redisplay win on this integrated-GPU Intel machine.
 (use-package pixel-scroll
   :ensure nil
+  :custom (fast-but-imprecise-scrolling t)
   :config (pixel-scroll-precision-mode 1))
 
 ;;; @doc Built-in current-line highlight — on for code and prose, off

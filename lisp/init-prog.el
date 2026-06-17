@@ -32,6 +32,15 @@
   :custom
   (treesit-font-lock-level 4))
 
+;;; @doc Defer fontification of newly exposed text by a few hundredths of
+;;; a second so heavy treesit level-4 font-lock never blocks keystrokes or
+;;; scrolling. Pairs with `redisplay-skip-fontification-on-input' (set in
+;;; init-core) — matters more on this slower Intel CPU.
+(use-package jit-lock
+  :ensure nil
+  :custom
+  (jit-lock-defer-time 0.05))
+
 ;;; @doc Auto-routes `foo-mode` → `foo-ts-mode` whenever the grammar is
 ;;; loadable. Grammar installation is suppressed because Nix
 ;;; provides them via `treesit-extra-load-path` (set from

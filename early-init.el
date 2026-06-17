@@ -92,10 +92,17 @@
 ;; and silence the firehose of async warnings during init.
 (defvar native-comp-async-report-warnings-errors nil)
 (defvar native-comp-speed nil)
+(defvar native-comp-async-jobs-number 0)
 (when (and (fboundp 'native-comp-available-p)
            (native-comp-available-p))
+  ;; Cap async (background) native compilation at 3 jobs. This machine has
+  ;; 4 physical / 8 logical cores; the default of 0 means "half the logical
+  ;; CPUs" (=4) and lets a background recompile starve redisplay and input.
+  ;; Leaving one physical core free keeps the editor responsive while the
+  ;; eln-cache warms.
   (setq native-comp-async-report-warnings-errors nil
-        native-comp-speed 2)
+        native-comp-speed 2
+        native-comp-async-jobs-number 3)
   (when (fboundp 'startup-redirect-eln-cache)
     (startup-redirect-eln-cache
      (convert-standard-filename
