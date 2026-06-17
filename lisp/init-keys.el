@@ -73,7 +73,7 @@ Region active → deactivate it.  Otherwise call regular
    ("M-o" . other-window)
    ("C-x j" . jotain-toggle-window-split)))
 
-;;; @doc Built-in directional window switching — Shift-<arrow> moves
+;;; @doc Built-in directional window switching — `Shift-<arrow>` moves
 ;;; focus between split windows. Ships with Emacs; no reason not
 ;;; to turn it on globally.
 (use-package windmove
