@@ -81,6 +81,7 @@ let
       ripgrep # xref-search-program, consult-ripgrep
       fd # project/consult fallback finder
       git # magit, vc
+      jujutsu # vc-jj, majutsu, jotain-vc-stats (jj binary)
       direnv # envrc
       coreutils # gls, used by dirvish-listing-switches on darwin
       pkgsWithOverlay.eca # eca-emacs server; prevents runtime download fallback
