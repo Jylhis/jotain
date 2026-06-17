@@ -51,7 +51,7 @@ in
   packages = with pkgs; [
     # Nix tooling
     nil
-    nixfmt-rfc-style
+    nixfmt
 
     # Nix linting
     statix
