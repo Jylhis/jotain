@@ -1,5 +1,11 @@
 {
   jylhisEmacsSrc ? null,
+  # When true, bundle only the tree-sitter grammars this config actually
+  # routes (~26) instead of the full set (~275). Smaller closure / much
+  # less to build from source. Default false keeps with-all-grammars so
+  # the `jotain-emacs-full` derivation hash is unchanged and the binary
+  # cache still hits — see flake.nix `emacs-lite` for the opt-in path.
+  curatedGrammars ? false,
 }:
 final: _prev:
 let
@@ -24,7 +30,45 @@ let
           epkgs.majutsu
           epkgs.nix-ts-mode
           epkgs.tagref
-          epkgs.treesit-grammars.with-all-grammars
+          (
+            if curatedGrammars then
+              # Only the grammars the Jotain config routes via
+              # treesit-auto / combobulate (lisp/init-prog.el,
+              # init-lang-*.el). Languages whose grammar is dropped fall
+              # back gracefully to their non-ts mode.
+              epkgs.treesit-grammars.with-grammars (
+                p: with p; [
+                  tree-sitter-bash
+                  tree-sitter-c
+                  tree-sitter-cmake
+                  tree-sitter-comment
+                  tree-sitter-cpp
+                  tree-sitter-css
+                  tree-sitter-dockerfile
+                  tree-sitter-elisp
+                  tree-sitter-go
+                  tree-sitter-gomod
+                  tree-sitter-gowork
+                  tree-sitter-html
+                  tree-sitter-javascript
+                  tree-sitter-jsdoc
+                  tree-sitter-json
+                  tree-sitter-make
+                  tree-sitter-markdown
+                  tree-sitter-markdown-inline
+                  tree-sitter-nix
+                  tree-sitter-python
+                  tree-sitter-regex
+                  tree-sitter-rust
+                  tree-sitter-toml
+                  tree-sitter-tsx
+                  tree-sitter-typescript
+                  tree-sitter-yaml
+                ]
+              )
+            else
+              epkgs.treesit-grammars.with-all-grammars
+          )
         ];
       };
     in

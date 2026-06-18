@@ -159,6 +159,17 @@ build:
 build-bare:
     nix-build --argstr system {{system}} emacs.nix
 
+# Build the full distribution with only the grammars this config uses (~26 vs ~275; smaller, lighter to build). Opt-in.
+[group('build')]
+build-lite:
+    nix build .#emacs-lite -o result-emacs-lite
+
+# Build a bare Emacs from source, trimmed (no xwidgets/mailutils) for fewer build inputs. Opt-in.
+[group('build')]
+build-bare-lite:
+    nix-build --arg withXwidgets false --arg withMailutils false \
+        --argstr system {{system}} emacs.nix
+
 # Build the bare github:jylhis/emacs Meson fork.
 [group('build')]
 build-jylhis:
