@@ -47,6 +47,21 @@
             self.overlays.default
           ];
         };
+      # Same as pkgsFor but with the overlay configured to bundle only the
+      # grammars this config uses. Kept out of the default overlay so
+      # packages.default / the system modules stay full-grammar cache hits.
+      pkgsForLite =
+        system:
+        import nixpkgs {
+          inherit system;
+          overlays = [
+            emacs-overlay.overlays.default
+            (import ./nix/mk-overlay.nix {
+              jylhisEmacsSrc = inputs."jylhis-emacs";
+              curatedGrammars = true;
+            })
+          ];
+        };
       treefmtEval =
         system:
         treefmt-nix.lib.evalModule (pkgsFor system) {
@@ -77,6 +92,9 @@
 
       packages = forAllSystems (system: {
         default = (pkgsFor system).jotainEmacsPackages;
+        # Full distribution with a curated grammar subset (~26 vs ~275):
+        # smaller closure, far less to build from source. Opt-in.
+        emacs-lite = (pkgsForLite system).jotainEmacsPackages;
         emacs = (pkgsFor system).jotainEmacs;
         emacs-jylhis = (pkgsFor system).jylhisEmacs;
         jylhis-emacs = (pkgsFor system).jylhisEmacs;
