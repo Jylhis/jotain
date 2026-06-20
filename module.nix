@@ -129,6 +129,45 @@ let
       "$@"
   '';
 
+  # launchd agent label — Home Manager prefixes user agents with
+  # "org.nix-community.home."; the agent below is named `jotain`.
+  launchdLabel = "org.nix-community.home.jotain";
+  launchdPlist = "${config.home.homeDirectory}/Library/LaunchAgents/${launchdLabel}.plist";
+
+  # Cross-platform daemon control. `jotctl <start|stop|status|restart|logs>`
+  # drives launchd on macOS and the systemd user service on Linux — the same
+  # daemon defined by launchd.agents.jotain / systemd.user.services.jotain.
+  jotctlScript = pkgs.writeShellScriptBin "jotctl" (
+    if isDarwin then
+      ''
+        label=${launchdLabel}
+        plist=${lib.escapeShellArg launchdPlist}
+        uid=$(${pkgs.coreutils}/bin/id -u)
+        target="gui/$uid/$label"
+        case "''${1:-status}" in
+          start)   launchctl bootstrap "gui/$uid" "$plist" 2>/dev/null \
+                     || launchctl kickstart "$target" ;;
+          stop)    launchctl bootout "$target" ;;
+          restart) launchctl kickstart -k "$target" ;;
+          status)  launchctl print "$target" ;;
+          logs)    echo "macOS launchd does not capture Jotain stdout (no StandardOutPath set); showing launchd state:" >&2
+                   launchctl print "$target" ;;
+          *) echo "usage: jotctl {start|stop|status|restart|logs}" >&2; exit 2 ;;
+        esac
+      ''
+    else
+      ''
+        case "''${1:-status}" in
+          start)   exec systemctl --user start jotain ;;
+          stop)    exec systemctl --user stop jotain ;;
+          restart) exec systemctl --user restart jotain ;;
+          status)  exec systemctl --user status jotain ;;
+          logs)    exec journalctl --user -u jotain -f ;;
+          *) echo "usage: jotctl {start|stop|status|restart|logs}" >&2; exit 2 ;;
+        esac
+      ''
+  );
+
   systemdWantedBy =
     if cfg.startWithUserSession == "graphical" then "graphical-session.target" else "default.target";
 
@@ -284,6 +323,7 @@ in
       selectedPackage
       editorScript
       visualScript
+      jotctlScript
       # hiPrio so the wrapped `emacs` shadows the unwrapped binary
       # that ships inside the selected package.
       (lib.hiPrio emacsWrapper)
