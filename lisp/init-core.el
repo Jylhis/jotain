@@ -277,11 +277,14 @@ freezes — start, reproduce, stop."
   :ensure nil
   :custom
   (savehist-file (jotain-var-file "savehist.el"))
-  ;; Carry the kill ring and search rings across sessions too — savehist
-  ;; silently drops entries it can't print, so binary/overlay junk in the
-  ;; kill ring is filtered automatically.
+  ;; Carry the kill ring and search rings across sessions too. savehist
+  ;; tests each variable's value as a whole and drops the lot if any part
+  ;; is unprintable — these three only ever hold strings, so they always
+  ;; round-trip. `register-alist' is deliberately excluded: a single
+  ;; marker (C-x r SPC) or window-configuration register (C-x r w) would
+  ;; silently discard every saved register.
   (savehist-additional-variables
-   '(kill-ring search-ring regexp-search-ring register-alist))
+   '(kill-ring search-ring regexp-search-ring))
   :config
   (savehist-mode 1))
 
