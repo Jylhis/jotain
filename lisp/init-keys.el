@@ -159,7 +159,7 @@ Region active → deactivate it.  Otherwise call regular
     :repeat t
     "t" 'window-layout-transpose
     "r" 'window-layout-rotate-clockwise
-    "R" 'window-layout-rotate-counterclockwise
+    "R" 'window-layout-rotate-anticlockwise
     "h" 'window-layout-flip-leftright
     "v" 'window-layout-flip-topdown)
   (keymap-global-set "C-x W" jotain-window-layout-repeat-map))
