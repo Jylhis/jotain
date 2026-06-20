@@ -56,6 +56,9 @@ The `services.jotain` module ships:
 - `jotain-editor` — `emacsclient --tty` with a `-nw` fallback. Set as
   `$EDITOR` when `services.jotain.defaultEditor = true`.
 - `jotain-visual` — `emacsclient --create-frame`. Set as `$VISUAL`.
+- `jotctl {start|stop|status|restart|logs}` — manage the daemon itself
+  (wraps `launchctl` on macOS, the `jotain` systemd user service on
+  Linux). Always on `PATH` when the module is enabled.
 - A `.desktop` entry (`jotain-client.desktop`) for launching a GUI
   client from your application menu, enabled by
   `services.jotain.client.enable`.
@@ -84,6 +87,24 @@ services.jotain = {
 The aliases are written to `programs.bash.shellAliases`,
 `programs.zsh.shellAliases`, and `programs.fish.shellAliases` — pick
 up whichever shell home-manager already manages.
+
+### Managing the daemon (`jotctl`)
+
+`emd` starts a *foreground* daemon; to manage the supervised daemon
+(the launchd agent on macOS, the `jotain` systemd user service on
+Linux) use `jotctl`, which is always on `PATH` when the module is
+enabled — independent of `shellAliases.enable`:
+
+| Command          | macOS (launchd)                  | Linux (systemd --user)            |
+| ---------------- | -------------------------------- | --------------------------------- |
+| `jotctl status`  | `launchctl print …` (default)    | `systemctl --user status jotain`  |
+| `jotctl start`   | `launchctl bootstrap` / kickstart | `systemctl --user start jotain`   |
+| `jotctl stop`    | `launchctl bootout`              | `systemctl --user stop jotain`    |
+| `jotctl restart` | `launchctl kickstart -k`         | `systemctl --user restart jotain` |
+| `jotctl logs`    | launchd state + note¹            | `journalctl --user -u jotain -f`  |
+
+¹ The launchd agent sets no `StandardOutPath`, so macOS doesn't capture
+the daemon's stdout; `jotctl logs` prints the launchd state instead.
 
 ## Quick edit (`-Q -nw`)
 
