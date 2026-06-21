@@ -146,5 +146,23 @@ Region active → deactivate it.  Otherwise call regular
   "}" #'enlarge-window-horizontally
   "{" #'shrink-window-horizontally)
 
+;; Emacs 31+: transpose/rotate/flip the whole window tree without
+;; manually deleting and re-splitting. Bound under the unused `C-x W'
+;; prefix (capital, so it doesn't clobber the `C-x w' hi-lock map) with
+;; a repeat map, so `C-x W r r r' keeps rotating. Guarded because these
+;; commands don't exist before Emacs 31; the command symbols are quoted
+;; (not `#''), so byte-compiling on Emacs 30 sees data, not an unknown
+;; function reference.
+(when (fboundp 'window-layout-transpose)
+  (defvar-keymap jotain-window-layout-repeat-map
+    :doc "Repeat map for `window-layout-*' frame transforms."
+    :repeat t
+    "t" 'window-layout-transpose
+    "r" 'window-layout-rotate-clockwise
+    "R" 'window-layout-rotate-anticlockwise
+    "h" 'window-layout-flip-leftright
+    "v" 'window-layout-flip-topdown)
+  (keymap-global-set "C-x W" jotain-window-layout-repeat-map))
+
 (provide 'init-keys)
 ;;; init-keys.el ends here

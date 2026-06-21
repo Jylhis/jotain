@@ -277,6 +277,14 @@ freezes — start, reproduce, stop."
   :ensure nil
   :custom
   (savehist-file (jotain-var-file "savehist.el"))
+  ;; Carry the kill ring and search rings across sessions too. savehist
+  ;; tests each variable's value as a whole and drops the lot if any part
+  ;; is unprintable — these three only ever hold strings, so they always
+  ;; round-trip. `register-alist' is deliberately excluded: a single
+  ;; marker (C-x r SPC) or window-configuration register (C-x r w) would
+  ;; silently discard every saved register.
+  (savehist-additional-variables
+   '(kill-ring search-ring regexp-search-ring))
   :config
   (savehist-mode 1))
 
@@ -299,6 +307,13 @@ freezes — start, reproduce, stop."
   (isearch-lazy-count t)
   (lazy-count-prefix-format "(%s/%s) ")
   (lazy-count-suffix-format nil))
+
+;;; @doc Live-highlight regexp constructs (groups, alternation, escapes,
+;;; char classes) in the minibuffer while typing a regexp for
+;;; `query-replace-regexp', `isearch-*-regexp', `keep-lines', etc.
+;;; Built-in since Emacs 30; no-op guard keeps older Emacs happy.
+(when (fboundp 'minibuffer-regexp-mode)
+  (minibuffer-regexp-mode 1))
 
 ;;; @doc Built-in HTML renderer used by eww, gnus, elfeed. Suppress page
 ;;; colours and proportional fonts so rendered HTML inherits the
