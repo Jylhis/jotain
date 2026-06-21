@@ -134,6 +134,13 @@ These servers may evaluate project JavaScript configuration files."
               (setq-local eldoc-documentation-strategy
                           #'eldoc-documentation-compose-eagerly)))
 
+  ;; Emacs 31+: render LSP hover/signature docs through the tree-sitter
+  ;; markdown viewer instead of the plain-text fallback. Guarded so the
+  ;; config still loads on Emacs 30 where the option doesn't exist.
+  (when (and (boundp 'eglot-documentation-renderer)
+             (fboundp 'markdown-ts-view-mode))
+    (setopt eglot-documentation-renderer 'markdown-ts-view-mode))
+
   ;; Inlay hints, opt-in per major mode. Add to this list as you grow.
   (when (fboundp 'eglot-inlay-hints-mode)
     (add-hook 'eglot-managed-mode-hook
@@ -265,7 +272,13 @@ connection alongside any existing language server."
   (eldoc-echo-area-use-multiline-p nil)
   (eldoc-print-after-edit t)
   (eldoc-idle-delay 0.2)
-  (eldoc-echo-area-display-truncation-message nil))
+  (eldoc-echo-area-display-truncation-message nil)
+  :config
+  ;; Emacs 31+: also surface `help-at-pt' text (e.g. flymake diagnostics,
+  ;; button help) through eldoc, no explicit command needed. Guarded so
+  ;; the config still loads on Emacs 30 where the option doesn't exist.
+  (when (boundp 'eldoc-help-at-pt)
+    (setopt eldoc-help-at-pt t)))
 
 ;;;; xref
 
