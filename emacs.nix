@@ -4,7 +4,7 @@
 # tree-sitter grammars, use default.nix instead.
 #
 # Base packages per variant:
-#   * mainline — pkgs.emacs31 from nixpkgs (release branch, Hydra-cached)
+#   * mainline — pkgs.emacs from nixpkgs (default Emacs attr, Hydra-cached)
 #   * git/unstable/igc — pkgs.emacs-git / emacs-unstable / emacs-igc from
 #     nix-community/emacs-overlay (cached on nix-community.cachix.org)
 #   * macport — pkgs.emacs-macport, nixpkgs' alias for emacs30-macport
@@ -72,7 +72,7 @@
       },
 
   # ── Source variant ────────────────────────────────────────────────
-  #   "mainline"  — nixpkgs emacs31 release branch (default, binary-cached)
+  #   "mainline"  — nixpkgs default emacs attr (default, binary-cached)
   #   "git"       — bleeding-edge master from git.savannah.gnu.org
   #   "unstable"  — latest release tag built from git source (srcRepo)
   #   "macport"   — jdtsmith/emacs-mac fork (Darwin only)
@@ -109,7 +109,7 @@
   # --with-native-compilation (libgccjit AOT)
   withCompressInstall ? true, # --with-compress-install (gzip .el files)
   withCsrc ? true, # install C sources for find-function-C-source
-  # Every base is a git checkout these days: nixpkgs fetches emacs31 and
+  # Every base is a git checkout these days: nixpkgs fetches emacs and
   # emacs30-macport via fetchgit/fetchFromGitHub (srcRepo defaults to
   # true in make-emacs.nix and nixpkgs does not override it), and
   # emacs-overlay passes srcRepo = true for git/unstable/igc.
@@ -189,7 +189,7 @@ let
   };
 
   # ── Base package per variant ─────────────────────────────────────
-  #   * mainline — nixpkgs emacs31 (release branch, Hydra-cached)
+  #   * mainline — nixpkgs default emacs attr (Hydra-cached)
   #   * git/unstable/igc — emacs-overlay's prebuilt attrs (cached on
   #     nix-community.cachix.org; emacs-igc already carries
   #     --with-mps=yes and the mps buildInput)
@@ -217,7 +217,7 @@ let
   #     import ./emacs.nix {}                  # mainline variant
   #     import ./emacs.nix { noGui = true; }   # any standard override
   #
-  # produces the *exact* store path of `pkgs.emacs31(.override { ... })`
+  # produces the *exact* store path of `pkgs.emacs(.override { ... })`
   # — and variant "git"/"unstable"/"igc" the store path of the matching
   # emacs-overlay attr — so binary caches (Hydra, nix-community.cachix.org,
   # jylhis) hit and we never rebuild Emacs from source. Only custom rev
@@ -236,7 +236,7 @@ let
   #            nixpkgs = fetchTarball { url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz"; sha256 = n.narHash; };
   #            overlay = fetchTarball { url = "https://github.com/${ov.owner}/${ov.repo}/archive/${ov.rev}.tar.gz"; sha256 = ov.narHash; };
   #            pkgs = import nixpkgs { overlays = [ (import overlay) ]; };
-  #        in (import ./emacs.nix {}).outPath == pkgs.emacs31.outPath'
+  #        in (import ./emacs.nix {}).outPath == pkgs.emacs.outPath'
   overridden = basePackage.override {
     inherit
       noGui

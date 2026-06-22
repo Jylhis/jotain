@@ -11,11 +11,11 @@ Jotain uses Nix for reproducible Emacs builds with fine-grained control over com
 
 ### emacs.nix
 
-The core build expression. It selects a base package per variant — nixpkgs' `emacs31` for the default `mainline`, emacs-overlay's `emacs-git`/`emacs-unstable`/`emacs-igc` for the git-based variants, and nixpkgs' `emacs-macport` alias for macport — and calls `.override { ... }` with every upstream build flag exposed as a file-level argument. The [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay) is added in `flake.nix`/`devenv.nix` to supply the git-based variants.
+The core build expression. It selects a base package per variant — nixpkgs' default `emacs` attribute for the default `mainline`, emacs-overlay's `emacs-git`/`emacs-unstable`/`emacs-igc` for the git-based variants, and nixpkgs' `emacs-macport` alias for macport — and calls `.override { ... }` with every upstream build flag exposed as a file-level argument. The [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay) is added in `flake.nix`/`devenv.nix` to supply the git-based variants.
 
 Supported:
 
-- **Source variants**: `mainline` (nixpkgs `emacs31`, the Emacs 31 release branch, default), `git` (emacs-overlay's `emacs-git`, current master), `unstable` (`emacs-unstable`, latest tagged release), `macport` (`emacs-macport` → nixpkgs `emacs30-macport`, jdtsmith/emacs-mac fork), `igc` (`emacs-igc`, the feature/igc3 Memory Pool System incremental GC branch).
+- **Source variants**: `mainline` (nixpkgs' default `emacs` attribute, currently the Emacs 30 release, default), `git` (emacs-overlay's `emacs-git`, current master), `unstable` (`emacs-unstable`, latest tagged release), `macport` (`emacs-macport` → nixpkgs `emacs30-macport`, jdtsmith/emacs-mac fork), `igc` (`emacs-igc`, the feature/igc3 Memory Pool System incremental GC branch).
 - **GUI toolkits**: GTK3, pgtk (pure GTK for Wayland), NS (Cocoa/NeXTstep on macOS), Motif, Athena, X11, or no GUI at all (`noGui = true`).
 - **Compilation**: native compilation (libgccjit AOT, default when the build platform can execute the host), compressed install, C sources for `find-function-C-source`, `srcRepo` (run autoreconf on git-based sources).
 - **Image formats**: WebP (default), Cairo (X11 default), optionally ImageMagick.
@@ -31,7 +31,7 @@ import ./emacs.nix {}                  # mainline
 import ./emacs.nix { noGui = true; }   # any standard override
 ```
 
-produces the *exact* store path of `pkgs.emacs31(.override { ... })` — and `variant = "git"`/`"unstable"`/`"igc"` the store paths of the matching emacs-overlay attrs — so the Hydra, `nix-community.cachix.org`, and project `jylhis` binary caches hit and nothing recompiles from source. Only custom `rev` pins and the Darwin patch flags are expected to diverge — those paths run through `overrideAttrs` and intentionally bust the cache.
+produces the *exact* store path of `pkgs.emacs(.override { ... })` — and `variant = "git"`/`"unstable"`/`"igc"` the store paths of the matching emacs-overlay attrs — so the Hydra, `nix-community.cachix.org`, and project `jylhis` binary caches hit and nothing recompiles from source. Only custom `rev` pins and the Darwin patch flags are expected to diverge — those paths run through `overrideAttrs` and intentionally bust the cache.
 
 Verify after any change to defaults:
 
@@ -50,7 +50,7 @@ nix-instantiate --eval --strict -E '
       };
       pkgs = import nixpkgs { overlays = [ (import overlay) ]; };
   in {
-    mainline = (import ./emacs.nix {}).outPath == pkgs.emacs31.outPath;
+    mainline = (import ./emacs.nix {}).outPath == pkgs.emacs.outPath;
     git      = (import ./emacs.nix { variant = "git"; }).outPath == pkgs.emacs-git.outPath;
     unstable = (import ./emacs.nix { variant = "unstable"; }).outPath == pkgs.emacs-unstable.outPath;
     igc      = (import ./emacs.nix { variant = "igc"; }).outPath == pkgs.emacs-igc.outPath;
