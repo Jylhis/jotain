@@ -65,9 +65,9 @@ There's also an `emacs-smoke` script (defined in `devenv.nix`) that byte-compile
 
 ### Nix build layer — cache-parity invariant
 
-**This is the most important invariant in the repo:** every default in `emacs.nix`'s argument list must match the corresponding default in upstream nixpkgs `make-emacs.nix` (and the explicit args `emacs-overlay` passes to its prebuilt attrs). When that holds, `import ./emacs.nix {}` produces the **exact same store path** as `pkgs.emacs31`, and the `git`/`unstable`/`igc` variants the store paths of `pkgs.emacs-git`/`emacs-unstable`/`emacs-igc`, so every default-rev build is a binary-cache hit (Hydra for mainline, `nix-community.cachix.org` for the overlay variants, plus the `jylhis` cachix cache) and nothing is rebuilt from source.
+**This is the most important invariant in the repo:** every default in `emacs.nix`'s argument list must match the corresponding default in upstream nixpkgs `make-emacs.nix` (and the explicit args `emacs-overlay` passes to its prebuilt attrs). When that holds, `import ./emacs.nix {}` produces the **exact same store path** as `pkgs.emacs`, and the `git`/`unstable`/`igc` variants the store paths of `pkgs.emacs-git`/`emacs-unstable`/`emacs-igc`, so every default-rev build is a binary-cache hit (Hydra for mainline, `nix-community.cachix.org` for the overlay variants, plus the `jylhis` cachix cache) and nothing is rebuilt from source.
 
-The base package map: `mainline` (default) is nixpkgs `emacs31` (release branch); `git`/`unstable`/`igc` come from [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay), wired in as a flake input alongside `nixpkgs`; `macport` is nixpkgs' `emacs-macport` alias (→ `emacs30-macport`, the jdtsmith/emacs-mac fork — emacs-overlay does not ship a macport). Only custom `rev` pins and the Darwin patch flags go through `overrideAttrs` and *intentionally* bust the cache. Any edit to `emacs.nix` that touches the `basePackage.override { … }` block must preserve parity for the mainline variant (and ideally the overlay variants). Verify with:
+The base package map: `mainline` (default) is nixpkgs' default `pkgs.emacs` attribute (currently the Emacs 30 release); `git`/`unstable`/`igc` come from [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay), wired in as a flake input alongside `nixpkgs`; `macport` is nixpkgs' `emacs-macport` alias (→ `emacs30-macport`, the jdtsmith/emacs-mac fork — emacs-overlay does not ship a macport). Only custom `rev` pins and the Darwin patch flags go through `overrideAttrs` and *intentionally* bust the cache. Any edit to `emacs.nix` that touches the `basePackage.override { … }` block must preserve parity for the mainline variant (and ideally the overlay variants). Verify with:
 
 ```
 nix-instantiate --eval --strict -E '
@@ -78,7 +78,7 @@ nix-instantiate --eval --strict -E '
       overlay = fetchTarball { url = "https://github.com/${ov.owner}/${ov.repo}/archive/${ov.rev}.tar.gz"; sha256 = ov.narHash; };
       pkgs = import nixpkgs { overlays = [ (import overlay) ]; };
   in {
-    mainline = (import ./emacs.nix {}).outPath == pkgs.emacs31.outPath;
+    mainline = (import ./emacs.nix {}).outPath == pkgs.emacs.outPath;
     git      = (import ./emacs.nix { variant = "git"; }).outPath == pkgs.emacs-git.outPath;
     unstable = (import ./emacs.nix { variant = "unstable"; }).outPath == pkgs.emacs-unstable.outPath;
     igc      = (import ./emacs.nix { variant = "igc"; }).outPath == pkgs.emacs-igc.outPath;
