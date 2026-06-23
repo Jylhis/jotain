@@ -24,7 +24,16 @@
   :ensure nil
   :custom
   (vc-follow-symlinks t)
-  (vc-handled-backends '(Git JJ)))
+  (vc-handled-backends '(Git JJ))
+  :config
+  ;; Emacs 31+: rewriting already-pushed history is a deliberate, normal
+  ;; move in JJ / force-pushed feature-branch workflows, so don't fight
+  ;; it. And refreshing a `vc-dir' buffer should fold away the
+  ;; up-to-date entries on its own. Guarded for Emacs 30.
+  (when (boundp 'vc-allow-rewriting-published-history)
+    (setopt vc-allow-rewriting-published-history t))
+  (when (boundp 'vc-dir-auto-hide-up-to-date)
+    (setopt vc-dir-auto-hide-up-to-date 'revert)))
 
 ;;; @doc Quick jump to a file git status reports as changed. Runs
 ;;; `git status --porcelain=v1 -z -uall' (-z keeps spaces and

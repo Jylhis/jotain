@@ -21,7 +21,12 @@
 (use-package prog-mode
   :ensure nil
   :hook
-  (prog-mode . display-fill-column-indicator-mode))
+  (prog-mode . display-fill-column-indicator-mode)
+  :config
+  ;; Emacs 31+: don't draw the indicator in a warning face past the
+  ;; column. Guarded so the config still loads on Emacs 30.
+  (when (boundp 'display-fill-column-indicator-warning)
+    (setopt display-fill-column-indicator-warning nil)))
 
 ;;;; Tree-sitter
 
@@ -140,6 +145,11 @@ These servers may evaluate project JavaScript configuration files."
   (when (and (boundp 'eglot-documentation-renderer)
              (fboundp 'markdown-ts-view-mode))
     (setopt eglot-documentation-renderer 'markdown-ts-view-mode))
+
+  ;; Emacs 31+: suppress the new inline "a code action is available here"
+  ;; indicators — some servers make them noisy. Guarded for Emacs 30.
+  (when (boundp 'eglot-code-action-indications)
+    (setopt eglot-code-action-indications nil))
 
   ;; Inlay hints, opt-in per major mode. Add to this list as you grow.
   (when (fboundp 'eglot-inlay-hints-mode)
@@ -273,6 +283,9 @@ connection alongside any existing language server."
   (eldoc-print-after-edit t)
   (eldoc-idle-delay 0.2)
   (eldoc-echo-area-display-truncation-message nil)
+  ;; Prefer the dedicated doc buffer over a truncated echo-area line when
+  ;; one is already visible — pairs well with `eldoc-help-at-pt' below.
+  (eldoc-echo-area-prefer-doc-buffer t)
   :config
   ;; Emacs 31+: also surface `help-at-pt' text (e.g. flymake diagnostics,
   ;; button help) through eldoc, no explicit command needed. Guarded so

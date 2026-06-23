@@ -40,5 +40,15 @@
   (comint-input-ignoredups t)
   (comint-scroll-to-bottom-on-input t))
 
+;;; @doc Built-in Emacs Lisp REPL. Emacs 31+ can persist input history
+;;; across sessions like comint/shell already do; point it at a file
+;;; under `var/'. Guarded so the config loads on Emacs 30.
+(use-package ielm
+  :ensure nil
+  :commands ielm
+  :config
+  (when (boundp 'ielm-history-file-name)
+    (setopt ielm-history-file-name (jotain-var-file "ielm-history.eld"))))
+
 (provide 'init-shell)
 ;;; init-shell.el ends here
