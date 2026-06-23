@@ -173,7 +173,12 @@ immediately for writes."
 ;;; dired-style filter/mark/operate on buffers.
 (use-package ibuffer
   :ensure nil
-  :bind ([remap list-buffers] . ibuffer))
+  :bind ([remap list-buffers] . ibuffer)
+  :config
+  ;; Emacs 31+: show the Size column in human units (KB/MB) instead of
+  ;; raw byte counts. Guarded so the config loads on Emacs 30.
+  (when (boundp 'ibuffer-human-readable-size)
+    (setopt ibuffer-human-readable-size t)))
 
 ;;; @doc Tame `find-file-at-point` so an unknown hostname doesn't block
 ;;; the editor on a DNS lookup — reject means "treat as not a host".
@@ -192,7 +197,12 @@ immediately for writes."
    '(("Europe/Zurich"   "Zurich")
      ("Europe/Helsinki" "Helsinki")
      ("Asia/Bangkok"    "Bangkok")
-     ("Asia/Shanghai"   "Shanghai"))))
+     ("Asia/Shanghai"   "Shanghai")))
+  :config
+  ;; Emacs 31+: sort the world-clock table by an ISO timestamp so the
+  ;; zones list in chronological order. Guarded for Emacs 30.
+  (when (boundp 'world-clock-sort-order)
+    (setopt world-clock-sort-order "%FT%T")))
 
 ;; Standalone command for viewing logs that contain raw ANSI escapes.
 ;; M-x jotain-display-ansi-colors.

@@ -14,7 +14,13 @@
   :ensure nil
   :custom
   (help-window-select t)
-  (help-window-keep-selected t))
+  (help-window-keep-selected t)
+  :config
+  ;; Emacs 31+: auto-refresh the keystroke log (C-h l) so the last keys
+  ;; update live — handy when teaching or screen-sharing. Guarded so the
+  ;; config loads on Emacs 30.
+  (when (boundp 'view-lossage-auto-refresh)
+    (setopt view-lossage-auto-refresh t)))
 
 ;;; @doc Built-in echo-area tooltips on buttons and links when point
 ;;; lingers — discoverability for the parts of Emacs that aren't

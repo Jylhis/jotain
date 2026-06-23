@@ -20,6 +20,26 @@
   :ensure nil
   :config (delete-selection-mode 1))
 
+;;; @doc Small built-in editing knobs. `kill-region-dwim' makes C-w with
+;;; no active region kill a word backwards instead of erroring;
+;;; `delete-pair-push-mark' leaves a mark on the former pair contents so
+;;; C-x C-x re-selects them. Both are Emacs 31+, guarded so the config
+;;; loads on Emacs 30. The `save-some-buffers' action lets you press `d'
+;;; at the prompt to diff a buffer against its file before saving (a
+;;; Protesilaos trick; works on Emacs 30 too).
+(use-package simple
+  :ensure nil
+  :config
+  (when (boundp 'kill-region-dwim)
+    (setopt kill-region-dwim 'emacs-word))
+  (when (boundp 'delete-pair-push-mark)
+    (setopt delete-pair-push-mark t))
+  (add-to-list 'save-some-buffers-action-alist
+               (list "d"
+                     (lambda (buffer)
+                       (diff-buffer-with-file (buffer-file-name buffer)))
+                     "show diff between the buffer and its file")))
+
 ;;; @doc Strip trailing whitespace and stray tabs on save without
 ;;; reformatting the rest of the buffer. Built-in.
 (use-package whitespace

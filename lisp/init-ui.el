@@ -353,5 +353,11 @@ availability on the right display."
   (xterm-mouse-mode 1))
 (add-hook 'tty-setup-hook #'jotain-ui--tty-setup)
 
+;;; @doc Emacs 31+: bring tooltips (help-echo, button hints) to terminal
+;;; frames, which previously had none. No-op in GUI. Guarded with
+;;; `fboundp' so the config still loads on Emacs 30.
+(when (fboundp 'tty-tip-mode)
+  (tty-tip-mode 1))
+
 (provide 'init-ui)
 ;;; init-ui.el ends here

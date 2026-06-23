@@ -40,7 +40,12 @@
   (dired-vc-rename-file t)
   :hook (dired-mode . dired-hide-details-mode)
   :bind (:map dired-mode-map
-              ("M-s R" . dired-do-replace-regexp-as-diff)))
+              ("M-s R" . dired-do-replace-regexp-as-diff))
+  :config
+  ;; Emacs 31+: also hide the absolute directory path in the header line
+  ;; under `dired-hide-details-mode'. Guarded for Emacs 30.
+  (when (boundp 'dired-hide-details-hide-absolute-location)
+    (setopt dired-hide-details-hide-absolute-location t)))
 
 ;;; @doc Built-in dired extras — `dired-omit-mode` hides dotfiles and
 ;;; cache directories so dired listings show only the things you
@@ -141,6 +146,9 @@
 
 ;;; @doc Modern dired front-end with previews, side panels, and miller
 ;;; columns. Overrides plain dired so every `C-x d` benefits.
+;;; `dirvish-side' (C-c D) already provides the docked side-tree that
+;;; Emacs 31's new `speedbar-window' offers, so speedbar is intentionally
+;;; not wired up here.
 (use-package dirvish
   :demand t
   :after dired
