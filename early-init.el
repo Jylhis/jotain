@@ -93,10 +93,13 @@
 (defvar native-comp-async-report-warnings-errors nil)
 (defvar native-comp-speed nil)
 (defvar native-comp-async-jobs-number 0)
-;; Emacs 31+ option; declared here so the `setq' below byte-compiles
-;; cleanly on Emacs 30 (where the symbol is otherwise unbound). defvar
-;; never clobbers an existing value, so on Emacs 31 the real default is
-;; preserved until we set it.
+;; Emacs 31+ option (a defcustom in comp-run.el). comp-run.el is NOT
+;; preloaded, so the symbol is unbound here at early-init time on *every*
+;; Emacs version — a `boundp' guard would therefore no-op even on Emacs
+;; 31. Pre-declaring with `defvar' both silences the byte-compiler on
+;; Emacs 30 and seeds the value so it survives until comp-run.el loads
+;; (its defcustom won't clobber an already-set value). Mirrors the
+;; `native-comp-speed' / `native-comp-async-jobs-number' handling above.
 (defvar native-comp-async-on-battery-power nil)
 (when (and (fboundp 'native-comp-available-p)
            (native-comp-available-p))
