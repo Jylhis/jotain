@@ -93,5 +93,13 @@ inside a running container."
 (use-package ansible
   :defer t)
 
+;;; @doc Bazel/Starlark support — major modes for `BUILD`, `WORKSPACE`,
+;;; `MODULE.bazel`, `REPO.bazel`, `*.bzl`, `.bazelrc`, `.bazelignore`
+;;; and `.bazeliskrc` (auto-mode-alist comes from the package's own
+;;; autoloads). `C-c C-f` runs buildifier; format-on-save for the
+;;; Starlark-family buffers is wired through apheleia in init-prog.
+(use-package bazel
+  :defer t)
+
 (provide 'init-lang-devops)
 ;;; init-lang-devops.el ends here
