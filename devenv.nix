@@ -62,6 +62,11 @@ in
     meson
     ninja
 
+    # Bazel/Starlark formatter.  bazel-mode (C-c C-f) and apheleia
+    # format-on-save shell out to buildifier for BUILD/WORKSPACE/.bzl
+    # buffers.
+    buildifier
+
     # SonarLint language server for in-editor code quality analysis.
     # Start in Emacs with M-x jotain-sonarlint.
     sonarlint-ls
