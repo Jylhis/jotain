@@ -31,6 +31,7 @@ init-completion   vertico, marginalia, orderless, consult, corfu, cape
 init-navigation   dired, dirvish, project, windmove, winner
 init-vc           vc, vc-jj, magit, majutsu, magit-todos, forge, diff-hl, smerge, ediff
 init-prog         prog-mode, treesit, eglot, flymake, eldoc, apheleia, compile
+init-snippets     tempel snippets + eglot-tempel LSP expansion
 init-project      project + projection + compile-multi
 init-ai           claude-code-ide, gptel, mcp
 init-shell        eshell, vterm, comint
@@ -89,6 +90,10 @@ The vertico stack on the minibuffer side, corfu + cape on the in-buffer side, pl
 ### `init-prog`
 
 The shared substrate for programming modes: `prog-mode` hooks, `treesit` setup, `eglot`, `flymake`, `eldoc`, `apheleia` for format-on-save, `compile`. Per-language `eglot-ensure` hooks live here so all LSP wiring is in one place; per-language mode settings live in `init-lang-*.el`. When the `rass` binary (rassumfrassum, shipped in the devenv shell) is on `PATH`, `tsx-ts-mode` / `typescript-ts-mode` / `typescript-mode` buffers are routed through it to run `typescript-language-server` alongside whichever of `eslint-lsp` and `tailwindcss-language-server` are also on `PATH`, and Python buffers run the bundled `rass python` preset (basedpyright + ruff) when both binaries are present; any missing prerequisite makes eglot fall back to its built-in single-server lookup, so projects using `pylsp` / `pyright` / unguarded tsserver keep working unchanged. Also provides `jotain-sonarlint` for on-demand SonarLint analysis via the `sonarlint-ls` language server — SonarCloud connected mode is configured per-project via `eglot-workspace-configuration` in `.dir-locals.el`.
+
+### `init-snippets`
+
+Template/snippet expansion via `tempel`, chosen over the built-in `skeleton`/`abbrev` and the heavier `yasnippet` because it shares an author with the corfu/cape/vertico stack and plugs straight into `completion-at-point-functions` — snippet names surface in the corfu popup (added buffer-locally ahead of the cape capfs on `prog-mode`/`text-mode`), and `M-+` (`tempel-complete`) / `M-*` (`tempel-insert`) expand them, with `TAB` / `S-TAB` moving between fields. The curated templates themselves live in `templates/jotain.eld` (keyed by major mode — basic for/while/if/function constructs for Emacs Lisp, Python, Rust, Go, C/C++, and TS/TSX/JS), so adding a snippet never touches Elisp. `eglot-tempel` is configured here too, so Tempel also expands the snippets language servers return (e.g. function-argument placeholders); it is armed the moment eglot loads, before the first connection.
 
 ### `init-project`
 
