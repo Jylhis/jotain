@@ -109,7 +109,8 @@ These servers may evaluate project JavaScript configuration files."
     python-mode python-ts-mode
     rust-mode rust-ts-mode
     tsx-ts-mode
-    typescript-mode typescript-ts-mode)
+    typescript-mode typescript-ts-mode
+    zig-ts-mode)
    . eglot-ensure)
   :custom
   (eglot-autoshutdown t)
@@ -149,7 +150,8 @@ These servers may evaluate project JavaScript configuration files."
                              '(go-mode go-ts-mode
                                rust-mode rust-ts-mode
                                typescript-mode typescript-ts-mode
-                               python-mode python-ts-mode))
+                               python-mode python-ts-mode
+                               zig-ts-mode))
                   (eglot-inlay-hints-mode 1)))))
 
   ;; Server overrides — most languages don't need an entry, eglot has
@@ -372,6 +374,9 @@ outside a project."
                                   "--source-file-path" filepath
                                   "-")))
   (add-to-list 'apheleia-mode-alist '(meson-mode . meson-format))
+  (add-to-list 'apheleia-formatters
+               '(zig-fmt . ("zig" "fmt" "--stdin")))
+  (add-to-list 'apheleia-mode-alist '(zig-ts-mode . zig-fmt))
   (apheleia-global-mode 1)
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 

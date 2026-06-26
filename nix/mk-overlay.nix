@@ -64,6 +64,7 @@ let
                   tree-sitter-tsx
                   tree-sitter-typescript
                   tree-sitter-yaml
+                  tree-sitter-zig
                 ]
               )
             else
