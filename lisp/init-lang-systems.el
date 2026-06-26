@@ -1,12 +1,14 @@
-;;; init-lang-systems.el --- Systems language modes: Go, C/C++, CMake, Meson, Haskell -*- lexical-binding: t; -*-
+;;; init-lang-systems.el --- Systems language modes: Go, C/C++, CMake, Meson, Haskell, Zig -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 
 ;; Compiled/systems-programming modes. Go and cc-mode are built in
-;; (ensure nil); cmake-mode, meson-mode, and haskell-mode come from MELPA.
+;; (ensure nil); cmake-mode, meson-mode, haskell-mode, and zig-ts-mode
+;; come from MELPA.
 ;;
-;; eglot wiring for go + rust is in `init-prog.el'. If you add hooks
-;; for more servers, keep them there so all LSP wiring is in one place.
+;; eglot wiring for go + rust + zig is in `init-prog.el'. If you add
+;; hooks for more servers, keep them there so all LSP wiring is in one
+;; place.
 
 ;;; Code:
 
@@ -54,6 +56,11 @@
 ;;; Haskell editing session from costing every Emacs start.
 (use-package haskell-mode
   :defer t)
+
+;;; @doc Tree-sitter Zig mode (MELPA). Eglot wires zls in init-prog;
+;;; format-on-save runs `zig fmt' through apheleia.
+(use-package zig-ts-mode
+  :mode "\\.zig\\'")
 
 (provide 'init-lang-systems)
 ;;; init-lang-systems.el ends here
