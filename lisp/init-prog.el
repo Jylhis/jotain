@@ -383,7 +383,7 @@ outside a project."
   ;; module/repo/starlark) while leaving the conf-derived bazelrc /
   ;; bazeliskrc / bazelignore modes untouched.
   (add-to-list 'apheleia-formatters
-               '(buildifier . ("buildifier" "-path" filepath)))
+               '(buildifier . ("buildifier" "-path" (or filepath "BUILD"))))
   (add-to-list 'apheleia-mode-alist '(bazel-mode . buildifier))
   (apheleia-global-mode 1)
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
