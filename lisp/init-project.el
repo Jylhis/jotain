@@ -128,7 +128,10 @@ projects sharing a basename across different roots stay distinct."
                       ("nix fmt"        . "nix fmt")))
      (rust-ts-mode . (("cargo test"     . "cargo test")
                       ("cargo clippy"   . "cargo clippy --all-targets")
-                      ("cargo build"    . "cargo build"))))))
+                      ("cargo build"    . "cargo build")))
+     (zig-ts-mode  . (("zig build"      . "zig build")
+                      ("zig test"       . "zig build test")
+                      ("zig run"        . "zig build run"))))))
 
 ;;; @doc Renders compile-multi pickers through consult — gives you
 ;;; orderless filtering and preview on every "what command should I

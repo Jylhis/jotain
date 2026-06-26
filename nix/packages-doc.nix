@@ -124,7 +124,7 @@ let
     }
     {
       file = "init-lang-systems.el";
-      title = "Systems (Go, C/C++, Haskell)";
+      title = "Systems (Go, C/C++, Haskell, Zig)";
     }
   ];
 
