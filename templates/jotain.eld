@@ -22,18 +22,18 @@ emacs-lisp-mode
 (unless "(unless " p "\n" r> ")")
 (dolist "(dolist (" p " " p ")\n" r> ")")
 
-python-ts-mode
+(python-mode python-ts-mode)
 
 (for "for " p " in " p ":" n> r>)
 (while "while " p ":" n> r>)
 (if "if " p ":" n> r>)
-(ifelse "if " p ":" n> r> n "else:" n> q)
+(ifelse "if " p ":" n> r> n "else:" > n> q)
 (def "def " p "(" p "):" n> r>)
 (class "class " p ":" n> r>)
-(try "try:" n> r> n "except " p ":" n> q)
+(try "try:" n> r> n "except " p ":" > n> q)
 (main "if __name__ == \"__main__\":" n> r>)
 
-rust-ts-mode
+(rust-mode rust-ts-mode)
 
 (for "for " p " in " p " {" n> r> n "}" >)
 (while "while " p " {" n> r> n "}" >)
@@ -43,7 +43,7 @@ rust-ts-mode
 (impl "impl " p " {" n> r> n "}" >)
 (struct "struct " p " {" n> r> n "}" >)
 
-go-ts-mode
+(go-mode go-ts-mode)
 
 (for "for " p " {" n> r> n "}" >)
 (forr "for " p ", " p " := range " p " {" n> r> n "}" >)
@@ -52,7 +52,7 @@ go-ts-mode
 (switch "switch " p " {" n> r> n "}" >)
 (struct "type " p " struct {" n> r> n "}" >)
 
-c-ts-mode
+(c-mode c-ts-mode)
 
 (for "for (" p "; " p "; " p ") {" n> r> n "}" >)
 (while "while (" p ") {" n> r> n "}" >)
@@ -61,7 +61,7 @@ c-ts-mode
 (fn p " " p "(" p ") {" n> r> n "}" >)
 (struct "struct " p " {" n> r> n "};" >)
 
-c++-ts-mode
+(c++-mode c++-ts-mode)
 
 (for "for (" p "; " p "; " p ") {" n> r> n "}" >)
 (forr "for (auto " p " : " p ") {" n> r> n "}" >)
@@ -71,13 +71,13 @@ c++-ts-mode
 (fn p " " p "(" p ") {" n> r> n "}" >)
 (class "class " p " {" n> "public:" n> r> n "};" >)
 
-(typescript-ts-mode tsx-ts-mode js-ts-mode)
+(typescript-mode typescript-ts-mode tsx-ts-mode js-mode js-ts-mode)
 
 (for "for (const " p " of " p ") {" n> r> n "}" >)
 (fori "for (let " p " = 0; " p " < " p "; " p "++) {" n> r> n "}" >)
 (while "while (" p ") {" n> r> n "}" >)
 (if "if (" p ") {" n> r> n "}" >)
-(ifelse "if (" p ") {" n> r> n "} else {" n> q n "}" >)
+(ifelse "if (" p ") {" n> r> n "} else {" > n> q n "}" >)
 (fn "function " p "(" p ") {" n> r> n "}" >)
 (arrow "const " p " = (" p ") => {" n> r> n "}" >)
 (switch "switch (" p ") {" n> r> n "}" >)
