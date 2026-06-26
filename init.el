@@ -89,6 +89,7 @@
 (require 'init-navigation)   ; Dired + dirvish, project, windmove, winner
 (require 'init-vc)           ; vc + magit + diff-hl + forge
 (require 'init-prog)         ; prog-mode, treesit, eglot, flymake, eldoc, compile
+(require 'init-snippets)     ; tempel snippets + eglot-tempel LSP expansion
 (require 'init-project)      ; project + projection + compile-multi
 (require 'init-ai)           ; claude-code-ide, gptel, mcp
 (require 'init-shell)        ; eshell, vterm, comint

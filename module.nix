@@ -332,11 +332,14 @@ in
     ++ lib.optional (cfg.client.enable && pkgs.stdenv.isLinux) (lib.hiPrio clientDesktopItem);
 
     # Install the Jotain Emacs configuration into ~/.config/emacs so the
-    # daemon picks up early-init.el, init.el and the lisp/ modules.
+    # daemon picks up early-init.el, init.el, the lisp/ modules, and the
+    # tempel snippet templates (lisp/init-snippets.el resolves
+    # `tempel-path' against user-emacs-directory).
     xdg.configFile = {
       "emacs/early-init.el".source = ./early-init.el;
       "emacs/init.el".source = ./init.el;
       "emacs/lisp".source = ./lisp;
+      "emacs/templates".source = ./templates;
     }
     // lib.optionalAttrs cfg.openrouter.enable {
       # OpenRouter provider for the eca server (lisp/init-ai.el). The key is
