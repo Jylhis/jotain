@@ -93,6 +93,14 @@
 (defvar native-comp-async-report-warnings-errors nil)
 (defvar native-comp-speed nil)
 (defvar native-comp-async-jobs-number 0)
+;; Emacs 31+ option (a defcustom in comp-run.el). comp-run.el is NOT
+;; preloaded, so the symbol is unbound here at early-init time on *every*
+;; Emacs version — a `boundp' guard would therefore no-op even on Emacs
+;; 31. Pre-declaring with `defvar' both silences the byte-compiler on
+;; Emacs 30 and seeds the value so it survives until comp-run.el loads
+;; (its defcustom won't clobber an already-set value). Mirrors the
+;; `native-comp-speed' / `native-comp-async-jobs-number' handling above.
+(defvar native-comp-async-on-battery-power nil)
 (when (and (fboundp 'native-comp-available-p)
            (native-comp-available-p))
   ;; Cap async (background) native compilation at 3 jobs. This machine has
@@ -102,7 +110,11 @@
   ;; eln-cache warms.
   (setq native-comp-async-report-warnings-errors nil
         native-comp-speed 2
-        native-comp-async-jobs-number 3)
+        native-comp-async-jobs-number 3
+        ;; Emacs 31+: pause background native compilation while on
+        ;; battery so a recompile doesn't spin the fans on an unplugged
+        ;; laptop. Inert on Emacs 30 (the symbol is just an unused var).
+        native-comp-async-on-battery-power nil)
   (when (fboundp 'startup-redirect-eln-cache)
     (startup-redirect-eln-cache
      (convert-standard-filename
