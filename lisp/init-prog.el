@@ -377,6 +377,14 @@ outside a project."
   (add-to-list 'apheleia-formatters
                '(zig-fmt . ("zig" "fmt" "--stdin")))
   (add-to-list 'apheleia-mode-alist '(zig-ts-mode . zig-fmt))
+  ;; buildifier reads from stdin; `-path' lets it infer the Starlark
+  ;; dialect (BUILD vs WORKSPACE vs .bzl).  Mapping the `bazel-mode'
+  ;; parent covers every derived Starlark-family mode (build/workspace/
+  ;; module/repo/starlark) while leaving the conf-derived bazelrc /
+  ;; bazeliskrc / bazelignore modes untouched.
+  (add-to-list 'apheleia-formatters
+               '(buildifier . ("buildifier" "-path" (or filepath "BUILD"))))
+  (add-to-list 'apheleia-mode-alist '(bazel-mode . buildifier))
   (apheleia-global-mode 1)
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
