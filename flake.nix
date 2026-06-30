@@ -146,7 +146,12 @@
         };
         modules = [
           self.nixOnDroidModules.default
-          { services.jotain.enable = true; }
+          {
+            services.jotain.enable = true;
+            # nix-on-droid's system.stateVersion has no default; set it so
+            # this example evaluates as a complete, switchable config.
+            system.stateVersion = "24.05";
+          }
         ];
       };
     };

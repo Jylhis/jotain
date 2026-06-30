@@ -57,7 +57,7 @@ nix-instantiate --eval --strict -E '
   }'
 ```
 
-The `basePackage.override` call is split into `baseOverrideArgs` (flags present in `make-emacs.nix` since nixpkgs 24.05) and `modernOverrideArgs` (flags added later, ≈24.11). The modern set is merged in only when `lib.versionAtLeast lib.version "24.11"`, so the build still evaluates when a downstream flake overrides `nixpkgs` with an older release. On the pinned unstable the gate is always true, so the full arg set is forwarded and cache parity is unaffected.
+The override arg set is filtered through `lib.intersectAttrs (lib.functionArgs basePackage.override)`, so only the flags the base `make-emacs.nix` actually defines are forwarded. This keeps the build evaluating when a downstream flake overrides `nixpkgs` with an older release (24.05+): arguments that newer `make-emacs.nix` versions added are dropped rather than throwing "called with unexpected argument". On the pinned unstable every argument is accepted, so the intersection is a no-op and cache parity is unaffected.
 
 ### emacs-jylhis.nix
 
