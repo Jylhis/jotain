@@ -23,6 +23,11 @@ let
         inherit package;
         inherit (final) emacsPackagesFor;
         override = extraPackages;
+        # `nix-ts-mode` is referenced directly (not guarded): init-lang-nix.el
+        # declares it `:ensure nil`, so if a nixpkgs snapshot ever lacks it we
+        # want a loud build failure rather than silently shipping a broken
+        # autoload for `.nix' files. Every nixpkgs in [24.05, unstable] ships
+        # it, so the 24.05+ override path is unaffected.
         extraEmacsPackages = epkgs: [
           epkgs.claude-code-ide
           epkgs.combobulate
