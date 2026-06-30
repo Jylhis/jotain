@@ -17,20 +17,19 @@ let
         inherit package;
         inherit (final) emacsPackagesFor;
         override = extraPackages;
-        extraEmacsPackages =
-          epkgs:
-          [
-            epkgs.claude-code-ide
-            epkgs.combobulate
-            epkgs.jylhis-emacs-themes
-            epkgs.tagref
-            epkgs.treesit-grammars.with-all-grammars
-          ]
-          # `nix-ts-mode` comes from the consumer's MELPA snapshot rather
-          # than extra-packages.nix, so a thinner older-nixpkgs snapshot
-          # (24.05+) may not carry it. Degrade gracefully instead of
-          # throwing, matching the use-package scanner's behaviour.
-          ++ final.lib.optional (epkgs ? nix-ts-mode) epkgs.nix-ts-mode;
+        # `nix-ts-mode` is referenced directly (not guarded): init-lang-nix.el
+        # declares it `:ensure nil`, so if a nixpkgs snapshot ever lacks it we
+        # want a loud build failure rather than silently shipping a broken
+        # autoload for `.nix' files. Every nixpkgs in [24.05, unstable] ships
+        # it, so the 24.05+ override path is unaffected.
+        extraEmacsPackages = epkgs: [
+          epkgs.claude-code-ide
+          epkgs.combobulate
+          epkgs.jylhis-emacs-themes
+          epkgs.nix-ts-mode
+          epkgs.tagref
+          epkgs.treesit-grammars.with-all-grammars
+        ];
       };
     in
     final.runCommand name
