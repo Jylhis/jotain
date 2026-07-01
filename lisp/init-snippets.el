@@ -20,6 +20,13 @@
 
 ;;; Code:
 
+;; Buffer-local guard for the merged tempel+eglot capf (see
+;; `jotain-tempel-eglot-capf' below).  Declared at top level so the
+;; byte-compiler sees the `make-variable-buffer-local' call `defvar-local'
+;; emits as a toplevel form; inside `use-package' `:init' it is not.
+(defvar-local jotain-tempel--eglot-merged nil
+  "Non-nil once the merged tempel+eglot capf is installed in this buffer.")
+
 ;;; @doc Lightweight template/snippet engine from the corfu/cape author.
 ;;; Templates are read from `templates/*.eld' (keyed by major mode);
 ;;; `M-+' completes a snippet by name, `M-*' inserts one interactively,
@@ -47,9 +54,8 @@
   ;; In eglot-managed buffers, prepending `tempel-complete' would hide LSP
   ;; candidates for prefixes that match a snippet name (f, if, class...).
   ;; Merge the two into a single capf with `cape-capf-super' so snippet and
-  ;; server candidates share one corfu popup instead of shadowing.
-  (defvar-local jotain-tempel--eglot-merged nil
-    "Non-nil once the merged tempel+eglot capf is installed in this buffer.")
+  ;; server candidates share one corfu popup instead of shadowing.  The
+  ;; `jotain-tempel--eglot-merged' guard is declared at top level above.
   (defun jotain-tempel-eglot-capf ()
     "Merge `tempel-complete' with eglot's capf in managed buffers.
 Idempotent: the buffer-local guard stops `eglot-reconnect' from
