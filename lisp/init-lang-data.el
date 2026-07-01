@@ -7,6 +7,8 @@
 
 ;;; Code:
 
+(declare-function mixed-pitch-mode "mixed-pitch" (&optional arg))
+
 (defun jotain-lang-data--enable-prog-mode-features ()
   "Run `prog-mode-hook' in a `text-mode'-derived config buffer.
 Both `yaml-mode' (MELPA) and the built-in `yaml-ts-mode' derive
@@ -20,13 +22,13 @@ this a no-op if the buffer's mode ever (re)parents onto
 `prog-mode', preventing the hook from firing twice.
 
 `text-mode-hook' also runs first and enables prose niceties
-that are wrong for code-shaped YAML: variable-pitch fonts,
-visual-line wrapping, and on-the-fly spell check.  Disable
+that are wrong for code-shaped YAML: mixed-pitch (proportional)
+fonts, visual-line wrapping, and on-the-fly spell check.  Disable
 those after the parent hook ran so the buffer ends up looking
 like code, not prose."
   (unless (derived-mode-p 'prog-mode)
     (run-hooks 'prog-mode-hook))
-  (variable-pitch-mode -1)
+  (mixed-pitch-mode -1)
   (visual-line-mode -1)
   (when (bound-and-true-p visual-wrap-prefix-mode)
     (visual-wrap-prefix-mode -1))

@@ -9,9 +9,11 @@
 
 ;;; Code:
 
-;;; @doc Built-in text-mode tweaks for prose: visual line wrap, hanging
-;;; indent on wrapped lines, variable-pitch face. Code modes stay
-;;; monospaced.
+(declare-function mixed-pitch-mode "mixed-pitch" (&optional arg))
+
+;;; @doc Built-in text-mode tweaks for prose: visual line wrap and
+;;; hanging indent on wrapped lines. Proportional fonts come from
+;;; `mixed-pitch' (below); code modes stay monospaced.
 (use-package text-mode
   :ensure nil
   :custom
@@ -25,8 +27,22 @@
   (text-mode-ispell-word-completion nil)
   :hook
   ((text-mode . visual-line-mode)
-   (text-mode . visual-wrap-prefix-mode)
-   (text-mode . variable-pitch-mode)))
+   (text-mode . visual-wrap-prefix-mode)))
+
+;;; @doc Proportional fonts for prose via the `variable-pitch' face,
+;;; while code, tables, and verbatim spans stay monospaced
+;;; (`fixed-pitch'). This keeps Org tables aligned, where a blanket
+;;; `variable-pitch-mode' would leave them ragged. Enabled in every
+;;; text-mode buffer and opted out of the column-sensitive ones: YAML
+;;; (see init-lang-data), commit messages, and email.
+(use-package mixed-pitch
+  :preface
+  (defun jotain-writing--keep-monospace ()
+    "Turn off `mixed-pitch-mode' in a column-sensitive text-mode buffer."
+    (mixed-pitch-mode -1))
+  :hook ((text-mode        . mixed-pitch-mode)
+         (git-commit-setup . jotain-writing--keep-monospace)
+         (message-mode     . jotain-writing--keep-monospace)))
 
 ;;; @doc Just-in-time spell check using enchant — no on-save scan, no
 ;;; per-buffer flyspell setup. M-$ corrects the word at point;

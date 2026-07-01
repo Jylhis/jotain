@@ -141,8 +141,8 @@
     global-sops-mode
     ;; jinx (text-mode)
     jinx-mode jinx--load-module
-    ;; visual-line / variable-pitch (text-mode)
-    visual-line-mode variable-pitch-mode visual-wrap-prefix-mode
+    ;; visual-line / mixed-pitch (text-mode)
+    visual-line-mode mixed-pitch-mode visual-wrap-prefix-mode
     ;; save-place
     save-place-find-file-hook
     ;; auto-revert
