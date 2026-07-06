@@ -114,9 +114,14 @@ projects sharing a basename across different roots stay distinct."
   :commands (compile-multi)
   :custom
   (compile-multi-config
-   '((go-mode      . (("go test"        . "go test ./...")
+   '((go-ts-mode   . (("go test"         . "go test ./...")
                       ("go test current" . "go test .")
-                      ("go build"       . "go build .")))
+                      ("go build"        . "go build ./...")
+                      ("go run"          . "go run .")
+                      ("go vet"          . "go vet ./...")
+                      ("golangci-lint"   . "golangci-lint run")))
+     (go-mod-ts-mode . (("go mod tidy"     . "go mod tidy")
+                        ("go mod download" . "go mod download")))
      (python-mode  . (("pytest"         . "pytest")
                       ("pytest file"    . "pytest %file-name%")))
      (haskell-mode . (("stack test"     . "stack test")

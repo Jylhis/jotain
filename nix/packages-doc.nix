@@ -111,6 +111,10 @@ let
       title = "Python";
     }
     {
+      file = "init-lang-go.el";
+      title = "Go";
+    }
+    {
       file = "init-lang-web.el";
       title = "Web (TypeScript, JS, CSS, HTML)";
     }
@@ -124,7 +128,7 @@ let
     }
     {
       file = "init-lang-systems.el";
-      title = "Systems (Go, C/C++, Haskell, Zig)";
+      title = "Systems (C/C++, Haskell, Zig)";
     }
   ];
 

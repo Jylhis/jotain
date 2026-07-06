@@ -1,21 +1,16 @@
-;;; init-lang-systems.el --- Systems language modes: Go, C/C++, CMake, Meson, Haskell, Zig -*- lexical-binding: t; -*-
+;;; init-lang-systems.el --- Systems language modes: C/C++, CMake, Meson, Haskell, Zig -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 
-;; Compiled/systems-programming modes. Go and cc-mode are built in
-;; (ensure nil); cmake-mode, meson-mode, haskell-mode, and zig-ts-mode
-;; come from MELPA.
+;; Compiled/systems-programming modes. cc-mode is built in (ensure
+;; nil); cmake-mode, meson-mode, haskell-mode, and zig-ts-mode come
+;; from MELPA. Go has grown into its own file, `init-lang-go.el'.
 ;;
-;; eglot wiring for go + rust + zig is in `init-prog.el'. If you add
-;; hooks for more servers, keep them there so all LSP wiring is in one
+;; eglot wiring for rust + zig is in `init-prog.el'. If you add hooks
+;; for more servers, keep them there so all LSP wiring is in one
 ;; place.
 
 ;;; Code:
-
-;;; @doc Go major mode. Eglot wires gopls in init-prog so all language
-;;; servers are configured in one place.
-(use-package go-mode
-  :defer t)
 
 ;;; @doc Built-in C/C++ mode with a Stroustrup style bias. The header
 ;;; extensions below default to C++ — Jotain assumes that's the
