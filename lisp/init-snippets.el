@@ -76,7 +76,7 @@ stacking duplicate super-capfs on repeated hook runs."
 (use-package eglot-tempel
   :after eglot
   :functions (eglot-tempel-mode)
-  :init (with-eval-after-load 'eglot (eglot-tempel-mode 1)))
+  :config (eglot-tempel-mode 1))
 
 (provide 'init-snippets)
 ;;; init-snippets.el ends here
