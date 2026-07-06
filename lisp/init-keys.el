@@ -116,6 +116,7 @@ Region active → deactivate it.  Otherwise call regular
     "C-c C-'"   "claude-code-ide"
     "C-c M-x"   "consult-mode-command"
     ;; C-x namespace.
+    "C-x C-a"   "dape (debug)"
     "C-x g"     "magit-status"
     "C-x M-g"   "magit-dispatch"
     "C-x j"     "rotate-window-split"
