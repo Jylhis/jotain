@@ -23,7 +23,8 @@ Jotain's Elisp configuration is split across `lisp/init-*.el`, one file per conc
 ```
 init-core         GC, encoding, var/ paths, sane file-handling defaults
 init-keys         Global keymap and window-split helpers
-init-ui           Theme, modeline, fonts, frame tweaks, icons, kkp, clipetty
+init-ui           Theme, modeline, fonts, frame tweaks, icons
+init-tabs         Workspace tabs via tab-bar-mode
 init-help         helpful + built-in help tweaks
 init-docs         Register the bundled jotain.info with C-h i
 init-editing      elec-pair, delsel, whitespace, region tools
@@ -34,7 +35,8 @@ init-prog         prog-mode, treesit, eglot, dape, flymake, eldoc, apheleia, com
 init-snippets     tempel snippets + eglot-tempel LSP expansion
 init-project      project + projection + compile-multi
 init-ai           claude-code-ide, gptel, mcp
-init-shell        eshell, vterm, comint
+init-shell        eshell, comint, ielm
+init-terminal     ghostel terminal + tty integration (kkp, clipetty)
 init-systems      sops, logview, auth-source-1password
 init-tracking     keyfreq, wakatime, activity-watch
 init-writing      jinx, markdown-mode, denote, pdf-tools
@@ -62,7 +64,7 @@ Global bindings only — per-package bindings live in the relevant `use-package`
 
 ### `init-ui`
 
-Appearance. Uses `modus-operandi-tinted` and `modus-vivendi-tinted` (user-customisable via `jotain-theme-light` / `jotain-theme-dark`), with `auto-dark-mode` flipping between them based on the system appearance. Installs `doom-modeline`, picks the first available font from `jotain-font-preferences` (JetBrains Mono Nerd Font → Iosevka Nerd Font → DejaVu Sans Mono), enables `display-line-numbers`, `pixel-scroll-precision-mode`, `hl-line-mode`, `show-paren-mode`, built-in `which-key`, `nerd-icons` integrations for dired/ibuffer/corfu/marginalia, `hl-todo`, `breadcrumb`, `pulsar`, `rainbow-delimiters`, `indent-bars`. Also enables `global-kkp-mode` (Kitty Keyboard Protocol) and `clipetty` for OSC 52 clipboard support through SSH + tmux.
+Appearance. Uses `modus-operandi-tinted` and `modus-vivendi-tinted` (user-customisable via `jotain-theme-light` / `jotain-theme-dark`), with `auto-dark-mode` flipping between them based on the system appearance. Installs `doom-modeline`, picks the first available font from `jotain-font-preferences` (JetBrains Mono Nerd Font → Iosevka Nerd Font → DejaVu Sans Mono), enables `display-line-numbers`, `pixel-scroll-precision-mode`, `hl-line-mode`, `show-paren-mode`, built-in `which-key`, `nerd-icons` integrations for dired/ibuffer/corfu/marginalia, `hl-todo`, `breadcrumb`, `pulsar`, `rainbow-delimiters`, `indent-bars`.
 
 ### `init-help`
 
@@ -106,7 +108,11 @@ AI assistants. `claude-code-ide` on `C-c C-'` for agentic multi-file edits via t
 
 ### `init-shell`
 
-`eshell`, `vterm`, and `comint` together — shells have their own input handling, history, prompts, and rendering, so grouping them lets the rules be coordinated in one place.
+`eshell`, `comint`, and `ielm` together — shells and REPLs have their own input handling, history, prompts, and rendering, so grouping them lets the rules be coordinated in one place. The true PTY terminal emulator lives in `init-terminal`.
+
+### `init-terminal`
+
+Both directions of terminal support. Inside Emacs: `ghostel`, a terminal emulator powered by libghostty-vt (the VT engine behind Ghostty) through a native dynamic module — real PTY for tmux/ncurses programs, plus automatic shell integration (OSC 7 directory tracking, OSC 133 prompt navigation) and OSC 52 clipboard. The Nix package builds the module from source and ships it in the package directory; in a source checkout the module is downloaded into the writable `elpa/` dir on first `M-x ghostel`. Emacs inside a terminal: `global-kkp-mode` (Kitty Keyboard Protocol), `clipetty` (OSC 52 clipboard through SSH + tmux), `xterm-mouse-mode`, and `tty-tip-mode` on Emacs 31+ — all no-ops in GUI frames. Ghostel's buffers advertise `TERM=xterm-ghostty`, the same dialect the outer Ghostty terminal uses; the `xterm-ghostty → xterm-256color` alias that supports both lives in `early-init.el` because terminal initialisation runs before `init.el`.
 
 ### `init-systems`
 
