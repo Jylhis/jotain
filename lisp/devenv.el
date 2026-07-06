@@ -358,10 +358,13 @@ time and exists for tests."
   "Drop cached results for ROOT, or all roots when ROOT is nil."
   (if (null root)
       (clrhash devenv--cache)
-    (maphash (lambda (key _value)
-               (when (equal (car key) root)
-                 (remhash key devenv--cache)))
-             devenv--cache)))
+    (let (stale)
+      (maphash (lambda (key _value)
+                 (when (equal (car key) root)
+                   (push key stale)))
+               devenv--cache)
+      (dolist (key stale)
+        (remhash key devenv--cache)))))
 
 (defun devenv-version (root)
   "Return the devenv version string active in ROOT, or nil."
@@ -911,7 +914,10 @@ reconnect any eglot servers so they see the new environment."
   (let ((root (devenv--root-or-error)))
     (devenv--cache-invalidate root)
     (cond
+     ;; `envrc-reload-all' can be fboundp via its autoload before the
+     ;; package is loaded, so also require the mode variable to exist.
      ((and (fboundp 'envrc-reload-all)
+           (boundp 'envrc-mode)
            (seq-some (lambda (buffer)
                        (buffer-local-value 'envrc-mode buffer))
                      (devenv--project-buffers root)))
@@ -1156,6 +1162,12 @@ at the front of the list.  Call after eglot is loaded."
   (format "devenv-%s"
           (file-name-nondirectory (directory-file-name root))))
 
+(defun devenv--mcp-command (root)
+  "Return the sh -c command string that starts `devenv mcp' in ROOT."
+  (format "cd %s && exec %s mcp"
+          (shell-quote-argument root)
+          (shell-quote-argument devenv-executable)))
+
 ;;;###autoload
 (defun devenv-mcp-setup ()
   "Register the current project's `devenv mcp' server with mcp.el.
@@ -1171,10 +1183,7 @@ clients: start the server from the `mcp-hub' dashboard, then
   (let* ((root (devenv--root-or-error))
          (name (devenv--mcp-server-name root))
          (spec (list :command "sh"
-                     :args (list "-c"
-                                 (format "cd %s && exec %s mcp"
-                                         (shell-quote-argument root)
-                                         devenv-executable)))))
+                     :args (list "-c" (devenv--mcp-command root)))))
     (setf (alist-get name mcp-hub-servers nil nil #'equal) spec)
     (message "devenv: registered MCP server %S — start it from M-x \
 mcp-hub, then M-x gptel-mcp-connect exposes its tools to gptel"
