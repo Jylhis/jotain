@@ -1,4 +1,4 @@
-;;; init-shell.el --- Eshell, vterm, comint -*- lexical-binding: t; -*-
+;;; init-shell.el --- Eshell, comint, ielm -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 
@@ -6,6 +6,9 @@
 ;; have their own input handling, history, prompts, and rendering. Group
 ;; them together so the rules ("how should the prompt look", "how does
 ;; history search work") can be coordinated.
+;;
+;; The ghostel terminal emulator (a true PTY, unlike these Lisp-driven
+;; shells and REPLs) lives in init-terminal.el.
 
 ;;; Code:
 
@@ -21,15 +24,6 @@
   (eshell-scroll-to-bottom-on-input 'all)
   (eshell-error-if-no-glob t)
   (eshell-destroy-buffer-when-process-dies t))
-
-;;; @doc Real terminal emulator (libvterm). Use this when you need a
-;;; tmux session, ncurses programs, or anything that wants a true
-;;; PTY — eshell can't do those.
-(use-package vterm
-  :commands (vterm vterm-other-window)
-  :custom
-  (vterm-max-scrollback 10000)
-  (vterm-buffer-name-string "vterm: %s"))
 
 ;;; @doc Built-in REPL substrate (used by python, ielm, sql, etc.).
 ;;; The settings here apply to every comint-derived buffer.
