@@ -98,16 +98,17 @@
 (require 'init-writing)      ; jinx, markdown-mode, denote, pdf-tools
 (require 'init-org)          ; org, org-modern, capture templates
 
-;; Languages. The big three (Nix, Rust, Python) each have their own
-;; file; less-used modes are grouped by concern so init.el doesn't
-;; grow one line per MELPA package.
+;; Languages. The big languages (Nix, Rust, Python, Go) each have
+;; their own file; less-used modes are grouped by concern so init.el
+;; doesn't grow one line per MELPA package.
 (require 'init-lang-nix)
 (require 'init-lang-rust)
 (require 'init-lang-python)
+(require 'init-lang-go)
 (require 'init-lang-web)       ; TS/TSX/CSS/HTML/JSON/web-mode
 (require 'init-lang-devops)    ; Dockerfile, terraform, just, ansible
 (require 'init-lang-data)      ; yaml, csv, sql, jinja2, gnuplot
-(require 'init-lang-systems)   ; Go, C/C++, CMake, Haskell
+(require 'init-lang-systems)   ; C/C++, CMake, Meson, Haskell, Zig
 
 (provide 'init)
 ;;; init.el ends here
