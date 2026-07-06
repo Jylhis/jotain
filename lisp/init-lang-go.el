@@ -46,7 +46,10 @@ init-prog) then displays them."
   :mode (("\\.go\\'" . go-ts-mode)
          ("/go\\.mod\\'" . go-mod-ts-mode))
   :hook ((go-ts-mode . jotain-go--eglot-workspace-config)
-         (go-mod-ts-mode . jotain-go--eglot-workspace-config))
+         (go-mod-ts-mode . jotain-go--eglot-workspace-config)
+         ;; Emacs 31 mode; on 30 the hook variable is created but
+         ;; never runs (go.work falls back to go-mod-ts-mode below).
+         (go-work-ts-mode . jotain-go--eglot-workspace-config))
   :custom
   ;; gofmt indents with tabs; a step of 8 (the default) matches the
   ;; default `tab-width' so one indent level renders as exactly one tab.

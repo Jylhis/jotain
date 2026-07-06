@@ -233,13 +233,10 @@ These servers may evaluate project JavaScript configuration files."
   (dape-default-breakpoints-file (jotain-var-file "dape-breakpoints"))
   :config
   ;; Restore the previous session's breakpoints on first use; persist
-  ;; them at exit, but only when dape actually got loaded — neither
-  ;; function is autoloaded, and this keeps startup free of dape.
+  ;; them at exit. Both run in :config, so a session that never loads
+  ;; dape never touches the breakpoints file.
   (dape-breakpoint-load)
-  (add-hook 'kill-emacs-hook
-            (lambda ()
-              (when (featurep 'dape)
-                (dape-breakpoint-save)))))
+  (add-hook 'kill-emacs-hook #'dape-breakpoint-save))
 
 ;;;; SonarLint (SonarCloud connected mode)
 
