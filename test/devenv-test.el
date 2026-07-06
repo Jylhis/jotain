@@ -249,5 +249,14 @@
   (should (equal (devenv--mcp-server-name "/home/u/proj/") "devenv-proj"))
   (should (equal (devenv--mcp-server-name "/home/u/proj") "devenv-proj")))
 
+(ert-deftest devenv-test-mcp-command-quoting ()
+  "The MCP launch command shell-quotes both the root and the binary."
+  (let ((devenv-executable "/opt/my tools/devenv"))
+    (let ((cmd (devenv--mcp-command "/home/u/my proj/")))
+      (should-not (string-match-p "/home/u/my proj" cmd))
+      (should-not (string-match-p "/opt/my tools/devenv mcp" cmd))
+      (should (string-suffix-p " mcp" cmd))
+      (should (string-prefix-p "cd " cmd)))))
+
 (provide 'devenv-test)
 ;;; devenv-test.el ends here
