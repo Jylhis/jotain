@@ -91,6 +91,7 @@
 (require 'init-prog)         ; prog-mode, treesit, eglot, flymake, eldoc, compile
 (require 'init-snippets)     ; tempel snippets + eglot-tempel LSP expansion
 (require 'init-project)      ; project + projection + compile-multi
+(require 'init-devenv)       ; devenv.sh: tasks, processes, env, LSP, MCP
 (require 'init-ai)           ; claude-code-ide, gptel, mcp
 (require 'init-shell)        ; eshell, vterm, comint
 (require 'init-systems)      ; sops, logview, auth-source-1password

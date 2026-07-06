@@ -17,6 +17,9 @@
 ;;
 ;;   mcp              M-x mcp-connect-server + gptel-mcp-connect
 ;;                                  Model Context Protocol tool use via gptel.
+;;                                  `devenv-mcp-setup' (init-devenv, C-c v M)
+;;                                  registers the project's `devenv mcp'
+;;                                  server here.
 ;;
 ;; Auth: API keys come from the environment first (OPENROUTER_API_KEY /
 ;; ANTHROPIC_API_KEY / GEMINI_API_KEY) and fall back to auth-source —
