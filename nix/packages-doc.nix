@@ -75,6 +75,10 @@ let
       title = "Per-project commands";
     }
     {
+      file = "init-devenv.el";
+      title = "devenv.sh integration";
+    }
+    {
       file = "init-ai.el";
       title = "AI assistants";
     }
