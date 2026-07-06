@@ -109,7 +109,7 @@ These servers may evaluate project JavaScript configuration files."
   ;; Per-language modules register modes only; auto-start lives here.
   :hook
   ((dockerfile-mode
-    go-mode go-ts-mode
+    go-mode go-ts-mode go-mod-ts-mode go-work-ts-mode
     nix-ts-mode
     python-mode python-ts-mode
     rust-mode rust-ts-mode
@@ -167,7 +167,8 @@ These servers may evaluate project JavaScript configuration files."
   ;; Server overrides — most languages don't need an entry, eglot has
   ;; sensible defaults. Add only when you want a specific server name.
   (add-to-list 'eglot-server-programs
-               '((go-mode go-ts-mode) . ("gopls")))
+               '((go-mode go-ts-mode go-mod-ts-mode go-work-ts-mode)
+                 . ("gopls")))
   (add-to-list 'eglot-server-programs
                '(dockerfile-mode . ("docker-langserver" "--stdio")))
 
@@ -216,6 +217,29 @@ These servers may evaluate project JavaScript configuration files."
 (use-package consult-eglot-embark
   :after (consult eglot embark)
   :demand t)
+
+;;;; Debugging — dape (Debug Adapter Protocol)
+
+;;; @doc Debug Adapter Protocol client — the debugging counterpart to
+;;; eglot. Ships adapter configs for dlv (Go), debugpy (Python),
+;;; codelldb (Rust/C/C++), and more; the adapter binary (e.g. `dlv`)
+;;; comes from the project/host PATH, same convention as the LSP
+;;; servers. `C-x C-a` is the prefix (the gud convention); stepping
+;;; commands carry repeat-maps, so `C-x C-a n n n` keeps stepping.
+(use-package dape
+  :bind-keymap ("C-x C-a" . dape-global-map)
+  :custom
+  (dape-buffer-window-arrangement 'right)
+  (dape-default-breakpoints-file (jotain-var-file "dape-breakpoints"))
+  :config
+  ;; Restore the previous session's breakpoints on first use; persist
+  ;; them at exit, but only when dape actually got loaded — neither
+  ;; function is autoloaded, and this keeps startup free of dape.
+  (dape-breakpoint-load)
+  (add-hook 'kill-emacs-hook
+            (lambda ()
+              (when (featurep 'dape)
+                (dape-breakpoint-save)))))
 
 ;;;; SonarLint (SonarCloud connected mode)
 
@@ -390,6 +414,11 @@ outside a project."
   (add-to-list 'apheleia-formatters
                '(zig-fmt . ("zig" "fmt" "--stdin")))
   (add-to-list 'apheleia-mode-alist '(zig-ts-mode . zig-fmt))
+  ;; Apheleia ships gofmt/goimports/gofumpt formatters but maps Go
+  ;; modes to plain gofmt; prepend a goimports mapping (gofmt plus
+  ;; import management) to shadow it.  The binary comes from the
+  ;; project/host PATH, like gopls and dlv.
+  (add-to-list 'apheleia-mode-alist '(go-ts-mode . goimports))
   ;; buildifier reads from stdin; `-path' lets it infer the Starlark
   ;; dialect (BUILD vs WORKSPACE vs .bzl).  Mapping the `bazel-mode'
   ;; parent covers every derived Starlark-family mode (build/workspace/
