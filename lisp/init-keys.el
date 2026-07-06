@@ -109,6 +109,7 @@ Region active → deactivate it.  Otherwise call regular
     "C-c o"     "combobulate"
     "C-c r"     "eglot-refactor"
     "C-c t"     "toggle-theme"
+    "C-c v"     "devenv"
     ;; C-c <punct> — AI and special leaves.
     "C-c RET"   "gptel-send"
     "C-c M-RET" "gptel-menu"
