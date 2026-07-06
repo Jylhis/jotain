@@ -83,6 +83,10 @@ let
       title = "Shells";
     }
     {
+      file = "init-terminal.el";
+      title = "Terminal support";
+    }
+    {
       file = "init-systems.el";
       title = "Sysadmin tools";
     }

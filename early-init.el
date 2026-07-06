@@ -129,6 +129,9 @@
 ;; term/xterm-ghostty.el. Aliasing to xterm-256color makes term/xterm.el
 ;; load instead, which restores modifyOtherKeys + 24-bit colour. Must be
 ;; set here because tty-run-terminal-initialization fires before init.el.
+;; The rest of the terminal story (the ghostel terminal emulator, kkp,
+;; clipetty) lives in lisp/init-terminal.el; ghostel's buffers also use
+;; TERM=xterm-ghostty, so this alias covers nested `emacs -nw' there.
 (add-to-list 'term-file-aliases '("xterm-ghostty" . "xterm-256color"))
 
 (provide 'early-init)
