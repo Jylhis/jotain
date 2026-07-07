@@ -65,6 +65,58 @@
   ;; zero overhead.
   (treesit-auto-add-to-auto-mode-alist 'all))
 
+;;;; Non-tree-sitter mode diagnostic
+
+;;; @doc Log to *Messages* whenever a buffer lands in a classic major
+;;; mode even though a tree-sitter variant with a loadable grammar
+;;; exists. Surfaces gaps where the config should route to `-ts-mode'.
+;;; Set `jotain-prog-warn-non-ts-mode' to nil to silence.
+(eval-when-compile (require 'treesit-auto))
+(declare-function treesit-ready-p "treesit" (language &optional quiet))
+(declare-function treesit-auto-recipe-ts-mode "treesit-auto" (recipe))
+(declare-function treesit-auto-recipe-lang "treesit-auto" (recipe))
+(declare-function treesit-auto-recipe-remap "treesit-auto" (recipe))
+
+(defcustom jotain-prog-warn-non-ts-mode t
+  "When non-nil, log if a classic major mode is used despite a ready ts-mode.
+The notice goes to *Messages* on `after-change-major-mode-hook' only
+when the corresponding tree-sitter grammar is actually loadable."
+  :type 'boolean
+  :group 'jotain)
+
+(defvar jotain-prog--non-ts-remap-table nil
+  "Hash table mapping a classic major-mode symbol to (TS-MODE . LANG).
+Built once from `treesit-auto-recipe-list'.")
+
+(defun jotain-prog--build-non-ts-remap-table ()
+  "Populate `jotain-prog--non-ts-remap-table' from treesit-auto recipes."
+  (when (bound-and-true-p treesit-auto-recipe-list)
+    (let ((table (make-hash-table :test #'eq)))
+      (dolist (recipe treesit-auto-recipe-list)
+        (let ((ts-mode (treesit-auto-recipe-ts-mode recipe))
+              (lang (treesit-auto-recipe-lang recipe))
+              (remap (treesit-auto-recipe-remap recipe)))
+          (dolist (classic (if (proper-list-p remap) remap (list remap)))
+            (when (and classic ts-mode lang)
+              (puthash classic (cons ts-mode lang) table)))))
+      (setq jotain-prog--non-ts-remap-table table))))
+
+(defun jotain-prog--warn-non-ts-mode ()
+  "Log when `major-mode' is classic but a ready tree-sitter mode exists.
+Runs on `after-change-major-mode-hook'; O(1) hash lookup on the miss path."
+  (when (and jotain-prog-warn-non-ts-mode
+             jotain-prog--non-ts-remap-table)
+    (when-let* ((entry (gethash major-mode jotain-prog--non-ts-remap-table))
+                (ts-mode (car entry))
+                (lang (cdr entry))
+                ((fboundp ts-mode))
+                ((treesit-ready-p lang t)))
+      (message "jotain: %s opened in %s; %s (tree-sitter, grammar `%s') is available"
+               (buffer-name) major-mode ts-mode lang))))
+
+(jotain-prog--build-non-ts-remap-table)
+(add-hook 'after-change-major-mode-hook #'jotain-prog--warn-non-ts-mode)
+
 ;;; @doc Code folding driven by treesit syntax nodes — folds along
 ;;; functions/classes/blocks instead of indentation guesses. Fringe
 ;;; indicators show fold state.
