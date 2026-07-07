@@ -120,15 +120,14 @@ compile-native:
 #       --eval '(native-compile-async (list "{{config_dir}}/early-init.el" "{{config_dir}}/init.el" "{{config_dir}}/lisp") (quote recursively))' \
 #       --eval '(while (or comp-files-queue (> (comp-async-runnings) 0)) (sleep-for 1))'
 
-# [DISABLED] Run ERT tests under test/ if any exist.
+# Run the ERT tests under test/ via the flake check (the dev shell has
+# no emacs; the check builds one). Direct equivalent once Emacs is back
+# in the shell:
+#   emacs --batch -L lisp -L test -l ert -l test/devenv-test.el \
+#       -f ert-run-tests-batch-and-exit
 [group('check')]
 test:
-    @echo "just test is disabled — emacs is not in the devenv shell."
-    @echo "(There is no test/ directory yet; re-enable alongside Emacs.)"
-# Original:
-#   emacs --batch -L lisp -L test -l ert \
-#       $(find test -name 'test-*.el' -exec echo -l {} \;) \
-#       -f ert-run-tests-batch-and-exit
+    nix build .#checks.{{system}}.elisp-test --no-link --print-build-logs
 
 
 # Wrapper init files live in bench/ — kept on disk for when re-enabled.

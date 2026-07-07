@@ -18,8 +18,6 @@
 - https://www.gnu.org/software/emacs/manual/html_node/elisp/Language-Grammar.html
 - https://github.com/universal-ctags/citre
 - https://github.com/joaotavora/eglot
-- https://github.com/realgud
-- https://github.com/emacs-lsp/dap-mode
 - https://www.emacswiki.org/emacs/FlyMake
 - https://www.gnu.org/software/emacs/manual/html_node/ebrowse/index.html
 - https://github.com/pythonic-emacs/anaconda-mode

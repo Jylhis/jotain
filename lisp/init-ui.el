@@ -332,32 +332,5 @@ availability on the right display."
   :custom (indent-bars-treesit-support t)
   :hook (prog-mode . jotain-ui--maybe-indent-bars))
 
-;;;; Terminal compatibility (no-ops in GUI)
-
-;;; @doc Kitty Keyboard Protocol — lets terminal Emacs distinguish
-;;; C-i/TAB, C-m/RET, C-[/ESC, and pass Shift-modified function
-;;; keys through. No-op in GUI frames, so safe to enable
-;;; unconditionally.
-(use-package kkp
-  :functions (global-kkp-mode)
-  :config (global-kkp-mode 1))
-
-;;; @doc OSC 52 clipboard integration. Yank/kill in terminal Emacs
-;;; reaches the system clipboard even through ssh + tmux.
-(use-package clipetty
-  :diminish
-  :hook (after-init . global-clipetty-mode))
-
-(defun jotain-ui--tty-setup ()
-  "Per-frame tty setup hook."
-  (xterm-mouse-mode 1))
-(add-hook 'tty-setup-hook #'jotain-ui--tty-setup)
-
-;;; @doc Emacs 31+: bring tooltips (help-echo, button hints) to terminal
-;;; frames, which previously had none. No-op in GUI. Guarded with
-;;; `fboundp' so the config still loads on Emacs 30.
-(when (fboundp 'tty-tip-mode)
-  (tty-tip-mode 1))
-
 (provide 'init-ui)
 ;;; init-ui.el ends here

@@ -279,7 +279,8 @@ in
         emacs -Q --batch --eval '
           (let ((failed nil))
             (dolist (f (append (list "early-init.el" "init.el")
-                               (directory-files "lisp" t "^init-.*\\.el$")))
+                               (directory-files "lisp" t "^\\(init-.*\\|devenv\\)\\.el$")
+                               (directory-files "test" t "\\.el$")))
               (condition-case err
                   (with-temp-buffer
                     (insert-file-contents f)
@@ -308,7 +309,24 @@ in
           -L lisp \
           --eval "(require 'pcre2el)" \
           --eval "(setq byte-compile-error-on-warn t)" \
-          -f batch-byte-compile early-init.el init.el lisp/init-*.el
+          -f batch-byte-compile early-init.el init.el lisp/devenv.el lisp/init-*.el
+        touch $out
+      '';
+
+  # ── Elisp unit tests (ERT, batch) ────────────────────────────────
+  # Pure-function tests only: no devenv binary, no network, no
+  # subprocesses — safe inside the Nix sandbox.
+  elisp-test =
+    pkgs.runCommandLocal "check-elisp-test"
+      {
+        nativeBuildInputs = [ pkgs.jotainEmacsPackages ];
+        inherit src;
+      }
+      ''
+        cd $src
+        emacs --batch -L lisp -L test \
+          -l ert -l test/devenv-test.el \
+          -f ert-run-tests-batch-and-exit
         touch $out
       '';
 }

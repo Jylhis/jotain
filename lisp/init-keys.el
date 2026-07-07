@@ -97,9 +97,8 @@ Region active → deactivate it.  Otherwise call regular
     ;; C-c <letter> — global user namespace.
     "C-c a"     "org-agenda"
     "C-c c"     "org-capture"
-    "C-c d"     "debug"
+    "C-c d"     "dirvish"
     "C-c D"     "dirvish-side"
-    "C-c f"     "dirvish"
     "C-c g"     "magit-file"
     "C-c h"     "consult-history"
     "C-c i"     "consult-info"
@@ -110,6 +109,7 @@ Region active → deactivate it.  Otherwise call regular
     "C-c o"     "combobulate"
     "C-c r"     "eglot-refactor"
     "C-c t"     "toggle-theme"
+    "C-c v"     "devenv"
     ;; C-c <punct> — AI and special leaves.
     "C-c RET"   "gptel-send"
     "C-c M-RET" "gptel-menu"
@@ -117,6 +117,7 @@ Region active → deactivate it.  Otherwise call regular
     "C-c C-'"   "claude-code-ide"
     "C-c M-x"   "consult-mode-command"
     ;; C-x namespace.
+    "C-x C-a"   "dape (debug)"
     "C-x g"     "magit-status"
     "C-x M-g"   "magit-dispatch"
     "C-x j"     "rotate-window-split"
