@@ -75,12 +75,20 @@ let
       title = "Per-project commands";
     }
     {
+      file = "init-devenv.el";
+      title = "devenv.sh integration";
+    }
+    {
       file = "init-ai.el";
       title = "AI assistants";
     }
     {
       file = "init-shell.el";
       title = "Shells";
+    }
+    {
+      file = "init-terminal.el";
+      title = "Terminal support";
     }
     {
       file = "init-systems.el";
@@ -111,6 +119,10 @@ let
       title = "Python";
     }
     {
+      file = "init-lang-go.el";
+      title = "Go";
+    }
+    {
       file = "init-lang-web.el";
       title = "Web (TypeScript, JS, CSS, HTML)";
     }
@@ -124,7 +136,7 @@ let
     }
     {
       file = "init-lang-systems.el";
-      title = "Systems (Go, C/C++, Haskell, Zig)";
+      title = "Systems (C/C++, Haskell, Zig)";
     }
   ];
 

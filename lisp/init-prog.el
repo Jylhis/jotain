@@ -249,7 +249,7 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
   ;; hook above (`eglot-ensure' is idempotent, so the two compose cleanly).
   :hook
   ((dockerfile-mode
-    go-ts-mode go-mod-ts-mode
+    go-ts-mode go-mod-ts-mode go-work-ts-mode
     nix-ts-mode
     python-mode python-ts-mode
     rust-mode rust-ts-mode
@@ -307,31 +307,13 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
   ;; Server overrides — most languages don't need an entry, eglot has
   ;; sensible defaults. Add only when you want a specific server name.
   (add-to-list 'eglot-server-programs
-               '((go-ts-mode go-mod-ts-mode) . ("gopls")))
+               '((go-ts-mode go-mod-ts-mode go-work-ts-mode) . ("gopls")))
   (add-to-list 'eglot-server-programs
                '(dockerfile-mode . ("docker-langserver" "--stdio")))
 
-  ;; gopls workspace config. The `:gopls' section is ignored by every
-  ;; other server, and a project's `.dir-locals.el' still overrides it
-  ;; buffer-locally. `hints' is what actually makes the inlay-hints mode
-  ;; (enabled above) display anything; `staticcheck' surfaces through
-  ;; flymake. `gofumpt' is left at its default (false) so gopls agrees
-  ;; with the gofmt formatter apheleia runs on save.
-  (setq-default eglot-workspace-configuration
-                '(:gopls (:usePlaceholders t
-                          :completeUnimported t
-                          :staticcheck t
-                          :hints (:parameterNames t
-                                  :assignVariableTypes t
-                                  :constantValues t
-                                  :functionTypeParameters t
-                                  :rangeVariableTypes t
-                                  :compositeLiteralTypes t
-                                  :compositeLiteralFields t)
-                          :analyses (:unusedparams t
-                                     :shadow t
-                                     :nilness t
-                                     :unusedwrite t))))
+  ;; gopls workspace configuration is set buffer-locally in init-lang-go
+  ;; (`jotain-go--eglot-workspace-config') rather than globally here, so
+  ;; it never leaks into other languages' eglot sessions.
 
   ;; rassumfrassum (`rass`) multiplexes several real LSP servers behind a
   ;; single stdio connection so eglot effectively drives multiple servers
@@ -363,21 +345,25 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
   :after (consult eglot embark)
   :demand t)
 
-;;; @doc Debug Adapter Protocol client (GNU ELPA). Ships built-in
-;;; configs for common adapters including Delve (`dlv dap') keyed to
-;;; `go-mode'/`go-ts-mode', so `M-x dape' offers a Go launch config with
-;;; no extra setup — `dlv' just needs to be on PATH (from the project
-;;; environment). `C-c d' is the debug prefix.
+;;;; Debugging — dape (Debug Adapter Protocol)
+
+;;; @doc Debug Adapter Protocol client — the debugging counterpart to
+;;; eglot. Ships adapter configs for dlv (Go), debugpy (Python),
+;;; codelldb (Rust/C/C++), and more; the adapter binary (e.g. `dlv`)
+;;; comes from the project/host PATH, same convention as the LSP
+;;; servers. `C-x C-a` is the prefix (the gud convention); stepping
+;;; commands carry repeat-maps, so `C-x C-a n n n` keeps stepping.
 (use-package dape
-  :defer t
-  :bind (("C-c d d" . dape)
-         ("C-c d b" . dape-breakpoint-toggle)
-         ("C-c d c" . dape-continue)
-         ("C-c d n" . dape-next)
-         ("C-c d i" . dape-step-in)
-         ("C-c d o" . dape-step-out)
-         ("C-c d r" . dape-repl)
-         ("C-c d q" . dape-quit)))
+  :bind-keymap ("C-x C-a" . dape-global-map)
+  :custom
+  (dape-buffer-window-arrangement 'right)
+  (dape-default-breakpoints-file (jotain-var-file "dape-breakpoints"))
+  :config
+  ;; Restore the previous session's breakpoints on first use; persist
+  ;; them at exit. Both run in :config, so a session that never loads
+  ;; dape never touches the breakpoints file.
+  (dape-breakpoint-load)
+  (add-hook 'kill-emacs-hook #'dape-breakpoint-save))
 
 ;;;; SonarLint (SonarCloud connected mode)
 
@@ -556,6 +542,11 @@ outside a project."
   (add-to-list 'apheleia-formatters
                '(zig-fmt . ("zig" "fmt" "--stdin")))
   (add-to-list 'apheleia-mode-alist '(zig-ts-mode . zig-fmt))
+  ;; Apheleia ships gofmt/goimports/gofumpt formatters but maps Go
+  ;; modes to plain gofmt; prepend a goimports mapping (gofmt plus
+  ;; import management) to shadow it.  The binary comes from the
+  ;; project/host PATH, like gopls and dlv.
+  (add-to-list 'apheleia-mode-alist '(go-ts-mode . goimports))
   ;; buildifier reads from stdin; `-path' lets it infer the Starlark
   ;; dialect (BUILD vs WORKSPACE vs .bzl).  Mapping the `bazel-mode'
   ;; parent covers every derived Starlark-family mode (build/workspace/
@@ -564,9 +555,11 @@ outside a project."
   (add-to-list 'apheleia-formatters
                '(buildifier . ("buildifier" "-path" (or filepath "BUILD"))))
   (add-to-list 'apheleia-mode-alist '(bazel-mode . buildifier))
-  ;; Go: apheleia ships a `gofmt' formatter but keys only `go-mode' by
-  ;; default; buffers open in `go-ts-mode', so map it explicitly.
-  (add-to-list 'apheleia-mode-alist '(go-ts-mode . gofmt))
+  ;; Apheleia ships gofmt/goimports/gofumpt formatters but maps Go
+  ;; modes to plain gofmt; prepend a goimports mapping (gofmt plus
+  ;; import management) to shadow it.  The binary comes from the
+  ;; project/host PATH, like gopls and dlv.
+  (add-to-list 'apheleia-mode-alist '(go-ts-mode . goimports))
   (apheleia-global-mode 1)
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 

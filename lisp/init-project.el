@@ -66,7 +66,8 @@ projects sharing a basename across different roots stay distinct."
   (project-list-file (jotain-var-file "projects.el"))
   (project-buffers-viewer 'project-list-buffers-ibuffer)
   (project-vc-extra-root-markers
-   '(".project" "package.json" "Cargo.toml" "pyproject.toml" "flake.nix")))
+   '(".project" "package.json" "Cargo.toml" "pyproject.toml" "flake.nix"
+     "devenv.nix")))
 
 ;;;; projection — per-project commands keyed off .dir-locals.el
 
@@ -117,8 +118,12 @@ projects sharing a basename across different roots stay distinct."
    '((go-ts-mode   . (("go test"         . "go test ./...")
                       ("go test current" . "go test .")
                       ("go test -race"   . "go test -race ./...")
+                      ("go build"        . "go build ./...")
+                      ("go run"          . "go run .")
                       ("go vet"          . "go vet ./...")
-                      ("go build"        . "go build ./...")))
+                      ("golangci-lint"   . "golangci-lint run")))
+     (go-mod-ts-mode . (("go mod tidy"     . "go mod tidy")
+                        ("go mod download" . "go mod download")))
      (python-mode  . (("pytest"         . "pytest")
                       ("pytest file"    . "pytest %file-name%")))
      (haskell-mode . (("stack test"     . "stack test")
@@ -127,7 +132,10 @@ projects sharing a basename across different roots stay distinct."
                       ("meson compile"  . "meson compile -C builddir")
                       ("meson test"     . "meson test -C builddir")))
      (nix-ts-mode  . (("nix flake check" . "nix flake check")
-                      ("nix fmt"        . "nix fmt")))
+                      ("nix fmt"        . "nix fmt")
+                      ("devenv test"    . "devenv -q test")
+                      ("devenv build"   . "devenv -q build")
+                      ("devenv up"      . "devenv -q up")))
      (rust-ts-mode . (("cargo test"     . "cargo test")
                       ("cargo clippy"   . "cargo clippy --all-targets")
                       ("cargo build"    . "cargo build")))

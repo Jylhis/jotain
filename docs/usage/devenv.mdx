@@ -1,0 +1,134 @@
+---
+title: devenv integration
+description: Run tasks, manage processes, and introspect devenv.sh environments from Emacs
+---
+
+# devenv integration
+
+Jotain ships a native integration with [devenv](https://devenv.sh), the
+Nix-based developer environment tool. The library lives in
+`lisp/devenv.el` (standalone and reusable — no Jotain dependencies) and
+is wired in by `init-devenv.el`. Everything is driven through the
+`devenv` CLI and degrades to a clean error when the binary is not on
+`PATH`. devenv 2.1+ is recommended; every invocation sets `AI_AGENT=1`
+so devenv's TUI stays out of the machine-readable output.
+
+## Entry point: `C-c v`
+
+`C-c v` (or `M-x devenv`) opens a transient covering the whole surface:
+
+| Key | Command | What it does |
+| --- | --- | --- |
+| `t` | `devenv-task-run` | Pick a task (annotated from `devenv tasks list --json`) and run it; prefix arg selects the dependency mode (`before`/`single`/`after`/`all`) |
+| `s` | `devenv-script-run` | Pick a script defined in `devenv.nix` (annotated with its description) and run it |
+| `T` | `devenv-test` | `devenv test` (enterTest, with processes started/stopped around it) |
+| `b` | `devenv-build` | `devenv build`, optionally for specific attributes |
+| `u` / `d` | `devenv-up` / `devenv-down` | Start/stop the project's processes; `up` streams into a live buffer (or detaches, see `devenv-up-detached`); prefix arg picks a subset |
+| `p` | `devenv-processes` | Process dashboard (below) |
+| `l` | `devenv-processes-logs` | Tail one process's logs |
+| `i` / `/` / `:` | `devenv-info` / `devenv-search` / `devenv-eval` | Introspection: environment summary, package/option search, evaluate any config attribute to pretty-printed JSON |
+| `r` | `devenv-reload` | Refresh the environment (below) |
+| `e` | `devenv-env-global-mode` | Toggle the native environment loader (below) |
+| `m` | `devenv-modeline-mode` | Toggle the mode-line status segment (below) |
+| `a` / `x` | `devenv-allow` / `devenv-revoke` | Trust / untrust the project for auto-activation (below) |
+| `M` | `devenv-mcp-setup` | Register the project's MCP server with mcp.el |
+| `U` / `G` | `devenv-update` / `devenv-gc` | Update `devenv.lock` inputs / garbage-collect old generations |
+| `$` | `devenv-show-log` | Every CLI invocation is recorded in `*devenv log*` |
+
+The `-c` (`--clean`) and `-r` (`--refresh-eval-cache`) infixes apply to
+`devenv-test` and `devenv-build`.
+
+Long-running commands (test, build, tasks, update, gc) run in
+compilation buffers with Nix trace matching, so `M-g M-n` jumps to the
+`file.nix:LINE:COL` locations in evaluation errors.
+
+## Process dashboard
+
+`devenv-processes` opens a tabulated view of the devenv process
+manager. Keys: `s` start, `k` stop, `r` restart, `l`/`RET` logs, `u`
+up, `d` down, `g` refresh. Data comes from `devenv processes list`
+(JSON when available, plain table on older devenv), fetched
+asynchronously so the UI never blocks.
+
+## Environment loading and reload
+
+Environment loading stays with **envrc + direnv** (see `init-prog`):
+`.envrc` says `use devenv`, so every project buffer already carries the
+devenv shell environment buffer-locally — eglot servers, apheleia
+formatters, `M-x compile`, and the ghostel terminal all see
+devenv-provided tools with no extra configuration.
+
+After changing `devenv.nix`, run `devenv-reload` (`C-c v r`). It
+invalidates the library's caches, refreshes the environment through
+`envrc-reload-all`, and — because eglot snapshots the environment when
+a server starts — offers to `eglot-reconnect` every server serving the
+project so language servers pick up new `PATH` entries.
+
+For devenv projects **without** direnv, `devenv-env-global-mode` is an
+optional native loader: it fetches `devenv print-dev-env --json`
+asynchronously and applies it buffer-locally, envrc-style. Its
+predicate skips any project with a `.envrc`, so it can never
+double-manage a buffer envrc owns. While a fetch is in flight,
+`eglot-ensure` is deferred and replayed once the environment lands, so
+language servers never start with the wrong `PATH`.
+
+## Auto-activation trust (`devenv allow` / `revoke`)
+
+devenv 2.1+ gates shell auto-activation behind a per-project trust
+database (`~/.local/share/devenv/allowed`), managed with `devenv
+allow` and `devenv revoke`. The integration honours the same
+contract: the native loader (`devenv-env-global-mode`) consults the
+internal `devenv hook-should-activate` check and **never evaluates an
+untrusted devenv.nix automatically** — exactly like the zsh/fish/nu
+shell hooks. `devenv-allow` (`C-c v a`) trusts the project and
+immediately activates the loader in its buffers; `devenv-revoke`
+(`C-c v x`) untrusts it and drops the native environment. On devenv
+versions without the trust model (< 2.1) the loader behaves as
+before. Note that the direnv/envrc path has its own consent gate
+(`envrc-allow` → `direnv allow`), independent of devenv's database.
+
+## Mode-line status
+
+`devenv-modeline-mode` (global, enabled by `init-devenv` at startup)
+adds a status segment to the mode line for buffers inside a devenv
+project:
+
+- **`devenv[on]`** — the buffer's environment carries the devenv
+  shell (loaded by envrc/direnv or the native loader; detected via
+  `DEVENV_PROFILE`).
+- **`devenv[off]`** — devenv project, environment not loaded.
+- **`devenv[!]`** — auto-activation trust denied; run `devenv-allow`.
+
+Outside devenv projects the segment is empty. `mouse-1` on the
+segment opens the `devenv` transient. The redisplay path is
+subprocess-free: trust is probed once per project in the background
+from `find-file-hook` and cached.
+
+## LSP for devenv.nix
+
+devenv 2.0+ ships `devenv lsp`, a bundled nixd preconfigured with the
+project's devenv module options (completion, hover docs for
+`devenv.nix` options). `init-devenv` routes `devenv.nix` and
+`devenv.local.nix` buffers to it while `nil` keeps serving every other
+Nix file — the routing entry delegates non-devenv buffers to whatever
+contact was registered before it.
+
+## MCP server for the AI stack
+
+devenv 2.0+ ships `devenv mcp`, a stdio MCP server exposing nixpkgs
+package search, devenv option search, and process control
+(list/status/logs/start/stop/restart). `devenv-mcp-setup` (`C-c v M`)
+registers it with [mcp.el](https://github.com/lizqwerscott/mcp.el)
+under a per-project name (`devenv-<project>`); start it from
+`M-x mcp-hub` and run `M-x gptel-mcp-connect` to hand its tools to
+gptel. `devenv-mcp-remove` unregisters it.
+
+## Customization
+
+The `devenv` customization group covers the executable name
+(`devenv-executable`), the quiet-mode environment
+(`devenv-extra-env`), global CLI flags (`devenv-global-arguments`),
+cache TTL and command timeout, detached `up`
+(`devenv-up-detached`), variables the native loader never applies
+(`devenv-env-ignored-variables`), and the dashboard's log line count
+(`devenv-processes-log-lines`).
