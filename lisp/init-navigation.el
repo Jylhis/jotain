@@ -159,7 +159,7 @@
   (dirvish-default-layout '(0 0.4 0.6))
   (dirvish-preview-dispatchers '(image gif video audio epub archive pdf))
   (dirvish-side-width 30)
-  :bind (("C-c d" . dirvish)
+  :bind (("C-c f" . dirvish)
          ("C-c D" . dirvish-side))
   :config
   (dirvish-override-dired-mode 1))

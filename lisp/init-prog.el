@@ -104,12 +104,100 @@ These servers may evaluate project JavaScript configuration files."
 ;;; here so all LSP wiring is visible in one place; per-language
 ;;; mode regexes stay in their `init-lang-*` file. C-c r is the
 ;;; refactor prefix (rename/format/code-actions).
+;;;
+;;; Beyond the curated hook list, `jotain-prog--maybe-eglot-ensure'
+;;; auto-starts eglot for ANY project file whose language server is on the
+;;; buffer's (envrc-applied) PATH — so enabling `languages.X.enable' in a
+;;; project's devenv lights up its LSP in Emacs with no per-language config.
 (use-package eglot
   :ensure nil
-  ;; Per-language modules register modes only; auto-start lives here.
+  :preface
+  ;; Declared so the byte-compiler stays quiet in these helpers even when
+  ;; eglot itself is not loaded at compile time.
+  (declare-function eglot-ensure "eglot")
+  (declare-function eglot--guess-contact "eglot")
+  (defvar eglot--managed-mode)
+
+  (defun jotain-prog--eglot-guess-program ()
+    "Executable eglot would use for this buffer, or nil.
+Resolved via `eglot--guess-contact', which evaluates function-valued
+`eglot-server-programs' entries, so it reflects the project's env.  Returns
+nil for exotic contacts (TCP, class forms) we can't cheaply inspect.  Assumes
+eglot is loaded."
+    (ignore-errors
+      (let ((contact (nth 3 (eglot--guess-contact))))
+        (cond ((stringp contact) contact)
+              ((and (consp contact) (stringp (car contact))) (car contact))))))
+
+  (defun jotain-prog--maybe-eglot-ensure ()
+    "Auto-start eglot when the project's env provides a server for this buffer.
+Deferred to an idle timer so envrc has already applied the buffer-local
+`exec-path'/PATH (envrc runs on `after-change-major-mode-hook', after
+`prog-mode-hook').  Skips remote files, non-file and Lisp buffers (no server,
+and we must not pull eglot into every elisp buffer), and already-managed
+buffers."
+    (when (and buffer-file-name
+               (not (file-remote-p default-directory))
+               (not (derived-mode-p 'emacs-lisp-mode 'lisp-data-mode))
+               (not (bound-and-true-p eglot--managed-mode))
+               (project-current))
+      (let ((buf (current-buffer)))
+        (run-with-idle-timer
+         0 nil
+         (lambda ()
+           (when (buffer-live-p buf)
+             (with-current-buffer buf
+               (unless (bound-and-true-p eglot--managed-mode)
+                 (require 'eglot)
+                 (when-let* ((prog (jotain-prog--eglot-guess-program)))
+                   (when (executable-find prog) ; uses buffer-local exec-path
+                     (eglot-ensure)))))))))))
+
+  (defun jotain-prog--risky-js-extras ()
+    "Optional ESLint/Tailwind `rass' companions, gated on the risky-JS opt-in.
+These servers may evaluate project-controlled JavaScript config, so they are
+added only when `jotain-prog-enable-risky-js-lsp' is non-nil and they are on
+PATH."
+    (let (extras)
+      (when jotain-prog-enable-risky-js-lsp
+        (dolist (s '("eslint-lsp" "tailwindcss-language-server"))
+          (when (executable-find s)
+            (setq extras (append extras (list "--" s "--stdio"))))))
+      extras))
+
+  (defun jotain-prog--ts-server (&optional _interactive)
+    "Resolve the TS/TSX server contact against the buffer's (project) PATH.
+Prefers the `rass' multiplexer when it and typescript-language-server are on
+PATH, else a plain typescript-language-server.  Called at eglot connect time,
+so it sees the project's devenv env — not Jotain's own shell."
+    (if (and (executable-find "rass")
+             (executable-find "typescript-language-server"))
+        (append '("rass" "--" "typescript-language-server" "--stdio")
+                (jotain-prog--risky-js-extras))
+      '("typescript-language-server" "--stdio")))
+
+  (defun jotain-prog--python-server (&optional _interactive)
+    "Resolve the Python server contact against the buffer's (project) PATH.
+Prefers the bundled `rass python' preset (basedpyright + ruff), then a lone
+basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
+    (cond ((and (executable-find "rass")
+                (executable-find "basedpyright")
+                (executable-find "ruff"))
+           '("rass" "python"))
+          ((executable-find "basedpyright") '("basedpyright-langserver" "--stdio"))
+          ((executable-find "pyright-langserver") '("pyright-langserver" "--stdio"))
+          (t '("pylsp"))))
+  :init
+  ;; General devenv-aware auto-start for languages beyond the curated list.
+  ;; Registered outside eglot's deferral so it also fires for the first file
+  ;; of an as-yet-unloaded language.
+  (add-hook 'prog-mode-hook #'jotain-prog--maybe-eglot-ensure)
+  ;; Per-language modules register modes only; curated auto-start lives here.
+  ;; Kept as an explicit, zero-regression safety net alongside the general
+  ;; hook above (`eglot-ensure' is idempotent, so the two compose cleanly).
   :hook
   ((dockerfile-mode
-    go-mode go-ts-mode
+    go-ts-mode go-mod-ts-mode
     nix-ts-mode
     python-mode python-ts-mode
     rust-mode rust-ts-mode
@@ -157,7 +245,7 @@ These servers may evaluate project JavaScript configuration files."
     (add-hook 'eglot-managed-mode-hook
               (lambda ()
                 (when (apply #'derived-mode-p
-                             '(go-mode go-ts-mode
+                             '(go-ts-mode
                                rust-mode rust-ts-mode
                                typescript-mode typescript-ts-mode
                                python-mode python-ts-mode
@@ -167,39 +255,45 @@ These servers may evaluate project JavaScript configuration files."
   ;; Server overrides — most languages don't need an entry, eglot has
   ;; sensible defaults. Add only when you want a specific server name.
   (add-to-list 'eglot-server-programs
-               '((go-mode go-ts-mode) . ("gopls")))
+               '((go-ts-mode go-mod-ts-mode) . ("gopls")))
   (add-to-list 'eglot-server-programs
                '(dockerfile-mode . ("docker-langserver" "--stdio")))
 
+  ;; gopls workspace config. The `:gopls' section is ignored by every
+  ;; other server, and a project's `.dir-locals.el' still overrides it
+  ;; buffer-locally. `hints' is what actually makes the inlay-hints mode
+  ;; (enabled above) display anything; `staticcheck' surfaces through
+  ;; flymake. `gofumpt' is left at its default (false) so gopls agrees
+  ;; with the gofmt formatter apheleia runs on save.
+  (setq-default eglot-workspace-configuration
+                '(:gopls (:usePlaceholders t
+                          :completeUnimported t
+                          :staticcheck t
+                          :hints (:parameterNames t
+                                  :assignVariableTypes t
+                                  :constantValues t
+                                  :functionTypeParameters t
+                                  :rangeVariableTypes t
+                                  :compositeLiteralTypes t
+                                  :compositeLiteralFields t)
+                          :analyses (:unusedparams t
+                                     :shadow t
+                                     :nilness t
+                                     :unusedwrite t))))
+
   ;; rassumfrassum (`rass`) multiplexes several real LSP servers behind a
   ;; single stdio connection so eglot effectively drives multiple servers
-  ;; per buffer.  Entries are registered only when `rass' and the
-  ;; underlying servers are actually on PATH; eglot falls back to its
-  ;; built-in lookup otherwise, so a missing companion server never
-  ;; breaks LSP entirely.
-  (when (executable-find "rass")
-    ;; TS/TSX/typescript-mode: typescript-language-server is the primary.
-    ;; ESLint/Tailwind companions are optional and gated behind
-    ;; `jotain-prog-enable-risky-js-lsp' because they may evaluate
-    ;; project-controlled JavaScript config.
-    (when (executable-find "typescript-language-server")
-      (let (extras)
-        (when jotain-prog-enable-risky-js-lsp
-          (dolist (s '("eslint-lsp" "tailwindcss-language-server"))
-            (when (executable-find s)
-              (setq extras (append extras (list "--" s "--stdio"))))))
-        (add-to-list
-         'eglot-server-programs
-         (cons '(tsx-ts-mode typescript-ts-mode typescript-mode)
-               (append '("rass"
-                         "--" "typescript-language-server" "--stdio")
-                       extras)))))
-    ;; Python: the bundled `rass python' preset assumes basedpyright +
-    ;; ruff.  Projects on pylsp/pyright keep eglot's default lookup.
-    (when (and (executable-find "basedpyright")
-               (executable-find "ruff"))
-      (add-to-list 'eglot-server-programs
-                   '((python-mode python-ts-mode) . ("rass" "python")))))
+  ;; per buffer.  Registered as function-valued contacts so discovery runs
+  ;; at eglot connect time in the buffer's (project/devenv) environment —
+  ;; not once at startup against Jotain's own shell.  Each resolver falls
+  ;; back to a plain single server when `rass' or a companion is absent, so
+  ;; a project that lacks them still gets LSP.
+  (add-to-list 'eglot-server-programs
+               (cons '(tsx-ts-mode typescript-ts-mode typescript-mode)
+                     #'jotain-prog--ts-server))
+  (add-to-list 'eglot-server-programs
+               (cons '(python-mode python-ts-mode)
+                     #'jotain-prog--python-server))
 
   ;; Silence eglot's JSON-RPC event log entirely.
   (fset #'jsonrpc--log-event #'ignore))
@@ -216,6 +310,22 @@ These servers may evaluate project JavaScript configuration files."
 (use-package consult-eglot-embark
   :after (consult eglot embark)
   :demand t)
+
+;;; @doc Debug Adapter Protocol client (GNU ELPA). Ships built-in
+;;; configs for common adapters including Delve (`dlv dap') keyed to
+;;; `go-mode'/`go-ts-mode', so `M-x dape' offers a Go launch config with
+;;; no extra setup — `dlv' just needs to be on PATH (from the project
+;;; environment). `C-c d' is the debug prefix.
+(use-package dape
+  :defer t
+  :bind (("C-c d d" . dape)
+         ("C-c d b" . dape-breakpoint-toggle)
+         ("C-c d c" . dape-continue)
+         ("C-c d n" . dape-next)
+         ("C-c d i" . dape-step-in)
+         ("C-c d o" . dape-step-out)
+         ("C-c d r" . dape-repl)
+         ("C-c d q" . dape-quit)))
 
 ;;;; SonarLint (SonarCloud connected mode)
 
@@ -352,10 +462,14 @@ outside a project."
 ;;; @doc Apply the project's `.envrc` / Nix shell to every buffer in
 ;;; that project. Strictly better than direnv-mode because the env
 ;;; is buffer-local, not global — multiple projects can coexist in
-;;; one Emacs without leaking environment.
+;;; one Emacs without leaking environment. `C-c e' is envrc's command
+;;; prefix: `C-c e a' allow, `C-c e r' reload, `C-c e R' reload-all
+;;; (the last picks up a `direnv allow' run in a terminal). Manual
+;;; allow is kept as the secure default — no auto-allow whitelist.
 (use-package envrc
   :demand t
   :functions (envrc-global-mode)
+  :bind-keymap ("C-c e" . envrc-command-map)
   :config
   (envrc-global-mode)
   (add-to-list 'warning-suppress-types '(envrc))
@@ -398,6 +512,9 @@ outside a project."
   (add-to-list 'apheleia-formatters
                '(buildifier . ("buildifier" "-path" (or filepath "BUILD"))))
   (add-to-list 'apheleia-mode-alist '(bazel-mode . buildifier))
+  ;; Go: apheleia ships a `gofmt' formatter but keys only `go-mode' by
+  ;; default; buffers open in `go-ts-mode', so map it explicitly.
+  (add-to-list 'apheleia-mode-alist '(go-ts-mode . gofmt))
   (apheleia-global-mode 1)
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
