@@ -1,0 +1,82 @@
+---
+title: AI Screenshots
+description: Let an AI assistant capture the Emacs frame and see how the config renders — interactively via MCP or headless under Xvfb
+---
+
+# AI Screenshots
+
+Jotain can render the current frame to an image file so an AI assistant
+(or you) can *see* how Emacs looks. The capture uses the built-in
+`x-export-frames`, which draws the frame straight to PNG/SVG/PDF on
+cairo builds — no external screenshot tool, no window-manager
+wrangling. The technique follows
+[Automating Emacs Screenshots (Emacs Redux)][article-1].
+
+Two entry points share the same code path: an interactive command for
+live sessions, and a headless `just` recipe for terminal-only
+environments such as CI or a cloud agent container.
+
+## `M-x jotain-screenshot`
+
+Captures the selected frame and writes it to
+`var/screenshots/<timestamp>.png` (the path is echoed and pushed onto
+the kill ring). From Lisp, both the output file and the format are
+parameters:
+
+```elisp
+(jotain-screenshot)                    ; var/screenshots/<timestamp>.png
+(jotain-screenshot "/tmp/frame.svg" 'svg)
+```
+
+The command needs a graphical frame on a cairo build (the default
+Linux X11 build; pgtk also carries cairo). It signals a `user-error`
+on tty frames and on builds without `x-export-frames` — `noGui`
+(nix-on-droid) and the macOS NS/macport ports.
+
+## The `emacs_screenshot` MCP tool
+
+`init-ai.el` registers the command as a custom MCP tool with
+[claude-code-ide][article-2], so a Claude Code session attached to
+Emacs (`C-c C-'`) can call `emacs_screenshot`, get back the image
+path, and read the file to see the frame.
+
+For the tool to be served, `claude-code-ide-enable-mcp-server` must be
+non-nil — Jotain now sets it in the `claude-code-ide` block. This
+starts a small local MCP server per Claude session (loopback only); it
+also enables claude-code-ide's built-in Emacs tools for the session.
+
+A typical exchange: ask Claude *"take a screenshot and check the
+mode line"* — it calls `emacs_screenshot`, then views the returned
+PNG.
+
+## Headless: `just screenshot`
+
+For environments with no display at all — CI, a cloud agent container,
+an SSH box — the `screenshot` recipe builds Emacs via Nix, launches it
+with this repo's config under a virtual X server (Xvfb, 1920×1080),
+captures the frame once startup settles, and exits:
+
+```bash
+just screenshot                      # → var/screenshots/headless.png
+just screenshot /tmp/frame.png       # explicit output path
+```
+
+`xvfb-run` comes from the devenv shell (Linux only — Xvfb is X11, and
+the macOS ports lack `x-export-frames` anyway). Exit status is 0 on
+success, 2 if init or the capture failed, non-zero from `timeout` if
+the run wedged.
+
+Caveats:
+
+- **First run is slow.** It pays a full `nix-build` (binary-cache pull
+  of a multi-GB closure) plus the MELPA bootstrap of every package
+  during init, and needs network for both. The recipe wraps the run in
+  `timeout 600`; raise it if a cold cache needs more.
+- **Fonts may differ.** If fontconfig doesn't see the devenv-shell
+  fonts, Xvfb falls back to whatever is available — the capture still
+  succeeds, just less faithful to your desktop.
+- `var/screenshots/` lives under `var/`, so it is gitignored and wiped
+  by `just clean-all`.
+
+[article-1]: https://emacsredux.com/blog/2026/07/03/automating-emacs-screenshots/
+[article-2]: https://github.com/manzaltu/claude-code-ide.el

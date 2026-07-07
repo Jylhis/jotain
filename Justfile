@@ -235,6 +235,33 @@ run-built *ARGS:
         --eval '(setq debug-on-error t)' \
         --init-directory="{{config_dir}}" {{ARGS}}
 
+# Headless screenshot: build Emacs, launch under Xvfb with this config,
+# capture the frame via jotain-screenshot, write OUT (PNG). Linux only;
+# needs xvfb-run from the devenv shell. First run is slow: nix build
+# (cache pull) + MELPA package bootstrap — raise the timeout if a cold
+# cache needs it.
+[group('build')]
+[linux]
+screenshot out="var/screenshots/headless.png":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    command -v xvfb-run >/dev/null 2>&1 || {
+        echo "xvfb-run not on PATH — enter the devenv shell (direnv/devenv shell)"; exit 1; }
+    just build
+    out="{{out}}"
+    case "$out" in /*) ;; *) out="{{config_dir}}/$out" ;; esac
+    mkdir -p "$(dirname "$out")"
+    JOTAIN_SCREENSHOT_OUT="$out" timeout 600 xvfb-run -a -s '-screen 0 1920x1080x24' \
+        ./result/bin/emacs --init-directory="{{config_dir}}" \
+        --eval '(run-at-time 3 nil (lambda ()
+                  (condition-case err
+                      (progn (jotain-screenshot (getenv "JOTAIN_SCREENSHOT_OUT"))
+                             (kill-emacs 0))
+                    (error (message "jotain-screenshot failed: %S" err)
+                           (kill-emacs 2)))))'
+    test -s "$out" || { echo "FAIL: no screenshot written"; exit 1; }
+    echo "Screenshot → $out"
+
 
 # Build option reference documentation (HTML for GitHub Pages).
 [group('build')]

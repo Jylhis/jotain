@@ -7,6 +7,11 @@
 ;;   claude-code-ide  C-c C-'       Agentic editing — autonomous multi-file
 ;;                                  changes via the Claude Code CLI.
 ;;
+;;   jotain-screenshot              Capture the frame to var/screenshots/,
+;;                                  also served to Claude as the
+;;                                  `emacs_screenshot' MCP tool so the AI
+;;                                  can see how Emacs looks.
+;;
 ;;   eca              C-c C-e       Editor Code Assistant — chat, inline
 ;;                                  completion, rewrite, and MCP through an
 ;;                                  external `eca' server (C-c . for the menu
@@ -30,6 +35,44 @@
 
 ;;; Code:
 
+;;;; Frame screenshots for AI tooling
+;;
+;; `x-export-frames' is a cairo-only primitive (Linux X11/pgtk builds;
+;; absent on noGui/tty and macOS NS/macport builds).
+
+(declare-function x-export-frames "xfns.c" (&optional frames type))
+(declare-function jotain-var-file "init-core" (name))
+
+(defun jotain-screenshot (&optional file format)
+  "Capture the selected frame to FILE; return the absolute path.
+FORMAT is one of the symbols `png' (default), `svg' or `pdf'.
+FILE defaults to var/screenshots/<timestamp>.<format> under
+`jotain-var-dir'.  Signals `user-error' on tty frames and on
+builds without `x-export-frames' (noGui, macOS NS/macport).
+Interactively, echo the path and push it onto the kill ring."
+  (interactive)
+  (unless (display-graphic-p)
+    (user-error "jotain-screenshot needs a graphical frame"))
+  (unless (fboundp 'x-export-frames)
+    (user-error "x-export-frames unavailable — needs a cairo build (Linux X11/pgtk)"))
+  (let* ((format (or format 'png))
+         (file (expand-file-name
+                (or file
+                    (jotain-var-file
+                     (format "screenshots/%s.%s"
+                             (format-time-string "%Y%m%dT%H%M%S") format))))))
+    (make-directory (file-name-directory file) t)
+    (redisplay t)
+    (let ((data (x-export-frames nil format))
+          (coding-system-for-write 'binary))
+      (with-temp-file file
+        (set-buffer-multibyte nil)
+        (insert data)))
+    (when (called-interactively-p 'interactive)
+      (kill-new file)
+      (message "Screenshot: %s" file))
+    file))
+
 ;;; @doc Agentic multi-file editing through the Claude Code CLI. Bound to
 ;;; C-c C-' so the menu is one key away whenever a refactor needs more
 ;;; context than a single LSP rename can carry. Provided by Nix
@@ -38,8 +81,23 @@
   :ensure nil ; Provided by Nix
   :defer t
   :bind ("C-c C-'" . claude-code-ide-menu)
+  :functions (claude-code-ide-emacs-tools-setup claude-code-ide-make-tool)
+  :custom
+  ;; Serve custom MCP tools (emacs_screenshot below) to attached sessions.
+  (claude-code-ide-enable-mcp-server t)
   :config
-  (claude-code-ide-emacs-tools-setup))
+  (claude-code-ide-emacs-tools-setup)
+  ;; Let Claude see the frame: capture an image, return the path, Read it.
+  ;; fboundp-guarded so an upstream API rename degrades to a no-op instead
+  ;; of breaking startup.
+  (when (fboundp 'claude-code-ide-make-tool)
+    (claude-code-ide-make-tool
+     :name "emacs_screenshot"
+     :description "Capture a screenshot of the current Emacs GUI frame and return the absolute path of the written image file. View it by calling Read on the returned path. Fails in tty sessions and non-cairo builds."
+     :args '((:name "format" :type string :enum ["png" "svg" "pdf"]
+              :optional t :description "Image format; default png"))
+     :function (lambda (&optional format)
+                 (jotain-screenshot nil (and format (intern format)))))))
 
 ;;; @doc Editor Code Assistant — AI pair-programming client (chat, inline
 ;;; completion, rewrite, MCP) talking to an external `eca' server over

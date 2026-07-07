@@ -48,58 +48,64 @@ in
   # imports = [ ./nix/devenv-emacs-lisp.nix ];
 
   # https://devenv.sh/packages/
-  packages = with pkgs; [
-    # Nix tooling
-    nil
-    nixfmt
+  packages =
+    with pkgs;
+    [
+      # Nix tooling
+      nil
+      nixfmt
 
-    # Nix linting
-    statix
-    deadnix
+      # Nix linting
+      statix
+      deadnix
 
-    # Meson build tooling.  meson-mode and apheleia use the Meson CLI for
-    # formatting, and compile-multi commands assume Ninja-backed builddirs.
-    meson
-    ninja
+      # Meson build tooling.  meson-mode and apheleia use the Meson CLI for
+      # formatting, and compile-multi commands assume Ninja-backed builddirs.
+      meson
+      ninja
 
-    # Bazel/Starlark formatter.  bazel-mode (C-c C-f) and apheleia
-    # format-on-save shell out to buildifier for BUILD/WORKSPACE/.bzl
-    # buffers.
-    buildifier
+      # Bazel/Starlark formatter.  bazel-mode (C-c C-f) and apheleia
+      # format-on-save shell out to buildifier for BUILD/WORKSPACE/.bzl
+      # buffers.
+      buildifier
 
-    # SonarLint language server for in-editor code quality analysis.
-    # Start in Emacs with M-x jotain-sonarlint.
-    sonarlint-ls
+      # SonarLint language server for in-editor code quality analysis.
+      # Start in Emacs with M-x jotain-sonarlint.
+      sonarlint-ls
 
-    # rassumfrassum (`rass`) LSP multiplexer.  init-prog.el routes TS/TSX
-    # and Python eglot connections through it when this binary is on PATH.
-    rassumfrassum
+      # rassumfrassum (`rass`) LSP multiplexer.  init-prog.el routes TS/TSX
+      # and Python eglot connections through it when this binary is on PATH.
+      rassumfrassum
 
-    # ECA server (`eca`) for the eca-emacs client.  On PATH so eca-emacs
-    # uses it directly instead of downloading a server at runtime.
-    eca
+      # ECA server (`eca`) for the eca-emacs client.  On PATH so eca-emacs
+      # uses it directly instead of downloading a server at runtime.
+      eca
 
-    # tagref (`tagref`) cross-reference checker.  Backs the tagref.el Emacs
-    # integration (M-x tagref-check, xref navigation) wired in init-prog.el.
-    tagref
+      # tagref (`tagref`) cross-reference checker.  Backs the tagref.el Emacs
+      # integration (M-x tagref-check, xref navigation) wired in init-prog.el.
+      tagref
 
-    # Dockerfile language server (`docker-langserver`) — Eglot auto-attaches
-    # it in dockerfile-mode via the entry registered in init-prog.el.
-    dockerfile-language-server
+      # Dockerfile language server (`docker-langserver`) — Eglot auto-attaches
+      # it in dockerfile-mode via the entry registered in init-prog.el.
+      dockerfile-language-server
 
-    # Documentation build chain (`just info`, `just docs`).  Declared
-    # here so both the recipe and interactive invocations have them on
-    # PATH; the Nix derivations still pull their own copies.
-    pandoc
-    texinfo
+      # Documentation build chain (`just info`, `just docs`).  Declared
+      # here so both the recipe and interactive invocations have them on
+      # PATH; the Nix derivations still pull their own copies.
+      pandoc
+      texinfo
 
-    # Fonts used by the Emacs configuration (init-ui.el looks them up by name).
-    # These are only active while you're inside the devenv shell; on your real
-    # system they come from home-manager or equivalent.
-    nerd-fonts.jetbrains-mono
-    nerd-fonts.iosevka
-    google-fonts
-  ];
+      # Fonts used by the Emacs configuration (init-ui.el looks them up by name).
+      # These are only active while you're inside the devenv shell; on your real
+      # system they come from home-manager or equivalent.
+      nerd-fonts.jetbrains-mono
+      nerd-fonts.iosevka
+      google-fonts
+    ]
+    # Virtual X server for `just screenshot` — headless capture of the
+    # Nix-built Emacs so an AI agent in a CI/cloud container can see the
+    # rendered frame. Linux-only: Xvfb is X11.
+    ++ lib.optionals stdenv.hostPlatform.isLinux [ xvfb-run ];
 
   # https://devenv.sh/languages/
   languages = {
