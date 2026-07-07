@@ -150,6 +150,30 @@ immediately for writes."
   (add-to-list 'find-file-not-found-functions
                #'jotain-core--auto-create-missing-dirs))
 
+;;;; custom-file writes never prompt
+
+;; `custom-file' (set in init.el) is write-only: the declarative config
+;; in git is the single source of truth, and custom.el is regenerated
+;; from scratch on every `custom-save-all' (e.g. when `package.el'
+;; persists `package-selected-packages' after installing a package).
+;; When more than one session writes it — a daemon and its `emacsclient'
+;; frames, or two Emacsen sharing `var/' — the file changes on disk
+;; underneath the writer, and `custom-save-variables' then blocks on the
+;; "changed on disk; really edit the buffer?" supersession prompt (and
+;; aborts the write with a `file-supersession' error if declined).
+;; Because the file is disposable, clobbering it is the correct outcome,
+;; so neutralize the prompt for the duration of the save.
+(defun jotain-core--custom-save-without-supersession (orig &rest args)
+  "Run ORIG (`custom-save-all') with ARGS, never prompting on disk changes."
+  (let ((saved (symbol-function 'ask-user-about-supersession-threat)))
+    (unwind-protect
+        (progn
+          (fset 'ask-user-about-supersession-threat #'ignore)
+          (apply orig args))
+      (fset 'ask-user-about-supersession-threat saved))))
+(advice-add 'custom-save-all :around
+            #'jotain-core--custom-save-without-supersession)
+
 ;;; @doc Repeat-mode lets you press the trailing key alone after a prefix
 ;;; command (e.g. C-x o o o instead of C-x o C-x o). Built-in,
 ;;; enabled globally. `repeat-exit-timeout' clears the transient map
