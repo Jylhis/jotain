@@ -90,6 +90,10 @@
 (defvar mcp-hub-servers)
 (defvar envrc-mode)
 
+;; Defined later in this file; declared for forward references.
+(defvar devenv-env-global-mode)
+(defvar devenv-env-mode)
+
 ;;;; Customization
 
 (defgroup devenv nil
@@ -376,6 +380,84 @@ time and exists for tests."
            (when (string-match "devenv \\([0-9][0-9.]*\\)" out)
              (match-string 1 out)))
        (error nil)))))
+
+;;;; Auto-activation trust (devenv allow / revoke)
+
+;; devenv 2.1+ gates auto-activation behind a trust database
+;; (~/.local/share/devenv/allowed, managed by `devenv allow' and
+;; `devenv revoke').  The shell hook consults it via the internal
+;; `devenv hook-should-activate' subcommand: exit 0 with the project
+;; path on stdout when trusted, exit 2 when a project exists but is
+;; not trusted, exit 0 with no output when there is no project.  The
+;; native environment loader below honours the same contract so Emacs
+;; never evaluates an untrusted devenv.nix automatically.
+
+(defun devenv--activation-state (exit output)
+  "Map hook-should-activate EXIT code and OUTPUT to a trust state.
+Returns `allowed', `blocked', `no-project', or `unsupported' (a
+devenv without the trust model, e.g. 1.x — treated as permitted
+to preserve that version's behaviour)."
+  (cond
+   ((and (eql exit 0) (not (string-blank-p (or output "")))) 'allowed)
+   ((eql exit 2) 'blocked)
+   ((eql exit 0) 'no-project)
+   (t 'unsupported)))
+
+(defun devenv--activation-permits-p (state)
+  "Return non-nil when trust STATE permits automatic env loading."
+  (memq state '(allowed unsupported)))
+
+(defun devenv--trust-state (root)
+  "Return ROOT's auto-activation trust state (cached).
+See `devenv--activation-state' for the possible values."
+  (devenv--cached
+   root 'trust
+   (lambda ()
+     (if (not (executable-find devenv-executable))
+         'unsupported
+       (let ((default-directory root)
+             (process-environment (append devenv-extra-env
+                                          process-environment)))
+         (with-temp-buffer
+           (let ((exit (ignore-errors
+                         (apply #'call-process devenv-executable
+                                nil '(t nil) nil
+                                (append devenv-global-arguments
+                                        '("hook-should-activate"))))))
+             (devenv--activation-state exit (buffer-string)))))))))
+
+;;;###autoload
+(defun devenv-allow ()
+  "Trust the current project for devenv auto-activation.
+Runs `devenv allow' (recording the project in devenv's trust
+database), then activates the native environment loader in the
+project's buffers when `devenv-env-global-mode' is enabled."
+  (interactive)
+  (let ((root (devenv--root-or-error)))
+    (devenv--call root "allow")
+    (devenv--cache-invalidate root)
+    (when devenv-env-global-mode
+      (dolist (buffer (devenv--project-buffers root))
+        (with-current-buffer buffer
+          (unless devenv-env-mode
+            (devenv-env--turn-on)))))
+    (devenv-modeline--refresh-root root)
+    (message "devenv: allowed %s" (abbreviate-file-name root))))
+
+;;;###autoload
+(defun devenv-revoke ()
+  "Revoke devenv auto-activation trust for the current project.
+Runs `devenv revoke' and drops the native environment from any
+buffer `devenv-env-mode' was managing."
+  (interactive)
+  (let ((root (devenv--root-or-error)))
+    (devenv--call root "revoke")
+    (devenv--cache-invalidate root)
+    (dolist (buffer (devenv-env--buffers root))
+      (with-current-buffer buffer
+        (devenv-env-mode -1)))
+    (devenv-modeline--refresh-root root)
+    (message "devenv: revoked %s" (abbreviate-file-name root))))
 
 ;;;; Introspection: eval, info, search
 
@@ -928,6 +1010,7 @@ reconnect any eglot servers so they see the new environment."
       (devenv-env--refresh root))
      (t
       (message "devenv: introspection cache cleared")))
+    (devenv-modeline--refresh-root root)
     (devenv--offer-eglot-reconnect root)))
 
 ;;;; Native environment loader (opt-in; envrc is the default substrate)
@@ -979,7 +1062,8 @@ variable, skipping names in IGNORED (defaults to
       (setq-local process-environment
                   (append pairs (default-value 'process-environment)))
       (when-let* ((path (devenv-env--path-from-pairs pairs)))
-        (setq-local exec-path path)))))
+        (setq-local exec-path path))
+      (devenv-modeline--update buffer 'no-probe))))
 
 (defun devenv-env--cached-pairs (root)
   "Return cached environment pairs for ROOT, or nil."
@@ -1063,14 +1147,18 @@ without direnv."
   "Enable `devenv-env-mode' when this buffer should manage its env.
 The buffer must sit inside a devenv project that direnv does not
 already cover (no .envrc anywhere above), with the devenv binary
-available.  Never activates in the minibuffer or remote buffers."
-  (when (and (not (minibufferp))
-             (not (file-remote-p default-directory))
-             (executable-find devenv-executable)
-             (devenv-project-root)
-             (not (locate-dominating-file default-directory ".envrc"))
-             (not (bound-and-true-p envrc-mode)))
-    (devenv-env-mode 1)))
+available, and the project must be trusted for auto-activation
+\(`devenv allow'; see `devenv-allow').  Never activates in the
+minibuffer or remote buffers."
+  (let ((root (and (not (minibufferp))
+                   (not (file-remote-p default-directory))
+                   (executable-find devenv-executable)
+                   (devenv-project-root))))
+    (when (and root
+               (not (locate-dominating-file default-directory ".envrc"))
+               (not (bound-and-true-p envrc-mode))
+               (devenv--activation-permits-p (devenv--trust-state root)))
+      (devenv-env-mode 1))))
 
 (defun devenv-env--around-eglot-ensure (orig-fun &rest args)
   "Defer ORIG-FUN (`eglot-ensure', ARGS) while the env is loading.
@@ -1090,6 +1178,156 @@ environment.  Deferred buffers replay once the env is applied."
       (advice-add 'eglot-ensure :around
                   #'devenv-env--around-eglot-ensure)
     (advice-remove 'eglot-ensure #'devenv-env--around-eglot-ensure)))
+
+;;;; Modeline status
+
+(defface devenv-modeline-active-face
+  '((t :inherit success))
+  "Face for the modeline segment when the devenv env is active.")
+
+(defface devenv-modeline-inactive-face
+  '((t :inherit shadow))
+  "Face for the modeline segment when the devenv env is not loaded.")
+
+(defface devenv-modeline-blocked-face
+  '((t :inherit warning))
+  "Face for the modeline segment when auto-activation is blocked.")
+
+(defvar-local devenv-modeline--state nil
+  "Cached devenv modeline state for this buffer.
+Nil when not yet computed; otherwise `none' (not a devenv
+project), `active', `inactive', or `blocked'.")
+
+(defvar devenv-modeline--map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [mode-line mouse-1] #'devenv)
+    map)
+  "Keymap for the devenv modeline segment; mouse-1 opens the menu.")
+
+(defun devenv-modeline--compute-state (root active trust-state)
+  "Return the modeline state for a buffer.
+ROOT is the devenv project root or nil, ACTIVE non-nil when the
+buffer's environment already carries the devenv shell, and
+TRUST-STATE the cached `devenv--activation-state' value (or
+nil when unknown)."
+  (cond ((null root) 'none)
+        (active 'active)
+        ((eq trust-state 'blocked) 'blocked)
+        (t 'inactive)))
+
+(defun devenv-modeline--format (state)
+  "Return the mode-line string for modeline STATE."
+  (pcase state
+    ('active
+     (propertize " devenv[on]"
+                 'face 'devenv-modeline-active-face
+                 'help-echo "devenv environment active\nmouse-1: devenv menu"
+                 'mouse-face 'mode-line-highlight
+                 'local-map devenv-modeline--map))
+    ('inactive
+     (propertize " devenv[off]"
+                 'face 'devenv-modeline-inactive-face
+                 'help-echo "devenv project, environment not loaded\n\
+mouse-1: devenv menu"
+                 'mouse-face 'mode-line-highlight
+                 'local-map devenv-modeline--map))
+    ('blocked
+     (propertize " devenv[!]"
+                 'face 'devenv-modeline-blocked-face
+                 'help-echo "devenv project not trusted — M-x devenv-allow\n\
+mouse-1: devenv menu"
+                 'mouse-face 'mode-line-highlight
+                 'local-map devenv-modeline--map))
+    (_ "")))
+
+(defun devenv-modeline--cached-trust (root)
+  "Return ROOT's trust state from the cache, or nil when unknown.
+Never runs devenv: modeline code must stay subprocess-free on
+the synchronous path."
+  (cdr (gethash (cons root 'trust) devenv--cache)))
+
+(defvar devenv-modeline--probing (make-hash-table :test #'equal)
+  "Roots whose trust state is being resolved in the background.")
+
+(defun devenv-modeline--probe-trust (root)
+  "Resolve ROOT's trust state asynchronously, then refresh buffers."
+  (unless (gethash root devenv-modeline--probing)
+    (puthash root t devenv-modeline--probing)
+    (devenv--run root '("hook-should-activate")
+                 (lambda (exit output)
+                   (remhash root devenv-modeline--probing)
+                   (puthash (cons root 'trust)
+                            (cons (float-time)
+                                  (devenv--activation-state exit output))
+                            devenv--cache)
+                   (devenv-modeline--refresh-root root))
+                 "trust-probe")))
+
+(defun devenv-modeline--update (&optional buffer no-probe)
+  "Recompute the devenv modeline state for BUFFER.
+Unless NO-PROBE, kick an asynchronous trust probe when the state
+is unknown so blocked projects eventually show devenv[!]."
+  (with-current-buffer (or buffer (current-buffer))
+    (let ((root (devenv-project-root)))
+      (setq devenv-modeline--state
+            (devenv-modeline--compute-state
+             root
+             (and root (getenv "DEVENV_PROFILE"))
+             (and root (devenv-modeline--cached-trust root))))
+      (when (and root (not no-probe)
+                 (eq devenv-modeline--state 'inactive)
+                 (null (devenv-modeline--cached-trust root))
+                 (executable-find devenv-executable))
+        (devenv-modeline--probe-trust root))
+      devenv-modeline--state)))
+
+(defun devenv-modeline--refresh-root (root)
+  "Recompute the modeline state of every buffer under ROOT."
+  (when (bound-and-true-p devenv-modeline-mode)
+    (dolist (buffer (devenv--project-buffers root))
+      (devenv-modeline--update buffer 'no-probe))
+    (force-mode-line-update t)))
+
+(defun devenv-modeline--segment ()
+  "Return the devenv status string for the current buffer.
+Computes the state lazily on first render; the redisplay path
+never runs subprocesses (probes happen from `find-file-hook')."
+  (unless devenv-modeline--state
+    (devenv-modeline--update nil 'no-probe))
+  (devenv-modeline--format devenv-modeline--state))
+
+(defun devenv-modeline--on-find-file ()
+  "Compute this buffer's modeline state, probing trust if needed."
+  (devenv-modeline--update))
+
+(defconst devenv-modeline--construct
+  '(devenv-modeline-mode (:eval (devenv-modeline--segment)))
+  "Mode-line construct injected into `mode-line-misc-info'.")
+
+;;;###autoload
+(define-minor-mode devenv-modeline-mode
+  "Show the devenv environment status in the mode line.
+Displays devenv[on] when the buffer's environment carries the
+devenv shell (loaded by envrc/direnv or `devenv-env-mode'),
+devenv[off] in a devenv project whose environment is not loaded,
+and devenv[!] when auto-activation trust has been denied (run
+\\[devenv-allow] to trust the project).  Outside devenv projects
+the segment is empty."
+  :global t
+  (if devenv-modeline-mode
+      (progn
+        (add-to-list 'mode-line-misc-info devenv-modeline--construct t)
+        (add-hook 'find-file-hook #'devenv-modeline--on-find-file)
+        (add-hook 'dired-mode-hook #'devenv-modeline--on-find-file)
+        ;; Invalidate so already-open buffers recompute lazily.
+        (dolist (buffer (buffer-list))
+          (with-current-buffer buffer
+            (setq devenv-modeline--state nil))))
+    (setq mode-line-misc-info
+          (delete devenv-modeline--construct mode-line-misc-info))
+    (remove-hook 'find-file-hook #'devenv-modeline--on-find-file)
+    (remove-hook 'dired-mode-hook #'devenv-modeline--on-find-file))
+  (force-mode-line-update t))
 
 ;;;; Eglot: serve devenv.nix with `devenv lsp'
 
@@ -1224,8 +1462,11 @@ mcp-hub, then M-x gptel-mcp-connect exposes its tools to gptel"
     ("$" "Show invocation log" devenv-show-log)]]
   ["Environment"
    [("r" "Reload environment" devenv-reload)
-    ("e" "Native env loader (global)" devenv-env-global-mode)]
-   [("M" "Register MCP server" devenv-mcp-setup)]]
+    ("e" "Native env loader (global)" devenv-env-global-mode)
+    ("m" "Modeline status (global)" devenv-modeline-mode)]
+   [("a" "Allow auto-activation" devenv-allow)
+    ("x" "Revoke auto-activation" devenv-revoke)
+    ("M" "Register MCP server" devenv-mcp-setup)]]
   ["Maintenance"
    [("U" "Update inputs (devenv.lock)" devenv-update)
     ("G" "Garbage-collect generations" devenv-gc)]]

@@ -29,6 +29,8 @@ so devenv's TUI stays out of the machine-readable output.
 | `i` / `/` / `:` | `devenv-info` / `devenv-search` / `devenv-eval` | Introspection: environment summary, package/option search, evaluate any config attribute to pretty-printed JSON |
 | `r` | `devenv-reload` | Refresh the environment (below) |
 | `e` | `devenv-env-global-mode` | Toggle the native environment loader (below) |
+| `m` | `devenv-modeline-mode` | Toggle the mode-line status segment (below) |
+| `a` / `x` | `devenv-allow` / `devenv-revoke` | Trust / untrust the project for auto-activation (below) |
 | `M` | `devenv-mcp-setup` | Register the project's MCP server with mcp.el |
 | `U` / `G` | `devenv-update` / `devenv-gc` | Update `devenv.lock` inputs / garbage-collect old generations |
 | `$` | `devenv-show-log` | Every CLI invocation is recorded in `*devenv log*` |
@@ -69,6 +71,38 @@ predicate skips any project with a `.envrc`, so it can never
 double-manage a buffer envrc owns. While a fetch is in flight,
 `eglot-ensure` is deferred and replayed once the environment lands, so
 language servers never start with the wrong `PATH`.
+
+## Auto-activation trust (`devenv allow` / `revoke`)
+
+devenv 2.1+ gates shell auto-activation behind a per-project trust
+database (`~/.local/share/devenv/allowed`), managed with `devenv
+allow` and `devenv revoke`. The integration honours the same
+contract: the native loader (`devenv-env-global-mode`) consults the
+internal `devenv hook-should-activate` check and **never evaluates an
+untrusted devenv.nix automatically** — exactly like the zsh/fish/nu
+shell hooks. `devenv-allow` (`C-c v a`) trusts the project and
+immediately activates the loader in its buffers; `devenv-revoke`
+(`C-c v x`) untrusts it and drops the native environment. On devenv
+versions without the trust model (< 2.1) the loader behaves as
+before. Note that the direnv/envrc path has its own consent gate
+(`envrc-allow` → `direnv allow`), independent of devenv's database.
+
+## Mode-line status
+
+`devenv-modeline-mode` (global, enabled by `init-devenv` at startup)
+adds a status segment to the mode line for buffers inside a devenv
+project:
+
+- **`devenv[on]`** — the buffer's environment carries the devenv
+  shell (loaded by envrc/direnv or the native loader; detected via
+  `DEVENV_PROFILE`).
+- **`devenv[off]`** — devenv project, environment not loaded.
+- **`devenv[!]`** — auto-activation trust denied; run `devenv-allow`.
+
+Outside devenv projects the segment is empty. `mouse-1` on the
+segment opens the `devenv` transient. The redisplay path is
+subprocess-free: trust is probed once per project in the background
+from `find-file-hook` and cached.
 
 ## LSP for devenv.nix
 

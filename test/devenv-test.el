@@ -249,6 +249,59 @@
   (should (equal (devenv--mcp-server-name "/home/u/proj/") "devenv-proj"))
   (should (equal (devenv--mcp-server-name "/home/u/proj") "devenv-proj")))
 
+;;;; Auto-activation trust (devenv allow / revoke / hook-should-activate)
+
+(ert-deftest devenv-test-activation-state ()
+  "Exit code and stdout of hook-should-activate map to trust states.
+Exit 0 with the project path on stdout means trusted; exit 2
+means the project exists but is not trusted; exit 0 with empty
+output means no project; anything else (including a missing
+subcommand on devenv 1.x) is `unsupported'."
+  (should (eq (devenv--activation-state 0 "/home/u/proj\n") 'allowed))
+  (should (eq (devenv--activation-state 2 "") 'blocked))
+  (should (eq (devenv--activation-state 0 "") 'no-project))
+  (should (eq (devenv--activation-state 0 "  \n") 'no-project))
+  (should (eq (devenv--activation-state 1 "error: unrecognized subcommand")
+              'unsupported))
+  (should (eq (devenv--activation-state nil "") 'unsupported)))
+
+(ert-deftest devenv-test-activation-state-permits-loading ()
+  "Trusted and pre-trust-model devenv versions permit auto-loading."
+  (should (devenv--activation-permits-p 'allowed))
+  (should (devenv--activation-permits-p 'unsupported))
+  (should-not (devenv--activation-permits-p 'blocked))
+  (should-not (devenv--activation-permits-p 'no-project)))
+
+;;;; Modeline status
+
+(ert-deftest devenv-test-modeline-compute-state ()
+  "Modeline state derives from root, active env, and trust state."
+  ;; Not in a devenv project.
+  (should (eq (devenv-modeline--compute-state nil nil nil) 'none))
+  ;; Environment loaded (DEVENV_PROFILE visible in the buffer).
+  (should (eq (devenv-modeline--compute-state "/p/" "/nix/store/x" nil)
+              'active))
+  ;; Project present, trust denied.
+  (should (eq (devenv-modeline--compute-state "/p/" nil 'blocked)
+              'blocked))
+  ;; Project present, env not loaded (trusted, unknown, or no info).
+  (should (eq (devenv-modeline--compute-state "/p/" nil 'allowed)
+              'inactive))
+  (should (eq (devenv-modeline--compute-state "/p/" nil nil) 'inactive)))
+
+(ert-deftest devenv-test-modeline-format ()
+  "Each modeline state renders its label; `none' renders empty."
+  (should (equal (devenv-modeline--format 'none) ""))
+  (should (string-match-p "devenv\\[on\\]" (devenv-modeline--format 'active)))
+  (should (string-match-p "devenv\\[off\\]"
+                          (devenv-modeline--format 'inactive)))
+  (should (string-match-p "devenv\\[!\\]"
+                          (devenv-modeline--format 'blocked)))
+  ;; Non-empty segments carry a leading space so they never glue onto
+  ;; the previous mode-line element.
+  (dolist (state '(active inactive blocked))
+    (should (string-prefix-p " " (devenv-modeline--format state)))))
+
 (ert-deftest devenv-test-mcp-command-quoting ()
   "The MCP launch command shell-quotes both the root and the binary."
   (let ((devenv-executable "/opt/my tools/devenv"))
