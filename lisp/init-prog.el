@@ -46,24 +46,53 @@
   :custom
   (jit-lock-defer-time 0.05))
 
-;;; @doc Auto-routes `foo-mode` → `foo-ts-mode` whenever the grammar is
-;;; loadable. Grammar installation is suppressed because Nix provides
-;;; them: the full distribution's `treesit-extra-load-path` is set by
-;;; Nixpkgs' site-start.el to the bundled grammar directory. We use only
-;;; the alist hook — `global-treesit-auto-mode` advises `set-auto-mode-0`
-;;; and costs ~3.6 s per find-file in this config.
-(use-package treesit-auto
-  :demand t
-  :custom (treesit-auto-install nil)
-  :config
-  ;; Populate auto-mode-alist with foo-ts-mode entries for every grammar
-  ;; Nix provides.  This is sufficient — global-treesit-auto-mode is NOT
-  ;; used because it advises set-auto-mode-0 with a hook that rebuilds
-  ;; major-mode-remap-alist on every call (62 treesit-ready-p checks,
-  ;; ~1.2 s), and set-auto-mode-0 fires 3× per file open, adding ~3.6 s
-  ;; per find-file.  The alist entries achieve the same mode routing with
-  ;; zero overhead.
-  (treesit-auto-add-to-auto-mode-alist 'all))
+;;; @doc Route classic major modes to their tree-sitter variants.  We do
+;;; this ourselves rather than via `treesit-auto': Nix provides every
+;;; grammar (nothing to install), and the routing is a short
+;;; `major-mode-remap-alist' loop, the same mechanism `init-lang-go.el'
+;;; already uses.  Remapping the *chosen* mode means we own no file
+;;; regexes: each classic mode's own `auto-mode-alist' /
+;;; `interpreter-mode-alist' entry stays the source of truth and we
+;;; simply redirect it to the `-ts-mode'.  Guarded by `treesit-ready-p'
+;;; so a curated/lite build lacking a grammar falls back to the classic
+;;; mode automatically.
+(declare-function treesit-ready-p "treesit" (language &optional quiet))
+
+(defvar jotain-prog-ts-remaps
+  '((bash        bash-ts-mode        sh-mode)
+    (cmake       cmake-ts-mode       cmake-mode)
+    (dockerfile  dockerfile-ts-mode  dockerfile-mode)
+    (json        json-ts-mode        js-json-mode json-mode)
+    (toml        toml-ts-mode        conf-toml-mode)
+    (yaml        yaml-ts-mode        yaml-mode)
+    ;; Languages with a dedicated `init-lang-*' file already route
+    ;; themselves via `:mode'; listed here belt-and-suspenders so any
+    ;; stray classic-mode path (a package autoload, a stale
+    ;; `package-quickstart' entry) still lands in the tree-sitter mode.
+    (python      python-ts-mode      python-mode)
+    (rust        rust-ts-mode        rust-mode)
+    (css         css-ts-mode         css-mode scss-mode)
+    (javascript  js-ts-mode          js-mode javascript-mode js2-mode)
+    (typescript  typescript-ts-mode  typescript-mode))
+  "Tree-sitter routing table: entries (LANG TS-MODE CLASSIC-MODE...).
+For each entry whose grammar LANG is loadable, every CLASSIC-MODE is
+remapped to TS-MODE through `major-mode-remap-alist'.  Go is handled in
+`init-lang-go.el', which additionally strips classic go-mode autoloads.")
+
+(defun jotain-prog--apply-ts-remaps ()
+  "Populate `major-mode-remap-alist' from `jotain-prog-ts-remaps'.
+Only remaps a language whose grammar is loadable (`treesit-ready-p') and
+whose tree-sitter mode is defined, so a build without a given grammar
+leaves the classic mode in place."
+  (dolist (entry jotain-prog-ts-remaps)
+    (let ((lang (car entry))
+          (ts-mode (cadr entry))
+          (classics (cddr entry)))
+      (when (and (fboundp ts-mode) (treesit-ready-p lang t))
+        (dolist (classic classics)
+          (add-to-list 'major-mode-remap-alist (cons classic ts-mode)))))))
+
+(jotain-prog--apply-ts-remaps)
 
 ;; Async native-comp workers run without site files, so they never pick up
 ;; the `treesit-extra-load-path' that Nixpkgs' site-start.el set for the
@@ -79,14 +108,12 @@
 
 ;;; @doc Log to *Messages* whenever a buffer lands in a classic major
 ;;; mode even though a tree-sitter variant with a loadable grammar
-;;; exists. Surfaces gaps where the config should route to `-ts-mode'.
-;;; Set `jotain-prog-warn-non-ts-mode' to nil to silence.
-(eval-when-compile (require 'treesit-auto))
-(declare-function treesit-ready-p "treesit" (language &optional quiet))
-(declare-function treesit-auto-recipe-ts-mode "treesit-auto" (recipe))
-(declare-function treesit-auto-recipe-lang "treesit-auto" (recipe))
-(declare-function treesit-auto-recipe-remap "treesit-auto" (recipe))
-
+;;; exists: a gap detector for a language not yet in
+;;; `jotain-prog-ts-remaps' (routed languages already sit in their
+;;; `-ts-mode' and never reach here).  Self-contained: it derives the
+;;; candidate `foo-ts-mode' and grammar name from the current mode name,
+;;; so it needs no external recipe database.  Set
+;;; `jotain-prog-warn-non-ts-mode' to nil to silence.
 (defcustom jotain-prog-warn-non-ts-mode t
   "When non-nil, log if a classic major mode is used despite a ready ts-mode.
 The notice goes to *Messages* on `after-change-major-mode-hook' only
@@ -94,37 +121,23 @@ when the corresponding tree-sitter grammar is actually loadable."
   :type 'boolean
   :group 'jotain)
 
-(defvar jotain-prog--non-ts-remap-table nil
-  "Hash table mapping a classic major-mode symbol to (TS-MODE . LANG).
-Built once from `treesit-auto-recipe-list'.")
-
-(defun jotain-prog--build-non-ts-remap-table ()
-  "Populate `jotain-prog--non-ts-remap-table' from treesit-auto recipes."
-  (when (bound-and-true-p treesit-auto-recipe-list)
-    (let ((table (make-hash-table :test #'eq)))
-      (dolist (recipe treesit-auto-recipe-list)
-        (let ((ts-mode (treesit-auto-recipe-ts-mode recipe))
-              (lang (treesit-auto-recipe-lang recipe))
-              (remap (treesit-auto-recipe-remap recipe)))
-          (dolist (classic (if (proper-list-p remap) remap (list remap)))
-            (when (and classic ts-mode lang)
-              (puthash classic (cons ts-mode lang) table)))))
-      (setq jotain-prog--non-ts-remap-table table))))
-
 (defun jotain-prog--warn-non-ts-mode ()
   "Log when `major-mode' is classic but a ready tree-sitter mode exists.
-Runs on `after-change-major-mode-hook'; O(1) hash lookup on the miss path."
-  (when (and jotain-prog-warn-non-ts-mode
-             jotain-prog--non-ts-remap-table)
-    (when-let* ((entry (gethash major-mode jotain-prog--non-ts-remap-table))
-                (ts-mode (car entry))
-                (lang (cdr entry))
-                ((fboundp ts-mode))
-                ((treesit-ready-p lang t)))
-      (message "jotain: %s opened in %s; %s (tree-sitter, grammar `%s') is available"
-               (buffer-name) major-mode ts-mode lang))))
+Derives the candidate `foo-ts-mode' and grammar name by stripping the
+`-mode' suffix; a no-op unless that mode is defined and its grammar
+loads.  Best-effort: it can't spot irregular names (`sh-mode' maps to
+`bash-ts-mode'), but those are remapped in `jotain-prog-ts-remaps' anyway."
+  (when jotain-prog-warn-non-ts-mode
+    (let ((name (symbol-name major-mode)))
+      (when (and (string-suffix-p "-mode" name)
+                 (not (string-suffix-p "-ts-mode" name)))
+        (let* ((base (string-remove-suffix "-mode" name))
+               (ts-mode (intern-soft (concat base "-ts-mode")))
+               (lang (intern base)))
+          (when (and ts-mode (fboundp ts-mode) (treesit-ready-p lang t))
+            (message "jotain: %s opened in %s; %s (tree-sitter, grammar `%s') is available"
+                     (buffer-name) major-mode ts-mode lang)))))))
 
-(jotain-prog--build-non-ts-remap-table)
 (add-hook 'after-change-major-mode-hook #'jotain-prog--warn-non-ts-mode)
 
 ;;; @doc Code folding driven by treesit syntax nodes — folds along
@@ -322,8 +335,11 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
   ;; sensible defaults. Add only when you want a specific server name.
   (add-to-list 'eglot-server-programs
                '((go-ts-mode go-mod-ts-mode go-work-ts-mode) . ("gopls")))
+  ;; Dockerfile buffers are remapped to `dockerfile-ts-mode' (see
+  ;; `jotain-prog-ts-remaps'); key the server on it, keeping the classic
+  ;; `dockerfile-mode' too so a build without the grammar still matches.
   (add-to-list 'eglot-server-programs
-               '(dockerfile-mode . ("docker-langserver" "--stdio")))
+               '((dockerfile-ts-mode dockerfile-mode) . ("docker-langserver" "--stdio")))
 
   ;; gopls workspace configuration is set buffer-locally in init-lang-go
   ;; (`jotain-go--eglot-workspace-config') rather than globally here, so
