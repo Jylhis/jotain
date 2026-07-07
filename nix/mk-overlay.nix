@@ -37,10 +37,11 @@ let
           epkgs.tagref
           (
             if curatedGrammars then
-              # Only the grammars the Jotain config routes via
-              # treesit-auto / combobulate (lisp/init-prog.el,
-              # init-lang-*.el). Languages whose grammar is dropped fall
-              # back gracefully to their non-ts mode.
+              # Only the grammars the Jotain config routes via the
+              # `jotain-prog-ts-remaps' table, init-lang-* `:mode' entries,
+              # or combobulate (lisp/init-prog.el, init-lang-*.el).
+              # Languages whose grammar is dropped fall back gracefully to
+              # their non-ts mode.
               epkgs.treesit-grammars.with-grammars (
                 p: with p; [
                   tree-sitter-bash

@@ -65,9 +65,8 @@ goimports/gofmt formatter apheleia runs on save."
 
 ;; go.work: Emacs 31 adds `go-work-ts-mode'; on Emacs 30 fall back to
 ;; `go-mod-ts-mode', whose gomod grammar handles the near-identical
-;; syntax.  Runs after treesit-auto (loaded in init-prog), so the entry
-;; prepends ahead of the go-work-ts-mode entry treesit-auto registers
-;; even on Emacs 30.
+;; syntax.  This prepends to `auto-mode-alist' so it wins over any
+;; go-work-ts-mode entry Emacs registers on its own.
 (add-to-list 'auto-mode-alist
              (cons "/go\\.work\\'"
                    (if (fboundp 'go-work-ts-mode)
