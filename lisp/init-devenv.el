@@ -36,16 +36,22 @@
 ;;; devenv.nix buffers are routed to the bundled `devenv lsp` server
 ;;; while `nil` keeps serving other Nix files, and `devenv-mcp-setup`
 ;;; registers the project's `devenv mcp` server with mcp.el so gptel
-;;; can call its tools. Everything degrades to a clean error when the
-;;; `devenv` binary is not on PATH.
+;;; can call its tools. `devenv-allow`/`devenv-revoke` manage devenv
+;;; 2.1's auto-activation trust database, which also gates the native
+;;; env loader, and `devenv-modeline-mode` (enabled here) shows the
+;;; per-buffer status — devenv[on]/[off]/[!] — in the mode line.
+;;; Everything degrades to a clean error when the `devenv` binary is
+;;; not on PATH.
 (use-package devenv
   :ensure nil ; In-repo library (lisp/devenv.el)
   :defer t
   :commands (devenv-task-run devenv-script-run devenv-test devenv-build
              devenv-up devenv-down devenv-processes devenv-processes-logs
              devenv-info devenv-search devenv-eval devenv-reload
-             devenv-eglot-setup devenv-mcp-setup devenv-env-global-mode)
+             devenv-allow devenv-revoke devenv-eglot-setup
+             devenv-mcp-setup devenv-env-global-mode)
   :bind ("C-c v" . devenv)
+  :hook (after-init . devenv-modeline-mode)
   :init
   ;; Route devenv.nix buffers to `devenv lsp' once eglot is loaded.
   ;; Gated on the binary so a machine without devenv keeps eglot's
