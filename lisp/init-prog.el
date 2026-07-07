@@ -555,11 +555,6 @@ outside a project."
   (add-to-list 'apheleia-formatters
                '(buildifier . ("buildifier" "-path" (or filepath "BUILD"))))
   (add-to-list 'apheleia-mode-alist '(bazel-mode . buildifier))
-  ;; Apheleia ships gofmt/goimports/gofumpt formatters but maps Go
-  ;; modes to plain gofmt; prepend a goimports mapping (gofmt plus
-  ;; import management) to shadow it.  The binary comes from the
-  ;; project/host PATH, like gopls and dlv.
-  (add-to-list 'apheleia-mode-alist '(go-ts-mode . goimports))
   (apheleia-global-mode 1)
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
