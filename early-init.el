@@ -120,10 +120,10 @@
      (convert-standard-filename
       (expand-file-name "var/eln-cache/" user-emacs-directory)))))
 
-;; Tree-sitter grammars provided out-of-band (Nix sets TREE_SITTER_DIR).
-(defvar treesit-extra-load-path nil)
-(when-let* ((ts-dir (getenv "TREE_SITTER_DIR")))
-  (setq treesit-extra-load-path (list ts-dir)))
+;; Tree-sitter grammars come from Nixpkgs' own site-start.el, which sets
+;; `treesit-extra-load-path' to the bundled grammar directory in the full
+;; distribution (see init-prog.el, which propagates that path to async
+;; native-comp workers).  No `TREE_SITTER_DIR' handling is needed here.
 
 ;; Ghostty advertises TERM=xterm-ghostty but Emacs doesn't ship a matching
 ;; term/xterm-ghostty.el. Aliasing to xterm-256color makes term/xterm.el
