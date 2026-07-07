@@ -704,6 +704,11 @@ here so all LSP wiring is visible in one place; per-language
 mode regexes stay in their `init-lang-*` file. C-c r is the
 refactor prefix (rename/format/code-actions).
 
+Beyond the curated hook list, `jotain-prog--maybe-eglot-ensure'
+auto-starts eglot for ANY project file whose language server is on the
+buffer's (envrc-applied) PATH — so enabling `languages.X.enable' in a
+project's devenv lights up its LSP in Emacs with no per-language config.
+
 ### `consult-eglot`
 
 Consult-driven workspace symbol search — C-M-. opens an
@@ -713,6 +718,14 @@ orderless-filtered list of symbols across the LSP workspace.
 
 Embark integration for consult-eglot — gives every workspace
 symbol an action menu (jump to def, find refs, rename, …).
+
+### `dape`
+
+Debug Adapter Protocol client (GNU ELPA). Ships built-in
+configs for common adapters including Delve (`dlv dap') keyed to
+`go-mode'/`go-ts-mode', so `M-x dape' offers a Go launch config with
+no extra setup — `dlv' just needs to be on PATH (from the project
+environment). `C-c d' is the debug prefix.
 
 ### `flymake` *(built-in / Nix)*
 
@@ -756,7 +769,10 @@ trailing whitespace). Built-in since Emacs 30.
 Apply the project's `.envrc` / Nix shell to every buffer in
 that project. Strictly better than direnv-mode because the env
 is buffer-local, not global — multiple projects can coexist in
-one Emacs without leaking environment.
+one Emacs without leaking environment. `C-c e' is envrc's command
+prefix: `C-c e a' allow, `C-c e r' reload, `C-c e R' reload-all
+(the last picks up a `direnv allow' run in a terminal). Manual
+allow is kept as the secure default — no auto-allow whitelist.
 
 ### `apheleia`
 
@@ -1055,13 +1071,6 @@ Dockerfile major mode — syntax highlighting plus build
 commands (`M-x dockerfile-build-buffer`). The runtime command
 name comes from `jotain-docker-backend`.
 
-### `docker`
-
-Magit-style transient menu for containers, images, volumes
-and networks. `C-c d` opens the dispatcher; commands respect
-`jotain-docker-backend` (docker vs podman, including compose and
-the TRAMP method used to open files inside a running container).
-
 ### `docker-compose-mode`
 
 YAML-flavoured docker-compose syntax with awareness of compose
@@ -1136,11 +1145,6 @@ analysis pipeline emits its own plotting scripts.
 
 ## `init-lang-systems.el` — Systems (Go, C/C++, Haskell, Zig)
 
-### `go-mode`
-
-Go major mode. Eglot wires gopls in init-prog so all language
-servers are configured in one place.
-
 ### `cc-mode` *(built-in / Nix)*
 
 Built-in C/C++ mode with a Stroustrup style bias. The header
@@ -1167,6 +1171,29 @@ Haskell editing session from costing every Emacs start.
 
 Tree-sitter Zig mode (MELPA). Eglot wires zls in init-prog;
 format-on-save runs `zig fmt' through apheleia.
+
+## `init-lang-go.el` — Other
+
+### `go-ts-mode` *(built-in / Nix)*
+
+Built-in tree-sitter Go modes. `go-mod-ts-mode' lives in the
+same `go-ts-mode' file, so both are registered from this one block.
+Eglot wires gopls in init-prog (for both modes); format-on-save runs
+gofmt through apheleia. No indent-offset is set: gofmt uses tabs and
+the built-in default already matches.
+
+### `go-tag`
+
+Struct-tag editing (`json:"..."', `db:"..."', …). gopls has no
+equivalent; the underlying `gomodifytags' binary comes from the
+project environment. Bound under the buffer-local `C-c C-t' Go
+tooling prefix so it never shadows the global `C-c t' theme toggle.
+
+### `gotest`
+
+Point-aware test runner. Complements the project-wide
+compile-multi "go test" commands with single-test / single-file runs.
+Shares the `C-c C-t' Go tooling prefix with go-tag.
 
 ## `init-snippets.el` — Other
 

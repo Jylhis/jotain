@@ -43,10 +43,11 @@ init-org          org, org-modern, capture templates
 init-lang-nix
 init-lang-rust
 init-lang-python
+init-lang-go
 init-lang-web         TS/TSX/CSS/HTML/JSON
 init-lang-devops      Dockerfile, terraform, just, ansible, bazel
 init-lang-data        yaml, csv, sql, jinja2, gnuplot
-init-lang-systems     Go, C/C++, CMake, Haskell, Zig
+init-lang-systems     C/C++, CMake, Meson, Haskell, Zig
 ```
 
 ## Core modules
@@ -89,7 +90,7 @@ The vertico stack on the minibuffer side, corfu + cape on the in-buffer side, pl
 
 ### `init-prog`
 
-The shared substrate for programming modes: `prog-mode` hooks, `treesit` setup, `eglot`, `flymake`, `eldoc`, `apheleia` for format-on-save, `compile`. Per-language `eglot-ensure` hooks live here so all LSP wiring is in one place; per-language mode settings live in `init-lang-*.el`. When the `rass` binary (rassumfrassum, shipped in the devenv shell) is on `PATH`, `tsx-ts-mode` / `typescript-ts-mode` / `typescript-mode` buffers are routed through it to run `typescript-language-server` alongside whichever of `eslint-lsp` and `tailwindcss-language-server` are also on `PATH`, and Python buffers run the bundled `rass python` preset (basedpyright + ruff) when both binaries are present; any missing prerequisite makes eglot fall back to its built-in single-server lookup, so projects using `pylsp` / `pyright` / unguarded tsserver keep working unchanged. Also provides `jotain-sonarlint` for on-demand SonarLint analysis via the `sonarlint-ls` language server — SonarCloud connected mode is configured per-project via `eglot-workspace-configuration` in `.dir-locals.el`.
+The shared substrate for programming modes: `prog-mode` hooks, `treesit` setup, `eglot`, `flymake`, `eldoc`, `apheleia` for format-on-save, `compile`. Per-language `eglot-ensure` hooks live here so all LSP wiring is in one place; per-language mode settings live in `init-lang-*.el`. When the `rass` binary (rassumfrassum, shipped in the devenv shell) is on `PATH`, `tsx-ts-mode` / `typescript-ts-mode` / `typescript-mode` buffers are routed through it to run `typescript-language-server` alongside whichever of `eslint-lsp` and `tailwindcss-language-server` are also on `PATH`, and Python buffers run the bundled `rass python` preset (basedpyright + ruff) when both binaries are present; any missing prerequisite makes eglot fall back to its built-in single-server lookup, so projects using `pylsp` / `pyright` / unguarded tsserver keep working unchanged. Also provides `jotain-sonarlint` for on-demand SonarLint analysis via the `sonarlint-ls` language server — SonarCloud connected mode is configured per-project via `eglot-workspace-configuration` in `.dir-locals.el`. Debugging is handled by `dape` (Debug Adapter Protocol) under the `C-c d` prefix; it ships built-in adapter configs (e.g. Delve for Go via `dlv dap`), and the adapter binary comes from the project environment.
 
 ### `init-snippets`
 
@@ -130,10 +131,11 @@ Each `init-lang-*.el` file pins `:mode` regexes and provides font-lock for a gro
 - **`init-lang-nix`** — `nix-ts-mode`. Formatting via apheleia (which ships a `nixfmt` entry).
 - **`init-lang-rust`** — `rust-ts-mode` (built-in) plus Cargo command wrappers.
 - **`init-lang-python`** — `python-ts-mode` (built-in), the interpreter set to `python3`. The LSP server (pyright/basedpyright/ruff-lsp) comes from the project environment, not from this config.
+- **`init-lang-go`** — `go-ts-mode` / `go-mod-ts-mode` (built-in), eglot wires `gopls` in `init-prog` with a workspace config that turns on inlay hints, staticcheck, and the `unusedparams`/`shadow`/`nilness` analyses. Format-on-save runs gofmt through apheleia. Adds `go-tag` (struct-tag editing) and `gotest` (point-aware test runs) under the buffer-local `C-c C-t` prefix. gopls / dlv / gotests / gomodifytags come from the project environment, not from this config.
 - **`init-lang-web`** — `typescript-ts-mode`, `tsx-ts-mode`, CSS, HTML, JSON, and related tree-sitter modes.
-- **`init-lang-devops`** — Dockerfile, docker-compose, Terraform (`*.tf`), gitlab-ci, justfile, Ansible, Bazel/Starlark (`BUILD`, `WORKSPACE`, `MODULE.bazel`, `*.bzl`, `.bazelrc`, …). Also exposes the `docker` Magit-style TUI on `C-c d` and a `jotain-docker-backend` defcustom (`'podman` by default, set to `'docker` for classic Docker) that switches the runtime command, compose command, and TRAMP method. Bazel buffers format on save via buildifier (centralised through apheleia in `init-prog`).
+- **`init-lang-devops`** — Dockerfile, docker-compose, Terraform (`*.tf`), gitlab-ci, justfile, Ansible, Bazel/Starlark (`BUILD`, `WORKSPACE`, `MODULE.bazel`, `*.bzl`, `.bazelrc`, …). A `jotain-docker-backend` defcustom (`'podman` by default, set to `'docker` for classic Docker) switches the runtime command used by `dockerfile-mode`. Bazel buffers format on save via buildifier (centralised through apheleia in `init-prog`).
 - **`init-lang-data`** — YAML, CSV (with `csv-align-mode`), SQL (`sql-indent`), Jinja2, gnuplot.
-- **`init-lang-systems`** — Go (`go-mode`), C/C++ (`cc-mode`), CMake, Haskell, Zig (`zig-ts-mode`, eglot wires `zls`).
+- **`init-lang-systems`** — C/C++ (`cc-mode`), CMake, Meson, Haskell, Zig (`zig-ts-mode`, eglot wires `zls`).
 
 ## Adding a new module
 

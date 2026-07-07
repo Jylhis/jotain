@@ -97,8 +97,9 @@ Region active → deactivate it.  Otherwise call regular
     ;; C-c <letter> — global user namespace.
     "C-c a"     "org-agenda"
     "C-c c"     "org-capture"
-    "C-c d"     "dirvish"
+    "C-c d"     "debug"
     "C-c D"     "dirvish-side"
+    "C-c f"     "dirvish"
     "C-c g"     "magit-file"
     "C-c h"     "consult-history"
     "C-c i"     "consult-info"
