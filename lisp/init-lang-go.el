@@ -74,17 +74,36 @@ goimports/gofmt formatter apheleia runs on save."
                        'go-work-ts-mode
                      'go-mod-ts-mode)))
 
-;; Route any *classic* Go major mode to its built-in tree-sitter
-;; equivalent.  The classic `go-mode' package is only ever pulled in as
-;; a transitive dependency of gotest/go-tag below; nothing in this
-;; config selects it deliberately.  Without this remap, a stale
-;; `package-quickstart' autoload, a treesit-auto grammar-missing
-;; fallback, or an old `auto-mode-alist' entry could route a .go file to
-;; `go-mode' and — when the classic package is not on load-path — raise
-;; "File mode specification error: Cannot open load file ... go-mode".
-;; The remap is consulted by `set-auto-mode' *before* the mode function
-;; loads, so `go-mode' is never required and every Go buffer lands in
-;; `go-ts-mode'.
+;; go-tag/gotest (below) drag in the *classic* `go-mode' package as a
+;; transitive dependency; nothing in this config selects it deliberately
+;; — every Go buffer uses the built-in tree-sitter modes.  go-mode's
+;; autoloads install two pieces of *global* state that break unrelated
+;; buffers, so strip them:
+;;
+;;   - A `magic-mode-alist' entry `(go--is-go-asm . go-asm-mode)'.
+;;     `magic-mode-alist' is consulted for EVERY file `set-auto-mode'
+;;     visits, and `go--is-go-asm' is autoloaded from `go-mode', so
+;;     opening any file at all (e.g. a .nix file) force-loads classic
+;;     go-mode.  When go-mode is not on `load-path' this raises "File
+;;     mode specification error: Cannot open load file ... go-mode" and
+;;     aborts mode setup, so the buffer never reaches its real mode.
+;;   - `auto-mode-alist' entries routing .go / go.mod / go.work to the
+;;     classic modes (this module's own `:mode' and the go.work entry
+;;     above already route them to the tree-sitter modes).
+;;
+;; Stripping the `magic-mode-alist' entry is what actually prevents the
+;; load error: the `major-mode-remap-alist' remap below does NOT (it
+;; only rewrites the *chosen* mode; the magic predicate fires earlier
+;; and loads go-mode directly).  The removals are no-ops when go-mode's
+;; autoloads were never loaded, so this stays safe everywhere.
+(setq magic-mode-alist (assq-delete-all 'go--is-go-asm magic-mode-alist))
+(dolist (classic '(go-mode go-dot-mod-mode go-dot-work-mode))
+  (setq auto-mode-alist (rassq-delete-all classic auto-mode-alist)))
+
+;; Belt-and-suspenders: if some other path still selects a classic Go
+;; major mode (a stale `package-quickstart' autoload, an old
+;; `auto-mode-alist' entry), remap it to the tree-sitter equivalent so
+;; `go-mode' is never required and every Go buffer lands in `go-ts-mode'.
 (when (fboundp 'go-ts-mode)
   (dolist (remap '((go-mode         . go-ts-mode)
                    (go-dot-mod-mode . go-mod-ts-mode)

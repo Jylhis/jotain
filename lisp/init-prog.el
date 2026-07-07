@@ -47,11 +47,11 @@
   (jit-lock-defer-time 0.05))
 
 ;;; @doc Auto-routes `foo-mode` → `foo-ts-mode` whenever the grammar is
-;;; loadable. Grammar installation is suppressed because Nix
-;;; provides them via `treesit-extra-load-path` (set from
-;;; $TREE_SITTER_DIR in early-init.el). We use only the alist hook
-;;; — `global-treesit-auto-mode` advises `set-auto-mode-0` and
-;;; costs ~3.6 s per find-file in this config.
+;;; loadable. Grammar installation is suppressed because Nix provides
+;;; them: the full distribution's `treesit-extra-load-path` is set by
+;;; Nixpkgs' site-start.el to the bundled grammar directory. We use only
+;;; the alist hook — `global-treesit-auto-mode` advises `set-auto-mode-0`
+;;; and costs ~3.6 s per find-file in this config.
 (use-package treesit-auto
   :demand t
   :custom (treesit-auto-install nil)
@@ -64,6 +64,16 @@
   ;; per find-file.  The alist entries achieve the same mode routing with
   ;; zero overhead.
   (treesit-auto-add-to-auto-mode-alist 'all))
+
+;; Async native-comp workers run without site files, so they never pick up
+;; the `treesit-extra-load-path' that Nixpkgs' site-start.el set for the
+;; interactive Emacs.  Propagate it into each worker so compiling a
+;; `*-ts-mode' config file doesn't log a spurious tree-sitter
+;; "grammar ... unavailable" warning.  A no-op when the path is nil.
+(defvar treesit-extra-load-path)
+(defvar native-comp-async-env-modifier-form)
+(setq native-comp-async-env-modifier-form
+      `(setq treesit-extra-load-path ',treesit-extra-load-path))
 
 ;;;; Non-tree-sitter mode diagnostic
 
@@ -181,13 +191,14 @@ eglot is loaded."
         (cond ((stringp contact) contact)
               ((and (consp contact) (stringp (car contact))) (car contact))))))
 
+  (declare-function devenv-env-loading-p "devenv")
   (defun jotain-prog--maybe-eglot-ensure ()
     "Auto-start eglot when the project's env provides a server for this buffer.
-Deferred to an idle timer so envrc has already applied the buffer-local
-`exec-path'/PATH (envrc runs on `after-change-major-mode-hook', after
-`prog-mode-hook').  Skips remote files, non-file and Lisp buffers (no server,
-and we must not pull eglot into every elisp buffer), and already-managed
-buffers."
+Deferred to an idle timer so `devenv-env-mode' has already turned on and
+begun applying the buffer-local `exec-path'/PATH (it runs on
+`after-change-major-mode-hook', after `prog-mode-hook').  Skips remote files,
+non-file and Lisp buffers (no server, and we must not pull eglot into every
+elisp buffer), and already-managed buffers."
     (when (and buffer-file-name
                (not (file-remote-p default-directory))
                (not (derived-mode-p 'emacs-lisp-mode 'lisp-data-mode))
@@ -201,9 +212,20 @@ buffers."
              (with-current-buffer buf
                (unless (bound-and-true-p eglot--managed-mode)
                  (require 'eglot)
-                 (when-let* ((prog (jotain-prog--eglot-guess-program)))
-                   (when (executable-find prog) ; uses buffer-local exec-path
-                     (eglot-ensure)))))))))))
+                 (cond
+                  ;; devenv env still loading: the buffer-local `exec-path'
+                  ;; isn't populated yet, so `executable-find' would wrongly
+                  ;; skip servers that live only in the devenv.  Call
+                  ;; `eglot-ensure' and let devenv's deferral advice hold and
+                  ;; replay it once the environment lands.
+                  ((and (fboundp 'devenv-env-loading-p)
+                        (devenv-env-loading-p))
+                   (eglot-ensure))
+                  ;; Otherwise only start when the guessed server is actually
+                  ;; on the (project) PATH.
+                  ((when-let* ((prog (jotain-prog--eglot-guess-program)))
+                     (executable-find prog)) ; uses buffer-local exec-path
+                   (eglot-ensure)))))))))))
 
   (defun jotain-prog--risky-js-extras ()
     "Optional ESLint/Tailwind `rass' companions, gated on the risky-JS opt-in.
@@ -240,23 +262,15 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
           ((executable-find "pyright-langserver") '("pyright-langserver" "--stdio"))
           (t '("pylsp"))))
   :init
-  ;; General devenv-aware auto-start for languages beyond the curated list.
-  ;; Registered outside eglot's deferral so it also fires for the first file
-  ;; of an as-yet-unloaded language.
+  ;; Single devenv-aware auto-start for every project language.  It runs on
+  ;; `prog-mode-hook' but defers the actual `eglot-ensure' to an idle timer,
+  ;; so it fires *after* `after-change-major-mode-hook' has turned on
+  ;; `devenv-env-mode' and begun applying the project env.  A curated
+  ;; per-mode `:hook . eglot-ensure' used to live here as well; it was
+  ;; removed on purpose because it fired inside the major-mode hook —
+  ;; *before* `devenv-env-mode' registered the buffer — so eglot connected
+  ;; with the global (toolchain-less) environment instead of the devenv one.
   (add-hook 'prog-mode-hook #'jotain-prog--maybe-eglot-ensure)
-  ;; Per-language modules register modes only; curated auto-start lives here.
-  ;; Kept as an explicit, zero-regression safety net alongside the general
-  ;; hook above (`eglot-ensure' is idempotent, so the two compose cleanly).
-  :hook
-  ((dockerfile-mode
-    go-ts-mode go-mod-ts-mode go-work-ts-mode
-    nix-ts-mode
-    python-mode python-ts-mode
-    rust-mode rust-ts-mode
-    tsx-ts-mode
-    typescript-mode typescript-ts-mode
-    zig-ts-mode)
-   . eglot-ensure)
   :custom
   (eglot-autoshutdown t)
   (eglot-extend-to-xref t)
@@ -497,34 +511,11 @@ outside a project."
 
 ;;;; Per-project environment + format-on-save + grep refactor
 
-;;; @doc Apply the project's `.envrc` / Nix shell to every buffer in
-;;; that project. Strictly better than direnv-mode because the env
-;;; is buffer-local, not global — multiple projects can coexist in
-;;; one Emacs without leaking environment. `C-c e' is envrc's command
-;;; prefix: `C-c e a' allow, `C-c e r' reload, `C-c e R' reload-all
-;;; (the last picks up a `direnv allow' run in a terminal). Manual
-;;; allow is kept as the secure default — no auto-allow whitelist.
-(use-package envrc
-  :demand t
-  :functions (envrc-global-mode)
-  :bind-keymap ("C-c e" . envrc-command-map)
-  :config
-  (envrc-global-mode)
-  (add-to-list 'warning-suppress-types '(envrc))
-
-  (defun jotain-prog--envrc-blocked-p (buffer-name _action)
-    "Non-nil when the *envrc* buffer reports a blocked .envrc."
-    (and (equal buffer-name "*envrc*")
-         (when-let* ((buf (get-buffer buffer-name)))
-           (with-current-buffer buf
-             (save-excursion
-               (goto-char (point-max))
-               (search-backward "is blocked" nil t))))))
-
-  (add-to-list 'display-buffer-alist
-               '(jotain-prog--envrc-blocked-p
-                 (display-buffer-no-window)
-                 (allow-no-window . t))))
+;; Per-project environment is loaded natively by devenv (init-devenv.el:
+;; `devenv-env-global-mode' with `devenv-env-defer-to-direnv' nil), not by
+;; direnv/envrc.  `devenv print-dev-env' is evaluated per project and applied
+;; buffer-locally, so eglot and other tools resolve from the devenv toolchain.
+;; envrc is intentionally not enabled here.
 
 ;;; @doc Async format-on-save through external formatters (ruff, nixfmt,
 ;;; rustfmt, prettier, …). Replaces hand-rolled per-language hooks
