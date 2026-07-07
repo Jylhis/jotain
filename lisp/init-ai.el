@@ -63,11 +63,8 @@ Interactively, echo the path and push it onto the kill ring."
                              (format-time-string "%Y%m%dT%H%M%S") format))))))
     (make-directory (file-name-directory file) t)
     (redisplay t)
-    (let ((data (x-export-frames nil format))
-          (coding-system-for-write 'binary))
-      (with-temp-file file
-        (set-buffer-multibyte nil)
-        (insert data)))
+    (let ((coding-system-for-write 'binary))
+      (write-region (x-export-frames nil format) nil file nil 'silent))
     (when (called-interactively-p 'interactive)
       (kill-new file)
       (message "Screenshot: %s" file))
