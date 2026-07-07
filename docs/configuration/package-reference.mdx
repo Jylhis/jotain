@@ -237,18 +237,6 @@ Vertical indent guides for code, treesit-aware so the bars
 follow real syntactic indentation. Toggle via
 `jotain-indent-bars-enabled'.
 
-### `kkp`
-
-Kitty Keyboard Protocol — lets terminal Emacs distinguish
-C-i/TAB, C-m/RET, C-[/ESC, and pass Shift-modified function
-keys through. No-op in GUI frames, so safe to enable
-unconditionally.
-
-### `clipetty`
-
-OSC 52 clipboard integration. Yank/kill in terminal Emacs
-reaches the system clipboard even through ssh + tmux.
-
 ## `init-tabs.el` — Workspace tabs
 
 ### `tab-bar` *(built-in / Nix)*
@@ -721,11 +709,12 @@ symbol an action menu (jump to def, find refs, rename, …).
 
 ### `dape`
 
-Debug Adapter Protocol client (GNU ELPA). Ships built-in
-configs for common adapters including Delve (`dlv dap') keyed to
-`go-mode'/`go-ts-mode', so `M-x dape' offers a Go launch config with
-no extra setup — `dlv' just needs to be on PATH (from the project
-environment). `C-c d' is the debug prefix.
+Debug Adapter Protocol client — the debugging counterpart to
+eglot. Ships adapter configs for dlv (Go), debugpy (Python),
+codelldb (Rust/C/C++), and more; the adapter binary (e.g. `dlv`)
+comes from the project/host PATH, same convention as the LSP
+servers. `C-x C-a` is the prefix (the gud convention); stepping
+commands carry repeat-maps, so `C-x C-a n n n` keeps stepping.
 
 ### `flymake` *(built-in / Nix)*
 
@@ -841,6 +830,28 @@ command type — purely visual, but a useful at-a-glance hint.
 Embark actions on compile-multi entries (run, copy, edit
 command line). Mirrors the projection embark integration.
 
+## `init-devenv.el` — devenv.sh integration
+
+### `devenv` *(built-in / Nix)*
+
+Native devenv.sh integration (the in-repo `lisp/devenv.el`
+library). `C-c v` opens a transient with task and script runners,
+`devenv test`/`build` through compilation-mode with Nix error
+matching, a process-manager dashboard (start/stop/restart/logs),
+and environment introspection (`devenv eval`/`info`/`search`).
+`devenv-reload` refreshes the project environment through envrc
+(the direnv substrate configured in init-prog) and offers to
+reconnect eglot servers so they see the new environment.
+devenv.nix buffers are routed to the bundled `devenv lsp` server
+while `nil` keeps serving other Nix files, and `devenv-mcp-setup`
+registers the project's `devenv mcp` server with mcp.el so gptel
+can call its tools. `devenv-allow`/`devenv-revoke` manage devenv
+2.1's auto-activation trust database, which also gates the native
+env loader, and `devenv-modeline-mode` (enabled here) shows the
+per-buffer status — devenv[on]/[off]/[!] — in the mode line.
+Everything degrades to a clean error when the `devenv` binary is
+not on PATH.
+
 ## `init-ai.el` — AI assistants
 
 ### `claude-code-ide` *(built-in / Nix)*
@@ -882,12 +893,6 @@ Built-in Lisp-driven shell — works the same on every platform
 and is the right tool for Emacs-flavoured pipelines (commands
 as Elisp functions, no subprocess for builtins).
 
-### `vterm`
-
-Real terminal emulator (libvterm). Use this when you need a
-tmux session, ncurses programs, or anything that wants a true
-PTY — eshell can't do those.
-
 ### `comint` *(built-in / Nix)*
 
 Built-in REPL substrate (used by python, ielm, sql, etc.).
@@ -898,6 +903,30 @@ The settings here apply to every comint-derived buffer.
 Built-in Emacs Lisp REPL. Emacs 31+ can persist input history
 across sessions like comint/shell already do; point it at a file
 under `var/'. Guarded so the config loads on Emacs 30.
+
+## `init-terminal.el` — Terminal support
+
+### `ghostel`
+
+Terminal emulator powered by libghostty-vt (the Ghostty VT
+engine) via a native dynamic module.  Replaces vterm: real PTY for
+tmux/ncurses/TUI programs, plus shell integration (OSC 7 directory
+tracking, OSC 133 prompt jumping) injected automatically for
+bash/zsh/fish.  The Nix package builds the module from source and
+ships it in the package directory; in a source checkout the module
+is downloaded into the writable elpa/ dir on first `M-x ghostel'.
+
+### `kkp`
+
+Kitty Keyboard Protocol — lets terminal Emacs distinguish
+C-i/TAB, C-m/RET, C-[/ESC, and pass Shift-modified function
+keys through. No-op in GUI frames, so safe to enable
+unconditionally.
+
+### `clipetty`
+
+OSC 52 clipboard integration. Yank/kill in terminal Emacs
+reaches the system clipboard even through ssh + tmux.
 
 ## `init-systems.el` — Sysadmin tools
 
@@ -1039,6 +1068,32 @@ get the modern parser without any third-party package. The LSP
 server (pyright/basedpyright/ruff-lsp) comes from the project's
 own environment, not from this config.
 
+## `init-lang-go.el` — Go
+
+### `go-ts-mode` *(built-in / Nix)*
+
+Built-in tree-sitter Go modes: `go-ts-mode` for source files,
+`go-mod-ts-mode` for go.mod, `go-work-ts-mode` (Emacs 31) for
+go.work. Eglot wires gopls in init-prog; format-on-save runs
+goimports through apheleia; dape drives dlv for debugging. All Go
+tooling (go, gopls, goimports, dlv) comes from the project/host
+PATH, not from this config.
+
+### `go-tag`
+
+Struct-tag editing (`json:"..."', `db:"..."', …). gopls has no
+equivalent; the underlying `gomodifytags' binary comes from the
+project environment. Bound under the buffer-local `C-c C-t' Go
+tooling prefix so it never shadows the global `C-c t' theme toggle.
+
+### `gotest`
+
+Run the Go test or benchmark at point, the current file's
+tests, or the whole project, with compilation-mode error jumping.
+Complements the project-wide compile-multi "go test" commands with
+single-test / single-file runs. Shares the mode-local `C-c C-t' Go
+tooling prefix with go-tag.
+
 ## `init-lang-web.el` — Web (TypeScript, JS, CSS, HTML)
 
 ### `typescript-ts-mode` *(built-in / Nix)*
@@ -1143,7 +1198,7 @@ covers `.j2`, `.jinja`, and `.jinja2`.
 Major mode for gnuplot script files (`.plt`). Useful when an
 analysis pipeline emits its own plotting scripts.
 
-## `init-lang-systems.el` — Systems (Go, C/C++, Haskell, Zig)
+## `init-lang-systems.el` — Systems (C/C++, Haskell, Zig)
 
 ### `cc-mode` *(built-in / Nix)*
 
@@ -1171,29 +1226,6 @@ Haskell editing session from costing every Emacs start.
 
 Tree-sitter Zig mode (MELPA). Eglot wires zls in init-prog;
 format-on-save runs `zig fmt' through apheleia.
-
-## `init-lang-go.el` — Other
-
-### `go-ts-mode` *(built-in / Nix)*
-
-Built-in tree-sitter Go modes. `go-mod-ts-mode' lives in the
-same `go-ts-mode' file, so both are registered from this one block.
-Eglot wires gopls in init-prog (for both modes); format-on-save runs
-gofmt through apheleia. No indent-offset is set: gofmt uses tabs and
-the built-in default already matches.
-
-### `go-tag`
-
-Struct-tag editing (`json:"..."', `db:"..."', …). gopls has no
-equivalent; the underlying `gomodifytags' binary comes from the
-project environment. Bound under the buffer-local `C-c C-t' Go
-tooling prefix so it never shadows the global `C-c t' theme toggle.
-
-### `gotest`
-
-Point-aware test runner. Complements the project-wide
-compile-multi "go test" commands with single-test / single-file runs.
-Shares the `C-c C-t' Go tooling prefix with go-tag.
 
 ## `init-snippets.el` — Other
 

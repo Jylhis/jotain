@@ -89,6 +89,10 @@ let
       out = "usage-launching.texi";
     }
     {
+      src = "usage/devenv.mdx";
+      out = "usage-devenv.texi";
+    }
+    {
       src = "finding-information-in-emacs.mdx";
       out = "finding-information-in-emacs.texi";
     }

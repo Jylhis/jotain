@@ -23,18 +23,21 @@ Jotain's Elisp configuration is split across `lisp/init-*.el`, one file per conc
 ```
 init-core         GC, encoding, var/ paths, sane file-handling defaults
 init-keys         Global keymap and window-split helpers
-init-ui           Theme, modeline, fonts, frame tweaks, icons, kkp, clipetty
+init-ui           Theme, modeline, fonts, frame tweaks, icons
+init-tabs         Workspace tabs via tab-bar-mode
 init-help         helpful + built-in help tweaks
 init-docs         Register the bundled jotain.info with C-h i
 init-editing      elec-pair, delsel, whitespace, region tools
 init-completion   vertico, marginalia, orderless, consult, corfu, cape
 init-navigation   dired, dirvish, project, windmove, winner
 init-vc           vc, vc-jj, magit, majutsu, magit-todos, forge, diff-hl, smerge, ediff
-init-prog         prog-mode, treesit, eglot, flymake, eldoc, apheleia, compile
+init-prog         prog-mode, treesit, eglot, dape, flymake, eldoc, apheleia, compile
 init-snippets     tempel snippets + eglot-tempel LSP expansion
 init-project      project + projection + compile-multi
+init-devenv       devenv.sh: tasks, processes, env, LSP, MCP
 init-ai           claude-code-ide, gptel, mcp
-init-shell        eshell, vterm, comint
+init-shell        eshell, comint, ielm
+init-terminal     ghostel terminal + tty integration (kkp, clipetty)
 init-systems      sops, logview, auth-source-1password
 init-tracking     keyfreq, wakatime, activity-watch
 init-writing      jinx, markdown-mode, denote, pdf-tools
@@ -62,7 +65,7 @@ Global bindings only — per-package bindings live in the relevant `use-package`
 
 ### `init-ui`
 
-Appearance. Uses `modus-operandi-tinted` and `modus-vivendi-tinted` (user-customisable via `jotain-theme-light` / `jotain-theme-dark`), with `auto-dark-mode` flipping between them based on the system appearance. Installs `doom-modeline`, picks the first available font from `jotain-font-preferences` (JetBrains Mono Nerd Font → Iosevka Nerd Font → DejaVu Sans Mono), enables `display-line-numbers`, `pixel-scroll-precision-mode`, `hl-line-mode`, `show-paren-mode`, built-in `which-key`, `nerd-icons` integrations for dired/ibuffer/corfu/marginalia, `hl-todo`, `breadcrumb`, `pulsar`, `rainbow-delimiters`, `indent-bars`. Also enables `global-kkp-mode` (Kitty Keyboard Protocol) and `clipetty` for OSC 52 clipboard support through SSH + tmux.
+Appearance. Uses `modus-operandi-tinted` and `modus-vivendi-tinted` (user-customisable via `jotain-theme-light` / `jotain-theme-dark`), with `auto-dark-mode` flipping between them based on the system appearance. Installs `doom-modeline`, picks the first available font from `jotain-font-preferences` (JetBrains Mono Nerd Font → Iosevka Nerd Font → DejaVu Sans Mono), enables `display-line-numbers`, `pixel-scroll-precision-mode`, `hl-line-mode`, `show-paren-mode`, built-in `which-key`, `nerd-icons` integrations for dired/ibuffer/corfu/marginalia, `hl-todo`, `breadcrumb`, `pulsar`, `rainbow-delimiters`, `indent-bars`.
 
 ### `init-help`
 
@@ -90,7 +93,7 @@ The vertico stack on the minibuffer side, corfu + cape on the in-buffer side, pl
 
 ### `init-prog`
 
-The shared substrate for programming modes: `prog-mode` hooks, `treesit` setup, `eglot`, `flymake`, `eldoc`, `apheleia` for format-on-save, `compile`. Per-language `eglot-ensure` hooks live here so all LSP wiring is in one place; per-language mode settings live in `init-lang-*.el`. When the `rass` binary (rassumfrassum, shipped in the devenv shell) is on `PATH`, `tsx-ts-mode` / `typescript-ts-mode` / `typescript-mode` buffers are routed through it to run `typescript-language-server` alongside whichever of `eslint-lsp` and `tailwindcss-language-server` are also on `PATH`, and Python buffers run the bundled `rass python` preset (basedpyright + ruff) when both binaries are present; any missing prerequisite makes eglot fall back to its built-in single-server lookup, so projects using `pylsp` / `pyright` / unguarded tsserver keep working unchanged. Also provides `jotain-sonarlint` for on-demand SonarLint analysis via the `sonarlint-ls` language server — SonarCloud connected mode is configured per-project via `eglot-workspace-configuration` in `.dir-locals.el`. Debugging is handled by `dape` (Debug Adapter Protocol) under the `C-c d` prefix; it ships built-in adapter configs (e.g. Delve for Go via `dlv dap`), and the adapter binary comes from the project environment.
+The shared substrate for programming modes: `prog-mode` hooks, `treesit` setup, `eglot`, `flymake`, `eldoc`, `apheleia` for format-on-save, `compile`. Per-language `eglot-ensure` hooks live here so all LSP wiring is in one place, and beyond that curated list `eglot` auto-starts for any project file whose language server is on the buffer's (envrc-applied) `PATH` — so enabling a language in a project's devenv lights up its LSP with no per-language config. Per-language mode settings live in `init-lang-*.el`. When the `rass` binary (rassumfrassum, shipped in the devenv shell) is on `PATH`, `tsx-ts-mode` / `typescript-ts-mode` / `typescript-mode` buffers are routed through it to run `typescript-language-server` alongside whichever of `eslint-lsp` and `tailwindcss-language-server` are also on `PATH`, and Python buffers run the bundled `rass python` preset (basedpyright + ruff) when both binaries are present; any missing prerequisite makes eglot fall back to its built-in single-server lookup, so projects using `pylsp` / `pyright` / unguarded tsserver keep working unchanged. Also provides `jotain-sonarlint` for on-demand SonarLint analysis via the `sonarlint-ls` language server — SonarCloud connected mode is configured per-project via `eglot-workspace-configuration` in `.dir-locals.el`. Debugging goes through `dape` (Debug Adapter Protocol, `C-x C-a` prefix); the adapter binaries (e.g. `dlv` for Go, `debugpy` for Python) come from the project/host PATH, same as the LSP servers.
 
 ### `init-snippets`
 
@@ -100,13 +103,21 @@ Template/snippet expansion via `tempel`, chosen over the built-in `skeleton`/`ab
 
 Two complementary project command systems: `projection` (`.dir-locals.el`-backed commands exposed via `C-x P`, auto-detected from Makefiles/justfiles/Cargo.toml/etc) and `compile-multi` (per-major-mode named compile commands like "go test", "pytest file", "nix flake check"). They overlap but neither fully covers the other.
 
+### `init-devenv`
+
+Wiring for the in-repo [devenv.sh](https://devenv.sh) integration library `lisp/devenv.el` — the one file under `lisp/` that is *not* an `init-*` module: it is a standalone, reusable package (own `devenv-` namespace, no `jotain-` dependencies) that this module merely binds into the configuration. `C-c v` opens a transient with task and script runners (completing-read over `devenv tasks list --json` / `devenv eval scripts`), `devenv test`/`build`/`update`/`gc` through compilation-mode with Nix-trace error matching, a tabulated process dashboard over the devenv process manager (`devenv up`/`down`, per-process start/stop/restart/logs), environment introspection (`devenv eval`/`info`/`search`), and `devenv-reload` (invalidates caches, refreshes the environment through envrc, offers `eglot-reconnect`). `devenv.nix` buffers are routed to the bundled `devenv lsp` server while `nil` keeps serving other Nix files. `devenv-mcp-setup` registers the project's `devenv mcp` stdio server with mcp.el for gptel tool use. Environment loading stays with envrc (see `init-prog`); the library's optional native loader (`devenv-env-global-mode`) exists for devenv projects without direnv and skips envrc-managed projects. See [devenv integration](/usage/devenv) for the user guide.
+
 ### `init-ai`
 
 AI assistants. `claude-code-ide` on `C-c C-'` for agentic multi-file edits via the Claude Code CLI. `eca` on `C-c C-e` is the Editor Code Assistant client (chat, inline completion, rewrite, MCP) talking to a Nix-provided server. `gptel` on `C-c RET` (send) / `C-c M-RET` (menu) with four backends configured: OpenRouter (default, OpenAI-compatible aggregator, `anthropic/claude-sonnet-4.6`), direct Anthropic, Google Gemini, and a local Ollama instance (no key needed). `mcp` is loaded after `gptel` for Model Context Protocol tool use. API keys resolve from the environment (`OPENROUTER_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY`) first, then fall back to `auth-source` — `auth-source-1password` (see `init-systems`) makes that transparent. The eca server's OpenRouter provider lives in `config/eca/config.json`, installed by the Home Manager module when `services.jotain.openrouter.enable = true`.
 
 ### `init-shell`
 
-`eshell`, `vterm`, and `comint` together — shells have their own input handling, history, prompts, and rendering, so grouping them lets the rules be coordinated in one place.
+`eshell`, `comint`, and `ielm` together — shells and REPLs have their own input handling, history, prompts, and rendering, so grouping them lets the rules be coordinated in one place. The true PTY terminal emulator lives in `init-terminal`.
+
+### `init-terminal`
+
+Both directions of terminal support. Inside Emacs: `ghostel`, a terminal emulator powered by libghostty-vt (the VT engine behind Ghostty) through a native dynamic module — real PTY for tmux/ncurses programs, plus automatic shell integration (OSC 7 directory tracking, OSC 133 prompt navigation) and OSC 52 clipboard. The Nix package builds the module from source and ships it in the package directory; in a source checkout the module is downloaded into the writable `elpa/` dir on first `M-x ghostel`. Emacs inside a terminal: `global-kkp-mode` (Kitty Keyboard Protocol), `clipetty` (OSC 52 clipboard through SSH + tmux), `xterm-mouse-mode`, and `tty-tip-mode` on Emacs 31+ — all no-ops in GUI frames. Ghostel's buffers advertise `TERM=xterm-ghostty`, the same dialect the outer Ghostty terminal uses; the `xterm-ghostty → xterm-256color` alias that supports both lives in `early-init.el` because terminal initialisation runs before `init.el`.
 
 ### `init-systems`
 
@@ -131,7 +142,7 @@ Each `init-lang-*.el` file pins `:mode` regexes and provides font-lock for a gro
 - **`init-lang-nix`** — `nix-ts-mode`. Formatting via apheleia (which ships a `nixfmt` entry).
 - **`init-lang-rust`** — `rust-ts-mode` (built-in) plus Cargo command wrappers.
 - **`init-lang-python`** — `python-ts-mode` (built-in), the interpreter set to `python3`. The LSP server (pyright/basedpyright/ruff-lsp) comes from the project environment, not from this config.
-- **`init-lang-go`** — `go-ts-mode` / `go-mod-ts-mode` (built-in), eglot wires `gopls` in `init-prog` with a workspace config that turns on inlay hints, staticcheck, and the `unusedparams`/`shadow`/`nilness` analyses. Format-on-save runs gofmt through apheleia. Adds `go-tag` (struct-tag editing) and `gotest` (point-aware test runs) under the buffer-local `C-c C-t` prefix. gopls / dlv / gotests / gomodifytags come from the project environment, not from this config.
+- **`init-lang-go`** — `go-ts-mode` / `go-mod-ts-mode` / `go-work-ts-mode` (built-in), with a buffer-local gopls workspace config that turns on inlay hints, staticcheck, and the `unusedparams`/`shadow`/`nilness`/`unusedwrite` analyses (eglot wired in `init-prog`). A `major-mode-remap-alist` entry routes the classic `go-mode` to `go-ts-mode`, so a stale autoload or missing grammar can never drop a `.go` file into an unavailable classic mode. Adds `go-tag` (struct-tag editing) and `gotest` (point-aware test/benchmark/coverage runs) under the buffer-local `C-c C-t` prefix. Formatting via apheleia → `goimports`; debugging via dape → `dlv`. All Go tooling (`go`, `gopls`, `goimports`, `dlv`, `gomodifytags`) comes from the project/host PATH.
 - **`init-lang-web`** — `typescript-ts-mode`, `tsx-ts-mode`, CSS, HTML, JSON, and related tree-sitter modes.
 - **`init-lang-devops`** — Dockerfile, docker-compose, Terraform (`*.tf`), gitlab-ci, justfile, Ansible, Bazel/Starlark (`BUILD`, `WORKSPACE`, `MODULE.bazel`, `*.bzl`, `.bazelrc`, …). A `jotain-docker-backend` defcustom (`'podman` by default, set to `'docker` for classic Docker) switches the runtime command used by `dockerfile-mode`. Bazel buffers format on save via buildifier (centralised through apheleia in `init-prog`).
 - **`init-lang-data`** — YAML, CSV (with `csv-align-mode`), SQL (`sql-indent`), Jinja2, gnuplot.
