@@ -93,6 +93,10 @@ let
       out = "usage-devenv.texi";
     }
     {
+      src = "usage/ai-screenshot.mdx";
+      out = "usage-ai-screenshot.texi";
+    }
+    {
       src = "finding-information-in-emacs.mdx";
       out = "finding-information-in-emacs.texi";
     }
