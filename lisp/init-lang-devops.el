@@ -19,29 +19,19 @@
 (defvar jotain-docker-backend)
 
 (defun jotain--apply-docker-backend ()
-  "Apply `jotain-docker-backend' to dockerfile-mode and docker.el.
-Sets the runtime command, compose command, and TRAMP method used by
-the relevant packages.  Variables are only touched if their owning
-package has been loaded, so this is safe to call before or after."
-  (let* ((podman (eq jotain-docker-backend 'podman))
-         (cmd     (if podman "podman"         "docker"))
-         (compose (if podman "podman compose" "docker compose")))
+  "Apply `jotain-docker-backend' to dockerfile-mode.
+Sets the runtime command used by `dockerfile-mode'.  The variable is
+only touched once its owning package has loaded, so this is safe to
+call before or after."
+  (let ((cmd (if (eq jotain-docker-backend 'podman) "podman" "docker")))
     (when (boundp 'dockerfile-mode-command)
-      (setq dockerfile-mode-command cmd))
-    (when (boundp 'docker-command)
-      (setq docker-command cmd))
-    (when (boundp 'docker-compose-command)
-      (setq docker-compose-command compose))
-    (when (boundp 'docker-container-tramp-method)
-      (setq docker-container-tramp-method cmd))))
+      (setq dockerfile-mode-command cmd))))
 
 (defcustom jotain-docker-backend 'podman
   "Container runtime that Docker-aware packages should drive.
 `podman' (default) is rootless and daemonless; `docker' uses the
-classic dockerd/docker-compose pair.  Changing this re-applies
-the relevant command-name variables for `dockerfile-mode' and the
-`docker' package, including the TRAMP method used to open files
-inside a running container."
+classic dockerd pair.  Changing this re-applies the runtime command
+name used by `dockerfile-mode'."
   :type '(choice (const :tag "Podman" podman)
                  (const :tag "Docker" docker))
   :group 'jotain-devops
@@ -54,15 +44,6 @@ inside a running container."
 ;;; name comes from `jotain-docker-backend`.
 (use-package dockerfile-mode
   :defer t
-  :config (jotain--apply-docker-backend))
-
-;;; @doc Magit-style transient menu for containers, images, volumes
-;;; and networks. `C-c d` opens the dispatcher; commands respect
-;;; `jotain-docker-backend` (docker vs podman, including compose and
-;;; the TRAMP method used to open files inside a running container).
-(use-package docker
-  :defer t
-  :bind ("C-c d" . docker)
   :config (jotain--apply-docker-backend))
 
 ;;; @doc YAML-flavoured docker-compose syntax with awareness of compose
