@@ -21,6 +21,8 @@ Use the devenv shell; with direnv this is automatic. Without it, prefix commands
 
 Elisp files use `-*- lexical-binding: t; -*-`, one concern per `lisp/init-*.el` module, and end with `(provide 'init-<concern>)`. Add new modules to `init.el` at the right load point. Prefer `setopt` for `defcustom` values. Built-ins and Nix-provided packages in `use-package` blocks should use `:ensure nil`. Keep LSP hooks and formatter wiring centralized in `lisp/init-prog.el`. Nix formatting is controlled by `nix/treefmt.nix` with `nixfmt`, `deadnix`, and `statix`.
 
+For Emacs internals and Elisp practice, use the source-cited skills in `.claude/skills/` (`emacs-internals`, `elisp-dev`), indexed at `.claude/knowledge/emacs/README.md`, rather than answering from memory.
+
 ## Testing Guidelines
 
 Place ERT files under `test/` using `test-*.el` names. Keep tests focused on module behavior or helper functions and load project code with `-L lisp`. Run `just test` for ERT, `just check-elisp` for syntax-only validation, and `just check` before opening a PR.
