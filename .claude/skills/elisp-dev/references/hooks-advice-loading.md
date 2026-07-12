@@ -20,8 +20,9 @@ for the lowest-impact tool that works.
     leave room for others.
   - LOCAL non-nil makes it buffer-local and appends `t` (meaning "also run
     the global value").
-- Modify hooks only with `add-hook`/`remove-hook`, never `setq` (clobbers
-  other packages). `let`-binding a hook for temporary suppression is fine.
+- Modify hooks only with `add-hook`/`remove-hook`, never `setq` or `setopt`
+  with a list literal (both clobber other packages' functions; `add-hook` is
+  additive). `let`-binding a hook for temporary suppression is fine.
 - In `use-package`, `:hook (text-mode . foo-mode)` is the idiomatic way to
   attach; it implies deferral. Names are given without the `-hook` suffix
   unless `use-package-hook-name-suffix` is nil.
