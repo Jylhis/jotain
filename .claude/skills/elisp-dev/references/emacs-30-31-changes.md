@@ -4,7 +4,9 @@ Source: `etc/NEWS.30`, `etc/NEWS.31`, use-package manual. Filtered to what
 matters for a config repo like this one. Emacs 31 is branched (feature
 freeze May 2026) and near release as of mid-2026; treat its items as
 "landing soon", and gate anything version-specific with `static-if` /
-`(when (>= emacs-major-version 31) …)`.
+`(when (>= emacs-major-version 31) …)`. Conversely, don't guard for versions
+at or below the repo's Emacs 30 floor (e.g. `(>= emacs-major-version 29)`) —
+such guards are dead and misleading.
 
 ## Emacs 30 (this repo's baseline)
 
