@@ -44,6 +44,31 @@ There's also an `emacs-smoke` script (defined in `devenv.nix`) that byte-compile
 
 - `just bench [output]` — benchmark startup: launches Emacs through `bench/early-init.el` which wraps `require` and `package-refresh-contents` with timing advice, then prints results sorted by load time. Optionally saves to a file.
 
+## Emacs & Elisp knowledge base and skills
+
+Two on-demand skills in `.claude/skills/` hold source-cited reference material
+for this Emacs 30/31 config; `.claude/knowledge/emacs/README.md` indexes them.
+**Use them instead of answering Emacs questions from memory** — each reference
+traces back to the GNU Emacs Lisp Reference Manual, `src/` commentary, or NEWS.
+
+- **`emacs-internals`** — GC & object representation, the gap buffer /
+  markers / overlays, redisplay, the command loop & keymaps, byte & native
+  compilation, threads, and build/dump. Reach for it when explaining or
+  debugging core behavior, tuning performance (GC, redisplay, startup), or
+  reasoning about native-comp / eln caches. Repo anchors it already documents:
+  the `gc-cons-threshold` startup dance and eln-cache redirect in
+  `early-init.el`, and the `igc` build variant.
+- **`elisp-dev`** — naming/file conventions, lexical binding, macro hygiene,
+  hooks vs. advice, `defcustom`/`setopt`, `use-package` patterns, modern
+  libraries (pcase/seq/map/cl-lib/rx), debugging & ERT, and an Emacs 30/31
+  changes digest. Reach for it when writing or reviewing any Elisp.
+
+The skills encode the repo's hard rules (`setopt` not `setq` for options,
+`:ensure nil` for built-ins/Nix packages, no builtins/third-party split,
+warning-clean byte-compilation, LSP/formatters centralized in `init-prog.el`).
+When a note conflicts with the installed Emacs, trust the running Emacs
+(`C-h f`/`C-h v`/`C-h S`) and fix the reference in the same change.
+
 ## Architecture
 
 ### Elisp layer — three parts
