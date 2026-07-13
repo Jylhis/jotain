@@ -46,7 +46,14 @@
       (
         let
           lock = builtins.fromJSON (builtins.readFile ./flake.lock);
-          nixpkgsNode = lock.nodes.root.inputs.nixpkgs;
+          # x86_64-darwin was dropped from nixpkgs-unstable (26.11); the flake
+          # pins it to nixpkgs-26.05-darwin via a dedicated input, so bare
+          # emacs.nix / variant builds on that platform must read the same node.
+          nixpkgsNode =
+            if system == "x86_64-darwin" then
+              lock.nodes.root.inputs.nixpkgs-x86_64-darwin
+            else
+              lock.nodes.root.inputs.nixpkgs;
           n = lock.nodes.${nixpkgsNode}.locked;
         in
         fetchTarball {
