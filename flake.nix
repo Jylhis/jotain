@@ -3,6 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    # nixpkgs-unstable (26.11) dropped x86_64-darwin; 26.05 is its last
+    # supported release. Pinned for that one platform only — every other
+    # system uses the unstable channel above. See `nixpkgsFor`.
+    nixpkgs-x86_64-darwin.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
@@ -41,13 +45,18 @@
       systems = [
         "x86_64-linux"
         "aarch64-linux"
+        # x86_64-darwin is pinned to nixpkgs-26.05-darwin (see the
+        # nixpkgs-x86_64-darwin input); unstable dropped the platform.
         "x86_64-darwin"
         "aarch64-darwin"
       ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
+      # x86_64-darwin uses the 26.05 pin (unstable dropped it); every other
+      # system uses nixpkgs-unstable.
+      nixpkgsFor = system: if system == "x86_64-darwin" then inputs."nixpkgs-x86_64-darwin" else nixpkgs;
       pkgsFor =
         system:
-        import nixpkgs {
+        import (nixpkgsFor system) {
           inherit system;
           overlays = [
             emacs-overlay.overlays.default
@@ -59,7 +68,7 @@
       # packages.default / the system modules stay full-grammar cache hits.
       pkgsForLite =
         system:
-        import nixpkgs {
+        import (nixpkgsFor system) {
           inherit system;
           overlays = [
             emacs-overlay.overlays.default
