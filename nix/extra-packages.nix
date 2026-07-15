@@ -5,13 +5,13 @@
 efinal: _eprev: {
   jylhis-emacs-themes = efinal.trivialBuild {
     pname = "jylhis-emacs-themes";
-    version = "0.3.0";
+    version = "0.4.0-unstable-2026-06-05";
     src =
       pkgs.fetchFromGitHub {
         owner = "Jylhis";
         repo = "design";
-        rev = "0e59959881172c7010c051507b2d4f07a18eb26d";
-        sha256 = "1qa8zq1lhprvv702rfnc6xjlfrl0mx5ianph2n23k2wx37s157p0";
+        rev = "b06b5cf5b15bd3920367112208c63b3361ea4fbc";
+        sha256 = "0w37g0aavzkfwnad3q0qvnygj28k31gqf1bs32fyvyh04b08mvab";
       }
       + "/platforms/emacs";
   };
