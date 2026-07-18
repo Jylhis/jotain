@@ -328,6 +328,7 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
                                rust-mode rust-ts-mode
                                typescript-mode typescript-ts-mode
                                python-mode python-ts-mode
+                               tuareg-mode
                                zig-ts-mode))
                   (eglot-inlay-hints-mode 1)))))
 
