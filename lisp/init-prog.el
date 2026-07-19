@@ -329,7 +329,10 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
                                typescript-mode typescript-ts-mode
                                python-mode python-ts-mode
                                tuareg-mode
-                               zig-ts-mode))
+                               zig-ts-mode
+                               c-mode c++-mode c-ts-mode c++-ts-mode
+                               nix-ts-mode
+                               haskell-mode))
                   (eglot-inlay-hints-mode 1)))))
 
   ;; Server overrides — most languages don't need an entry, eglot has

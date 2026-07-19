@@ -115,7 +115,7 @@ projects sharing a basename across different roots stay distinct."
   :commands (compile-multi)
   :custom
   (compile-multi-config
-   '((go-ts-mode   . (("go test"         . "go test ./...")
+   `((go-ts-mode   . (("go test"         . "go test ./...")
                       ("go test current" . "go test .")
                       ("go test -race"   . "go test -race ./...")
                       ("go build"        . "go build ./...")
@@ -124,8 +124,17 @@ projects sharing a basename across different roots stay distinct."
                       ("golangci-lint"   . "golangci-lint run")))
      (go-mod-ts-mode . (("go mod tidy"     . "go mod tidy")
                         ("go mod download" . "go mod download")))
-     (python-mode  . (("pytest"         . "pytest")
-                      ("pytest file"    . "pytest %file-name%")))
+     ;; `python-base-mode' is the shared parent of both `python-mode' and
+     ;; `python-ts-mode', so this fires regardless of which one a .py buffer
+     ;; lands in (the repo routes to python-ts-mode, but a missing grammar
+     ;; falls back to python-mode).  "pytest file" is a function action so
+     ;; the current file is substituted at run time — compile-multi does not
+     ;; template `%…%' placeholders.
+     (python-base-mode . (("pytest"      . "pytest")
+                          ("pytest file" . ,(lambda ()
+                                              (concat "pytest "
+                                                      (shell-quote-argument
+                                                       (or (buffer-file-name) ".")))))))
      (haskell-mode . (("stack test"     . "stack test")
                       ("cabal test"     . "cabal test")))
      (tuareg-mode  . (("dune build"     . "dune build")
@@ -145,7 +154,20 @@ projects sharing a basename across different roots stay distinct."
                       ("cargo build"    . "cargo build")))
      (zig-ts-mode  . (("zig build"      . "zig build")
                       ("zig test"       . "zig build test")
-                      ("zig run"        . "zig build run"))))))
+                      ("zig run"        . "zig build run")))
+     ;; TypeScript / JavaScript — a list trigger is `eval'd by compile-multi,
+     ;; so this one entry covers all three ts-modes.  Neutral `npm' scripts;
+     ;; concrete commands are overridden per project via projection /
+     ;; .dir-locals.el.
+     ((apply #'derived-mode-p '(typescript-ts-mode tsx-ts-mode js-ts-mode))
+      . (("npm test"  . "npm test")
+         ("npm build" . "npm run build")
+         ("npm lint"  . "npm run lint")))
+     ;; C / C++ — CMake / CTest, mirroring the Meson entries above.
+     ((apply #'derived-mode-p '(c-mode c++-mode c-ts-mode c++-ts-mode))
+      . (("cmake configure" . "cmake -B build")
+         ("cmake build"     . "cmake --build build")
+         ("ctest"           . "ctest --test-dir build --output-on-failure"))))))
 
 ;;; @doc Renders compile-multi pickers through consult — gives you
 ;;; orderless filtering and preview on every "what command should I
