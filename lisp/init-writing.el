@@ -45,11 +45,17 @@
          (message-mode     . jotain-writing--keep-monospace)))
 
 ;;; @doc Just-in-time spell check using enchant — no on-save scan, no
-;;; per-buffer flyspell setup. M-$ corrects the word at point;
-;;; C-M-$ switches dictionaries.
+;;; per-buffer flyspell setup. `global-jinx-mode' replaces both
+;;; `flyspell-mode' and `flyspell-prog-mode' in one shot: jinx keys off
+;;; faces, so in a code buffer it checks only comments and strings and
+;;; leaves the code alone, no `flyspell-prog-mode' equivalent needed.
+;;; Enabled from `emacs-startup' rather than a bag of per-mode hooks so
+;;; prose *and* code get checked. M-$ corrects the word at point
+;;; (C-u M-$ walks every misspelling); C-M-$ switches dictionaries.
+;;; Data/config buffers that only look like prose opt back out in
+;;; init-lang-data.
 (use-package jinx
-  :hook ((text-mode . jinx-mode)
-         (org-mode  . jinx-mode))
+  :hook (emacs-startup . global-jinx-mode)
   :bind (("M-$"   . jinx-correct)
          ("C-M-$" . jinx-languages)))
 
