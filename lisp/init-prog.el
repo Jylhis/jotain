@@ -430,14 +430,17 @@ connection alongside any existing language server."
 
 ;;; @doc Built-in inline diagnostic display. Indicator chars (! ? ·) and
 ;;; end-of-line message rendering keep diagnostics legible without
-;;; opening a side window. M-n / M-p navigate.
+;;; opening a side window: `short' shows only the most severe diagnostic
+;;; per line, so a busy line stays readable. M-n / M-p navigate.
 (use-package flymake
   :ensure nil
   :hook (prog-mode . flymake-mode)
   :custom
   (flymake-fringe-indicator-position 'left-fringe)
   (flymake-suppress-zero-counters t)
-  (flymake-show-diagnostics-at-end-of-line t) ; Built-in inline display
+  ;; `short' (Flymake 1.3.6+): only the most severe diagnostic per line at
+  ;; end-of-line. Keeps busy lines legible vs. `t', which stacks them all.
+  (flymake-show-diagnostics-at-end-of-line 'short)
   (flymake-margin-indicators-string
    '((error   "!" compilation-error)
      (warning "?" compilation-warning)
