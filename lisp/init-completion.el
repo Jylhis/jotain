@@ -195,9 +195,17 @@
 
 ;;;; Embark — actions on anything
 
-;;; @doc Right-click for the keyboard. C-. on any candidate (file,
-;;; symbol, region, command name) opens a menu of actions valid for
-;;; that thing. C-h B replaces describe-bindings with a paged view.
+;;; @doc Right-click for the keyboard. `C-.' (embark-act) on any
+;;; candidate — file, symbol, region, buffer, command name, URL —
+;;; opens a menu of actions valid for that thing; `C-;' (embark-dwim)
+;;; skips the menu and runs the default action (visit the file, browse
+;;; the URL, jump to the definition). Press `C-h' after `C-.' to turn
+;;; the menu into a searchable `completing-read' — the best way to
+;;; discover what applies. Inside the menu `i'/`w' insert or copy the
+;;; candidate, `A' (embark-act-all) acts on every candidate at once,
+;;; and `B' (embark-become) re-runs the typed input through another
+;;; command; `C-u C-.' keeps the minibuffer open for successive
+;;; actions. `C-h B' replaces describe-bindings with a paged view.
 (use-package embark
   :bind
   (("C-."   . embark-act)
@@ -213,9 +221,13 @@
                  nil
                  (window-parameters (mode-line-format . none)))))
 
-;;; @doc Glue between embark and consult — exports a consult result
-;;; list (e.g. consult-ripgrep) into a grep buffer with C-c C-o for
-;;; the classic search → wgrep refactor flow.
+;;; @doc Glue between embark and consult — teaches `embark-export' to
+;;; turn a consult result list into the right major mode: consult-grep
+;;; and consult-ripgrep become a grep buffer, consult-line an occur
+;;; buffer, file candidates a dired buffer, buffer candidates an
+;;; ibuffer buffer. The grep/ripgrep export is the classic search →
+;;; `C-c C-o' → wgrep (`C-x C-q') refactor flow that edits every match
+;;; in place across all the matched files.
 (use-package embark-consult
   :after (embark consult)
   :hook (embark-collect-mode . consult-preview-at-point-mode)
