@@ -244,6 +244,17 @@
 
 ;;;; In-buffer completion
 
+;;; @doc `tab-always-indent' = `complete' turns TAB into the single
+;;; trigger for the whole completion stack: it indents the line when
+;;; indentation is pending and otherwise summons corfu with every
+;;; `completion-at-point-functions' entry — the major mode's own capf
+;;; plus the cape fallbacks wired up below. Auto-completion still fires
+;;; on its own, but this gives an explicit, muscle-memory trigger.
+(use-package emacs
+  :ensure nil
+  :custom
+  (tab-always-indent 'complete))
+
 ;;; @doc In-buffer completion popup — the corfu equivalent of company.
 ;;; Auto-triggered after 2 chars so it feels like a modern editor
 ;;; without a long delay.
@@ -266,17 +277,31 @@
 
 ;;; @doc Completion-at-point Extensions — extra capf functions (dabbrev,
 ;;; file path, keyword) that feed corfu when the major mode's own
-;;; capf finds nothing useful.
+;;; capf finds nothing useful. These three go on the *global*
+;;; `completion-at-point-functions' so they act as fallbacks after the
+;;; buffer-local, major-mode capfs run. `cape-elisp-symbol' is instead
+;;; added buffer-locally in Elisp buffers, where it completes symbols
+;;; even inside comments and docstrings (out there `elisp-completion-at-point'
+;;; only fires in code), without polluting completion elsewhere.
 (use-package cape
   :demand t
-  :functions (cape-dabbrev cape-file cape-keyword)
+  :functions (cape-dabbrev cape-file cape-keyword cape-elisp-symbol)
   :custom
   (cape-file-directory-must-exist t)
   (cape-file-prefix '("~" "/" "./" "../"))
   :init
   (add-hook 'completion-at-point-functions #'cape-dabbrev)
   (add-hook 'completion-at-point-functions #'cape-file)
-  (add-hook 'completion-at-point-functions #'cape-keyword))
+  (add-hook 'completion-at-point-functions #'cape-keyword)
+  (defun jotain-cape-setup-elisp ()
+    "Add `cape-elisp-symbol' as an Elisp fallback capf.
+The positive depth appends it after the mode's own
+`elisp-completion-at-point', so in code the richer built-in wins and
+`cape-elisp-symbol' only kicks in where the built-in returns nil —
+comments and docstrings."
+    (add-hook 'completion-at-point-functions #'cape-elisp-symbol 90 t))
+  (add-hook 'emacs-lisp-mode-hook #'jotain-cape-setup-elisp)
+  (add-hook 'lisp-interaction-mode-hook #'jotain-cape-setup-elisp))
 
 (provide 'init-completion)
 ;;; init-completion.el ends here
