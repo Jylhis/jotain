@@ -45,11 +45,12 @@
 
 ;;; @doc Kitty Keyboard Protocol — lets terminal Emacs distinguish
 ;;; C-i/TAB, C-m/RET, C-[/ESC, and pass Shift-modified function
-;;; keys through. No-op in GUI frames, so safe to enable
-;;; unconditionally.
+;;; keys through. Only loaded in tty and daemon sessions — the
+;;; daemon arm matters because a daemon can later serve
+;;; `emacsclient -nw' frames; pure GUI sessions skip it entirely.
 (use-package kkp
-  :functions (global-kkp-mode)
-  :config (global-kkp-mode 1))
+  :if (or (daemonp) (not (display-graphic-p)))
+  :hook (after-init . global-kkp-mode))
 
 ;;; @doc OSC 52 clipboard integration. Yank/kill in terminal Emacs
 ;;; reaches the system clipboard even through ssh + tmux.
