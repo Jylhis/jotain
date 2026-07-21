@@ -277,7 +277,7 @@ freezes — start, reproduce, stop."
 ;;; PATH — this picks up ~/.nix-profile and user toolchains.
 (use-package exec-path-from-shell
   :if (or (daemonp)
-          (memq window-system '(mac ns x)))
+          (memq window-system '(mac ns x pgtk)))
   :demand t
   :functions (exec-path-from-shell-initialize)
   :custom
