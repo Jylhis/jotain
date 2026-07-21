@@ -4,7 +4,7 @@
 
 ;; AI tool hierarchy:
 ;;
-;;   claude-code-ide  C-c C-'       Agentic editing — autonomous multi-file
+;;   claude-code-ide  C-c q         Agentic editing — autonomous multi-file
 ;;                                  changes via the Claude Code CLI.
 ;;
 ;;   jotain-screenshot              Capture the frame to var/screenshots/,
@@ -12,13 +12,13 @@
 ;;                                  `emacs_screenshot' MCP tool so the AI
 ;;                                  can see how Emacs looks.
 ;;
-;;   eca              C-c C-e       Editor Code Assistant — chat, inline
+;;   eca              C-c e         Editor Code Assistant — chat, inline
 ;;                                  completion, rewrite, and MCP through an
 ;;                                  external `eca' server (C-c . for the menu
 ;;                                  inside eca windows).
 ;;
-;;   gptel            C-c RET       Send region/buffer to an LLM.
-;;                    C-c M-RET     Full menu (model, backend, system prompt).
+;;   gptel            C-c s         Send region/buffer to an LLM.
+;;                    C-c S         Full menu (model, backend, system prompt).
 ;;
 ;;   mcp              M-x mcp-connect-server + gptel-mcp-connect
 ;;                                  Model Context Protocol tool use via gptel.
@@ -71,13 +71,14 @@ Interactively, echo the path and push it onto the kill ring."
     file))
 
 ;;; @doc Agentic multi-file editing through the Claude Code CLI. Bound to
-;;; C-c C-' so the menu is one key away whenever a refactor needs more
-;;; context than a single LSP rename can carry. Provided by Nix
-;;; (manzaltu/claude-code-ide.el is not on MELPA).
+;;; C-c q (user-reserved space, so no major mode shadows it) so the menu
+;;; is one key away whenever a refactor needs more context than a single
+;;; LSP rename can carry. Provided by Nix (manzaltu/claude-code-ide.el is
+;;; not on MELPA).
 (use-package claude-code-ide
   :ensure nil ; Provided by Nix
   :defer t
-  :bind ("C-c C-'" . claude-code-ide-menu)
+  :bind ("C-c q" . claude-code-ide-menu)
   :functions (claude-code-ide-emacs-tools-setup claude-code-ide-make-tool)
   :custom
   ;; Serve custom MCP tools (emacs_screenshot below) to attached sessions.
@@ -100,25 +101,26 @@ Interactively, echo the path and push it onto the kill ring."
 ;;; completion, rewrite, MCP) talking to an external `eca' server over
 ;;; JSONRPC. The server binary is provided by Nix and found on $PATH, so
 ;;; nothing is downloaded; provider keys come from the environment, same as
-;;; gptel. C-c C-e starts a session and opens the chat.
+;;; gptel. C-c e starts a session and opens the chat.
 (use-package eca
   :defer t
-  :bind ("C-c C-e" . eca))
+  :bind ("C-c e" . eca))
 
 ;;; @doc Conversational LLM front-end with multiple backends. OpenRouter
 ;;; — an OpenAI-compatible aggregator fronting Claude, GPT, Gemini,
 ;;; DeepSeek, Qwen, GLM and more behind one key — is the default; direct
 ;;; Anthropic, Gemini and local Ollama backends stay selectable from the
-;;; C-c M-RET menu. Bound to C-c RET / C-c M-RET for quick send and full
-;;; menu. Keys come from the environment first, then auth-source via
+;;; C-c S menu. Bound to C-c s / C-c S for quick send and full menu —
+;;; user-reserved space, so org-mode and friends can't shadow them. Keys
+;;; come from the environment first, then auth-source via
 ;;; auth-source-1password.
 (use-package gptel
   :defer t
   :functions (gptel-make-openai gptel-make-anthropic gptel-make-gemini
                                 gptel-make-ollama)
   :bind
-  (("C-c RET"   . gptel-send)
-   ("C-c M-RET" . gptel-menu))
+  (("C-c s" . gptel-send)
+   ("C-c S" . gptel-menu))
   :config
   ;; OpenRouter — OpenAI-compatible aggregator, primary backend.
   (setopt gptel-backend
