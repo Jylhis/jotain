@@ -61,6 +61,8 @@ goimports/gofmt formatter apheleia runs on save."
   :custom
   ;; gofmt indents with tabs; a step of 8 (the default) matches the
   ;; default `tab-width' so one indent level renders as exactly one tab.
+  ;; Renamed to `go-ts-indent-offset' in Emacs 31 (obsolete alias keeps
+  ;; this working); rename atomically when the floor moves to 31.
   (go-ts-mode-indent-offset 8))
 
 ;; go.work: Emacs 31 adds `go-work-ts-mode'; on Emacs 30 fall back to
