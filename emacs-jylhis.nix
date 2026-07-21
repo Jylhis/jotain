@@ -24,8 +24,12 @@
       },
 
   src ? null,
-  rev ? "eaf289b4f7414744a23912ab7aae0a518d998242",
-  hash ? "sha256-ZbwX8kKNWpV6BbaqEFE6ZB4oNuqwtdg6QTNcKX1qPBY=",
+  # Fallback pin for non-flake imports (src == null): read the same
+  # jylhis-emacs revision the flake locks so every entry point builds the
+  # same source.  narHash is the unpacked-tree NAR hash, which is exactly
+  # what fetchTarball's sha256 expects.
+  rev ? (builtins.fromJSON (builtins.readFile ./flake.lock)).nodes."jylhis-emacs".locked.rev,
+  hash ? (builtins.fromJSON (builtins.readFile ./flake.lock)).nodes."jylhis-emacs".locked.narHash,
 
   # The Meson branch has GTK3 terminal/X11 wiring, but NS/PGTK are not wired in
   # the source tree yet.  Keep the default terminal-only so it works on Darwin
@@ -50,10 +54,9 @@ let
     if src != null then
       src
     else
-      pkgs.fetchFromGitHub {
-        owner = "jylhis";
-        repo = "emacs";
-        inherit rev hash;
+      fetchTarball {
+        url = "https://github.com/jylhis/emacs/archive/${rev}.tar.gz";
+        sha256 = hash;
       };
 in
 stdenv.mkDerivation (_finalAttrs: {
