@@ -98,15 +98,18 @@ Missing means some archive in `package-archives' lacks a cached
 ;; when it is actually stale, so the next hand install doesn't pay the
 ;; network cost.  Async download + demoted errors: never blocks the
 ;; daemon, never fails the service.
+(defun jotain--refresh-package-archives-maybe ()
+  "Refresh the package archive cache in the background when it is stale."
+  (when (jotain--package-archives-stale-p)
+    (with-demoted-errors "jotain: background package refresh failed: %S"
+      (package-refresh-contents t))))
+
+(defun jotain--schedule-package-refresh ()
+  "Schedule a background archive refresh for the next idle moment."
+  (run-with-idle-timer 2 nil #'jotain--refresh-package-archives-maybe))
+
 (when jotain-refresh-package-archives
-  (add-hook 'emacs-startup-hook
-            (lambda ()
-              (run-with-idle-timer
-               2 nil
-               (lambda ()
-                 (when (jotain--package-archives-stale-p)
-                   (with-demoted-errors "jotain: background package refresh failed: %S"
-                     (package-refresh-contents t))))))))
+  (add-hook 'emacs-startup-hook #'jotain--schedule-package-refresh))
 
 (require 'init-core)         ; GC, encoding, var/ paths, sane defaults
 (require 'init-keys)         ; Global keymap and leader-key setup
