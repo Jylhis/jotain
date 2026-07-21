@@ -325,8 +325,8 @@ in
       ''
         cd $src
         emacs --batch -L lisp -L test \
-          -l ert -l test/devenv-test.el \
-          -f ert-run-tests-batch-and-exit
+          --eval '(dolist (f (directory-files "test" t "\\.el$")) (load f nil t))' \
+          -l ert -f ert-run-tests-batch-and-exit
         touch $out
       '';
 }
