@@ -2,23 +2,37 @@
 
 - https://github.com/federicotdn/verb
 - Disable "Process zoxide finished" messages in zoxide buffer
-- Disable direnv errors in envrc buffer
 - Fix themes in terminal
+
+## Deferred review findings (docs/reviews/2026-07-emacs-nix-deep-review.md)
+
+- **Finding 12, option (b)** — adopt `completion-preview` alongside corfu in
+  `init-completion.el` (with the Emacs 31 `completion-preview-sort-function`
+  pairing). Feature decision; the docs-only fix (option a) shipped instead.
+- **Finding 21** — make `devenv-env--turn-on` subprocess-free: consult only
+  `devenv-modeline--cached-trust` and replay via the async
+  `devenv-modeline--probe-trust` callback (the long-TTL trust cache shipped;
+  the async rework needs a live Emacs to validate).
+- **Finding 48, part (c)** — scanner-fidelity flake check: batch-read
+  `lisp/*.el` with Emacs's own reader, collect `(use-package NAME)` heads, and
+  diff against `scanDirectory` output (new CI machinery; parts a/b shipped in
+  `nix/use-package.nix`).
+- **Finding 52** — bench harness rework: time autoload-driven loads via a
+  file-name handler for the `load` operation (or attribute post-init loads by
+  snapshotting `features`), and measure the archive refresh synchronously
+  (`just bench` is currently a disabled stub anyway).
+- **Finding 53, full fix** — generate `config/eca/config.json`'s model list and
+  `init-ai.el`'s gptel `:models` from a single source, or add a checks.nix
+  drift check (the minimal cross-reference comments shipped).
 
 ## Investigate
 
 - https://github.com/kickingvegas/casual
 - https://github.com/emacs-vs/line-reminder
-- https://www.emacswiki.org/emacs/WindMove
 - https://github.com/sulami/literate-calc-mode.el
-- https://www.emacswiki.org/emacs/WhiteSpace
 - https://github.com/benma/visual-regexp.el
 - https://www.emacswiki.org/emacs/AlignCommands
-- https://elpa.gnu.org/packages/expreg.html
-- https://www.gnu.org/software/emacs/manual/html_node/elisp/Language-Grammar.html
 - https://github.com/universal-ctags/citre
-- https://github.com/joaotavora/eglot
-- https://www.emacswiki.org/emacs/FlyMake
 - https://www.gnu.org/software/emacs/manual/html_node/ebrowse/index.html
 - https://github.com/pythonic-emacs/anaconda-mode
 - https://github.com/emacs-elsa/Elsa
@@ -26,12 +40,10 @@
 - https://github.com/Wilfred/suggest.el
 - https://www.erlang.org/doc/apps/tools/erlang_mode_chapter.html
 - https://github.com/elixir-editors/emacs-elixir
-- https://github.com/haskell/haskell-mode
 - https://github.com/swift-emacs/swift-mode
 - https://github.com/Emacs-Kotlin-Mode-Maintainers/kotlin-mode
 - https://github.com/hlissner/emacs-mips-mode
 - https://github.com/AdamNiederer/riscv-mode
-- https://github.com/vedang/pdf-tools
 - https://github.com/kubernetes-el/kubernetes-el
 - https://github.com/lastquestion/explain-pause-mode
 - https://github.com/syl20bnr/spacemacs
