@@ -48,7 +48,7 @@
    ("C-h k"   . helpful-key)
    ("C-h F"   . helpful-function)
    ("C-h C"   . helpful-command)
-   ("C-c C-d" . helpful-at-point)
+   ([remap display-local-help] . helpful-at-point)
    ([remap describe-symbol] . helpful-symbol)))
 
 (provide 'init-help)

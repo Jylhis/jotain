@@ -66,6 +66,8 @@
 ;;; `comment-auto-fill-only-comments' keeps automatic line wrapping
 ;;; (when `auto-fill-mode' is on) confined to comments. C-c ; is an
 ;;; ergonomic alias for `comment-line' — C-; is taken by embark-dwim.
+;;; Deliberate tradeoff: org-mode shadows C-c ; with `org-toggle-comment',
+;;; which is the org equivalent anyway.
 ;;; Per-mode overrides go in the language module via a named hook:
 ;;;   (defun my-foo-mode-setup ()
 ;;;     (setq-local comment-multi-line nil))
@@ -109,12 +111,12 @@
   :bind ("C-=" . expreg-expand))
 
 ;;; @doc Visual multi-cursor editing. C-> and C-< select the next/prev
-;;; occurrence; C-c C-< selects every occurrence in the buffer.
+;;; occurrence; C-S-c C-S-c selects every occurrence in the buffer.
 (use-package multiple-cursors
   :bind
-  (("C->"     . mc/mark-next-like-this)
-   ("C-<"     . mc/mark-previous-like-this)
-   ("C-c C-<" . mc/mark-all-like-this)))
+  (("C->"         . mc/mark-next-like-this)
+   ("C-<"         . mc/mark-previous-like-this)
+   ("C-S-c C-S-c" . mc/mark-all-like-this)))
 
 ;;; @doc Visual undo tree on C-x u. Stateless — no .undo-tree side files
 ;;; cluttering the filesystem like undo-tree.el used to leave
