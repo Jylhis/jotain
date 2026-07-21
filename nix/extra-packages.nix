@@ -17,6 +17,14 @@ efinal: eprev: {
     version = eprev.ghostel.version or "0";
     src = eprev.ghostel.src;
     packageRequires = eprev.ghostel.packageRequires or [ ];
+    # The MELPA recipe cherry-picks the elisp out of the repo; trivialBuild
+    # wants it at the source root, so point sourceRoot at ghostel.el's dir.
+    postUnpack = ''
+      elFile=$(find "$sourceRoot" -name ghostel.el -print -quit)
+      if [ -n "$elFile" ]; then
+        sourceRoot=$(dirname "$elFile")
+      fi
+    '';
   };
 
   jylhis-emacs-themes = efinal.trivialBuild {
