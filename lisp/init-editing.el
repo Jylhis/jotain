@@ -129,13 +129,12 @@
 ;;; fight your own cursor.
 (use-package super-save
   :diminish
-  :functions (super-save-mode)
+  :hook (after-init . super-save-mode)
   :custom
   (super-save-auto-save-when-idle t)
   (super-save-remote-files nil)
   (super-save-silent t)
-  (super-save-delete-trailing-whitespace 'except-current-line)
-  :config (super-save-mode 1))
+  (super-save-delete-trailing-whitespace 'except-current-line))
 
 ;;; @doc Make `M-x re-builder' use string syntax — the same form you'd
 ;;; paste into `re-search-forward' — instead of the default `read'

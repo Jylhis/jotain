@@ -16,14 +16,19 @@
 ;;; smtpmail, circe — resolves credentials by host against the
 ;;; 1Password vault transparently.
 (use-package auth-source-1password
-  :demand t
+  :defer t
   :functions (auth-source-1password-enable)
   :custom
   (auth-source-1password-vault "Private")
   (auth-source-1password-op-executable "op")
   (auth-source-1password-cache-ttl 3600)
+  :init
+  ;; Credentials are only looked up when a consumer (gptel, forge, …)
+  ;; loads auth-source, so register the backend lazily at that point.
+  (with-eval-after-load 'auth-source
+    (require 'auth-source-1password)
+    (auth-source-1password-enable))
   :config
-  (auth-source-1password-enable)
   (setopt auth-source-1password-search-fields '("title" "website" "url")))
 
 ;;;; sops — transparent encryption for YAML/JSON/env files
@@ -37,10 +42,11 @@
 ;;; C-c saves an encrypted edit; C-c C-d toggles into the editing
 ;;; view; C-c C-k cancels.
 (use-package sops
-  :demand t
-  :functions (global-sops-mode sops-save-file sops-cancel sops-edit-file)
+  ;; The global mode hooks find-file; after-init runs before
+  ;; command-line file arguments are visited, so nothing is missed.
+  :hook (after-init . global-sops-mode)
+  :functions (sops-save-file sops-cancel sops-edit-file)
   :config
-  (global-sops-mode 1)
   (define-key sops-mode-map (kbd "C-c C-c") #'sops-save-file)
   (define-key sops-mode-map (kbd "C-c C-k") #'sops-cancel)
   (define-key sops-mode-map (kbd "C-c C-d") #'sops-edit-file)
