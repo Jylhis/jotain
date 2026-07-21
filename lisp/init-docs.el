@@ -9,11 +9,19 @@
 ;; source-checkout workflows (`just run' against a host emacs that
 ;; is not the Jotain wrapper): if `just info' has produced
 ;; `result-info/share/info/jotain.info' in the repo, register its
-;; directory in `Info-directory-list' so the manual still opens.
+;; directory in `Info-additional-directory-list' so the manual still
+;; opens.
 
 ;;; Code:
 
-(require 'info)
+;; `Info-directory-list' is nil until `info-initialize' builds it from
+;; INFOPATH and `Info-default-directory-list', and that initialization
+;; is skipped entirely once the list is non-nil -- so seeding it here
+;; would suppress every other manual.  `Info-additional-directory-list'
+;; is the variable designed for additions: Info appends it after the
+;; initialized list.  Declared for warning-clean byte-compilation
+;; without an eager `(require 'info)'.
+(defvar Info-additional-directory-list)
 
 (defvar jotain-info--candidate-paths
   (delq nil
@@ -33,7 +41,8 @@
                (file-exists-p (expand-file-name "jotain.info" dir))))
         jotain-info--candidate-paths)))
   (when found
-    (add-to-list 'Info-directory-list found))
+    (with-eval-after-load 'info
+      (add-to-list 'Info-additional-directory-list found)))
   (when (and init-file-debug (not found))
     (message "init-docs: no jotain.info found in %S"
              jotain-info--candidate-paths)))
