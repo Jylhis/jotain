@@ -8,6 +8,9 @@
 
 ;;; Code:
 
+;; Defined in init-writing.el, which init.el loads before this file.
+(defvar jotain-notes-directory)
+
 ;;; @doc Built-in Org — outline, agenda, capture, literate-programming.
 ;;; Treated as a "third-party" package despite being built-in
 ;;; because it's the size and surface area of one. Capture templates
@@ -20,7 +23,10 @@
    ("C-c c" . org-capture)
    ("C-c l" . org-store-link))
   :custom
-  (org-directory               (expand-file-name "~/Documents"))
+  ;; Shared notes root (`jotain-notes-directory', init-writing.el) so
+  ;; org-capture and org-roam land next to denote notes instead of
+  ;; dropping loose .org files into the user's home folders.
+  (org-directory               jotain-notes-directory)
   (org-agenda-files            (list org-directory))
   (org-default-notes-file      (expand-file-name "inbox.org" org-directory))
   (org-startup-indented        t)
