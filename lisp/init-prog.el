@@ -287,7 +287,7 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
   :custom
   (eglot-autoshutdown t)
   (eglot-extend-to-xref t)
-  (eglot-confirm-server-initiated-edits nil)
+  (eglot-confirm-server-edits nil)
   (eglot-send-changes-idle-time 0.5)
   (eglot-events-buffer-config '(:size 0 :format short))
   (eglot-report-progress nil)
@@ -310,7 +310,9 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
   ;; Emacs 31+: render LSP hover/signature docs through the tree-sitter
   ;; markdown viewer instead of the plain-text fallback. Guarded so the
   ;; config still loads on Emacs 30 where the option doesn't exist.
+  ;; markdown-ts-mode.el ships in 31 but has no autoloads — require it:
   (when (and (boundp 'eglot-documentation-renderer)
+             (require 'markdown-ts-mode nil t)
              (fboundp 'markdown-ts-view-mode))
     (setopt eglot-documentation-renderer 'markdown-ts-view-mode))
 
@@ -361,10 +363,7 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
                      #'jotain-prog--ts-server))
   (add-to-list 'eglot-server-programs
                (cons '(python-mode python-ts-mode)
-                     #'jotain-prog--python-server))
-
-  ;; Silence eglot's JSON-RPC event log entirely.
-  (fset #'jsonrpc--log-event #'ignore))
+                     #'jotain-prog--python-server)))
 
 ;;; @doc Consult-driven workspace symbol search — C-M-. opens an
 ;;; orderless-filtered list of symbols across the LSP workspace.
@@ -422,8 +421,10 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
 Launches the SonarLint language server as a secondary eglot
 connection alongside any existing language server."
   (interactive)
+  (require 'eglot)
   (let ((eglot-server-programs
-         `((,major-mode . ("sonarlint-ls" "-stdio")))))
+         (cons `(,major-mode . ("sonarlint-ls" "-stdio"))
+               eglot-server-programs)))
     (call-interactively #'eglot)))
 
 ;;;; Flymake / eldoc
@@ -503,12 +504,15 @@ connection alongside any existing language server."
   :hook (prog-mode . jotain-tagref--maybe-enable)
   :init
   (defun jotain-tagref--maybe-enable ()
-    "Enable `tagref-mode' only inside a project.
+    "Enable `tagref-mode' only inside a project, when tagref is installed.
 `tagref-mode' signals a `user-error' when there is no project (e.g. the
 daemon's *scratch* buffer in `lisp-interaction-mode'), which aborts
 daemon startup before `server-start' with exit 255.  Decline silently
-outside a project."
-    (when (project-current)
+outside a project, and when the library is absent (Nix-only — in the
+MELPA-fallback mode the `:commands' autoload stub would otherwise
+hard-error on every prog-mode buffer)."
+    (when (and (project-current)
+               (require 'tagref nil t))
       (tagref-mode 1))))
 
 ;;;; Compile
