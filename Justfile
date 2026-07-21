@@ -308,6 +308,20 @@ docs-refresh-packages: build-packages-doc
 [group('build')]
 docs-all: docs info
 
+# Build the full jotain.j10s.io site: landing SPA + docs pages +
+# manual (HTML/Info) + man pages + GNU Emacs/Elisp manuals + options
+# and package references. Deployed from the `site` branch by the
+# Cloudflare GitHub integration (see .github/workflows/deploy.yml).
+[group('build')]
+site:
+    nix build .#site -o result-site
+    @echo "Site → result-site/public/index.html"
+
+# Build and locally serve the full site.
+[group('build')]
+serve-site: site
+    python3 -m http.server -d result-site/public 8080
+
 
 # ── Format ──────────────────────────────────────────────────────────
 

@@ -157,6 +157,10 @@
           pkgs = pkgsFor system;
           src = self;
         };
+        site = import ./nix/site.nix {
+          pkgs = pkgsFor system;
+          src = self;
+        };
       });
 
       formatter = forAllSystems (system: (treefmtEval system).config.build.wrapper);
