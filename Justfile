@@ -8,7 +8,7 @@ config_dir := justfile_directory()
 
 # Emacs build flavours target the current system by default. Override
 # with `just system=x86_64-linux build-nox` etc.
-system := `nix eval --impure --raw --expr 'builtins.currentSystem'`
+system := arch() + "-" + if os() == "macos" { "darwin" } else { "linux" }
 
 # List available recipes.
 default:
