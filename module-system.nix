@@ -36,14 +36,50 @@ let
     else
       pkgsWithOverlay.jotainEmacsPackages;
 
+  # Runtime binaries the Elisp config invokes unconditionally (shared
+  # list, see nix/runtime-deps.nix).
+  runtimeDeps = import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; };
+
+  # Re-wrap the selected package's binaries so the runtime tools ride
+  # the Emacs PATH without entering the global environment: appending
+  # keeps the host userland first (and GNU coreutils out of the way on
+  # darwin), and — unlike environment.systemPackages, which a
+  # Dock/launchd-launched GUI Emacs never sees on darwin — the wrapper
+  # PATH survives every launch context.
+  wrappedPackage =
+    pkgs.runCommand "${selectedPackage.name or "jotain-emacs"}-with-runtime-deps"
+      {
+        nativeBuildInputs = [
+          # Top-level `lndir` only exists on recent nixpkgs; on older
+          # releases (24.05+) it lives under the xorg package set.
+          (pkgs.lndir or pkgs.xorg.lndir)
+          pkgs.makeBinaryWrapper
+        ];
+        meta = (selectedPackage.meta or { }) // {
+          mainProgram = "emacs";
+        };
+        passthru = selectedPackage.passthru or { };
+      }
+      ''
+        mkdir -p $out
+        lndir -silent ${selectedPackage} $out
+        for prog in $out/bin/*; do
+          [ -L "$prog" ] || continue
+          orig=$(readlink -f "$prog")
+          rm "$prog"
+          makeBinaryWrapper "$orig" "$prog" \
+            --suffix PATH : "${lib.makeBinPath runtimeDeps}"
+        done
+      '';
+
   # Fallback script for EDITOR when the daemon is not running.
   editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
-    exec ${lib.getBin selectedPackage}/bin/emacs -nw -- "$@"
+    exec ${lib.getBin wrappedPackage}/bin/emacs -nw -- "$@"
   '';
 
   # EDITOR — terminal-friendly emacsclient (works over SSH, in git commit, etc.)
   editorScript = pkgs.writeShellScriptBin "jotain-editor" ''
-    exec ${lib.getBin selectedPackage}/bin/emacsclient \
+    exec ${lib.getBin wrappedPackage}/bin/emacsclient \
       --tty \
       --alternate-editor=${editorFallback} \
       -- \
@@ -52,9 +88,9 @@ let
 
   # VISUAL — opens a GUI emacsclient frame.
   visualScript = pkgs.writeShellScriptBin "jotain-visual" ''
-    exec ${lib.getBin selectedPackage}/bin/emacsclient \
+    exec ${lib.getBin wrappedPackage}/bin/emacsclient \
       --create-frame \
-      --alternate-editor=${lib.getBin selectedPackage}/bin/emacs \
+      --alternate-editor=${lib.getBin wrappedPackage}/bin/emacs \
       -- \
       "$@"
   '';
@@ -111,10 +147,14 @@ in
 
     nixpkgs.overlays = [ jotainOverlay ];
     environment.systemPackages = [
-      selectedPackage
+      wrappedPackage
       editorScript
       visualScript
       pkgsWithOverlay.eca
+      # Base dictionary for jinx spell-checking (lisp/init-writing.el).
+      # Must be in the profile — not on PATH — because libaspell finds
+      # $profile/lib/aspell via its NIX_PROFILES patch at runtime.
+      pkgs.aspellDicts.en
     ];
     # Colour-emoji fallback for the `emoji' / `symbol' fontsets wired
     # in lisp/init-ui.el.  Skipped on Darwin: macOS provides Apple
