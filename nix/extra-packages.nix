@@ -2,7 +2,23 @@
 # GNU ELPA, NonGNU ELPA).  Shared between default.nix and devenv.nix.
 { pkgs }:
 
-efinal: _eprev: {
+efinal: eprev: {
+  # TEMPORARY (2026-07-21): emacs-overlay's ghostel epkg builds the
+  # libghostty-vt native module with zig, and the module's zig-deps
+  # fixed-output fetch is currently unbuildable on GitHub CI runners —
+  # zig's HTTP/git fetcher fails deterministically against github.com
+  # (HttpConnectionClosing / WriteFailed, three runs on 2026-07-21).
+  # Rebuild the package Elisp-only from the same pinned MELPA source so
+  # the distribution stays buildable; `ghostel-module-auto-install
+  # 'download` (lisp/init-terminal.el) restores the module at runtime.
+  # Revert to the plain epkgs.ghostel once the upstream fetch works.
+  ghostel = efinal.trivialBuild {
+    pname = "ghostel";
+    version = eprev.ghostel.version or "0";
+    src = eprev.ghostel.src;
+    packageRequires = eprev.ghostel.packageRequires or [ ];
+  };
+
   jylhis-emacs-themes = efinal.trivialBuild {
     pname = "jylhis-emacs-themes";
     version = "0.4.0-unstable-2026-06-05";
