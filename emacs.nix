@@ -14,13 +14,14 @@
 # overlays attr is derived from flake.lock).
 #
 # Usage:
-#   nix-build emacs.nix                                            # Emacs 31 release branch (default)
+#   nix-build emacs.nix                                            # Emacs 30 (nixpkgs default attr)
 #   nix-build emacs.nix --arg noGui true                           # terminal-only
 #   nix-build emacs.nix --arg withPgtk true                        # pure GTK (Wayland)
 #   nix-build emacs.nix --arg withGTK3 true                        # GTK3 + X11
 #   nix-build emacs.nix --arg withNativeCompilation false          # disable native-comp
 #   nix-build emacs.nix --arg variant '"git"'                      # bleeding-edge master
-#   nix-build emacs.nix --arg variant '"unstable"'                 # latest release tag
+#   nix-build emacs.nix --arg variant '"unstable"'                 # Emacs 31 release branch (31.0.90 pretest;
+#                                                                  #   the distribution default via mk-overlay.nix)
 #   nix-build emacs.nix --arg variant '"macport"'                  # macOS macport fork (still Emacs 30)
 #   nix-build emacs.nix --arg variant '"igc"'                      # incremental GC branch
 #   nix-build emacs.nix --arg withSystemAppearancePatch true       # macOS dark mode hooks
@@ -79,9 +80,12 @@
       },
 
   # ── Source variant ────────────────────────────────────────────────
-  #   "mainline"  — nixpkgs default emacs attr (default, binary-cached)
+  #   "mainline"  — nixpkgs default emacs attr (Emacs 30; the default
+  #                 for bare emacs.nix builds, Hydra-cached)
   #   "git"       — bleeding-edge master from git.savannah.gnu.org
-  #   "unstable"  — latest release tag built from git source (srcRepo)
+  #   "unstable"  — Emacs 31 release branch (currently the 31.0.90
+  #                 pretest); the distribution default — mk-overlay.nix
+  #                 passes variant = "unstable" to jotainEmacs
   #   "macport"   — jdtsmith/emacs-mac fork (Darwin only)
   #   "igc"       — feature/igc3 incremental garbage collector branch
   variant ? "mainline",
@@ -104,12 +108,22 @@
   # X11 (Linux default)
   withToolkitScrollBars ? true, # --with-toolkit-scroll-bars
   withXinput2 ? withX, # --with-xinput2 (smooth scrolling on X)
-  withXwidgets ? !noGui && (withGTK3 || withPgtk || withNS || variant == "macport"),
-  # --with-xwidgets (embedded webkit widgets). Matches the upstream
-  # make-emacs.nix default (its extra `isDarwin || major != "30"` clause
-  # only matters for non-Darwin Emacs 30, which no jotain variant is).
-  # emacs-overlay's git/unstable/igc bases default xwidgets off, but we
-  # pass this flag explicitly so our value wins there too.
+  withXwidgets ? (
+    if variant == "git" || variant == "unstable" || variant == "igc" then
+      false
+    else
+      !noGui && (withGTK3 || withPgtk || withNS || variant == "macport")
+  ),
+  # --with-xwidgets (embedded webkit widgets). The default mirrors each
+  # base's own: emacs-overlay builds its git/unstable/igc attrs with
+  # xwidgets off (even on Darwin, where withNS would otherwise flip it
+  # on), while nixpkgs make-emacs.nix defaults it on for GUI GTK/NS
+  # builds (its extra `isDarwin || major != "30"` clause only matters
+  # for non-Darwin Emacs 30 with a GTK toolkit forced on, which no
+  # jotain default is). The flag is only forwarded when the caller
+  # diverges from this default (see overrideArgs below) — always passing
+  # it would override the overlay attrs' xwidgets-off value on Darwin
+  # and silently bust cache parity for git/unstable/igc there.
 
   # ── Compilation ──────────────────────────────────────────────────
   withNativeCompilation ? (pkgs.stdenv.buildPlatform.canExecute pkgs.stdenv.hostPlatform),
@@ -149,8 +163,10 @@
 
   # ── macOS patches (from nix-giant/nix-darwin-emacs) ──────────────
   # Originally from d12frosted/homebrew-emacs-plus. Only applied on
-  # Darwin. Hashes are pinned per patch branch in darwinPatchHashes
-  # below; if upstream rewrites a patch, the build reports the new hash.
+  # Darwin. Fetched from the commit pinned in darwinPatchesRev below;
+  # hashes are pinned per patch branch in darwinPatchHashes. Updating
+  # means bumping the rev — a patch rewritten upstream then reports its
+  # new hash at build time.
   withSystemAppearancePatch ? false,
   # Adds ns-system-appearance variable and
   # ns-system-appearance-change-functions hook for Dark/Light mode detection
@@ -262,6 +278,12 @@ let
   # not-yet-existing flags (noGui, srcRepo, withGcMarkTrace, …) are
   # dropped, and terminal/GUI selection still flows through the explicit
   # `with*` flags that have existed all along.
+  xwidgetsBaseDefault =
+    if isGitVariant then
+      false
+    else
+      !noGui && (withGTK3 || withPgtk || withNS || variant == "macport");
+
   overrideArgs = {
     inherit
       noGui
@@ -277,7 +299,6 @@ let
       withCsrc
       withToolkitScrollBars
       withXinput2
-      withXwidgets
       withTreeSitter
       withSQLite3
       withWebP
@@ -294,6 +315,16 @@ let
       withGcMarkTrace
       withGlibNetworking
       ;
+  }
+  # Mirror of the `withXwidgets ?` default above. Forward the flag only
+  # when the caller diverges from it: the overlay's git/unstable/igc
+  # attrs carry xwidgets off explicitly, so unconditionally passing our
+  # value would rebuild them from source on Darwin (where withNS makes
+  # the mainline-style default true) instead of hitting
+  # nix-community.cachix.org. An explicit non-default withXwidgets still
+  # intentionally busts the cache, like the rev pins.
+  // lib.optionalAttrs (withXwidgets != xwidgetsBaseDefault) {
+    inherit withXwidgets;
   };
 
   overridden = basePackage.override (
@@ -301,12 +332,15 @@ let
   );
 
   # ── Darwin patches (fetched from nix-giant/nix-darwin-emacs) ─────
-  # Patch directory: "unstable" for master/32+, "30" for the macport
-  # fork (still Emacs 30.x), "31" for Emacs 31.x.
+  # Patch directory: "unstable" for master/32+; otherwise keyed on what
+  # the base package actually is, not on the variant name — "30" for
+  # Emacs 30.x (macport, and mainline while nixpkgs' default attr is
+  # 30.2), "31" for Emacs 31.x (unstable, and mainline once nixpkgs
+  # promotes 31 to pkgs.emacs).
   patchBranch =
     if variant == "git" || variant == "igc" then
       "unstable"
-    else if variant == "macport" then
+    else if lib.versionOlder basePackage.version "31" then
       "30"
     else
       "31";
@@ -329,13 +363,22 @@ let
     };
   };
 
+  # Pinned nix-giant/nix-darwin-emacs commit the patches are fetched
+  # from. Branch URLs are mutable — an upstream rewrite/move/delete on
+  # `main` would make these fixed-output fetches fail (hash mismatch or
+  # 404) at an arbitrary future date on machines without the store
+  # paths. Bumping this rev is the deliberate update path; if the patch
+  # content changed upstream, the build reports the new hashes for the
+  # table above.
+  darwinPatchesRev = "c54ec432033e0e099ba9d4b4da8a1667971b3134"; # main as of 2026-07-21
+
   darwinPatch =
     name:
     fetchpatch {
       inherit name;
       url =
         "https://raw.githubusercontent.com/nix-giant/nix-darwin-emacs"
-        + "/main/overlays/patches-${patchBranch}/${name}";
+        + "/${darwinPatchesRev}/overlays/patches-${patchBranch}/${name}";
       hash = darwinPatchHashes.${patchBranch}.${name};
     };
 

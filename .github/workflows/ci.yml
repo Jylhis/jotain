@@ -1,16 +1,19 @@
 # CI for the Jotain Emacs configuration — pull requests only.
 #
-# Runs the lightweight subset of nix/checks.nix on every PR. The heavy
-# checks (elisp-compile, packages-default, packages-info) are deferred
-# to deploy.yml on main so PR latency stays low even on cache miss.
+# Runs the lightweight subset of nix/checks.nix on every PR, plus
+# elisp-compile: the default Emacs is the unstable variant (Emacs 31
+# pretest), so the warnings-as-errors byte-compile gate must catch 31
+# obsoletions before merge, not on main. The heavy package builds
+# (packages-default, packages-info) stay deferred to deploy.yml on main
+# so PR latency stays low even on cache miss.
 #
 # Two parallel jobs on x86_64-linux:
 #
 #   check — formatting, statix, deadnix, module-eval,
 #           packages-doc-in-sync, packages-doc, options-doc, elisp-lint
-#           (paren check; transitively builds the bare jotainEmacs from
-#           cache).  Skips elisp-compile and the full grammar
-#           distribution — those run in deploy.yml.
+#           (paren check), elisp-compile (both transitively build the
+#           bare jotainEmacs from cache).  Skips the full grammar
+#           distribution — that runs in deploy.yml.
 #   test  — devenv test (dev environment assertions from devenv.nix).
 #
 # The jylhis cachix cache is pull-only here: PR runs (including from
@@ -43,6 +46,9 @@ jobs:
       - uses: cachix/cachix-action@v17
         with:
           name: jylhis
+          # The default jotainEmacs base (emacs-unstable, Emacs 31
+          # pretest) is cached on nix-community.cachix.org.
+          extraPullNames: nix-community
 
       # Each check is a separate step so a failure surfaces by name in
       # the GitHub Actions UI without needing log access.
@@ -77,6 +83,9 @@ jobs:
       - name: Check — elisp-lint
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.elisp-lint
 
+      - name: Check — elisp-compile
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.elisp-compile
+
   test:
     name: Dev environment
     timeout-minutes: 15
@@ -91,7 +100,7 @@ jobs:
       - uses: cachix/cachix-action@v17
         with:
           name: jylhis
-          extraPullNames: devenv
+          extraPullNames: devenv,nix-community
 
       - name: Install devenv.sh
         run: nix profile add nixpkgs#devenv
