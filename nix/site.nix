@@ -80,13 +80,27 @@ let
     pkgs.runCommand "emacs-manuals-html"
       {
         nativeBuildInputs = [ pkgs.texinfo ];
-        inherit (emacs) src;
+        inherit (emacs) src version;
         meta.description = "GNU Emacs and Elisp manuals as HTML (from the pinned Emacs source)";
       }
       ''
         set -eu
-        tar xf "$src"
-        cd emacs-*/
+
+        # emacs.src is a release tarball on some nixpkgs revisions and a
+        # bare source checkout on others — only doc/ is needed either way.
+        if [ -d "$src" ]; then
+          cp -r "$src/doc" doc
+        else
+          tar xf "$src"
+          mv emacs-*/doc doc
+        fi
+        chmod -R u+w doc
+
+        # Release tarballs ship the generated emacsver.texi; a git-style
+        # checkout only has emacsver.texi.in. Both manuals @include it.
+        [ -f doc/emacs/emacsver.texi ] \
+          || printf '@set EMACSVER %s\n' "$version" > doc/emacs/emacsver.texi
+
         mkdir -p "$out"
         ( cd doc/emacs && makeinfo --html --split=chapter --css-ref=../manual.css \
             -o "$out/emacs" emacs.texi )
