@@ -22,16 +22,37 @@ copper accent, JetBrains Mono + Literata).
     headers (honored by Cloudflare's static-asset serving)
 - `wrangler.jsonc` — Cloudflare Workers static-assets config
 
+## Generated content
+
+`website/public/` is only the shell (landing SPA + shared CSS/JS/fonts).
+The full site is assembled by `nix build .#site` (`nix/site.nix`), which
+adds everything the repo can generate:
+
+- `/docs/…` — every `docs/**/*.mdx` page rendered to HTML, navigation
+  and ordering from `docs/docs.json`
+- `/manual/` — the Jotain manual (`docs/jotain.texi` pipeline) as HTML,
+  one page per chapter, plus `/manual/jotain.info` for `C-h i`
+- `/man/` — `jotain(7)` (from `docs/jotain.7.md`, also served as raw
+  troff) and the man pages shipped by the Emacs build, via mandoc
+- `/info/emacs/`, `/info/elisp/` — the GNU Emacs manual and the Emacs
+  Lisp reference manual, rendered from the exact Emacs source revision
+  Jotain builds
+- `/options/` — Nix module options reference (`nix/options-doc.nix`)
+- `/help/packages/` — per-package reference from `;;; @doc` markers
+  (`nix/packages-doc.nix`)
+
 ## Deployment
 
-Deployment happens on the Cloudflare side via the GitHub integration —
-nothing in CI here builds or pushes the site.
+`deploy.yml` builds `.#site` on every push to main and publishes the
+result to the **`site` branch** (wrangler.jsonc at the root, the site
+under `public/`). Deployment itself happens on the Cloudflare side via
+the GitHub integration:
 
-- **Workers Builds** (uses `wrangler.jsonc`): connect this repo in the
-  Cloudflare dashboard, set the project *root directory* to `website/`.
-  Every push to the production branch deploys `public/` as static assets.
-- **Cloudflare Pages** (alternative): connect the repo, leave the build
-  command empty, set the build output directory to `website/public`.
+- **Workers Builds**: connect this repo in the Cloudflare dashboard,
+  set the production branch to `site` and the root directory to `/` —
+  the branch's `wrangler.jsonc` serves `public/` as static assets.
+- **Cloudflare Pages** (alternative): watch the `site` branch, empty
+  build command, output directory `public`.
 
 Either way, attach the `jotain.j10s.io` custom domain to the
 project/Worker in the dashboard (the `j10s.io` zone is already on
@@ -39,12 +60,9 @@ Cloudflare, so the DNS record is created automatically).
 
 ## Local preview
 
-The site is plain static files:
-
 ```
-python3 -m http.server -d website/public 8080
-# or, with wrangler:
-cd website && npx wrangler dev
+just serve-site          # full site: nix build .#site + http.server
+python3 -m http.server -d website/public 8080   # shell only
 ```
 
 ## Conventions

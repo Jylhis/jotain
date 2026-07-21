@@ -86,6 +86,26 @@ jobs:
       - name: Check — elisp-compile
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.elisp-compile
 
+  site:
+    name: Site
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: cachix/install-nix-action@v31
+
+      - uses: cachix/cachix-action@v17
+        with:
+          name: jylhis
+
+      # Validate the full jotain.j10s.io site assembly (docs pages,
+      # manual HTML, man pages, Emacs/Elisp manuals, options/package
+      # references) so a docs or website change can't break the
+      # site-branch deploy that runs post-merge in deploy.yml.
+      - name: Build site
+        run: nix build --no-link --print-build-logs .#site
+
   test:
     name: Dev environment
     timeout-minutes: 15
