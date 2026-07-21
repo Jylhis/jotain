@@ -90,9 +90,9 @@ When a note conflicts with the installed Emacs, trust the running Emacs
 
 ### Nix build layer — cache-parity invariant
 
-**This is the most important invariant in the repo:** every default in `emacs.nix`'s argument list must match the corresponding default in upstream nixpkgs `make-emacs.nix` (and the explicit args `emacs-overlay` passes to its prebuilt attrs). When that holds, `import ./emacs.nix {}` produces the **exact same store path** as `pkgs.emacs`, and the `git`/`unstable`/`igc` variants the store paths of `pkgs.emacs-git`/`emacs-unstable`/`emacs-igc`, so every default-rev build is a binary-cache hit (Hydra for mainline, `nix-community.cachix.org` for the overlay variants, plus the `jylhis` cachix cache) and nothing is rebuilt from source.
+**This is the most important invariant in the repo:** every default in `emacs.nix`'s argument list must match the corresponding default in upstream nixpkgs `make-emacs.nix` (and the explicit args `emacs-overlay` passes to its prebuilt attrs). When that holds, `import ./emacs.nix {}` produces the **exact same store path** as `pkgs.emacs`, and the `git`/`unstable`/`igc` variants the store paths of `pkgs.emacs-git`/`emacs-unstable`/`emacs-igc`, so every default-rev build is a binary-cache hit and nothing is rebuilt from source. The **distribution default is the `unstable` variant**: `nix/mk-overlay.nix` builds `jotainEmacs` with `variant = "unstable"` — emacs-overlay's `emacs-unstable`, the Emacs 31 release branch (currently the 31.0.90 pretest) — so the caches that matter day-to-day are `nix-community.cachix.org` (which carries `emacs-unstable` and the other overlay variants) plus the `jylhis` cachix cache; Hydra covers the `mainline` variant.
 
-The base package map: `mainline` (default) is nixpkgs' default `pkgs.emacs` attribute (currently the Emacs 30 release); `git`/`unstable`/`igc` come from [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay), wired in as a flake input alongside `nixpkgs`; `macport` is nixpkgs' `emacs-macport` alias (→ `emacs30-macport`, the jdtsmith/emacs-mac fork — emacs-overlay does not ship a macport). Only custom `rev` pins and the Darwin patch flags go through `overrideAttrs` and *intentionally* bust the cache. Any edit to `emacs.nix` that touches the `basePackage.override { … }` block must preserve parity for the mainline variant (and ideally the overlay variants). Verify with:
+The base package map: `unstable` (the distribution default, set in `nix/mk-overlay.nix`) plus `git`/`igc` come from [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay), wired in as a flake input alongside `nixpkgs`; `mainline` (bare `emacs.nix`'s own default, exposed as `packages.<system>.emacs-mainline`) is nixpkgs' default `pkgs.emacs` attribute (currently the Emacs 30 release); `macport` is nixpkgs' `emacs-macport` alias (→ `emacs30-macport`, the jdtsmith/emacs-mac fork — emacs-overlay does not ship a macport). Only custom `rev` pins and the Darwin patch flags go through `overrideAttrs` and *intentionally* bust the cache. Any edit to `emacs.nix` that touches the `basePackage.override { … }` block must preserve parity for the `unstable` variant (the shipped default) — and ideally every other variant. Verify with:
 
 ```
 nix-instantiate --eval --strict -E '
@@ -101,8 +101,9 @@ nix-instantiate --eval --strict -E '
       ov = lock.nodes.${lock.nodes.root.inputs.emacs-overlay}.locked;
       nixpkgs = fetchTarball { url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz"; sha256 = n.narHash; };
       overlay = fetchTarball { url = "https://github.com/${ov.owner}/${ov.repo}/archive/${ov.rev}.tar.gz"; sha256 = ov.narHash; };
-      pkgs = import nixpkgs { overlays = [ (import overlay) ]; };
+      pkgs = import nixpkgs { overlays = [ (import overlay) (import ./overlay.nix) ]; };
   in {
+    default  = pkgs.jotainEmacs.outPath == pkgs.emacs-unstable.outPath;
     mainline = (import ./emacs.nix {}).outPath == pkgs.emacs.outPath;
     git      = (import ./emacs.nix { variant = "git"; }).outPath == pkgs.emacs-git.outPath;
     unstable = (import ./emacs.nix { variant = "unstable"; }).outPath == pkgs.emacs-unstable.outPath;
