@@ -253,6 +253,8 @@ pkgs.runCommand "jotain-info"
         # website (nix/site.nix mounts this at /manual/).  The css-ref is
         # relative so the site can ship its own manual.css next to the
         # pages; standalone consumers just get unstyled-but-readable HTML.
+        # makeinfo only creates the last path component itself.
+        mkdir -p "$out/share/doc/jotain"
         makeinfo --html \
           --split=chapter \
           --css-ref=manual.css \
