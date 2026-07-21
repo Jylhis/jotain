@@ -90,6 +90,16 @@
           projectRootFile = "flake.nix";
           programs = import ./nix/treefmt.nix;
         };
+      # Overlay handed to the HM / NixOS / nix-darwin / nix-on-droid module
+      # outputs. emacs-overlay is composed underneath the jotain overlay so
+      # module installs resolve the emacs-git/unstable/igc bases and their
+      # epkgs from the same snapshot `packages.default` (and CI) build —
+      # otherwise module-built distributions would silently diverge from
+      # the flake-built, cachix-cached one. Consumer trade-off: consumers
+      # following jotain's nixpkgs pin get jylhis-cachix hits; consumers
+      # overriding nixpkgs with their own (24.05+) lose Hydra-cached epkgs
+      # and build the overlay's MELPA snapshot locally instead.
+      moduleOverlay = nixpkgs.lib.composeExtensions emacs-overlay.overlays.default self.overlays.default;
     in
     {
       overlays.default = import ./nix/mk-overlay.nix {
@@ -100,20 +110,20 @@
         { ... }:
         {
           imports = [ ./module.nix ];
-          _module.args.jotainOverlay = self.overlays.default;
+          _module.args.jotainOverlay = moduleOverlay;
         };
       nixosModules.default =
         { ... }:
         {
           imports = [ ./module-system.nix ];
-          _module.args.jotainOverlay = self.overlays.default;
+          _module.args.jotainOverlay = moduleOverlay;
         };
       darwinModules.default = self.nixosModules.default;
       nixOnDroidModules.default =
         { ... }:
         {
           imports = [ ./module-nix-on-droid.nix ];
-          _module.args.jotainOverlay = self.overlays.default;
+          _module.args.jotainOverlay = moduleOverlay;
         };
 
       lib = import ./nix/use-package.nix { inherit (nixpkgs) lib; };
