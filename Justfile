@@ -123,8 +123,9 @@ compile-native:
 # Run the ERT tests under test/ via the flake check (the dev shell has
 # no emacs; the check builds one). Direct equivalent once Emacs is back
 # in the shell:
-#   emacs --batch -L lisp -L test -l ert -l test/devenv-test.el \
-#       -f ert-run-tests-batch-and-exit
+#   emacs --batch -L lisp -L test \
+#       --eval '(dolist (f (directory-files "test" t "\\.el$")) (load f nil t))' \
+#       -l ert -f ert-run-tests-batch-and-exit
 [group('check')]
 test:
     nix build .#checks.{{system}}.elisp-test --no-link --print-build-logs
