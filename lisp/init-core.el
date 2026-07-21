@@ -300,7 +300,7 @@ freezes — start, reproduce, stop."
 ;;; @doc Inherits PATH, MANPATH, and other shell-managed vars from the
 ;;; user's login shell so GUI / launchd / systemd-spawned Emacs
 ;;; matches what the terminal sees. module.nix prepends Nix-store
-;;; binaries (rg, fd, git, direnv, coreutils) to the wrapper's
+;;; binaries (rg, fd, git, jj, zoxide, coreutils) to the wrapper's
 ;;; PATH — this picks up ~/.nix-profile and user toolchains.
 (use-package exec-path-from-shell
   :if (or (daemonp)
