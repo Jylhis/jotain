@@ -133,6 +133,8 @@ Interactively, echo the path and push it onto the kill ring."
                        (auth-source-pick-first-password
                         :host "openrouter.ai"
                         :user "apikey")))
+            ;; Keep this model list in sync with config/eca/config.json
+            ;; (providers.openrouter.models) — the eca server's copy.
             :models '(anthropic/claude-opus-4.8
                       anthropic/claude-sonnet-4.6
                       openai/gpt-5.5
