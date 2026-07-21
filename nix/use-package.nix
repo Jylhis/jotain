@@ -91,12 +91,13 @@ let
   # spell alphanumerics out literally instead of using `[:alnum:]`
   # because some POSIX regex backends choke on `[[:alnum:]_-]`
   # (ambiguous with the `[ ]` opener).
-  wordChar = "[A-Za-z0-9_-]";
+  wordChar = "[A-Za-z0-9+_-]";
   endSym = "[^A-Za-z0-9_-]";
 
   isEnsureNil = block: match (".*:ensure[[:space:]]+nil(" + endSym + ".*)?") block != null;
 
-  isDisabled = block: match (".*:disabled[[:space:]]+t(" + endSym + ".*)?") block != null;
+  # use-package honors both `:disabled t` and bare `:disabled`.
+  isDisabled = block: match (".*:disabled([[:space:]]+t)?(" + endSym + ".*)?") block != null;
 
   # :ensure nil  ->  null  (skip — built-in or Nix-provided)
   # :ensure t    ->  use the use-package head name
