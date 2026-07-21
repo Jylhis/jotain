@@ -1,0 +1,70 @@
+/*
+ * motion.css — the "ink draws on" motion signature.
+ *
+ * The principle: nothing fades or floats. Things are DRAWN, TYPED, or
+ * BLINKED onto the paper, the way ink and terminals behave. Three idioms,
+ * each mapped to an existing motion token — no new durations or easings.
+ *
+ *   rule-draw   — a horizontal rule draws in left→right (slow, 300ms)
+ *   type-on     — a mono label types on with steps()   (420ms, stepped)
+ *   caret       — a copper block caret blinks           (1.1s, loop)
+ *
+ * Guardrails (docs/STYLE-GUIDE.md §5):
+ *   · max ONE drawn entrance per viewport
+ *   · the caret never appears twice on one surface
+ *   · caret is for prompts and loading states only
+ *
+ * The universal prefers-reduced-motion guard in colors_and_type.css covers
+ * every animation below: durations collapse to 0.001ms and loops run once,
+ * so drawn/typed elements land in their final visible state and the caret
+ * rests solid.
+ */
+
+@keyframes ds-rule-in {
+  to { transform: scaleX(1); }
+}
+@keyframes ds-type-in {
+  to { width: var(--ds-type-ch, 10ch); }
+}
+@keyframes ds-caret-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* A horizontal rule that draws itself. Add .is-drawn to run. */
+.ds-rule-draw {
+  height: 1px;
+  background: var(--color-border);
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+.ds-rule-draw.is-drawn {
+  animation: ds-rule-in var(--transition-slow) forwards;
+}
+
+/* A mono label that types on. Set --ds-type-ch to the label's width in ch
+   (e.g. style="--ds-type-ch: 10ch" for a 10-character label).
+   Add .is-typed to run. */
+.ds-typed {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 0;
+  vertical-align: bottom;
+}
+.ds-typed.is-typed {
+  animation: ds-type-in 420ms steps(12) forwards;
+}
+
+/* The block caret — prompts and loading states. Always aria-hidden="true";
+   pair it with visible text (e.g. "fetching") so meaning never rides on
+   the animation alone. */
+.ds-caret {
+  display: inline-block;
+  width: 0.5em;
+  height: 1.1em;
+  background: var(--color-accent);
+  vertical-align: text-bottom;
+  margin-left: 0.15em;
+  animation: ds-caret-blink 1.1s steps(1) infinite;
+}
