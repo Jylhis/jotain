@@ -5,9 +5,9 @@
 ;; Only *global* keybindings live here — the kind you want to see in a
 ;; single place so the whole keymap is reviewable at a glance.
 ;; Per-package bindings stay in the relevant `use-package' block via
-;; `:bind', `:bind-keymap', or `:general'; that way a package's keys
-;; live next to the package's config, and removing the package removes
-;; the keys with it.
+;; `:bind' or `:bind-keymap'; that way a package's keys live next to
+;; the package's config, and removing the package removes the keys
+;; with it.
 
 ;;; Code:
 
@@ -99,28 +99,32 @@ Region active → deactivate it.  Otherwise call regular
     "C-c c"     "org-capture"
     "C-c d"     "dirvish"
     "C-c D"     "dirvish-side"
+    "C-c e"     "eca"
     "C-c g"     "magit-file"
     "C-c h"     "consult-history"
     "C-c i"     "consult-info"
     "C-c j"     "jujutsu"
     "C-c k"     "consult-kmacro"
     "C-c l"     "org-store-link"
+    "C-c m"     "consult-man"
     "C-c n"     "org-roam"
     "C-c o"     "combobulate"
+    "C-c q"     "claude-code-ide"
     "C-c r"     "eglot-refactor"
+    "C-c s"     "gptel-send"
+    "C-c S"     "gptel-menu"
     "C-c t"     "toggle-theme"
     "C-c v"     "devenv"
-    ;; C-c <punct> — AI and special leaves.
-    "C-c RET"   "gptel-send"
-    "C-c M-RET" "gptel-menu"
+    ;; C-c <modified> — special leaves.
     "C-c M-j"   "jujutsu-dispatch"
-    "C-c C-'"   "claude-code-ide"
     "C-c M-x"   "consult-mode-command"
     ;; C-x namespace.
     "C-x C-a"   "dape (debug)"
     "C-x g"     "magit-status"
+    "C-x G"     "git-status-file"
     "C-x M-g"   "magit-dispatch"
     "C-x j"     "rotate-window-split"
+    "C-x J"     "jj-status-file"
     "C-x u"     "vundo"
     "C-x P"     "project (projection)"))
 
@@ -130,23 +134,11 @@ Region active → deactivate it.  Otherwise call regular
 ;; repeated with single keystrokes immediately after its first
 ;; invocation: type the chord once, then keep typing the trailing
 ;; key.  Many built-in commands ship their own repeat-maps already
-;; (`other-window', `next-buffer', `undo', `next-error', …) — so
-;; `M-o o o' and `C-/ /' Just Work.  The maps below fill the
+;; (`other-window', `next-buffer', `undo', `next-error', and window
+;; resizing via `resize-window-repeat-map', …) — so `M-o o o',
+;; `C-/ /', and `C-x ^ ^ v' all Just Work.  The map below fills the
 ;; remaining gap for commands that don't have one out of the box.
 ;; See the "Ergonomics" chapter of the Info manual for background.
-
-;; After `C-x ^', `C-x }', or `C-x {', single `^', `v', `}', or `{'
-;; keystrokes keep resizing the window. `shrink-window' has no
-;; default key binding but joins the overlay once any other entry
-;; command has fired, so `C-x ^ ^ v v' overshoots and corrects.
-;; Cleared by `repeat-exit-timeout' (2 s, set in init-core.el).
-(defvar-keymap jotain-window-resize-repeat-map
-  :doc "Repeat map for window-resize commands."
-  :repeat t
-  "^" #'enlarge-window
-  "v" #'shrink-window
-  "}" #'enlarge-window-horizontally
-  "{" #'shrink-window-horizontally)
 
 ;; Emacs 31+: transpose/rotate/flip the whole window tree without
 ;; manually deleting and re-splitting. Bound under the unused `C-x W'
