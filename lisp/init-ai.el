@@ -170,10 +170,10 @@ Interactively, echo the path and push it onto the kill ring."
 
 ;;; @doc Model Context Protocol bridge — lets gptel call MCP tools so the
 ;;; LLM can read files, query databases, and act through registered
-;;; servers. Loaded after gptel.
+;;; servers. Loaded on demand via its autoloads (`devenv-mcp-setup',
+;;; M-x mcp-connect-server) — nothing here forces a load.
 (use-package mcp
-  :defer t
-  :after gptel)
+  :defer t)
 
 (provide 'init-ai)
 ;;; init-ai.el ends here

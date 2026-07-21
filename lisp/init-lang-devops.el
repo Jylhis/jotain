@@ -25,7 +25,7 @@ only touched once its owning package has loaded, so this is safe to
 call before or after."
   (let ((cmd (if (eq jotain-docker-backend 'podman) "podman" "docker")))
     (when (boundp 'dockerfile-mode-command)
-      (setq dockerfile-mode-command cmd))))
+      (setopt dockerfile-mode-command cmd))))
 
 (defcustom jotain-docker-backend 'podman
   "Container runtime that Docker-aware packages should drive.
