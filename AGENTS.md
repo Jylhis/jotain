@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-Jotain is an Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer. Startup files are `early-init.el` and `init.el`; feature modules live in `lisp/init-*.el` and are loaded from `init.el` in order. Nix build and module code lives at the root (`flake.nix`, `emacs.nix`, `overlay.nix`, `module.nix`, `module-system.nix`) with helpers in `nix/` (`mk-overlay.nix` is the overlay implementation). Documentation sources are in `docs/`, benchmark wrappers are in `bench/`, and ERT tests live in `test/` — every `test/*.el` file is loaded by the test check.
+Jotain is an Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer. Startup files are `early-init.el` and `init.el`; feature modules live in `lisp/init-*.el` and are loaded from `init.el` in order. Nix build and module code lives at the root (`flake.nix`, `emacs.nix`, `overlay.nix`, `module.nix`, `module-system.nix`) with helpers in `nix/` (`mk-overlay.nix` is the overlay implementation). Documentation sources are in `docs/`, benchmark wrappers are in `bench/`, and ERT tests live in `test/` — every `test/*.el` file is loaded by the test check. `journal/`, `plan.md`, and `TODO.md` are working notes that may be stale — when they disagree with the code, the code wins.
 
 ## Build, Test, and Development Commands
 
