@@ -130,7 +130,6 @@
 ;;; trailing whitespace except on the current line so you don't
 ;;; fight your own cursor.
 (use-package super-save
-  :diminish
   :hook (after-init . super-save-mode)
   :custom
   (super-save-auto-save-when-idle t)
