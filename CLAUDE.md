@@ -97,8 +97,8 @@ The base package map: `mainline` (default) is nixpkgs' default `pkgs.emacs` attr
 ```
 nix-instantiate --eval --strict -E '
   let lock = builtins.fromJSON (builtins.readFile ./flake.lock);
-      n = lock.nodes.nixpkgs.locked;
-      ov = lock.nodes.emacs-overlay.locked;
+      n  = lock.nodes.${lock.nodes.root.inputs.nixpkgs}.locked;
+      ov = lock.nodes.${lock.nodes.root.inputs.emacs-overlay}.locked;
       nixpkgs = fetchTarball { url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz"; sha256 = n.narHash; };
       overlay = fetchTarball { url = "https://github.com/${ov.owner}/${ov.repo}/archive/${ov.rev}.tar.gz"; sha256 = ov.narHash; };
       pkgs = import nixpkgs { overlays = [ (import overlay) ]; };
