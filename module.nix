@@ -71,22 +71,15 @@ let
   # falling back to a stray ~/.emacs.d/ on the user's machine.
   initDirectory = "${config.xdg.configHome}/emacs";
 
-  # Runtime dependencies the Elisp config invokes unconditionally (outside
-  # of envrc-managed project buffers). Prepending these to PATH in the
-  # wrapper keeps them available regardless of launch context — notably
-  # launchd on macOS, which doesn't inherit the user's login-shell PATH.
+  # Runtime dependencies the Elisp config invokes unconditionally,
+  # factored into nix/runtime-deps.nix so module-system.nix and
+  # module-nix-on-droid.nix satisfy the same contract. Prepending these
+  # to PATH in the wrapper keeps them available regardless of launch
+  # context — notably launchd on macOS, which doesn't inherit the
+  # user's login-shell PATH.
   runtimeDeps =
-    with pkgs;
-    [
-      ripgrep # xref-search-program, consult-ripgrep
-      fd # project/consult fallback finder
-      git # magit, vc
-      jujutsu # vc-jj, majutsu, jotain-vc-stats (jj binary)
-      direnv # envrc
-      coreutils # gls, used by dirvish-listing-switches on darwin
-      pkgsWithOverlay.eca # eca-emacs server; prevents runtime download fallback
-      rsync # dired-rsync (C-c C-r)
-    ]
+    import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; }
+    ++ lib.optional cfg.devenv.enable pkgs.devenv
     ++ lib.optional cfg.sonarlint.enable pkgs.sonarlint-ls
     ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server;
 
@@ -94,6 +87,12 @@ let
   # lisp/init-ui.el.  macOS ships Apple Color Emoji system-wide, so the
   # Nix font would just bloat the closure there.
   emojiFontPackages = lib.optional isLinux pkgs.noto-fonts-color-emoji;
+
+  # Nerd Font glyphs for the icon stack (nerd-icons, doom-modeline,
+  # corfu/marginalia margins, dirvish, ibuffer). JetBrains Mono is the
+  # first entry in `jotain-font-preferences' (lisp/init-ui.el), so the
+  # icons match the default editor face out of the box.
+  iconFontPackages = [ pkgs.nerd-fonts.jetbrains-mono ];
 
   runtimePath = lib.makeBinPath runtimeDeps;
 
@@ -267,6 +266,32 @@ in
       enable = lib.mkEnableOption "SonarLint language server ({command}`M-x jotain-sonarlint`)";
     };
 
+    devenv = {
+      enable = lib.mkEnableOption ''
+        the {command}`devenv` CLI on the wrapper PATH, for the native
+        environment loader (`devenv-env-global-mode`, lisp/devenv.el)
+        under launchd/systemd daemons whose login shell does not export
+        it. Opt-in because exec-path-from-shell normally finds the
+        user's own devenv, and `pkgs.devenv` bundles its own nix and
+        can version-skew against per-project devenv installs
+      '';
+    };
+
+    spell = {
+      dictionaries = lib.mkOption {
+        type = with lib.types; listOf package;
+        default = [ pkgs.aspellDicts.en ];
+        defaultText = lib.literalExpression "[ pkgs.aspellDicts.en ]";
+        example = lib.literalExpression "[ pkgs.aspellDicts.en pkgs.aspellDicts.fi ]";
+        description = ''
+          Aspell dictionary packages for jinx spell-checking
+          (lisp/init-writing.el). Installed into the profile, where
+          libaspell's NIX_PROFILES patch finds them at runtime and
+          enchant's aspell backend hands them to jinx.
+        '';
+      };
+    };
+
     openrouter = {
       enable = lib.mkEnableOption ''
         the OpenRouter provider for {command}`eca` by installing
@@ -328,7 +353,9 @@ in
       # that ships inside the selected package.
       (lib.hiPrio emacsWrapper)
     ]
+    ++ cfg.spell.dictionaries
     ++ emojiFontPackages
+    ++ iconFontPackages
     ++ lib.optional (cfg.client.enable && pkgs.stdenv.isLinux) (lib.hiPrio clientDesktopItem);
 
     # Install the Jotain Emacs configuration into ~/.config/emacs so the

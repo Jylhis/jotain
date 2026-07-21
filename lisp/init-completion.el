@@ -252,6 +252,11 @@
 ;;; visited files automatically; M-g z surfaces the most-recent
 ;;; matches first.
 (use-package zoxide
+  ;; The Nix modules put the zoxide binary on the wrapper PATH
+  ;; (nix/runtime-deps.nix); outside those delivery modes, skip the
+  ;; find-file hook rather than shell out to a missing binary on
+  ;; every file open.
+  :if (executable-find "zoxide")
   :bind
   (("M-g z"   . zoxide-find-file)
    ("M-g M-z" . zoxide-find-file))

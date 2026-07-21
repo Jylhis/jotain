@@ -33,15 +33,48 @@ let
     else
       pkgsWithOverlay.jotainEmacsPackagesNoGui;
 
+  # Runtime binaries the Elisp config invokes unconditionally (shared
+  # list, see nix/runtime-deps.nix).
+  runtimeDeps = import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; };
+
+  # Re-wrap the selected package's binaries so the runtime tools ride
+  # the Emacs PATH (appended, so tools the user installs themselves
+  # stay first) without entering the global profile.
+  wrappedPackage =
+    pkgs.runCommand "${selectedPackage.name or "jotain-emacs"}-with-runtime-deps"
+      {
+        nativeBuildInputs = [
+          # Top-level `lndir` only exists on recent nixpkgs; on older
+          # releases (24.05+) it lives under the xorg package set.
+          (pkgs.lndir or pkgs.xorg.lndir)
+          pkgs.makeBinaryWrapper
+        ];
+        meta = (selectedPackage.meta or { }) // {
+          mainProgram = "emacs";
+        };
+        passthru = selectedPackage.passthru or { };
+      }
+      ''
+        mkdir -p $out
+        lndir -silent ${selectedPackage} $out
+        for prog in $out/bin/*; do
+          [ -L "$prog" ] || continue
+          orig=$(readlink -f "$prog")
+          rm "$prog"
+          makeBinaryWrapper "$orig" "$prog" \
+            --suffix PATH : "${lib.makeBinPath runtimeDeps}"
+        done
+      '';
+
   # Fallback for EDITOR when no daemon is running.
   editorFallback = pkgs.writeShellScript "jotain-editor-fallback" ''
-    exec ${lib.getBin selectedPackage}/bin/emacs -nw -- "$@"
+    exec ${lib.getBin wrappedPackage}/bin/emacs -nw -- "$@"
   '';
 
   # EDITOR — terminal emacsclient (works over SSH, in git commit, etc.).
   # There is no GUI on Android, so VISUAL points at the same client.
   editorScript = pkgs.writeShellScriptBin "jotain-editor" ''
-    exec ${lib.getBin selectedPackage}/bin/emacsclient \
+    exec ${lib.getBin wrappedPackage}/bin/emacsclient \
       --tty \
       --alternate-editor=${editorFallback} \
       -- \
@@ -99,9 +132,13 @@ in
     ];
 
     environment.packages = [
-      selectedPackage
+      wrappedPackage
       editorScript
       pkgsWithOverlay.eca
+      # Base dictionary for jinx spell-checking (lisp/init-writing.el).
+      # Must be in the profile — not on PATH — because libaspell finds
+      # $profile/lib/aspell via its NIX_PROFILES patch at runtime.
+      pkgs.aspellDicts.en
     ];
 
     environment.sessionVariables = lib.mkIf cfg.defaultEditor {
