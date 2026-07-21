@@ -302,10 +302,11 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
   :config
   ;; Compose eldoc sources eagerly — it's the more readable variant
   ;; than Eglot's default in most modes.
-  (add-hook 'eglot-managed-mode-hook
-            (lambda ()
-              (setq-local eldoc-documentation-strategy
-                          #'eldoc-documentation-compose-eagerly)))
+  (defun jotain-prog--eldoc-compose-eagerly ()
+    "Compose eldoc sources eagerly in Eglot-managed buffers."
+    (setq-local eldoc-documentation-strategy
+                #'eldoc-documentation-compose-eagerly))
+  (add-hook 'eglot-managed-mode-hook #'jotain-prog--eldoc-compose-eagerly)
 
   ;; Emacs 31+: render LSP hover/signature docs through the tree-sitter
   ;; markdown viewer instead of the plain-text fallback. Guarded so the
@@ -322,20 +323,21 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
     (setopt eglot-code-action-indications nil))
 
   ;; Inlay hints, opt-in per major mode. Add to this list as you grow.
+  (defun jotain-prog--maybe-enable-inlay-hints ()
+    "Enable inlay hints in the major modes that opt in to them."
+    (when (apply #'derived-mode-p
+                 '(go-ts-mode
+                   rust-mode rust-ts-mode
+                   typescript-mode typescript-ts-mode
+                   python-mode python-ts-mode
+                   tuareg-mode
+                   zig-ts-mode
+                   c-mode c++-mode c-ts-mode c++-ts-mode
+                   nix-ts-mode
+                   haskell-mode))
+      (eglot-inlay-hints-mode 1)))
   (when (fboundp 'eglot-inlay-hints-mode)
-    (add-hook 'eglot-managed-mode-hook
-              (lambda ()
-                (when (apply #'derived-mode-p
-                             '(go-ts-mode
-                               rust-mode rust-ts-mode
-                               typescript-mode typescript-ts-mode
-                               python-mode python-ts-mode
-                               tuareg-mode
-                               zig-ts-mode
-                               c-mode c++-mode c-ts-mode c++-ts-mode
-                               nix-ts-mode
-                               haskell-mode))
-                  (eglot-inlay-hints-mode 1)))))
+    (add-hook 'eglot-managed-mode-hook #'jotain-prog--maybe-enable-inlay-hints))
 
   ;; Server overrides — most languages don't need an entry, eglot has
   ;; sensible defaults. Add only when you want a specific server name.
