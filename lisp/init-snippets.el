@@ -25,7 +25,7 @@
 ;; byte-compiler sees the `make-variable-buffer-local' call `defvar-local'
 ;; emits as a toplevel form; inside `use-package' `:init' it is not.
 (defvar-local jotain-tempel--eglot-merged nil
-  "Non-nil once the merged tempel+eglot capf is installed in this buffer.")
+  "Merged tempel+eglot capf installed in this buffer, or nil.")
 
 ;;; @doc Lightweight template/snippet engine from the corfu/cape author.
 ;;; Templates are read from `templates/*.eld' (keyed by major mode);
@@ -55,18 +55,31 @@
   ;; candidates for prefixes that match a snippet name (f, if, class...).
   ;; Merge the two into a single capf with `cape-capf-super' so snippet and
   ;; server candidates share one corfu popup instead of shadowing.  The
-  ;; `jotain-tempel--eglot-merged' guard is declared at top level above.
+  ;; `jotain-tempel--eglot-merged' guard is declared at top level above and
+  ;; stores the merged capf itself so teardown can remove it again.
   (defun jotain-tempel-eglot-capf ()
     "Merge `tempel-complete' with eglot's capf in managed buffers.
-Idempotent: the buffer-local guard stops `eglot-reconnect' from
-stacking duplicate super-capfs on repeated hook runs."
-    (when (and (eglot-managed-p) (not jotain-tempel--eglot-merged))
-      (setq jotain-tempel--eglot-merged t)
-      (remove-hook 'completion-at-point-functions #'tempel-complete t)
-      (setq-local completion-at-point-functions
-                  (cons (cape-capf-super #'tempel-complete #'eglot-completion-at-point)
-                        (remq #'eglot-completion-at-point
-                              completion-at-point-functions)))))
+`eglot-managed-mode-hook' also runs on server shutdown; in that
+teardown branch, drop the merged capf -- its eglot half would
+signal with no live connection -- restore the plain tempel capf,
+and re-arm the merge for a later reconnect."
+    (if (eglot-managed-p)
+        (unless jotain-tempel--eglot-merged
+          (remove-hook 'completion-at-point-functions #'tempel-complete t)
+          (setq jotain-tempel--eglot-merged
+                (cape-capf-super #'tempel-complete #'eglot-completion-at-point))
+          (setq-local completion-at-point-functions
+                      (cons jotain-tempel--eglot-merged
+                            (remq #'eglot-completion-at-point
+                                  completion-at-point-functions))))
+      ;; Teardown: drop the merged capf (its eglot half now signals) and
+      ;; restore the plain tempel capf; also re-arms the merge for reconnect.
+      (when jotain-tempel--eglot-merged
+        (setq-local completion-at-point-functions
+                    (remq jotain-tempel--eglot-merged
+                          completion-at-point-functions))
+        (setq jotain-tempel--eglot-merged nil)
+        (add-hook 'completion-at-point-functions #'tempel-complete -90 t))))
   (add-hook 'eglot-managed-mode-hook #'jotain-tempel-eglot-capf))
 
 ;;; @doc Lets Tempel expand the snippets language servers send back
