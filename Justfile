@@ -320,9 +320,14 @@ update:
     tmpfile=$(mktemp)
     cp devenv.yaml "$tmpfile"
     for input in {{ shared_inputs }}; do
-        owner=$(jq -r ".nodes.\"$input\".locked.owner" flake.lock)
-        repo=$(jq -r ".nodes.\"$input\".locked.repo" flake.lock)
-        rev=$(jq -r ".nodes.\"$input\".locked.rev" flake.lock)
+        node=$(jq -r ".nodes.root.inputs.\"$input\" // empty" flake.lock)
+        if [ -z "$node" ]; then
+            echo "ERROR: input '$input' missing from flake.lock root inputs" >&2
+            exit 1
+        fi
+        owner=$(jq -r ".nodes.\"$node\".locked.owner" flake.lock)
+        repo=$(jq -r ".nodes.\"$node\".locked.repo" flake.lock)
+        rev=$(jq -r ".nodes.\"$node\".locked.rev" flake.lock)
         echo "Syncing devenv.yaml: $input -> $rev"
         sed -i.bak "s|url: github:$owner/$repo/[^[:space:]]*|url: github:$owner/$repo/$rev|" "$tmpfile"
         rm -f "$tmpfile.bak"
@@ -338,8 +343,17 @@ verify:
     set -euo pipefail
     fail=0
     for input in {{ shared_inputs }}; do
-        flake_rev=$(jq -r ".nodes.\"$input\".locked.rev" flake.lock)
-        devenv_rev=$(jq -r ".nodes.\"$input\".locked.rev" devenv.lock)
+        flake_node=$(jq -r ".nodes.root.inputs.\"$input\" // empty" flake.lock)
+        devenv_node=$(jq -r ".nodes.root.inputs.\"$input\" // empty" devenv.lock)
+        if [ -z "$flake_node" ] || [ -z "$devenv_node" ]; then
+            echo "FAIL: $input missing from a lock file's root inputs"
+            echo "  flake node:  ${flake_node:-<missing>}"
+            echo "  devenv node: ${devenv_node:-<missing>}"
+            fail=1
+            continue
+        fi
+        flake_rev=$(jq -r ".nodes.\"$flake_node\".locked.rev" flake.lock)
+        devenv_rev=$(jq -r ".nodes.\"$devenv_node\".locked.rev" devenv.lock)
         if [ "$flake_rev" != "$devenv_rev" ]; then
             echo "FAIL: $input revs diverged"
             echo "  flake:  $flake_rev"
