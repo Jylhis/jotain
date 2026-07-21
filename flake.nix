@@ -23,7 +23,13 @@
       url = "github:nix-community/emacs-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    jylhis-emacs.url = "github:jylhis/emacs/dev";
+    # Only the source tree is consumed (mk-overlay.nix passes it to
+    # emacs-jylhis.nix as `src`); `flake = false` keeps its transitive
+    # inputs (nixpkgs, emacs-overlay, …) out of flake.lock.
+    jylhis-emacs = {
+      url = "github:jylhis/emacs/dev";
+      flake = false;
+    };
     # Android (Termux/proot) Nix environment. Only consumed by
     # `nixOnDroidModules` / the example `nixOnDroidConfigurations`; other
     # outputs do not depend on it.
