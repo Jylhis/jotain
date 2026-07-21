@@ -31,21 +31,47 @@ immediately for writes."
 
 (ignore-errors (make-directory jotain-var-dir t))
 
-;; Restore a sane GC threshold after the early-init.el bump. 16 MiB is the
-;; common compromise: high enough that typing/scrolling never trips a GC,
-;; low enough that an idle GC actually completes quickly. Combined with
-;; the idle-timer below, total pause time stays well under perceptible.
-(setq gc-cons-threshold (* 16 1024 1024)
-      gc-cons-percentage 0.1)
-(run-with-idle-timer 5 t #'garbage-collect)
+;; Restore a sane GC threshold after the early-init.el bump — on
+;; `emacs-startup-hook' (late depth), so the whole of init still runs
+;; under the bumped threshold instead of paying GC pauses from the first
+;; module load onwards. 16 MiB is the common compromise: high enough
+;; that typing/scrolling never trips a GC, low enough that an idle GC
+;; actually completes quickly. Combined with the idle-timer below, total
+;; pause time stays well under perceptible. Caveat: if init errors out,
+;; the threshold stays at `most-positive-fixnum' until the idle timer or
+;; the minibuffer hooks below touch it.
+(defconst jotain-core-gc-cons-threshold (* 16 1024 1024)
+  "Steady-state `gc-cons-threshold' after startup.")
+
+(defun jotain-core--gc-restore-after-startup ()
+  "Drop `gc-cons-threshold' to its steady-state value once startup is done."
+  (setq gc-cons-threshold jotain-core-gc-cons-threshold
+        gc-cons-percentage 0.1))
+(add-hook 'emacs-startup-hook #'jotain-core--gc-restore-after-startup 90)
+
+;; Explicit `garbage-collect' ignores the threshold, so skip the idle
+;; collection while a minibuffer is open — otherwise idling five seconds
+;; mid-completion would run the very GC pause the hooks below prevent.
+(defun jotain-core--gc-idle-collect ()
+  "Run a full GC when Emacs has been idle, unless a minibuffer is open."
+  (unless (active-minibuffer-window)
+    (garbage-collect)))
+(run-with-idle-timer 5 t #'jotain-core--gc-idle-collect)
 
 ;; Pause GC entirely while the minibuffer is open. Completion frameworks
 ;; allocate aggressively and a GC mid-keystroke is the single biggest
-;; source of perceptible input lag.
-(add-hook 'minibuffer-setup-hook
-          (lambda () (setq gc-cons-threshold most-positive-fixnum)))
-(add-hook 'minibuffer-exit-hook
-          (lambda () (setq gc-cons-threshold (* 16 1024 1024))))
+;; source of perceptible input lag. Named functions so the hooks are
+;; removable; the depth guard keeps the pause in force while an outer
+;; minibuffer is still active (`enable-recursive-minibuffers' is t).
+(defun jotain-core--gc-defer ()
+  "Pause GC for the duration of a minibuffer session."
+  (setq gc-cons-threshold most-positive-fixnum))
+(defun jotain-core--gc-restore ()
+  "Restore steady-state GC once the outermost minibuffer exits."
+  (when (< (minibuffer-depth) 2)
+    (setq gc-cons-threshold jotain-core-gc-cons-threshold)))
+(add-hook 'minibuffer-setup-hook #'jotain-core--gc-defer)
+(add-hook 'minibuffer-exit-hook #'jotain-core--gc-restore)
 
 ;; UTF-8 everywhere. Modern systems are UTF-8; the locale dance only
 ;; matters if you ssh into something ancient.
