@@ -372,9 +372,8 @@ freezes — start, reproduce, stop."
 ;;; @doc Live-highlight regexp constructs (groups, alternation, escapes,
 ;;; char classes) in the minibuffer while typing a regexp for
 ;;; `query-replace-regexp', `isearch-*-regexp', `keep-lines', etc.
-;;; Built-in since Emacs 30; no-op guard keeps older Emacs happy.
-(when (fboundp 'minibuffer-regexp-mode)
-  (minibuffer-regexp-mode 1))
+;;; Built-in since Emacs 30.
+(minibuffer-regexp-mode 1)
 
 ;;; @doc Built-in HTML renderer used by eww, gnus, elfeed. Suppress page
 ;;; colours and proportional fonts so rendered HTML inherits the

@@ -78,8 +78,6 @@ projects sharing a basename across different roots stay distinct."
   :hook (after-init . global-projection-hook-mode)
   :bind-keymap ("C-x P" . projection-map)
   :config
-  (with-eval-after-load 'project
-    (require 'projection))
   ;; Mark all the projection-commands-* variables as safe local
   ;; variables so .dir-locals.el can set them without prompting.
   (dolist (sym '(projection-commands-configure-project
