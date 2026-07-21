@@ -100,7 +100,9 @@ in
       # system they come from home-manager or equivalent.
       nerd-fonts.jetbrains-mono
       nerd-fonts.iosevka
-      google-fonts
+      # Only Literata is probed from the Google Fonts collection
+      # (init-ui.el variable-pitch face); the full collection is ~1 GB.
+      (google-fonts.override { fonts = [ "Literata" ]; })
     ]
     # Virtual X server for `just screenshot` — headless capture of the
     # Nix-built Emacs so an AI agent in a CI/cloud container can see the
