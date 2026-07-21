@@ -248,4 +248,14 @@ pkgs.runCommand "jotain-info"
         install-info \
           --dir-file="$out/share/info/dir" \
           "$out/share/info/jotain.info"
+
+        # HTML rendering of the same manual, one page per chapter, for the
+        # website (nix/site.nix mounts this at /manual/).  The css-ref is
+        # relative so the site can ship its own manual.css next to the
+        # pages; standalone consumers just get unstyled-but-readable HTML.
+        makeinfo --html \
+          --split=chapter \
+          --css-ref=manual.css \
+          -o "$out/share/doc/jotain/html" \
+          docs/jotain.texi
   ''
