@@ -104,7 +104,9 @@ let
         mkdir -p "$out"
         ( cd doc/emacs && makeinfo --html --split=chapter --css-ref=../manual.css \
             -o "$out/emacs" emacs.texi )
-        ( cd doc/lispref && makeinfo --html --split=chapter --css-ref=../manual.css \
+        # elisp.texi @includes docstyle.texi/emacsver.texi from doc/emacs
+        # (upstream's Makefile passes the same -I).
+        ( cd doc/lispref && makeinfo -I ../emacs --html --split=chapter --css-ref=../manual.css \
             -o "$out/elisp" elisp.texi )
       '';
 in
