@@ -71,6 +71,30 @@ let
   # falling back to a stray ~/.emacs.d/ on the user's machine.
   initDirectory = "${config.xdg.configHome}/emacs";
 
+  # Byte-compiled copy of the Jotain config, so the daemon executes the
+  # same .elc artifact the elisp-compile flake check verifies instead of
+  # interpreting raw .el on every start. Loading .elc is also what lets
+  # deferred native compilation produce .eln files into the writable
+  # var/eln-cache — JIT native comp never triggers for plain .el loads.
+  # Modelled on nix/checks.nix elisp-compile: the pcre2el require is
+  # load-bearing (magit-todos pulls in pcre2el, whose defadvice
+  # byte-compiles its advice body and fails under error-on-warn; see
+  # journal/2026-04-16.md). The .el sources are kept beside the .elc so
+  # `find-function' and native compilation can still read them.
+  compiledConfig = pkgs.runCommand "jotain-config-compiled" { } ''
+    mkdir -p $out/lisp
+    cp ${./early-init.el} $out/early-init.el
+    cp ${./init.el} $out/init.el
+    cp -r ${./lisp}/. $out/lisp/
+    chmod -R u+w $out
+    cd $out
+    ${selectedPackage}/bin/emacs --batch \
+      -L lisp \
+      --eval "(require 'pcre2el)" \
+      --eval "(setq byte-compile-error-on-warn t)" \
+      -f batch-byte-compile early-init.el init.el lisp/devenv.el lisp/init-*.el
+  '';
+
   # Runtime dependencies the Elisp config invokes unconditionally,
   # factored into nix/runtime-deps.nix so module-system.nix and
   # module-nix-on-droid.nix satisfy the same contract. Prepending these
@@ -361,11 +385,17 @@ in
     # Install the Jotain Emacs configuration into ~/.config/emacs so the
     # daemon picks up early-init.el, init.el, the lisp/ modules, and the
     # tempel snippet templates (lisp/init-snippets.el resolves
-    # `tempel-path' against user-emacs-directory).
+    # `tempel-path' against user-emacs-directory). lisp/ and the two
+    # entry files come from compiledConfig, so the daemon loads .elc
+    # (with the .el kept alongside); the .elc entries for early-init and
+    # init are separate because repointing only "emacs/lisp" would leave
+    # the entry files interpreted.
     xdg.configFile = {
       "emacs/early-init.el".source = ./early-init.el;
+      "emacs/early-init.elc".source = "${compiledConfig}/early-init.elc";
       "emacs/init.el".source = ./init.el;
-      "emacs/lisp".source = ./lisp;
+      "emacs/init.elc".source = "${compiledConfig}/init.elc";
+      "emacs/lisp".source = "${compiledConfig}/lisp";
       "emacs/templates".source = ./templates;
     }
     // lib.optionalAttrs cfg.openrouter.enable {
