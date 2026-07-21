@@ -16,8 +16,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # Supplies the git-based variants used by emacs.nix: emacs-git
-    # (master), emacs-unstable (latest release tag), emacs-igc
-    # (feature/igc3). The default mainline build uses nixpkgs' default
+    # (master), emacs-unstable (Emacs 31 release branch — the default
+    # base for jotainEmacs, see nix/mk-overlay.nix), emacs-igc
+    # (feature/igc3). The "mainline" variant uses nixpkgs' default
     # emacs attribute and does not need the overlay.
     emacs-overlay = {
       url = "github:nix-community/emacs-overlay";
@@ -134,6 +135,13 @@
         # smaller closure, far less to build from source. Opt-in.
         emacs-lite = (pkgsForLite system).jotainEmacsPackages;
         emacs = (pkgsFor system).jotainEmacs;
+        # Bare Emacs on nixpkgs' default attr (Emacs 30, Hydra-cached) —
+        # the pre-switch default, kept as an escape hatch now that
+        # jotainEmacs defaults to the unstable (Emacs 31 pretest) variant.
+        emacs-mainline = import ./emacs.nix {
+          pkgs = pkgsFor system;
+          variant = "mainline";
+        };
         emacs-jylhis = (pkgsFor system).jylhisEmacs;
         jylhis-emacs = (pkgsFor system).jylhisEmacs;
         info = (pkgsFor system).jotainInfo;
