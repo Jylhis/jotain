@@ -56,7 +56,6 @@ and the result is a face-attribute soup."
 ;;; anything that exposes a dark/light setting. C-c t toggles
 ;;; manually.
 (use-package auto-dark
-  :diminish
   :demand t
   :bind ("C-c t" . auto-dark-toggle-appearance)
   :custom
@@ -79,6 +78,13 @@ and the result is a face-attribute soup."
   (doom-modeline-lsp t)
   (doom-modeline-github nil)
   (doom-modeline-buffer-encoding nil))
+
+;; doom-modeline's minor-modes segment is off by default, so lighters
+;; are hidden there without any diminish-style setup.  For the vanilla
+;; modeline (doom-modeline unavailable or disabled), Emacs 31's built-in
+;; `mode-line-collapse-minor-modes' collapses them behind one indicator.
+(when (boundp 'mode-line-collapse-minor-modes)
+  (setopt mode-line-collapse-minor-modes t))
 
 ;;;; Fonts
 
@@ -219,7 +225,6 @@ availability on the right display."
 ;;; multiplier — a Jotain staple.
 (use-package which-key
   :ensure nil
-  :diminish
   :config (which-key-mode 1))
 
 ;;; @doc Built-in calendar. Configured for ISO week numbering and a

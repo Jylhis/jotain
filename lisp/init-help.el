@@ -41,7 +41,6 @@
 ;;; that include source, callers, examples, and active keybindings
 ;;; — the single biggest discoverability upgrade in Emacs.
 (use-package helpful
-  :diminish
   :bind
   (("C-h f"   . helpful-callable)
    ("C-h v"   . helpful-variable)

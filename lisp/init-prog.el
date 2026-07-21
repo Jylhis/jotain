@@ -113,12 +113,24 @@ leaves the classic mode in place."
 ;;; `-ts-mode' and never reach here).  Self-contained: it derives the
 ;;; candidate `foo-ts-mode' and grammar name from the current mode name,
 ;;; so it needs no external recipe database.  Set
-;;; `jotain-prog-warn-non-ts-mode' to nil to silence.
+;;; `jotain-prog-warn-non-ts-mode' to nil to silence entirely, or add
+;;; deliberate classic-mode choices to
+;;; `jotain-prog-warn-non-ts-exclude'.
 (defcustom jotain-prog-warn-non-ts-mode t
   "When non-nil, log if a classic major mode is used despite a ready ts-mode.
 The notice goes to *Messages* on `after-change-major-mode-hook' only
-when the corresponding tree-sitter grammar is actually loadable."
+when the corresponding tree-sitter grammar is actually loadable.
+Modes in `jotain-prog-warn-non-ts-exclude' are never reported."
   :type 'boolean
+  :group 'jotain)
+
+(defcustom jotain-prog-warn-non-ts-exclude '(c-mode c++-mode)
+  "Classic major modes the non-ts diagnostic deliberately skips.
+C/C++ stay on cc-mode on purpose (see `init-lang-systems.el': the
+invested `c-default-style'/`c-basic-offset' setup has no migrated
+tree-sitter equivalent), so the detector would otherwise nag on
+every C buffer forever."
+  :type '(repeat symbol)
   :group 'jotain)
 
 (defun jotain-prog--warn-non-ts-mode ()
@@ -126,8 +138,10 @@ when the corresponding tree-sitter grammar is actually loadable."
 Derives the candidate `foo-ts-mode' and grammar name by stripping the
 `-mode' suffix; a no-op unless that mode is defined and its grammar
 loads.  Best-effort: it can't spot irregular names (`sh-mode' maps to
-`bash-ts-mode'), but those are remapped in `jotain-prog-ts-remaps' anyway."
-  (when jotain-prog-warn-non-ts-mode
+`bash-ts-mode'), but those are remapped in `jotain-prog-ts-remaps' anyway.
+Skips modes listed in `jotain-prog-warn-non-ts-exclude'."
+  (when (and jotain-prog-warn-non-ts-mode
+             (not (memq major-mode jotain-prog-warn-non-ts-exclude)))
     (let ((name (symbol-name major-mode)))
       (when (and (string-suffix-p "-mode" name)
                  (not (string-suffix-p "-ts-mode" name)))
@@ -144,7 +158,6 @@ loads.  Best-effort: it can't spot irregular names (`sh-mode' maps to
 ;;; functions/classes/blocks instead of indentation guesses. Fringe
 ;;; indicators show fold state.
 (use-package treesit-fold
-  :diminish
   :hook (after-init . global-treesit-fold-indicators-mode)
   :custom (treesit-fold-indicators-priority -1))
 
@@ -469,7 +482,6 @@ connection alongside any existing language server."
 ;;; you type.
 (use-package eldoc
   :ensure nil
-  :diminish
   :custom
   (eldoc-echo-area-use-multiline-p nil)
   (eldoc-print-after-edit t)
@@ -537,7 +549,6 @@ hard-error on every prog-mode buffer)."
 ;;; trailing whitespace). Built-in since Emacs 30.
 (use-package editorconfig
   :ensure nil
-  :diminish
   :hook (prog-mode . editorconfig-mode))
 
 ;;;; Per-project environment + format-on-save + grep refactor
@@ -553,7 +564,6 @@ hard-error on every prog-mode buffer)."
 ;;; with one place to look. Per-buffer override safe-local-variable
 ;;; lets `.dir-locals.el` opt out.
 (use-package apheleia
-  :diminish apheleia-mode
   :hook (after-init . apheleia-global-mode)
   :config
   (add-to-list 'apheleia-formatters
@@ -592,7 +602,6 @@ hard-error on every prog-mode buffer)."
 ;;; @doc Detect indentation width from file contents — saves us from
 ;;; having to special-case every project's tab/space convention.
 (use-package dtrt-indent
-  :diminish
   :hook (prog-mode . dtrt-indent-mode))
 
 (provide 'init-prog)

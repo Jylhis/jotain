@@ -55,7 +55,6 @@
 ;;; @doc OSC 52 clipboard integration. Yank/kill in terminal Emacs
 ;;; reaches the system clipboard even through ssh + tmux.
 (use-package clipetty
-  :diminish
   :hook (after-init . global-clipetty-mode))
 
 (defun jotain-terminal--tty-setup ()

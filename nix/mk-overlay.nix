@@ -46,7 +46,11 @@ let
             if curatedGrammars then
               # Only the grammars the Jotain config routes via the
               # `jotain-prog-ts-remaps' table, init-lang-* `:mode' entries,
-              # or combobulate (lisp/init-prog.el, init-lang-*.el).
+              # or combobulate (lisp/init-prog.el, init-lang-*.el) — plus
+              # tree-sitter-c/-cpp, which nothing routes: C/C++ deliberately
+              # stay on cc-mode (`jotain-prog-warn-non-ts-exclude' in
+              # init-prog.el records the choice), but the grammars are kept
+              # so a manual M-x c-ts-mode / c++-ts-mode still works.
               # Languages whose grammar is dropped fall back gracefully to
               # their non-ts mode.
               epkgs.treesit-grammars.with-grammars (

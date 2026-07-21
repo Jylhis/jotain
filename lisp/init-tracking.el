@@ -13,7 +13,6 @@
 ;;; the busiest commands so you can spot rebinding opportunities.
 ;;; Tiny, no daemon, no network.
 (use-package keyfreq
-  :diminish keyfreq-mode
   :functions (keyfreq-mode keyfreq-autosave-mode)
   :custom
   (keyfreq-file (jotain-var-file "keyfreq.el"))
@@ -29,7 +28,6 @@
 (use-package wakatime-mode
   :if (and (executable-find "wakatime-cli")
            (getenv "WAKATIME_API_KEY"))
-  :diminish wakatime-mode
   :functions (global-wakatime-mode)
   :custom (wakatime-cli-path (executable-find "wakatime-cli"))
   :config (global-wakatime-mode))
