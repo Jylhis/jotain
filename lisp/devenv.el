@@ -350,6 +350,14 @@ Return the compilation buffer."
   "Cache of introspection results keyed by (ROOT . KEY).
 Values are (TIMESTAMP . VALUE) conses; see `devenv-cache-ttl'.")
 
+(defconst devenv-env--cache-ttl 3600
+  "Seconds to keep a fetched environment or trust state.
+Deliberately much longer than `devenv-cache-ttl': the shell env
+only changes when the config does (and `devenv-reload'
+invalidates it explicitly), while trust only changes via
+`devenv-allow' and `devenv-revoke', which both invalidate their
+cache entry.")
+
 (defun devenv--cache-fresh-p (entry &optional now)
   "Return non-nil when cache ENTRY is younger than `devenv-cache-ttl'.
 ENTRY is a (TIMESTAMP . VALUE) cons; NOW defaults to the current
@@ -419,21 +427,26 @@ to preserve that version's behaviour)."
 (defun devenv--trust-state (root)
   "Return ROOT's auto-activation trust state (cached).
 See `devenv--activation-state' for the possible values."
-  (devenv--cached
-   root 'trust
-   (lambda ()
-     (if (not (executable-find devenv-executable))
-         'unsupported
-       (let ((default-directory root)
-             (process-environment (append devenv-extra-env
-                                          process-environment)))
-         (with-temp-buffer
-           (let ((exit (ignore-errors
-                         (apply #'call-process devenv-executable
-                                nil '(t nil) nil
-                                (append devenv-global-arguments
-                                        '("hook-should-activate"))))))
-             (devenv--activation-state exit (buffer-string)))))))))
+  ;; Trust only changes via `devenv-allow'/`devenv-revoke', which both
+  ;; invalidate this cache explicitly — cache it for the long TTL so
+  ;; the synchronous `hook-should-activate' subprocess is not re-paid
+  ;; every `devenv-cache-ttl' seconds on the find-file path.
+  (let ((devenv-cache-ttl devenv-env--cache-ttl))
+    (devenv--cached
+     root 'trust
+     (lambda ()
+       (if (not (executable-find devenv-executable))
+           'unsupported
+         (let ((default-directory root)
+               (process-environment (append devenv-extra-env
+                                            process-environment)))
+           (with-temp-buffer
+             (let ((exit (ignore-errors
+                           (apply #'call-process devenv-executable
+                                  nil '(t nil) nil
+                                  (append devenv-global-arguments
+                                          '("hook-should-activate"))))))
+               (devenv--activation-state exit (buffer-string))))))))))
 
 ;;;###autoload
 (defun devenv-allow ()
@@ -1029,12 +1042,6 @@ reconnect any eglot servers so they see the new environment."
 
 (defvar devenv-env--eglot-replay nil
   "Buffers whose deferred `eglot-ensure' replays after env load.")
-
-(defconst devenv-env--cache-ttl 3600
-  "Seconds to keep a fetched environment.
-Deliberately much longer than `devenv-cache-ttl': the shell env
-only changes when the config does, and `devenv-reload'
-invalidates it explicitly.")
 
 (defun devenv-env--parse (json-string &optional ignored)
   "Parse `devenv print-dev-env --json' JSON-STRING output.
