@@ -10,6 +10,7 @@
 ;;; Code:
 
 (declare-function mixed-pitch-mode "mixed-pitch" (&optional arg))
+(declare-function global-jinx-mode "jinx" (&optional arg))
 
 ;;; @doc Built-in text-mode tweaks for prose: visual line wrap and
 ;;; hanging indent on wrapped lines. Proportional fonts come from
@@ -55,7 +56,15 @@
 ;;; Data/config buffers that only look like prose opt back out in
 ;;; init-lang-data.
 (use-package jinx
-  :hook (emacs-startup . global-jinx-mode)
+  :preface
+  (defun jotain-writing--enable-jinx ()
+    "Enable `global-jinx-mode', demoting errors so startup continues.
+Jinx compiles a native module against enchant on first load; if
+that fails (MELPA-fallback mode without cc/enchant), a raw error
+here would abort every later `emacs-startup-hook' entry."
+    (with-demoted-errors "jotain: jinx unavailable: %S"
+      (global-jinx-mode 1)))
+  :hook (emacs-startup . jotain-writing--enable-jinx)
   :bind (("M-$"   . jinx-correct)
          ("C-M-$" . jinx-languages)))
 
