@@ -215,17 +215,19 @@ working-tree file no longer exists to open."
 ;;; you're editing. `diff-hl-flydiff-mode` updates pre-save so the
 ;;; indicators reflect uncommitted edits, not just the last save.
 (use-package diff-hl
-  :after magit
-  :demand t
-  :functions (diff-hl-flydiff-mode diff-hl-magit-post-refresh diff-hl-dired-mode)
+  :functions (diff-hl-flydiff-mode)
   :custom
   (diff-hl-draw-borders nil)
   (fringes-outside-margins t)
   (diff-hl-side 'left)
   :hook
+  ;; No `:after magit'/`:demand' — adding functions to the
+  ;; magit-{pre,post}-refresh hooks is safe before magit loads (hooks
+  ;; are just variables), and gating on magit would postpone the
+  ;; after-init registration past after-init itself.
   ((after-init . global-diff-hl-mode)
    (dired-mode . diff-hl-dired-mode)
-   (magit-pre-refresh  . ignore)
+   (magit-pre-refresh  . diff-hl-magit-pre-refresh)
    (magit-post-refresh . diff-hl-magit-post-refresh))
   :config
   ;; Live, pre-save diff indicators.
@@ -527,41 +529,26 @@ invalidation after `magit-post-refresh-hook'."
            jotain-git-stats--cache)
   (force-mode-line-update t))
 
-;; `doom-modeline-def-segment' and `doom-modeline-def-modeline' are
-;; macros; make them available at byte-compile time so their forms
-;; below get expanded instead of treated as unknown function calls.
-(eval-when-compile (require 'doom-modeline))
+;; Attach the counters through `mode-line-misc-info' instead of
+;; re-declaring doom-modeline's `main' modeline with a hand-copied
+;; segment list (which would silently drift as upstream adds/renames
+;; segments).  doom-modeline renders misc-info in its default `main',
+;; and the stock mode line shows it too, so the counter survives
+;; upstream changes and works without doom-modeline loaded.
+(add-to-list 'mode-line-misc-info
+             '(:eval (when-let* ((file buffer-file-name)
+                                 (rb (and (mode-line-window-selected-p)
+                                          (jotain-git-stats--root-and-backend file))))
+                       (progn (jotain-git-stats--maybe-refresh (car rb) (cdr rb))
+                              (or (jotain-git-stats--render (car rb)) ""))))
+             t)
 
-(with-eval-after-load 'doom-modeline
-  (doom-modeline-def-segment jotain-git-stats
-    "Uncommitted-changes / commits-today counters (git or jj)."
-    (let* ((file buffer-file-name)
-           (rb (and (mode-line-window-selected-p)
-                    file
-                    (jotain-git-stats--root-and-backend file))))
-      (if (not rb)
-          ""
-        (jotain-git-stats--maybe-refresh (car rb) (cdr rb))
-        (or (jotain-git-stats--render (car rb)) ""))))
-
-  ;; Re-declare the `main' modeline with the new segment appended to the
-  ;; right-hand list, just before `time'. Mirrors doom-modeline's default
-  ;; main definition; only the trailing segment list differs.
-  (doom-modeline-def-modeline 'main
-    '(eldoc bar workspace-name window-number modals matches follow
-            buffer-info remote-host buffer-position word-count
-            parrot selection-info)
-    '(compilation objed-state misc-info battery grip irc mu4e gnus github
-                  debug repl lsp minor-modes input-method indent-info
-                  buffer-encoding major-mode process vcs jotain-git-stats
-                  check time))
-
-  (add-hook 'after-save-hook #'jotain-git-stats--invalidate-current-buffer)
-  (add-hook 'magit-post-refresh-hook #'jotain-git-stats--invalidate-current-buffer)
-  (unless jotain-git-stats--timer
-    (setq jotain-git-stats--timer
-          (run-with-idle-timer jotain-git-stats-update-interval t
-                               #'jotain-git-stats--tick))))
+(add-hook 'after-save-hook #'jotain-git-stats--invalidate-current-buffer)
+(add-hook 'magit-post-refresh-hook #'jotain-git-stats--invalidate-current-buffer)
+(unless jotain-git-stats--timer
+  (setq jotain-git-stats--timer
+        (run-with-idle-timer jotain-git-stats-update-interval t
+                             #'jotain-git-stats--tick)))
 
 ;;; @doc Built-in conflict-marker editor. Custom prefix C-c ^ groups
 ;;; upper/lower/next/prev so resolving merges doesn't require
