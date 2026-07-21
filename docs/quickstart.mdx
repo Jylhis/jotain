@@ -14,56 +14,42 @@ cd jotain
 
 ## Enter the development shell
 
-Jotain ships a [devenv](https://devenv.sh) shell that provides Emacs (built from the local `emacs.nix`), `just`, `nil`, `nixfmt-rfc-style`, `treefmt`, and the Nerd Fonts the UI config looks up. With `direnv` installed it activates automatically; otherwise enter it manually:
+Jotain ships a [devenv](https://devenv.sh) shell that provides the tooling — `just`, `nil`, `nixfmt-rfc-style`, `treefmt`, Nix linters, the language servers the config shells out to, and the fonts the UI config looks up. Emacs itself is **not** in the shell (see [Launching Emacs](/usage/launching)); it is built via Nix on demand. With `direnv` installed the shell activates automatically; otherwise enter it manually:
 
 ```bash
 devenv shell
 ```
 
-## Run Emacs with the Jotain configuration
+## Build and run Emacs with the Jotain configuration
 
 ```bash
-just run            # GUI
-just debug          # GUI with --debug-init and debug-on-error
-just tty            # terminal (-nw)
-just daemon         # foreground daemon for emacsclient
-just client         # graphical emacsclient frame
-just client-tty     # terminal emacsclient frame
-just quick          # emacs -Q -nw with the wombat theme (no Jotain config)
+just run-built            # build for the current platform, then launch result/bin/emacs
+just run-built-debug      # same, with --debug-init and debug-on-error
 ```
 
-`just run` launches Emacs with `--init-directory=<repo>`, so it never touches `~/.emacs.d`. The first launch bootstraps any package not provided by Nix from MELPA; subsequent launches load from the package cache.
+`just run-built` builds the full distribution (Emacs 31 + packages + tree-sitter grammars — usually a binary-cache pull, not a compile) and launches `./result/bin/emacs` with `--init-directory=<repo>`, so it never touches `~/.emacs.d`. The first launch bootstraps any package not provided by Nix from MELPA; subsequent launches load from the package cache.
 
-See [Launching Emacs](/usage/launching) for when to reach for each pattern (one-shot vs. daemon + client vs. `-Q -nw` quick edit) and how to enable the `emd` / `em` / `emg` shell aliases via `services.jotain.shellAliases`.
-
-## Build a standalone Emacs
-
-If you want a Nix-built binary outside the devenv shell:
-
-```bash
-just build          # mainline Emacs 30 + all 275 tree-sitter grammars
-just run-built      # build for the current platform, then launch result/bin/emacs
-```
+The direct-launch recipes (`just run`, `just debug`, `just tty`, `just daemon`, `just client`, `just client-tty`, `just quick`) are currently disabled stubs — see the note in [Launching Emacs](/usage/launching), which also covers the daemon + client pattern and the `emd` / `em` / `emg` shell aliases via `services.jotain.shellAliases`.
 
 ## Sanity-check the configuration
 
 ```bash
-just check          # parse-only: every .el file under lisp/ + early-init + init
-just compile        # byte-compile with byte-compile-error-on-warn
-just test           # run any ERT tests under test/ (currently none)
-just fmt            # treefmt — Nix formatting via nixfmt-rfc-style
+just check          # nix flake check: package builds, Nix linting, docs checks,
+                    # elisp paren check, byte-compile (warnings as errors), ERT tests
+just test           # build only the elisp-test flake check (ERT tests under test/)
+just fmt            # nix fmt — treefmt with nixfmt-rfc-style, deadnix, statix
 ```
 
 ## Clean build artifacts
 
 ```bash
 just clean          # .elc files, autosaves, eln-cache, result/
-just clean-all      # also elpa/, var/, etc/, .dev-home/ — forces a full re-fetch
+just clean-all      # also elpa/, var/, .dev-home/ — forces a full re-fetch
 ```
 
 ## Update pinned sources
 
-`flake.lock` is the single source of truth for input revs; `devenv.yaml` mirrors the shared ones (`nixpkgs`, `treefmt-nix`).
+`flake.lock` is the single source of truth for input revs; `devenv.yaml` mirrors the shared ones (`nixpkgs`, `treefmt-nix`, `emacs-overlay`).
 
 ```bash
 just update             # update every flake input, then sync devenv.yaml + devenv.lock
