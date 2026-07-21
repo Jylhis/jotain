@@ -74,14 +74,17 @@ The full fork-backed package set is still experimental because the Meson fork ha
 
 ### default.nix
 
-The distribution layer. It imports `emacs.nix` (forwarding every argument it does not consume itself) and, when `withTreeSitterGrammars` is `true` (default), wraps the result with `emacsPackagesFor emacs |> withPackages (epkgs: [ epkgs.treesit-grammars.with-all-grammars ])`. The resulting Emacs loads all ~275 grammars out of the box; `early-init.el` wires them in via `TREE_SITTER_DIR` / `treesit-extra-load-path`.
+The non-flake entry point — a thin flake-compat wrapper, not a distribution layer. It reads the pinned `flake-compat` rev from `flake.lock`, evaluates `flake.nix`, and promotes the current system's packages to the top level: plain `nix-build` builds the full distribution (`jotainEmacsPackages`), `nix-build -A emacs` the bare Emacs. Variant builds still target `emacs.nix` directly (e.g. `nix-build emacs.nix --arg withPgtk true`).
+
+### Tree-sitter grammars
+
+Grammar bundling lives in `nix/mk-overlay.nix`, not in `default.nix`: the distribution's `withPackages` set includes `epkgs.treesit-grammars.with-all-grammars` by default (~275 grammars), or a curated ~26-grammar subset when the overlay is instantiated with `curatedGrammars = true` (exposed as `packages.<system>.emacs-lite`). Discovery is nixpkgs' own `site-start.el`, which sets `treesit-extra-load-path` to the bundled grammar directory — `early-init.el` deliberately does **no** `TREE_SITTER_DIR` handling (see its comment), and `init-prog.el` propagates `treesit-extra-load-path` to async native-comp workers, which run without site files.
 
 ## Key Build Options
 
 | Option | Default | Description |
 |---|---|---|
 | `variant` | `"mainline"` | Emacs source variant — `mainline` / `git` / `unstable` / `macport` / `igc`; `nix/mk-overlay.nix` passes `"unstable"` (the distribution default) |
-| `withTreeSitterGrammars` | `true` | (default.nix) include all tree-sitter grammars |
 | `noGui` | `false` | Terminal only — `--without-x --without-ns` |
 | `withPgtk` | `false` | Pure GTK (Wayland) — `--with-pgtk` |
 | `withGTK3` | `withPgtk && !noGui` | GTK3 toolkit — `--with-x-toolkit=gtk3` |

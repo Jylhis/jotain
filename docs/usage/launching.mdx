@@ -5,6 +5,17 @@ description: Pick the right launch pattern for the task — one-shot, daemon + c
 
 # Launching Emacs
 
+<Note>
+**Current state:** the devenv shell provides tooling only — there is no
+`emacs` binary in it (see the top-of-file note in `devenv.nix`). The
+direct-launch recipes (`just run`, `just debug`, `just tty`,
+`just daemon`, `just client`, `just client-tty`, `just quick`) are
+`[DISABLED]` stubs that print a notice and exit 0. The supported launch
+path is **`just run-built`**: build Emacs via Nix, then launch it with
+this configuration. Other docs pages that mention launching point back
+at this note.
+</Note>
+
 Jotain supports three launch patterns. Pick the one that matches the
 task — they're complementary, not alternatives.
 
@@ -14,13 +25,19 @@ A fresh `emacs` process every time. Loads the full Jotain config; pays
 package-init cost on every launch.
 
 ```bash
-just run            # GUI, full config
-just debug          # GUI with --debug-init and debug-on-error
-just tty            # -nw, full config
+just run-built            # build for this platform, then launch result/bin/emacs
+just run-built-debug      # same, with --debug-init and debug-on-error
 ```
 
-Best for sanity checks, CI, and `just bench` runs. Avoid for day-to-day
-editing — the startup cost adds up.
+`just run-built` auto-detects the platform, builds the full
+distribution (`just build`; on aarch64-linux the full terminal-only
+distribution via `just build-nox-full`), and launches
+`./result/bin/emacs --init-directory=<repo>`, so it never touches
+`~/.emacs.d`. The first invocation pays a `nix build` (usually a
+binary-cache pull); reruns launch straight from `./result`.
+
+Best for sanity checks and trying out config changes. Avoid for
+day-to-day editing — the startup cost adds up.
 
 ## Daemon + client
 
@@ -29,22 +46,25 @@ first frame is slow; every frame after is instant.
 
 ### In the repo (development)
 
+The `just daemon` / `just client` / `just client-tty` recipes are
+disabled (no Emacs in the dev shell — see the note above). The manual
+equivalent uses the Nix-built binary:
+
 ```bash
-just daemon         # foreground daemon with --init-directory=<repo>
-just client         # graphical emacsclient frame
-just client-tty     # terminal emacsclient frame
+just build          # or let a previous `just run-built` leave ./result behind
+./result/bin/emacs --fg-daemon --init-directory="$PWD"   # foreground daemon
+./result/bin/emacsclient -c                              # graphical client frame
+./result/bin/emacsclient -t                              # terminal client frame
 ```
 
-`just daemon` blocks; run it in another terminal (or under `tmux`) and
-connect with `just client` / `just client-tty` from elsewhere. Each
-client passes an `--alternate-editor` fallback that spawns a fresh
-Emacs with `--init-directory=<repo>`, so isolation from `~/.emacs.d`
-is preserved even when the daemon isn't running yet.
+The daemon blocks; run it in another terminal (or under `tmux`) and
+connect with `emacsclient` from elsewhere. Launching with
+`--init-directory=<repo>` keeps it isolated from `~/.emacs.d`.
 
 Stop the daemon with `C-c` in its terminal, or from any client:
 
 ```bash
-emacsclient -e '(kill-emacs)'
+./result/bin/emacsclient -e '(kill-emacs)'
 ```
 
 ### As an installed user (home-manager)
@@ -110,10 +130,11 @@ the daemon's stdout; `jotctl logs` prints the launchd state instead.
 
 When you need a stripped-down Emacs — editing `/etc/hosts` over SSH,
 fixing a typo in a 200 MB log file, demonstrating something with no
-muscle-memory key bindings — bypass Jotain entirely:
+muscle-memory key bindings — bypass Jotain entirely (the `just quick`
+recipe is disabled; use any `emacs` on the host, or the Nix-built one):
 
 ```bash
-just quick          # emacs -Q -nw with the wombat theme
+./result/bin/emacs -Q -nw --eval "(load-theme 'wombat t)"
 ```
 
 This is the pattern [Rahul Juliato describes in basic-emacs-alias][article-2].
@@ -121,7 +142,7 @@ This is the pattern [Rahul Juliato describes in basic-emacs-alias][article-2].
 `-nw` keeps it in the current terminal; the wombat theme line is the
 one concession to readability on dark terminals.
 
-To get the same effect outside the repo, add an alias to your shell:
+To get the same effect anywhere, add an alias to your shell:
 
 ```bash
 alias eq='emacs -Q -nw --eval "(load-theme '\''wombat t)"'
@@ -129,12 +150,12 @@ alias eq='emacs -Q -nw --eval "(load-theme '\''wombat t)"'
 
 ## Which one to use
 
-| Situation                               | Use          |
-| --------------------------------------- | ------------ |
-| First-time setup, CI, benchmarking      | `just run`   |
-| Day-to-day editing, fast frame opens    | daemon + `em`/`emg` |
-| Sysadmin SSH session, ad-hoc edit       | `just quick` |
-| Debugging a config regression           | `just debug` |
+| Situation                               | Use                  |
+| --------------------------------------- | -------------------- |
+| First-time setup, sanity checks         | `just run-built`     |
+| Day-to-day editing, fast frame opens    | daemon + `em`/`emg`  |
+| Sysadmin SSH session, ad-hoc edit       | `emacs -Q -nw` alias |
+| Debugging a config regression           | `just run-built-debug` |
 
 [article-1]: https://rahuljuliato.com/posts/launching-emacs-terminal
 [article-2]: https://rahuljuliato.com/posts/basic-emacs-alias

@@ -286,7 +286,7 @@ docs:
 info:
     nix build .#info -o result-info
     @echo "Info manual → result-info/share/info/jotain.info"
-    @echo "Open with 'just run' then C-h i d m Jotain RET."
+    @echo "Open with 'just run-built' then C-h i d m Jotain RET."
 
 # Build the per-package reference (HTML + texi + Mintlify .mdx).
 [group('build')]
