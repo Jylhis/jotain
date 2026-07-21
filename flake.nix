@@ -142,6 +142,10 @@
           pkgs = pkgsFor system;
           variant = "mainline";
         };
+        # Full terminal-only distribution (noGui Emacs + packages +
+        # grammars) — same attribute the nix-on-droid module ships.
+        # `just run-built` launches this on aarch64-linux.
+        emacs-nox = (pkgsFor system).jotainEmacsPackagesNoGui;
         emacs-jylhis = (pkgsFor system).jylhisEmacs;
         jylhis-emacs = (pkgsFor system).jylhisEmacs;
         info = (pkgsFor system).jotainInfo;
