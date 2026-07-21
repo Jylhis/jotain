@@ -246,14 +246,25 @@ availability on the right display."
 ;;; nerd-icons-* family draws on. Picks the font family from
 ;;; `jotain-font-preferences` so the icons match the editor face.
 (use-package nerd-icons
+  ;; Deferred: doom-modeline pulls it in at after-init, and the :after
+  ;; chains below (corfu/completion/ibuffer glue) follow it there.
+  :defer t
+  :preface
+  (defun jotain-ui--apply-nerd-icons-font (&optional frame)
+    "Set `nerd-icons-font-family' from `jotain-font-preferences' for FRAME.
+Runs on `server-after-make-frame-hook' so daemon-created GUI frames
+get the matched Nerd Font too — at daemon load time no graphical
+frame exists yet, so a load-time-only probe would never fire."
+    (when (display-graphic-p frame)
+      (when-let* ((nerd-font
+                   (cl-loop for (family . _height) in jotain-font-preferences
+                            when (and (string-match-p "Nerd Font" family)
+                                      (find-font (font-spec :family family) frame))
+                            return family)))
+        (setopt nerd-icons-font-family nerd-font))))
   :config
-  (when (display-graphic-p)
-    (when-let* ((nerd-font
-                 (cl-loop for (family . _height) in jotain-font-preferences
-                          when (and (string-match-p "Nerd Font" family)
-                                    (find-font (font-spec :family family)))
-                          return family)))
-      (setopt nerd-icons-font-family nerd-font))))
+  (jotain-ui--apply-nerd-icons-font)
+  (add-hook 'server-after-make-frame-hook #'jotain-ui--apply-nerd-icons-font))
 
 ;;; @doc Decorates corfu candidates with a kind-specific glyph in the
 ;;; margin, so completions are scannable at a glance.
@@ -297,16 +308,14 @@ availability on the right display."
 ;;; (other-window, xref, consult-line). Tells the eye where the
 ;;; cursor went without staring.
 (use-package pulsar
-  :demand t
-  :functions (pulsar-global-mode)
+  :hook (after-init . pulsar-global-mode)
   :custom
   (pulsar-pulse-functions
    '(recenter-top-bottom move-to-window-line-top-bottom reposition-window
      bookmark-jump other-window delete-window delete-other-windows
      forward-page backward-page scroll-up-command scroll-down-command
      xref-find-definitions xref-find-references xref-go-back
-     consult-line consult-goto-line imenu))
-  :config (pulsar-global-mode 1))
+     consult-line consult-goto-line imenu)))
 
 ;;; @doc Colourises matching parens by depth in Lisp buffers — almost
 ;;; essential for navigating deeply nested forms.
