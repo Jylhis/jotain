@@ -20,7 +20,6 @@
       )
       {
         inherit system;
-        config.allowUnfree = true;
       },
 
   src ? null,

@@ -64,7 +64,6 @@
       )
       {
         inherit system;
-        config.allowUnfree = true;
         overlays = [
           (import (
             let
