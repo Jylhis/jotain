@@ -279,10 +279,7 @@ let
   # dropped, and terminal/GUI selection still flows through the explicit
   # `with*` flags that have existed all along.
   xwidgetsBaseDefault =
-    if isGitVariant then
-      false
-    else
-      !noGui && (withGTK3 || withPgtk || withNS || variant == "macport");
+    if isGitVariant then false else !noGui && (withGTK3 || withPgtk || withNS || variant == "macport");
 
   overrideArgs = {
     inherit
