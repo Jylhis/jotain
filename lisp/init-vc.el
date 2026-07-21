@@ -555,16 +555,9 @@ invalidation after `magit-post-refresh-hook'."
         (run-with-idle-timer jotain-git-stats-update-interval t
                              #'jotain-git-stats--tick)))
 
-;;; @doc Built-in conflict-marker editor. Custom prefix C-c ^ groups
-;;; upper/lower/next/prev so resolving merges doesn't require
-;;; scrolling through the smerge menu.
-(use-package smerge-mode
-  :ensure nil
-  :bind (:map smerge-mode-map
-              ("C-c ^ u" . smerge-keep-upper)
-              ("C-c ^ l" . smerge-keep-lower)
-              ("C-c ^ n" . smerge-next)
-              ("C-c ^ p" . smerge-prev)))
+;; smerge-mode needs no block here: it activates itself on conflict
+;; detection and already binds C-c ^ u/l/n/p (keep-upper/keep-lower/
+;; next/prev) via `smerge-command-prefix'.
 
 ;;; @doc Built-in interactive diff. Configured with `plain` window setup
 ;;; so the control panel doesn't pop a separate frame, plus

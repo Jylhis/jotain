@@ -336,8 +336,7 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
                    nix-ts-mode
                    haskell-mode))
       (eglot-inlay-hints-mode 1)))
-  (when (fboundp 'eglot-inlay-hints-mode)
-    (add-hook 'eglot-managed-mode-hook #'jotain-prog--maybe-enable-inlay-hints))
+  (add-hook 'eglot-managed-mode-hook #'jotain-prog--maybe-enable-inlay-hints)
 
   ;; Server overrides — most languages don't need an entry, eglot has
   ;; sensible defaults. Add only when you want a specific server name.
