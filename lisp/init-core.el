@@ -147,12 +147,6 @@ immediately for writes."
   (advice-add 'save-place-find-file-hook :after
               #'jotain-core--recenter-after-save-place))
 
-;;; @doc Hides minor-mode lighters from the modeline. Loaded early and
-;;; :demand t so that downstream use-package blocks can use the
-;;; :diminish keyword without macro-expansion errors.
-(use-package diminish
-  :demand t)
-
 (declare-function jotain-core--auto-create-missing-dirs nil)
 ;;; @doc Built-in file-handling tweaks: no auto-save side files, no
 ;;; backup `~` files, no kill-process confirmation, plus a hook that

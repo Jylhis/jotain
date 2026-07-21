@@ -18,7 +18,11 @@
 
 ;;; @doc Built-in C/C++ mode with a Stroustrup style bias. The header
 ;;; extensions below default to C++ — Jotain assumes that's the
-;;; more common case in modern repos.
+;;; more common case in modern repos. C/C++ deliberately stay on
+;;; cc-mode rather than c-ts-mode/c++-ts-mode — the style setup below
+;;; is not migrated — and `jotain-prog-warn-non-ts-exclude'
+;;; (init-prog.el) records that choice so the tree-sitter gap
+;;; detector stays quiet about it.
 (use-package cc-mode
   :ensure nil
   :custom
