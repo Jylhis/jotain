@@ -204,9 +204,10 @@ immediately for writes."
 ;;; command (e.g. C-x o o o instead of C-x o C-x o). Built-in,
 ;;; enabled globally. `repeat-exit-timeout' clears the transient map
 ;;; after two idle seconds so the user doesn't have to think about
-;;; exiting it — the ergonomic "one-shot modifier" pattern. A
-;;; window-resize repeat-map filling the one gap in the built-in
-;;; coverage lives in init-keys.el.
+;;; exiting it — the ergonomic "one-shot modifier" pattern. The
+;;; built-in maps cover window resizing too (`resize-window-repeat-map'),
+;;; so `C-x ^ ^ v' just works; init-keys.el only adds a map for the
+;;; Emacs 31 `window-layout-*' commands.
 (use-package repeat
   :ensure nil
   :custom
