@@ -36,13 +36,19 @@
     (setopt delete-pair-push-mark t)))
 
 ;;; @doc Strip trailing whitespace and stray tabs on save without
-;;; reformatting the rest of the buffer. Built-in.
+;;; reformatting the rest of the buffer. Built-in. Skipped during
+;;; super-save's automatic saves so its except-current-line
+;;; handling keeps whitespace at point intact.
 (use-package whitespace
   :ensure nil
-  :hook (before-save . whitespace-cleanup)
+  :preface
+  (defun jotain-editing--whitespace-cleanup-unless-auto-save ()
+    "Run `whitespace-cleanup' except during super-save's automatic saves."
+    (unless (bound-and-true-p super-save-in-progress)
+      (whitespace-cleanup)))
+  :hook (before-save . jotain-editing--whitespace-cleanup-unless-auto-save)
   :custom
-  (whitespace-style '(face trailing tabs tab-mark))
-  (whitespace-action '(auto-cleanup)))
+  (whitespace-style '(face trailing tabs tab-mark)))
 
 ;;; @doc Treats CamelCase / snake_case word parts as separate words for
 ;;; M-f / M-b / M-d. Built-in. Programming-mode only — prose still
@@ -85,28 +91,6 @@
   :bind
   (("C-x M-t"   . transpose-sentences)
    ("C-x C-M-t" . transpose-paragraphs)))
-
-;;; @doc Defaults for the built-in comment commands (M-;, C-x C-;, M-j).
-;;; `comment-multi-line' makes M-j continue inside an open block
-;;; comment instead of closing/reopening; `extra-line' style puts
-;;; opening and closing delimiters on their own lines for
-;;; `comment-region'; `comment-empty-lines' makes `comment-region'
-;;; treat blank lines the same as content lines;
-;;; `comment-auto-fill-only-comments' keeps automatic line wrapping
-;;; (when `auto-fill-mode' is on) confined to comments. C-c ; is an
-;;; ergonomic alias for `comment-line' — C-; is taken by embark-dwim.
-;;; Per-mode overrides go in the language module via a named hook:
-;;;   (defun my-foo-mode-setup ()
-;;;     (setq-local comment-multi-line nil))
-;;;   (add-hook 'foo-mode-hook #'my-foo-mode-setup)
-(use-package newcomment
-  :ensure nil
-  :bind ("C-c ;" . comment-line)
-  :custom
-  (comment-multi-line t)
-  (comment-style 'extra-line)
-  (comment-empty-lines t)
-  (comment-auto-fill-only-comments t))
 
 ;;; @doc Emacs 30 ships `replace-regexp-as-diff' and
 ;;; `multi-file-replace-regexp-as-diff' — run a regex replacement, but
