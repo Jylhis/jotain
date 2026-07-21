@@ -43,7 +43,10 @@
 ;;; from Rahul M. Juliato's emacs-solo/switch-git-status-buffer.
 (use-package vc-git
   :ensure nil
-  :bind ("C-x C-g" . jotain-switch-git-status-buffer)
+  ;; C-x G (not C-x C-g — a sequence ending in C-g would swallow the
+  ;; "pressed C-x, changed my mind, C-g aborts" gesture) sits mnemonically
+  ;; next to C-x g magit-status / C-x M-g magit-dispatch below.
+  :bind ("C-x G" . jotain-switch-git-status-buffer)
   :preface
   (declare-function vc-git-root "vc-git" (file))
   (defun jotain-switch-git-status-buffer ()
@@ -110,13 +113,14 @@ working-tree file no longer exists to open."
 ;;; set via `jj config edit --user' so vc/diff-hl/smerge read jj diffs
 ;;; and conflicts in the format they expect.
 ;;;
-;;; `jotain-switch-jj-status-buffer' (C-x C-j) is the jj twin of the
+;;; `jotain-switch-jj-status-buffer' (C-x J — not C-x C-j, which stays
+;;; on its Emacs 28+ default `dired-jump') is the jj twin of the
 ;;; git status jump above: it parses `jj diff --summary -r @' and offers
 ;;; the changed files (deletions omitted — the file is gone) through
 ;;; `completing-read'. The richer interactive view is `majutsu' (C-c j).
 (use-package vc-jj
   :after vc
-  :bind ("C-x C-j" . jotain-switch-jj-status-buffer)
+  :bind ("C-x J" . jotain-switch-jj-status-buffer)
   :preface
   (defun jotain-switch-jj-status-buffer ()
     "Switch to a file `jj' reports as changed in the working copy.
@@ -221,13 +225,14 @@ working-tree file no longer exists to open."
   (fringes-outside-margins t)
   (diff-hl-side 'left)
   :hook
-  ;; No `:after magit'/`:demand' — adding functions to the
-  ;; magit-{pre,post}-refresh hooks is safe before magit loads (hooks
-  ;; are just variables), and gating on magit would postpone the
-  ;; after-init registration past after-init itself.
+  ;; No `:after magit'/`:demand' — adding a function to
+  ;; magit-post-refresh-hook is safe before magit loads (hooks are
+  ;; just variables), and gating on magit would postpone the
+  ;; after-init registration past after-init itself.  diff-hl 1.11
+  ;; obsoleted `diff-hl-magit-pre-refresh' (aliased to `ignore');
+  ;; only the post-refresh half is needed on Magit 2.4+.
   ((after-init . global-diff-hl-mode)
    (dired-mode . diff-hl-dired-mode)
-   (magit-pre-refresh  . diff-hl-magit-pre-refresh)
    (magit-post-refresh . diff-hl-magit-post-refresh))
   :config
   ;; Live, pre-save diff indicators.
