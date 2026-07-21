@@ -23,13 +23,26 @@ Shipped; verified clean by the `elisp-compile` flake check.
 native-comp speed 2, and the `treesit-auto` alist-only routing (NOT
 `global-treesit-auto-mode`, which costs ~3.6 s/find-file).
 
+## Done — §5 x86_64-darwin binary-cache EOL
+
+Shipped. `flake.nix` adds the dedicated `nixpkgs-x86_64-darwin` input pinned to
+`nixpkgs-26.05-darwin` and selects it only for `x86_64-darwin` via `nixpkgsFor`
+(every other system stays on `nixpkgs-unstable`); `emacs.nix` reads the same
+per-system node out of `flake.lock`'s root input map. Because the pin is its
+own flake input — not a divergence of the shared `nixpkgs` input — `just
+verify` and the `devenv.yaml`/`devenv.lock` sync invariant are unaffected, and
+no CLAUDE.md exception is needed. Remaining operational check (on the Darwin
+host itself): confirm `jylhis.cachix.org` is in the host's substituters and
+carries the x86_64-darwin Emacs + full distribution.
+
 ---
 
 ## Open points
 
 ### §2 — `-march=icelake-client` from-source perf build (opt-in)
 
-Once this machine must build Emacs from source anyway (see §5), a CPU-tuned
+If this machine ever must build Emacs from source anyway (the §5 Darwin pin,
+now shipped, keeps prebuilt binaries flowing for the time being), a CPU-tuned
 build costs nothing extra and gains a few percent on this i5.
 
 - Add an opt-in flag/recipe (`just build-perf` or an `emacs.nix` arg) that
@@ -59,35 +72,16 @@ Experimental, so trial-only before any promotion.
 happens (macport breaks pixel-scroll; igc), replace it with `ultra-scroll`
 (smoother on Intel). File: `lisp/init-ui.el`.
 
-### §5 — x86_64-darwin binary-cache EOL (strategic)
-
-nixpkgs **26.05 is the last release** with x86_64-darwin binaries (gone after
-end-2026). Decision: **pin x86_64-darwin to 26.05, keep latest (unstable)
-elsewhere**, and lean on the `jylhis` cachix cache so this machine pulls
-prebuilt Emacs instead of rebuilding on 4 cores.
-
-- `flake.nix` — add a second nixpkgs input pinned to `release-26.05`
-  (e.g. `nixpkgs-darwin`); select it **only** for `x86_64-darwin` in
-  `pkgsFor`/`forAllSystems`, keep `nixpkgs-unstable` for other systems.
-- `emacs.nix` / `default.nix` read nixpkgs from `flake.lock` directly — their
-  `lock.nodes.<input>` selection must follow the same per-system rule.
-- `devenv.yaml` / `devenv.lock` — allow the Darwin pin to diverge from the
-  unstable pin; document this as an intentional exception to the lock-sync
-  invariant (`just verify`) in `CLAUDE.md`.
-- cachix — ensure the `jylhis` cache pushes the x86_64-darwin Emacs + full
-  distribution; confirm `jylhis.cachix.org` is in this host's substituters.
-
 ---
 
 ## Verification (for the open work)
 
-1. Baseline: `just bench bench-before.txt`; profile a freeze with
-   `M-x jotain-profile-toggle`.
+1. Baseline: `just bench bench-before.txt` (currently a disabled stub —
+   re-enable it first); profile a freeze with `M-x jotain-profile-toggle`.
 2. After build changes: re-run `just bench`, diff load times; confirm the
    eln-cache holds `init-*.eln`.
 3. GC: `(setq garbage-collection-messages t)`, exercise completion/LSP under
    release vs igc daemons; compare pause counts.
 4. Cache parity unchanged: run the `nix-instantiate` parity check from
-   `CLAUDE.md` — mainline must still equal `pkgs.emacs31`.
-5. Darwin pin: `nix flake metadata` shows the 26.05 node; `nix path-info
-   --store https://jylhis.cachix.org <emacs drv>` confirms the binary is cached.
+   `CLAUDE.md` — the default (`unstable`) variant must still equal
+   `pkgs.emacs-unstable`, and the `mainline` variant `pkgs.emacs`.

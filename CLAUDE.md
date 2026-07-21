@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Jotain is a GNU Emacs 31 configuration (floor: Emacs 30.1, per `init.el`'s `Package-Requires`) with a Nix build layer. The repo ships **both** a modular Elisp configuration (`early-init.el`, `init.el`, `lisp/init-*.el`) and the Nix expressions that build Emacs itself (`emacs.nix`, `nix/mk-overlay.nix`, `overlay.nix`, `default.nix`, `flake.nix`). The default build is the emacs-overlay `unstable` variant — the Emacs 31 release branch, currently the 31.0.90 pretest — with nixpkgs' Emacs 30 kept as the `mainline` variant. The dev shell provides tooling only; Emacs itself is **not** in the shell — build and launch the editor with `just run-built`.
 
+`journal/`, `plan.md`, and `TODO.md` are the owner's working notes — they may be stale, and when they disagree with the code, the code wins.
+
 ## Development environment
 
 All recipes assume the devenv shell is active. `direnv` handles this via `.envrc`; without direnv, prefix any command with `devenv shell --`:
