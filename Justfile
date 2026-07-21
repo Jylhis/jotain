@@ -210,10 +210,17 @@ build-git:
 build-igc:
     nix-build --arg variant '"igc"' --argstr system {{system}} emacs.nix
 
-# Build for aarch64-linux nox (Termux/Android).
+# Build a bare aarch64-linux nox Emacs (Termux/Android) — kept for
+# cache-parity testing of emacs.nix; `run-built` uses build-nox-full.
 [group('build')]
 build-android:
     nix-build --arg noGui true --argstr system aarch64-linux emacs.nix
+
+# Build the full terminal-only distribution (noGui Emacs + packages +
+# grammars) for the current system.
+[group('build')]
+build-nox-full:
+    nix build .#emacs-nox -o result
 
 # Auto-detect platform, build, then launch Emacs with this configuration.
 [group('build')]
@@ -224,16 +231,19 @@ run-built *ARGS:
     case "$platform" in
         Darwin-arm64)  target=build       ;;
         Darwin-*)      target=build       ;;
-        Linux-aarch64) target=build-android ;;
+        Linux-aarch64) target=build-nox-full ;;
         *)             target=build       ;;
     esac
     echo "Platform: $platform → just $target"
     just "$target"
     echo "Build output: $(readlink result)"
     echo "Launching Emacs from result/bin/emacs..."
-    ./result/bin/emacs --debug-init \
-        --eval '(setq debug-on-error t)' \
-        --init-directory="{{config_dir}}" {{ARGS}}
+    ./result/bin/emacs --init-directory="{{config_dir}}" {{ARGS}}
+
+# Same, with init debugging enabled.
+[group('build')]
+run-built-debug *ARGS:
+    just run-built --debug-init --eval '(setq debug-on-error t)' {{ARGS}}
 
 # Headless screenshot: build Emacs, launch under Xvfb with this config,
 # capture the frame via jotain-screenshot, write OUT (PNG). Linux only;
