@@ -15,6 +15,10 @@
 
 ;;; Code:
 
+;; Defined in init-project.el, which init.el loads after this file;
+;; magit only reads it from its (deferred) :config block below.
+(defvar jotain-repositories-roots)
+
 ;;; @doc Built-in version control. Pinned to Git + Jujutsu — every
 ;;; other backend is a slow startup tax (probes every visited file's
 ;;; parents) you almost never benefit from. JJ is supplied by `vc-jj'
@@ -169,8 +173,13 @@ working-tree file no longer exists to open."
   (magit-diff-hide-trailing-cr-characters t)
   (magit-diff-context-lines 5)
   (magit-save-repository-buffers 'dontask)
-  (magit-repository-directories '(("~/Developer" . 2)))
   :config
+  ;; Repository roots come from `jotain-repositories-roots'
+  ;; (init-project.el). Set here rather than in :custom because
+  ;; init-project.el loads after this file; by the time magit itself
+  ;; loads, the defcustom exists.
+  (setopt magit-repository-directories
+          (mapcar (lambda (root) (cons root 2)) jotain-repositories-roots))
   ;; Show worktrees as a section in magit-status when more than one exists.
   (add-hook 'magit-status-sections-hook 'magit-insert-worktrees t))
 

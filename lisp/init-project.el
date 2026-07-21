@@ -20,22 +20,24 @@
 
 ;;;; project.el (built-in)
 
-(defcustom jotain-projects-directories
-  (list (expand-file-name "~/Projects")
-        (expand-file-name "~/code")
-        (expand-file-name "~/src"))
-  "Roots whose immediate subdirs feed `jotain-find-projects-and-switch'."
+(defcustom jotain-repositories-roots
+  (list "~/Developer" "~/Projects")
+  "Roots whose immediate subdirectories are treated as repositories.
+Feeds `jotain-find-projects-and-switch' (C-x p P) here and
+`magit-repository-directories' (init-vc.el). Roots that do not
+exist on this machine are silently skipped, so the defaults are
+harmless wherever the config is deployed."
   :type '(repeat directory)
   :group 'project)
 
 (declare-function project-remember-project "project" (pr &optional no-write))
 
 (defun jotain-find-projects-and-switch ()
-  "Scan `jotain-projects-directories', pick a project, remember and open it.
+  "Scan `jotain-repositories-roots', pick a project, remember and open it.
 Completion labels include the full abbreviated parent root, so two
 projects sharing a basename across different roots stay distinct."
   (interactive)
-  (let* ((dirs (cl-loop for root in jotain-projects-directories
+  (let* ((dirs (cl-loop for root in jotain-repositories-roots
                         when (file-directory-p root)
                         nconc (directory-files root t "\\`[^.]" t)))
          (choices (cl-loop for d in dirs
@@ -46,7 +48,7 @@ projects sharing a basename across different roots stay distinct."
                                           (file-name-directory d)))
                            collect (cons (format "%s (%s)" name parent) d))))
     (unless choices
-      (user-error "No project candidates under %s" jotain-projects-directories))
+      (user-error "No project candidates under %s" jotain-repositories-roots))
     (let* ((pick (completing-read "Project: " choices nil t))
            (dir  (cdr (assoc pick choices))))
       (when dir
@@ -57,7 +59,7 @@ projects sharing a basename across different roots stay distinct."
 ;;; @doc Built-in project tracker. Extra root markers below mean a
 ;;; project is recognised when any of these is present, not just
 ;;; on a VCS root. Project list lives under var/. `C-x p P' scans
-;;; `jotain-projects-directories' to add+open projects not yet in
+;;; `jotain-repositories-roots' to add+open projects not yet in
 ;;; the known list.
 (use-package project
   :ensure nil

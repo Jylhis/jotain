@@ -12,6 +12,20 @@
 (declare-function mixed-pitch-mode "mixed-pitch" (&optional arg))
 (declare-function global-jinx-mode "jinx" (&optional arg))
 
+(defgroup jotain-writing nil
+  "Jotain prose and note-taking settings."
+  :group 'text)
+
+(defcustom jotain-notes-directory (expand-file-name "~/Documents/notes/")
+  "Directory holding plain-text notes.
+Single root for the whole note-taking stack: `denote-directory'
+(below) and `org-directory' (init-org.el) both read it, so denote
+notes, org-capture inboxes, and org-roam files all land under one
+tree. Nothing breaks if it does not exist yet — denote and
+org-roam create it on first use."
+  :type 'directory
+  :group 'jotain-writing)
+
 ;;; @doc Built-in text-mode tweaks for prose: visual line wrap and
 ;;; hanging indent on wrapped lines. Proportional fonts come from
 ;;; `mixed-pitch' (below); code modes stay monospaced.
@@ -80,11 +94,12 @@ here would abort every later `emacs-startup-hook' entry."
   (markdown-header-scaling t))
 
 ;;; @doc Plain-text note system with strict file-naming rules so notes
-;;; are findable years later. Stored under `~/Documents/notes`.
+;;; are findable years later. Stored under `jotain-notes-directory`
+;;; (default `~/Documents/notes`), shared with Org (init-org.el).
 (use-package denote
   :commands (denote denote-create-note denote-open-or-create)
   :custom
-  (denote-directory (expand-file-name "~/Documents/notes/"))
+  (denote-directory jotain-notes-directory)
   (denote-known-keywords '("emacs" "nix" "linux" "writing")))
 
 ;;; @doc In-Emacs PDF viewing — search, annotate, follow links, outline.
