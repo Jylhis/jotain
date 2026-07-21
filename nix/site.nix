@@ -28,7 +28,7 @@ let
   optionsDoc = import ./options-doc.nix { inherit pkgs src; };
   packagesDoc = import ./packages-doc.nix { inherit pkgs src; };
   infoManual = import ./info-manual.nix { inherit pkgs src; };
-  emacs = pkgs.emacs;
+  inherit (pkgs) emacs;
 
   # ── docs navigation, from the same docs.json Mintlify uses ─────
   docsNav = builtins.fromJSON (builtins.readFile (src + "/docs/docs.json"));
@@ -36,7 +36,7 @@ let
   pagesFlat = lib.concatMap (
     g:
     map (p: {
-      group = g.group;
+      inherit (g) group;
       id = p;
     }) g.pages
   ) navGroups;
