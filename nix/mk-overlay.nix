@@ -161,7 +161,7 @@ in
   # symlink to the bare emacs.nix derivation, which we cannot mutate.
   # Instead we produce an outer derivation that (a) lndirs the core
   # wrapper verbatim, and (b) re-wraps the user-facing binaries to
-  # prepend ${jotainInfo}/share/info to $INFOPATH.  The trailing ':'
+  # append ${jotainInfo}/share/info to $INFOPATH.  The trailing ':'
   # tells Emacs's info-initialize to append Info-default-directory-list
   # so the built-in Emacs manuals stay visible.
   jotainEmacsPackages = mkJotainEmacsPackages {
