@@ -1,5 +1,12 @@
 {
   jylhisEmacsSrc ? null,
+  # Emacs source variant for jotainEmacs / jotainEmacsNoGui (see
+  # emacs.nix). Defaults to "unstable": emacs-overlay's emacs-unstable,
+  # the Emacs 31 release branch (currently the 31.0.90 pretest), cached
+  # on nix-community.cachix.org. "mainline" (nixpkgs' default Emacs 30
+  # attr, Hydra-cached) stays available — the flake exposes it as
+  # `packages.emacs-mainline`.
+  variant ? "unstable",
   # When true, bundle only the tree-sitter grammars this config actually
   # routes (~26) instead of the full set (~275). Smaller closure / much
   # less to build from source. Default false keeps with-all-grammars so
@@ -112,13 +119,17 @@ let
       '';
 in
 {
-  jotainEmacs = import ../emacs.nix { pkgs = final; };
+  jotainEmacs = import ../emacs.nix {
+    pkgs = final;
+    inherit variant;
+  };
 
   # Terminal-only (`-nw`) build, used by the nix-on-droid module: Android
   # under proot is headless, so a GUI Emacs would only bloat the closure
   # with unusable X/Wayland libraries.
   jotainEmacsNoGui = import ../emacs.nix {
     pkgs = final;
+    inherit variant;
     noGui = true;
   };
 
