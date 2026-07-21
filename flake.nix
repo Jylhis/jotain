@@ -157,9 +157,13 @@
           pkgs = pkgsFor system;
           src = self;
         };
+        # No `src = self` here: site.nix (via info-manual.nix) selects
+        # files with lib.fileset, which requires a real path — the
+        # string-like flake source is rejected. The default src (../.
+        # relative to nix/) is the same tree as a path, matching how
+        # mk-overlay.nix wires jotainInfo.
         site = import ./nix/site.nix {
           pkgs = pkgsFor system;
-          src = self;
         };
       });
 
