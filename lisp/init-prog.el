@@ -370,14 +370,17 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
 ;;; @doc Consult-driven workspace symbol search — C-M-. opens an
 ;;; orderless-filtered list of symbols across the LSP workspace.
 (use-package consult-eglot
-  :after (consult eglot)
+  ;; Gated on eglot alone (not consult, which is deferred): the binding
+  ;; only needs `eglot-mode-map', and `consult-eglot-symbols' is
+  ;; autoloaded, so the first C-M-. pulls in consult-eglot (and consult).
+  :after eglot
   :bind (:map eglot-mode-map
               ("C-M-." . consult-eglot-symbols)))
 
 ;;; @doc Embark integration for consult-eglot — gives every workspace
 ;;; symbol an action menu (jump to def, find refs, rename, …).
 (use-package consult-eglot-embark
-  :after (consult eglot embark)
+  :after (consult-eglot embark)
   :demand t)
 
 ;;;; Debugging — dape (Debug Adapter Protocol)
@@ -552,7 +555,7 @@ hard-error on every prog-mode buffer)."
 ;;; lets `.dir-locals.el` opt out.
 (use-package apheleia
   :diminish apheleia-mode
-  :functions (apheleia-global-mode)
+  :hook (after-init . apheleia-global-mode)
   :config
   (add-to-list 'apheleia-formatters
                '(meson-format . ("meson" "format"
@@ -575,7 +578,6 @@ hard-error on every prog-mode buffer)."
   (add-to-list 'apheleia-formatters
                '(buildifier . ("buildifier" "-path" (or filepath "BUILD"))))
   (add-to-list 'apheleia-mode-alist '(bazel-mode . buildifier))
-  (apheleia-global-mode 1)
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
 ;;; @doc Edit grep / ripgrep result buffers in place; saving propagates

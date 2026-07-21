@@ -114,7 +114,6 @@
 ;;; imenu, flymake, register store. The big binding table below
 ;;; replaces a dozen built-ins with a single, consistent UI.
 (use-package consult
-  :demand t
   :hook (completion-list-mode . consult-preview-at-point-mode)
   :functions (consult-xref consult-register-window)
   :bind
@@ -172,15 +171,16 @@
    ("M-s"     . consult-history)
    ("M-r"     . consult-history))
   :init
-  ;; Take over register preview.
+  ;; Take over register preview.  `consult-register-window' and
+  ;; `consult-xref' both carry autoload cookies, so referencing them
+  ;; here does not load consult — every entry point above is a bound
+  ;; command, so consult itself loads on first use.
   (advice-add #'register-preview :override #'consult-register-window)
   (setopt register-preview-delay 0.5)
-  :config
-  (require 'consult-xref)
   ;; Use consult for xref result lists.
   (setopt xref-show-xrefs-function       #'consult-xref
           xref-show-definitions-function #'consult-xref)
-
+  :config
   ;; Per-command preview debouncing — theme preview is fast, ripgrep/grep
   ;; preview is expensive so it waits for you to stop moving the cursor.
   (consult-customize
@@ -229,6 +229,9 @@
 ;;; `C-c C-o' → wgrep (`C-x C-q') refactor flow that edits every match
 ;;; in place across all the matched files.
 (use-package embark-consult
+  ;; Since consult is deferred, this glue (the C-c C-o binding and the
+  ;; collect-mode preview hook) activates on the first consult command
+  ;; (e.g. the first `C-x b') — which is also the only time it matters.
   :after (embark consult)
   :hook (embark-collect-mode . consult-preview-at-point-mode)
   :bind (:map minibuffer-local-map
@@ -271,13 +274,12 @@
 ;;; Auto-triggered after 2 chars so it feels like a modern editor
 ;;; without a long delay.
 (use-package corfu
-  :demand t
+  :hook (after-init . global-corfu-mode)
   :custom
   (corfu-cycle t)
   (corfu-auto t)
   (corfu-auto-prefix 2)
-  (corfu-auto-delay 0.1)
-  :config (global-corfu-mode 1))
+  (corfu-auto-delay 0.1))
 
 ;;; @doc Persists corfu's pick history into savehist so frequent
 ;;; completions float to the top across sessions. Bundled with
@@ -296,7 +298,9 @@
 ;;; even inside comments and docstrings (out there `elisp-completion-at-point'
 ;;; only fires in code), without polluting completion elsewhere.
 (use-package cape
-  :demand t
+  ;; The capfs hooked below are autoloaded, so cape itself only loads
+  ;; on the first completion-at-point that reaches them.
+  :defer t
   :functions (cape-dabbrev cape-file cape-keyword cape-elisp-symbol)
   :custom
   (cape-file-directory-must-exist t)
