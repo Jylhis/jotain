@@ -28,7 +28,10 @@ let
   optionsDoc = import ./options-doc.nix { inherit pkgs src; };
   packagesDoc = import ./packages-doc.nix { inherit pkgs src; };
   infoManual = import ./info-manual.nix { inherit pkgs src; };
-  inherit (pkgs) emacs;
+  # The Emacs Jotain actually ships (emacs-unstable base since the 31
+  # pretest switch) — its man pages and manual sources feed /man and
+  # /info, so the site documents the exact revision users get.
+  emacs = pkgs.jotainEmacs;
 
   # ── docs navigation, from the same docs.json Mintlify uses ─────
   docsNav = builtins.fromJSON (builtins.readFile (src + "/docs/docs.json"));
