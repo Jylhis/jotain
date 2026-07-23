@@ -19,6 +19,31 @@ let
   usePackage = import ./use-package.nix { inherit (final) lib; };
   extraPackages = import ./extra-packages.nix { pkgs = final; };
 
+  # Spell dictionaries bundled into the distribution so `jinx' works out of
+  # the box (lisp/init-writing.el) without an externally-populated profile.
+  # jinx links enchant, whose aspell backend delegates to libaspell, but the
+  # base distribution ships no dictionary data — so a bare `./result/bin/emacs'
+  # (e.g. `just run-built') reports `No dictionaries available for "en_US"'.
+  #
+  # `aspellWithDicts' builds one directory holding libaspell's own data files
+  # *and* the requested dictionaries under a single `lib/aspell'. We point
+  # both aspell `dict-dir' and `data-dir' at it via ASPELL_CONF on the wrapper
+  # below. NIX_PROFILES alone is NOT enough: nixpkgs' libaspell patch only
+  # feeds NIX_PROFILES into dictionary *enumeration*, so `enchant_broker_-
+  # list_dicts' sees the language but `enchant_broker_request_dict' (what jinx
+  # calls) still fails to build a speller because the master word list resolves
+  # under the default data-dir. en_GB is the jinx default (init-writing.el);
+  # fi/de/fr are reachable per buffer via C-M-$.
+  spellEnv = final.aspellWithDicts (
+    d: with d; [
+      en
+      fi
+      de
+      fr
+    ]
+  );
+  spellConf = "dict-dir ${spellEnv}/lib/aspell; data-dir ${spellEnv}/lib/aspell";
+
   mkJotainEmacsPackages =
     {
       name,
@@ -118,7 +143,8 @@ let
           orig=$(readlink -f "$prog")
           rm "$prog"
           makeBinaryWrapper "$orig" "$prog" \
-            --suffix INFOPATH : "${final.jotainInfo}/share/info:"
+            --suffix INFOPATH : "${final.jotainInfo}/share/info:" \
+            --set-default ASPELL_CONF "${spellConf}"
         done
       '';
 in

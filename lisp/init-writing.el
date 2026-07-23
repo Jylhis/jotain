@@ -78,6 +78,13 @@ that fails (MELPA-fallback mode without cc/enchant), a raw error
 here would abort every later `emacs-startup-hook' entry."
     (with-demoted-errors "jotain: jinx unavailable: %S"
       (global-jinx-mode 1)))
+  :custom
+  ;; British English by default. The Nix distribution bundles the en/fi/de/
+  ;; fr aspell dictionaries (nix/mk-overlay.nix); switch or combine them per
+  ;; buffer with C-M-$, or set this to e.g. "en_GB fi" for a bilingual
+  ;; buffer. A single default keeps a foreign-language word from silently
+  ;; counting as correctly spelled English.
+  (jinx-languages "en_GB")
   :hook (emacs-startup . jotain-writing--enable-jinx)
   :bind (("M-$"   . jinx-correct)
          ("C-M-$" . jinx-languages)))
