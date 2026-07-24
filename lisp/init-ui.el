@@ -69,15 +69,28 @@ and the result is a face-attribute soup."
 ;;; @doc A dense, IDE-style modeline with LSP/eglot status, project
 ;;; buffer info, and Nerd Font glyphs. Loaded after init so the
 ;;; primary frame doesn't redraw before fonts are ready.
+(defun jotain-ui--apply-modeline-icons (&optional frame)
+  "Enable doom-modeline glyphs only on a graphical FRAME.
+Terminal frames have no Nerd Font, so the icons render as tofu; gate
+`doom-modeline-icon' on `display-graphic-p'.  Runs on
+`server-after-make-frame-hook' so a daemon's GUI client frames still get
+glyphs even though no graphical frame exists at daemon start (mirrors
+`jotain-ui-apply-font')."
+  (when (boundp 'doom-modeline-icon)
+    (setopt doom-modeline-icon (and (display-graphic-p frame) t))
+    (force-mode-line-update t)))
+
 (use-package doom-modeline
   :hook (after-init . doom-modeline-mode)
   :custom
   (doom-modeline-height 28)
   (doom-modeline-bar-width 4)
-  (doom-modeline-icon t)
   (doom-modeline-lsp t)
   (doom-modeline-github nil)
-  (doom-modeline-buffer-encoding nil))
+  (doom-modeline-buffer-encoding nil)
+  :config
+  (jotain-ui--apply-modeline-icons)
+  (add-hook 'server-after-make-frame-hook #'jotain-ui--apply-modeline-icons))
 
 ;; doom-modeline's minor-modes segment is off by default, so lighters
 ;; are hidden there without any diminish-style setup.  For the vanilla
