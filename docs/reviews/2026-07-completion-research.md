@@ -649,3 +649,367 @@ terminal" and never mentions Emacs 31. Stale silence, not a contradiction — bu
 a reader consulting only that page would be misled.
 
 ---
+
+## Part 5 — Prose-mode completion (the `M-TAB` question), resolved
+
+The first research round left this contradictory: one claim that "M-TAB in Text
+mode completes from the spell-checker's dictionary" was refuted 0-3, while a
+different verifier quoted the manual saying exactly that. A dedicated pass over
+source resolved it. **Both prior positions were partly right.**
+
+### 5.1 What text-mode actually installs [V]
+
+Since **Emacs 30.1**, the body of `(define-derived-mode text-mode …)` ends with —
+byte-identical on `emacs-30` (lines 157-158), `emacs-31` and `master` (155-156):
+
+```elisp
+(add-hook 'context-menu-functions 'text-mode-context-menu 10 t)
+(when (eq text-mode-ispell-word-completion 'completion-at-point)
+  (add-hook 'completion-at-point-functions #'ispell-completion-at-point 10 t))
+```
+
+Decoded against `add-hook`'s signature `(hook function &optional depth local)`:
+**depth 10, buffer-local**. This is the *only* executable reference to
+`completion-at-point-functions` in `text-mode.el` (the other two occurrences are
+inside a docstring).
+
+`ispell-completion-at-point` is a real capf (`ispell.el`:3718 on emacs-30, :3783
+on emacs-31), docstring "Word completion function for use in
+`completion-at-point-functions'", returning `(list beg end (cdr all) :exclusive 'no)`.
+
+**Consequence for this config [V]:** depth 10 appends **late**. Any capf added at
+default depth 0 — `tempel-complete`, `cape-dabbrev`, eglot — runs *before* it. The
+ispell capf is a **fallback, not a shadow**. ("Depth 10 = last" is a loose gloss:
+depths range −100..100, and with `LOCAL=t` the `t` sentinel sits at the very end
+of the buffer-local list.)
+
+### 5.2 The option [V]
+
+```elisp
+(defcustom text-mode-ispell-word-completion 'completion-at-point
+  "How Text mode provides Ispell word completion. …"
+  :group 'text
+  :type '(choice (const completion-at-point) boolean)
+  :version "30.1"
+  :set (lambda (sym val) …))
+```
+
+Three meaningful values: `completion-at-point` (capf — the default), any other
+non-nil (bind `C-M-i` directly to `ispell-complete-word`), `nil` (neither).
+
+Introduced via bug#67527 (patch by Eshel Yaron, installed 2024-01-27). Emacs 29
+has no such defcustom at all — only an unconditional
+`"C-M-i" #'ispell-complete-word` in `text-mode-map`.
+
+**Emacs 30 vs 31 doc-only delta [V]:** emacs-30's docstring carries the sentence
+"This user option only takes effect when you customize it in Custom or with
+`setopt', not with `setq'." — **deleted in 31 and master** while the `:set` lambda
+that motivated it was kept. Anyone citing that sentence for an Emacs 31 config is
+citing removed text.
+
+### 5.3 The key path — a correction worth propagating [V]
+
+By default `text-mode-map` has **no** `C-M-i` / `M-TAB` binding. The defcustom's
+`:set` lambda *removes* it via `(keymap-unset text-mode-map "C-M-i" t)` whenever
+the value is `nil` or `completion-at-point`. Because `text-mode.el` is preloaded
+(`loadup.el`:283), the dump-time `custom-initialize-reset` already ran that
+branch — C-M-i is unbound in `text-mode-map` out of the box.
+
+So `M-TAB` falls through to the **global** `esc-map` binding. And NEWS and the
+manual both say "completion-at-point, globally bound to M-TAB" — but the actual
+binding (`bindings.el`:952 on 30, :1061-1063 on 31) is:
+
+```elisp
+(define-key esc-map "\t" 'complete-symbol)
+```
+
+where `complete-symbol` is `(if arg (info-complete-symbol) (completion-at-point))`.
+Bare `C-M-i` is behaviorally identical; **`C-u C-M-i` runs `info-complete-symbol`
+instead**. Precise phrasing: *global `C-M-i` → `complete-symbol`, which calls
+`completion-at-point`.*
+
+### 5.4 What setting it to nil removes [V]
+
+Exactly two things: the (default-absent) `C-M-i` binding, and the buffer-local
+`ispell-completion-at-point` capf entry. Nothing else. Proven by grep, not
+inference: a tree-wide search for the option returns `total_count=3` —
+`text-mode.el`, `doc/emacs/text.texi`, `etc/NEWS.30`. No other Lisp file reads it;
+`ispell.el` never references it and has no `remove-hook` for the capf.
+
+It is read at **mode-entry** time, so `nil` does not retroactively strip the capf
+from already-live text-mode buffers.
+
+**A precision correction [V]:** the blanket "setq silently fails here" is an
+overreach. Only the *keymap* half lives in `:set`, and since text-mode.el is
+preloaded a `setq` can never update `text-mode-map`. But the *capf* half is read
+from the live variable inside the mode body, so `(setq text-mode-ispell-word-completion nil)`
+**does** stop the capf from being installed in newly-entered buffers — the
+practically decisive effect. `setq` genuinely fails only when moving to a non-nil,
+non-`completion-at-point` value. Given this repo's `setopt` rule the point is
+moot, but the mechanism should be stated correctly.
+
+**Bearing on `init-writing.el`:41-42 [V]:** the existing comment says the Emacs 30
+ispell capf throws "No plain word-list found" on NixOS where
+`ispell-alternate-dictionary` has no file. Setting the option to `nil` is a
+correct and sufficient fix for that, and it removes nothing else.
+
+### 5.5 The manual now agrees [V]
+
+`emacs-31 doc/emacs/fixit.texi` (Spelling node):
+
+```texinfo
+@item M-@key{TAB}
+@itemx @key{ESC} @key{TAB}
+@itemx C-M-i
+Complete the word before point based on the spelling dictionary and
+other completion sources (@code{completion-at-point}).
+```
+
+The Emacs **29** manual said the opposite — "(@code{ispell-complete-word})" —
+which is almost certainly what the first round's 0-3 refutation was reasoning
+from. `ispell-complete-word` itself is **not** obsolete: a live defun on both
+branches, with no `make-obsolete`.
+
+**Adjudication:** M-TAB in text modes *does* complete from the spell-checker's
+dictionary — but as **one capf among others**, at depth 10, reached via
+`complete-symbol` → `completion-at-point`, not via a dedicated key binding.
+
+### 5.6 A key-safety hazard the design must dodge [V]
+
+**With `flyspell-mode` enabled, `M-TAB` / `ESC TAB` / `C-M-i` is not a completion
+key at all.** `flyspell.el`:430-438:
+
+```elisp
+(defvar flyspell-mode-map
+  (let ((map (make-sparse-keymap)))
+    (if flyspell-use-meta-tab (define-key map "\M-\t" 'flyspell-auto-correct-word))
+    …))
+```
+
+`flyspell-use-meta-tab` defaults to `t` on both 30 and 31. As a **minor-mode**
+keymap it outranks the global `esc-map` binding — so the completion key is fully
+shadowed by spell correction in exactly the buffers where dictionary completion
+was supposed to help.
+
+**Opt-out:** set `flyspell-use-meta-tab` to `nil`; its `:set` lambda re-binds
+`"\M-\t"` to nil live, so it works both before and after flyspell loads.
+
+**Why this repo is *probably* already safe [I]:** `init-writing.el` uses **jinx**,
+not flyspell (`global-jinx-mode` "replaces both `flyspell-mode` and
+`flyspell-prog-mode` in one shot"). So `flyspell-mode-map` should never be active.
+This is inference from the config, not a verified runtime check — any future move
+back to flyspell, or any package enabling it transitively, silently breaks the
+dwim key. The design document treats this as a documented risk.
+
+---
+
+## Part 6 — tempel, hippie-expand, and what remains unknown
+
+### 6.1 tempel's capf surface [V]
+
+Verified against `tempel.el` v1.14 (939 lines) on `main`; the emacs-straight
+released mirror `diff -q`s **identical**, so `main` == what a NixOS user installs.
+
+| Symbol | Kind | Returns |
+| --- | --- | --- |
+| `tempel-complete` | capf | **all** templates for the buffer |
+| `tempel-expand` | capf | **single** exactly-matching template |
+| `tempel-insert` | command (`completing-read`) | — |
+
+Both capfs return `:category 'tempel`, `:exclusive 'no`, and an `:exit-function`
+of `tempel--exit`. `tempel-expand`'s docstring: "returns only the single exactly
+matching template name. As a consequence the completion UI (e.g. Corfu) does not
+present the candidates for selection." `tempel-complete`'s: "returns a list of all
+possible template names, which are then displayed in the completion UI."
+
+Only `tempel-complete` emits `:company-kind` (`(lambda (_) 'snippet)`),
+`:company-doc-buffer`, `:company-location`, and a **conditional**
+`:annotation-function` — nil if `tempel-complete-annotation` (default 20) is nil.
+`tempel-expand` emits none of these.
+
+### 6.2 `tempel-trigger-prefix` does not exist [V]
+
+A scope correction: **`tempel-trigger-prefix` is not in tempel 1.14.** `grep` for
+`trigger-prefix` returns zero matches on both `main` and the released mirror.
+Prefix detection is the internal `tempel--prefix-bounds` (lines 770-780), which
+walks back over non-whitespace and accepts that span only if `try-completion`
+against the template list succeeds, else falls back to
+`(bounds-of-thing-at-point 'symbol)`.
+
+The complete defcustom set is **nine**: `tempel-path`, `tempel-mark`,
+`tempel-insert-annotation` (40), `tempel-complete-annotation` (20),
+`tempel-user-elements` (nil), `tempel-template-sources`, `tempel-done-on-region`
+(t), `tempel-done-on-next` (t), `tempel-auto-reload` (t). `tempel-map` is a
+`defvar-keymap`, not a defcustom, but is still user-configurable.
+
+**[?]** The suggested modern equivalent — `cape-capf-trigger` wrapped around
+`tempel-complete` — was *not* itself verified. Treat as unverified.
+
+### 6.3 Template and file format [V]
+
+`.eld` files are a flat sequence `(MODES PLIST TEMPLATES MODES PLIST TEMPLATES…)`.
+Leading non-keyword symbols are mode names; keyword/value pairs form a per-section
+plist whose `:when` supplies a condition (defaulting to `t`); remaining conses are
+templates. Mode matching is `derived-mode-p` plus `major-mode-remap-alist`
+indirection, with `fundamental-mode` sections always matching.
+
+Only `:when` is consumed from the *section* plist — any other section-level
+keyword is **silently discarded**. Per-template `:pre`/`:post` are a separate
+mechanism: a trailing plist on each template cons.
+
+- `:pre` — a Lisp form evaluated **first** in `tempel--insert`, before the element
+  loop.
+- `:post` — stashed on the range overlay, evaluated by the finalizer
+  `tempel--done` in the lexical scope of the named fields. **Not evaluated on
+  `tempel-abort`.**
+
+Element syntax (from `tempel--element`'s docstring): strings, `nil`, `p`, `r`,
+`r>`, `n`, `n>`, `>`, `&`, `%`, `o`, `q`, `(s NAME)`, `(p PROMPT <NAME> <NOINSERT>)`,
+`(r PROMPT …)`, `(r> PROMPT …)`, `(l ELEMENTS…)`, and arbitrary Lisp forms
+dispatched first through `tempel-user-elements`, with string results dynamically
+updated. Upstream's own warning: "Use caution with templates which execute
+arbitrary code!"
+
+`tempel-auto-reload` compares a whole `(file . mtime)` alist with `equal`, so file
+**addition and removal** also trigger a reload, not just mtime bumps.
+
+**Bearing on this repo [I]:** `templates/jotain.eld` uses exactly the documented
+shape — bare mode symbols as section headers, `p`/`n`/`n>`/`r>`/`q` elements — and
+`tempel-path` is set to `templates/*.eld`, which the wildcard support covers.
+
+### 6.4 hippie-expand — the prior art for a dwim chain key [V]
+
+This is the most directly applicable finding for the "separate chain key" design.
+
+**Default `hippie-expand-try-functions-list`** (byte-identical on emacs-30,
+emacs-31 and master; `hippie-exp.el`:204-218):
+
+```elisp
+'(try-complete-file-name-partially
+  try-complete-file-name
+  try-expand-all-abbrevs
+  try-expand-list
+  try-expand-line
+  try-expand-dabbrev
+  try-expand-dabbrev-all-buffers
+  try-expand-dabbrev-from-kill
+  try-complete-lisp-symbol-partially
+  try-complete-lisp-symbol)
+```
+
+`:type '(repeat function)`, autoloaded, no `:version`/`:group`/`:set`. Note the
+default is a **proper subset** of what the file defines — `try-expand-line-all-buffers`,
+`try-expand-list-all-buffers` and `try-expand-whole-kill` are deliberately excluded.
+
+**The sanctioned way to build a bespoke chain key [V]** —
+`make-hippie-expand-function`, autoloaded, `(TRY-LIST &optional VERBOSE)`,
+returning an interactive closure that dynamically binds
+`hippie-expand-try-functions-list` to TRY-LIST and calls `hippie-expand`:
+
+> "instead of loading the variable with all kinds of try-functions above, it might
+> be an idea to use `make-hippie-expand-function' to construct different
+> `hippie-expand'-like functions, with different try-lists and **bound to different
+> keys**."
+>
+> — `hippie-exp.el` Commentary, lines 114-118
+
+with `fset` examples at lines 394-400. Nothing in the file is marked obsolete
+(`grep -n obsolete` → zero hits). It is a **defun returning a closure**, not a
+macro — the file's own preceding comment calls it "a macro" sloppily.
+
+**Cycling semantics [V]:** repeated invocation steps through candidates and then
+forward through the try-list. A positive numeric ARG jumps ARG functions forward;
+a negative arg, `C-u 0`, or plain `C-u` **undoes** the tried expansion. Three
+precisions: (a) it does **not** wrap around — on exhaustion it messages "No further
+expansions found" and `(ding)`; (b) with no ARG a repeat re-invokes the *same*
+try-function with `old=t` to get its next candidate, advancing only once that
+function returns nil — candidate-by-candidate, not one function per keypress;
+(c) `C-u 0` also reaches the undo branch, which the manual wording omits.
+
+**[R] Refuted 0-3:** the claim that the Commentary "explicitly sanctions" the
+buffer-local/mode-hook pattern as *the* documented pattern for prose-vs-code
+chains. The text at lines 118-120 does offer that path — "It is also possible to
+make `hippie-expand-try-functions-list' a buffer local variable, and let it depend
+on the mode (by setting it in the mode-hooks)" — but it carries no such normative
+weight.
+
+### 6.5 corfu's keymap — the RET and TAB question [V]
+
+Default `corfu-map`, from the corfu README:
+
+| Binding | Command |
+| --- | --- |
+| `completion-at-point`, `TAB` | `corfu-complete` |
+| `M-TAB` | `corfu-expand` |
+| `RET` | `corfu-insert` |
+| `next-line`, `down`, `M-n` | `corfu-next` |
+| `previous-line`, `up`, `M-p` | `corfu-previous` |
+| `C-g` | `corfu-quit` |
+| `M-SPC` | `corfu-insert-separator` |
+| `M-h` | `corfu-info-documentation` |
+| `M-g` | `corfu-info-location` |
+
+> "The current candidate is inserted with `TAB` and selected with `RET`."
+
+Upstream documents freeing RET explicitly:
+
+```elisp
+;; Free the RET key for less intrusive behavior.
+;; Option 1: Unbind RET completely
+(keymap-unset corfu-map "RET")
+;; Option 2: Use RET only in shell modes
+(keymap-set corfu-map "RET" `( menu-item "" nil :filter
+                               ,(lambda (&optional _)
+                                  (and (derived-mode-p 'eshell-mode 'comint-mode)
+                                       #'corfu-send))))
+```
+
+This is decisive for the "Enter must never accept a completion" requirement: it is
+a **supported, upstream-documented configuration**, not a hack. The `menu-item`
+`:filter` form is also the general pattern for making a corfu binding
+context-conditional.
+
+**Not established this round:** exhaustive accepted-value lists for
+`corfu-preselect`, `corfu-on-exact-match`, and `corfu-quit-no-match`. The README
+shows `corfu-preselect` values `prompt` and `directory` by example only, and
+`corfu-on-exact-match` via `'insert` by example. `corfu-quit-no-match` is
+described with `separator` (default) and `t`. **Do not reproduce a complete value
+table from this report** — read the docstrings before relying on any value not
+listed here.
+
+### 6.6 What remains unresearched
+
+Reported as **not found** rather than inferred. Two rounds produced zero verified
+claims on these, so the design document must not present them as evidence-backed:
+
+- **Capf ordering, concretely (GAP 3).** Whether `cape-capf-nonexclusive` around
+  `eglot-completion-at-point` is upstream-endorsed; how it compares with
+  `cape-capf-super` merging; whether `completion--capf-wrapper`'s prefix-
+  `try-completion` approximation for `:exclusive 'no` **misfires under orderless**
+  (the `minibuffer.el` FIXME says non-prefix completion "will not work (or not
+  right) for completion functions that are non-exclusive" — and this config runs
+  orderless); and the behavior of `eglot--capf-session` / `eglot--capf-session-flush`,
+  including whether `cape-capf-buster` is needed around eglot.
+
+  The two things GAP 3 *can* lean on from verified findings: tempel's capfs are
+  both `:exclusive 'no`, and the ispell capf sits at depth 10 — so tempel and
+  ispell both fall through, and neither shadows eglot.
+
+- **Opt-out / kill-switch idiom (GAP 5).** Neither the normative half (Elisp manual
+  Defining Variables / Customization / Minor Mode Conventions on `defcustom` vs
+  `defvar`, `:set`/`:initialize`, load-time vs runtime togglability) nor the
+  descriptive half (Doom module flags, Prelude, Crafted, purcell, Prot, karthink,
+  minimal-emacs.d) was gathered. **The design document's opt-out section is
+  therefore grounded in this repo's own established convention**, which is
+  verifiable locally, rather than in external evidence.
+
+- **Performance (GAP 6).** Nothing on `corfu-auto-delay`/`-prefix` tuning guidance,
+  the per-keystroke cost of `corfu-auto--post-command`, `eglot-send-changes-idle-time`
+  or capf latency reports, `cape-dabbrev-check-other-buffers` cost, `corfu-history`
+  + savehist boundedness, or native-comp's effect on completion responsiveness.
+  Every performance number in circulation for this stack should be treated as
+  folklore until measured.
+
+- **The rest of the built-in layer.** `dabbrev` internals and cache invalidation,
+  `abbrev`/`abbrev-suggest`, `skeleton`/`tempo`, and the exact accepted values of
+  `completion-auto-help` and `completion-auto-select`.
