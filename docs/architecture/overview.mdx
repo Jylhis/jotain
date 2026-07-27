@@ -15,19 +15,30 @@ jotain/
 ├── init.el             # Entry point — loads modules in order
 ├── lisp/               # Modular Elisp config (init-*.el, one per concern)
 ├── emacs.nix           # GNU Emacs build from source (cache-parity invariant)
+├── emacs-jylhis.nix    # The github:jylhis/emacs Meson fork build
 ├── default.nix         # Non-flake entry point (flake-compat wrapper)
 ├── overlay.nix         # Standalone nixpkgs overlay (wraps nix/mk-overlay.nix)
 ├── module.nix          # Home Manager module for the daemon
+├── module-system.nix   # Shared NixOS / nix-darwin module
+├── module-nix-on-droid.nix  # nix-on-droid module (terminal-only build)
 ├── nix/
 │   ├── mk-overlay.nix         # Overlay implementation — distribution assembly
 │   ├── checks.nix             # Flake checks (lint, compile, tests, builds)
 │   ├── use-package.nix        # use-package scanner (Elisp → epkgs mapping)
-│   └── ...                    # docs, extra packages, treefmt, devenv helpers
+│   └── ...                    # docs, site, extra packages, treefmt helpers
 ├── devenv.nix          # Development shell (tooling only — no Emacs)
 ├── devenv.yaml         # devenv inputs (pinned to flake.lock revs)
 ├── flake.nix           # Flake entry point — source of truth for pins
 ├── Justfile            # Task runner recipes
-├── docs/               # Mintlify documentation (this site)
+├── docs/               # Documentation sources (rendered into the site,
+│                       #   the Info manual, and the man page; docs.json
+│                       #   defines page order for all three)
+├── website/            # jotain.j10s.io site shell (assembled by nix build .#site)
+├── test/               # ERT tests (every *.el here is loaded by elisp-test)
+├── bench/              # Startup-benchmark wrapper init files
+├── templates/          # Tempel snippet templates (jotain.eld)
+├── config/             # Auxiliary tool config (e.g. eca)
+├── scripts/            # Bootstrap helpers (e.g. bootstrap-agent-env.sh)
 └── journal/            # Development journal entries
 ```
 
@@ -39,7 +50,7 @@ The Elisp configuration is split into three parts:
 
 1. **`early-init.el`** — loaded before `package.el`, before the first frame, before `init.el`. Handles anything that *must* happen that early: the startup GC threshold, `use-package-always-ensure`, frame chrome defaults, native-comp and eln-cache redirection, terminal aliases.
 
-2. **`init.el`** — tiny entry point. Registers MELPA/NonGNU ELPA as fallback archives, puts `lisp/` on the load-path, points `custom-file` at `var/custom.el` (write-only — never loaded back), refreshes archive contents on the first run, and `require`s each module in order.
+2. **`init.el`** — tiny entry point. Registers MELPA/NonGNU ELPA as fallback archives, puts `lisp/` on the load-path, points `custom-file` at `var/custom.el` (write-only — never loaded back), and `require`s each module in order. Archive refresh is off the startup path: a staleness-gated background refresh runs on an idle timer only when the cached archive contents are older than 7 days (opt out with `JOTAIN_NO_PACKAGE_REFRESH`).
 
 3. **`lisp/init-*.el`** — one file per concern. See [Modules](/architecture/modules) for the full list and their responsibilities.
 

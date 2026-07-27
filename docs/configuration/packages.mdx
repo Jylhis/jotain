@@ -5,12 +5,12 @@ description: How packages are managed in Jotain
 
 # Packages
 
-Jotain is a "use-package + Nix" configuration: Nix (or, in development, the devenv shell) provides most packages on `load-path`, so `use-package` finds them without touching the network; anything Nix does not ship falls through to MELPA at install time.
+Jotain is a "use-package + Nix" configuration: Nix provides most packages on `load-path`, so `use-package` finds them without touching the network; anything Nix does not ship falls through to MELPA at install time.
 
 ## Provenance
 
 - **Built-in to Emacs 30+** — always opt out of installation with `:ensure nil`.
-- **Provided by Nix** — built through `emacsPackagesFor` in `devenv.nix` (e.g. `claude-code-ide`, `combobulate`, the tree-sitter grammars). These also use `:ensure nil` because Nix already put them on the load path.
+- **Provided by Nix** — the distribution (`nix/mk-overlay.nix`) scans the `use-package` declarations and maps them to the emacs-overlay package set; archive-absent packages (e.g. `claude-code-ide`, `combobulate`) are built in `nix/extra-packages.nix`. These also use `:ensure nil` because Nix already put them on the load path.
 - **MELPA / NonGNU ELPA fallback** — every other `use-package` block. `use-package-always-ensure` is `t` (set in `early-init.el`), so these default to "install if missing" without any extra boilerplate. Archives are registered in `init.el`:
 
   ```elisp
@@ -24,16 +24,20 @@ When built with `default.nix` (the full distribution — `just build` and friend
 
 ## Packages that live in Nix
 
-`devenv.nix` defines a small set of Elisp packages that are not on any archive (MELPA, GNU ELPA, NonGNU ELPA), so Nix builds them directly and puts them on `load-path`:
+`nix/extra-packages.nix` defines the Elisp packages that are not on any archive (MELPA, GNU ELPA, NonGNU ELPA), so Nix builds them directly via `trivialBuild` from pinned revisions and puts them on `load-path`:
 
+- **`ghostel`** — Ghostty terminal integration.
+- **`jylhis-emacs-themes`** — the design-system themes; their revision comes from `nix/design-pin.nix`, the single pin shared with the website's vendored CSS.
 - **`claude-code-ide`** — fetched from `manzaltu/claude-code-ide.el`, built with `websocket` and `web-server` as runtime dependencies (`transient` is built in to Emacs 30+).
 - **`combobulate`** — fetched from `mickeynp/combobulate`; all its dependencies (`seq`, `map`, `treesit`) are built in to Emacs 30+.
+- **`majutsu`** — Magit-style porcelain for Jujutsu (jj), wired in `init-vc.el`.
+- **`tagref`** — Emacs integration for the `tagref` cross-reference checker.
 
-Both are consumed by `use-package ... :ensure nil` blocks in the relevant `init-*.el` module.
+All are consumed by `use-package ... :ensure nil` blocks in the relevant `init-*.el` module and wired into the distribution by `nix/mk-overlay.nix`.
 
 ## The devenv shell
 
-Running inside `devenv shell` (or via `direnv` / `.envrc`) gives you the same Emacs that `just build-bare` produces, plus `claude-code-ide`, `combobulate`, and all tree-sitter grammars. `devenv.nix` enables the custom `languages.emacs-lisp` module (from `nix/devenv-emacs-lisp.nix`) which also provides `eask-cli`; `ellsp` (LSP) and `elsa` (static analyser) are off by default — toggle them in `devenv.nix` if you want them.
+The devenv shell provides **tooling only** — linters, language servers, the docs chain, fonts. Emacs itself is *not* in the shell (see the top-of-file note in `devenv.nix`); build and launch the editor with `just run-built`.
 
 ## Adding a new package
 
@@ -49,4 +53,6 @@ Most of the time you just need a `use-package` block in the appropriate `init-*.
   )
 ```
 
-If the package is not on any archive, add it to the `overrideScope` block in `devenv.nix` with `trivialBuild` so it is built from a pinned GitHub revision and available on `load-path`, then declare it with `:ensure nil` in the module.
+If the package is not on any archive, add it to `nix/extra-packages.nix` with `trivialBuild` so it is built from a pinned GitHub revision and available on `load-path`, then declare it with `:ensure nil` in the module.
+
+One invariant to know: the Nix side (`nix/use-package.nix`) **parses** the Elisp — it does not evaluate it. `use-package` forms must stay top-level (not wrapped in `when`/`let`/macros) and not `:disabled`, or the package silently drops out of the Nix-provided set even though the Elisp still works interactively.
