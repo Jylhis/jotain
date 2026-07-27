@@ -13,15 +13,21 @@
   "User-facing UI knobs for the Jotain configuration."
   :group 'convenience)
 
-;;;; Theme — Jylhis paper/roast, switched by system appearance
+;;;; Theme — Jylhis sheet/field, switched by system appearance
 
-(defcustom jotain-theme-light 'jylhis-paper
-  "Theme to use when the system is in light mode."
+(defcustom jotain-theme-light 'jylhis-sheet
+  "Theme to use when the system is in light mode.
+Renamed in v2 of the Jylhis design system: `jylhis-paper' became
+`jylhis-sheet'.  A machine-local config still setting the old symbol
+will fail to load a theme."
   :type 'symbol
   :group 'jotain-ui)
 
-(defcustom jotain-theme-dark 'jylhis-roast
-  "Theme to use when the system is in dark mode."
+(defcustom jotain-theme-dark 'jylhis-field
+  "Theme to use when the system is in dark mode.
+Renamed in v2 of the Jylhis design system: `jylhis-roast' became
+`jylhis-field'.  A machine-local config still setting the old symbol
+will fail to load a theme."
   :type 'symbol
   :group 'jotain-ui)
 
@@ -38,18 +44,31 @@ and the result is a face-attribute soup."
 
 (advice-add 'load-theme :before #'jotain-ui--disable-other-themes)
 
-;; Register the Jylhis theme directory on custom-theme-load-path.
-;; The package ships jylhis-themes.el as the entry point for this.
-(if (require 'jylhis-themes nil t)
-    ;; Pre-load both themes so auto-dark can flip between them without
-    ;; re-evaluating the .el files on every appearance change.  Guarded
-    ;; against batch mode where custom-theme-load-path may be incomplete.
-    (unless noninteractive
-      (load-theme jotain-theme-light t t)
-      (load-theme jotain-theme-dark  t t))
+(defun jotain-ui--fall-back-to-modus (reason)
+  "Point the theme variables at the built-in Modus themes.
+REASON is reported so the downgrade is visible in *Messages*."
   (setopt jotain-theme-light 'modus-operandi
           jotain-theme-dark 'modus-vivendi)
-  (message "jylhis-themes is unavailable; falling back to Modus themes"))
+  (message "jotain: %s; falling back to Modus themes" reason))
+
+;; Register the Jylhis theme directory on custom-theme-load-path.
+;; The package ships jylhis-themes.el as the entry point for this.
+(if (not (require 'jylhis-themes nil t))
+    (jotain-ui--fall-back-to-modus "jylhis-themes is unavailable")
+  ;; Pre-load both themes so auto-dark can flip between them without
+  ;; re-evaluating the .el files on every appearance change.  Guarded
+  ;; against batch mode where custom-theme-load-path may be incomplete.
+  ;;
+  ;; `load-theme' signals if the theme file is missing, and init.el
+  ;; requires this module unguarded — so an upstream rename (v1's
+  ;; paper/roast became v2's sheet/field) would otherwise take out every
+  ;; module loaded after init-ui.  Degrade to Modus instead.
+  (unless noninteractive
+    (condition-case err
+        (progn
+          (load-theme jotain-theme-light t t)
+          (load-theme jotain-theme-dark t t))
+      (error (jotain-ui--fall-back-to-modus (error-message-string err))))))
 
 ;;; @doc Flips between `jotain-theme-light` and `jotain-theme-dark`
 ;;; following the system appearance — works on macOS, GNOME, and
@@ -110,23 +129,33 @@ machine-local config)."
   :group 'jotain-ui)
 
 (defcustom jotain-font-preferences
-  '(("JetBrainsMono Nerd Font" . 140)
+  '(("BlexMono Nerd Font"      . 140)
+    ("JetBrainsMono Nerd Font" . 140)
     ("Iosevka Nerd Font"       . 140)
     ("DejaVu Sans Mono"        . 130))
   "Ordered list of (FAMILY . HEIGHT) pairs to try for the default face.
 HEIGHT is in 1/10 pt units (140 = 14 pt).  The first installed family
-wins.  All heights are multiplied by `jotain-font-scale' at runtime."
+wins.  All heights are multiplied by `jotain-font-scale' at runtime.
+
+BlexMono is IBM Plex Mono with Nerd Font glyphs patched in — the mono
+role of the Jylhis design system, so the editor matches jylhis.com.
+Entries containing \"Nerd Font\" also supply `nerd-icons-font-family';
+keep at least one such family ahead of the plain fallbacks."
   :type '(alist :key-type string :value-type integer)
   :group 'jotain-ui)
 
 (defcustom jotain-variable-pitch-font-preferences
-  '(("Literata"     . 150)
-    ("Iosevka Aile" . 150)
-    ("Noto Sans"    . 150)
-    ("DejaVu Sans"  . 140))
+  '(("Hanken Grotesk" . 150)
+    ("Literata"       . 150)
+    ("Iosevka Aile"   . 150)
+    ("Noto Sans"      . 150)
+    ("DejaVu Sans"    . 140))
   "Ordered list of (FAMILY . HEIGHT) pairs to try for the variable-pitch face.
 Heights are larger than the monospace default: proportional fonts render
-visually smaller at the same point size."
+visually smaller at the same point size.
+
+Hanken Grotesk is the body role of the Jylhis design system; Literata,
+the v1 body face, is kept behind it as a fallback."
   :type '(alist :key-type string :value-type integer)
   :group 'jotain-ui)
 

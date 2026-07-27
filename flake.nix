@@ -165,6 +165,12 @@
         site = import ./nix/site.nix {
           pkgs = pkgsFor system;
         };
+        # Design-system CSS + fonts at the pinned jylhis/design rev, as
+        # website/public/ds is expected to contain them. `just ds-sync`
+        # copies from here; the ds-in-sync check diffs against it.
+        ds-assets = import ./nix/ds-assets.nix {
+          pkgs = pkgsFor system;
+        };
       });
 
       formatter = forAllSystems (system: (treefmtEval system).config.build.wrapper);

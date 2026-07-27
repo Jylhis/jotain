@@ -156,6 +156,31 @@ in
         touch $out
       '';
 
+  # ── Vendored design system must match the pinned upstream rev ────
+  #
+  # website/public/ds is committed so website/public stays a no-build
+  # shell, which is exactly how it drifted a whole major version behind
+  # the Emacs themes built from the same repo. Both now read
+  # nix/design-pin.nix, and this check makes the drift fatal.
+  ds-in-sync =
+    let
+      dsAssets = import ./ds-assets.nix { inherit pkgs; };
+    in
+    pkgs.runCommandLocal "check-ds-in-sync"
+      {
+        inherit src dsAssets;
+      }
+      ''
+        if ! diff -r "$dsAssets" "$src/website/public/ds"; then
+          echo "" >&2
+          echo "website/public/ds is out of sync with the jylhis/design rev" >&2
+          echo "pinned in nix/design-pin.nix." >&2
+          echo "Re-vendor it with: just ds-sync" >&2
+          exit 1
+        fi
+        touch $out
+      '';
+
   # ── Home Manager module evaluation ───────────────────────────────
   module-eval =
     pkgs.runCommandLocal "check-module-eval"

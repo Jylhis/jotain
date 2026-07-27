@@ -147,8 +147,8 @@ pkgs.runCommand "jotain-site"
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>''${title} — jotain</title>
     <link rel="canonical" href="https://jotain.j10s.io/">
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf7f2">
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1a1714">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f8fb">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d0f14">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <script src="/js/theme-init.js"></script>
     <link rel="stylesheet" href="/css/site.css">

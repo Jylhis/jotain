@@ -1,5 +1,5 @@
 /*
- * theme-init.js — set the Paper/Roast theme before first paint.
+ * theme-init.js — set the Sheet/Field theme before first paint.
  * Loaded synchronously in <head> by every page (hand-written and
  * generated alike) so there is no flash of the wrong theme.
  */
