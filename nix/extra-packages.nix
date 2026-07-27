@@ -37,7 +37,16 @@ efinal: eprev: {
     efinal.trivialBuild {
       pname = "jylhis-emacs-themes";
       inherit (pin) version;
-      src = pkgs.fetchFromGitHub { inherit (pin) owner repo rev sha256; } + "/platforms/emacs";
+      src =
+        pkgs.fetchFromGitHub {
+          inherit (pin)
+            owner
+            repo
+            rev
+            sha256
+            ;
+        }
+        + "/platforms/emacs";
     };
 
   claude-code-ide = efinal.trivialBuild {
