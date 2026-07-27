@@ -85,9 +85,6 @@ REASON is reported so the downgrade is visible in *Messages*."
 
 ;;;; Modeline
 
-;;; @doc A dense, IDE-style modeline with LSP/eglot status, project
-;;; buffer info, and Nerd Font glyphs. Loaded after init so the
-;;; primary frame doesn't redraw before fonts are ready.
 (defun jotain-ui--apply-modeline-icons (&optional frame)
   "Enable doom-modeline glyphs only on a graphical FRAME.
 Terminal frames have no Nerd Font, so the icons render as tofu; gate
@@ -99,6 +96,9 @@ glyphs even though no graphical frame exists at daemon start (mirrors
     (setopt doom-modeline-icon (and (display-graphic-p frame) t))
     (force-mode-line-update t)))
 
+;;; @doc A dense, IDE-style modeline with LSP/eglot status, project
+;;; buffer info, and Nerd Font glyphs. Loaded after init so the
+;;; primary frame doesn't redraw before fonts are ready.
 (use-package doom-modeline
   :hook (after-init . doom-modeline-mode)
   :custom
