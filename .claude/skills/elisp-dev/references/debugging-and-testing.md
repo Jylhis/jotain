@@ -1,13 +1,14 @@
 # Debugging, profiling, and ERT testing
 
 Source: GNU Elisp Reference Manual (Debugging chapter, Profiling), ERT
-manual, this repo's workflow (`just test`, `test/test-*.el`).
+manual, this repo's workflow (`just test`, every `test/*.el`).
 
 ## Debugging
 
 - **`M-x toggle-debug-on-error`** / `(setq debug-on-error t)` — enter the
-  backtrace debugger on any error. `just debug` starts Emacs with
-  `--debug-init` and `debug-on-error` for startup problems.
+  backtrace debugger on any error. `just run-built-debug` starts Emacs
+  with `--debug-init` and `debug-on-error` for startup problems
+  (`just debug` is a disabled stub — no Emacs in the dev shell).
 - `debug-on-entry` / `cancel-debug-on-entry` — break on entry to a function.
   `debug-on-variable-change` (add-variable-watcher) — break when a variable
   changes. `debug-on-signal` — catch even handled signals.
@@ -27,13 +28,14 @@ manual, this repo's workflow (`just test`, `test/test-*.el`).
   fontification hotspots (look for `redisplay_internal`, `jit-lock`,
   font-lock functions).
 - `benchmark-run` / `benchmark-progn` for microbenchmarks;
-  `M-x emacs-init-time` and this repo's `just bench` (wraps `require` with
-  timing advice via `bench/early-init.el`) for startup cost.
+  `M-x emacs-init-time` for startup cost. (This repo's `just bench` —
+  `require` wrapped with timing advice via `bench/early-init.el` — is
+  currently a disabled stub; the wrapper files remain in `bench/`.)
 - `M-x memory-report` for a heap overview; `garbage-collect` and
   `gc-elapsed`/`gcs-done` for GC pressure (see the internals skill's
   `objects-and-gc.md`).
 
-## ERT testing (this repo: `test/test-*.el`, run with `just test`)
+## ERT testing (this repo: every `*.el` under `test/`, run with `just test`)
 
 - `(ert-deftest prefix-name () "Docstring." BODY)`. Test names are a single
   global namespace — **prefix every test with the module/package name**; the
@@ -58,9 +60,13 @@ manual, this repo's workflow (`just test`, `test/test-*.el`).
   testable without simulating the command loop. Keep fixtures as plain
   helper functions that take a body thunk.
 - Run in batch (what CI does):
-  `emacs -Q -batch -L lisp -l ert -l test/test-foo.el -f ert-run-tests-batch-and-exit`.
-  `just test` wraps this; `test/` files load repo code with `-L lisp`.
-- Lint gauntlet before considering Elisp done: `just check-elisp` (parens),
-  `just compile` (byte-compile, warnings-as-errors), `M-x checkdoc`,
-  and `relint` for regexps. Emacs 30's `package-isolate` runs a subprocess
-  with only named packages for clean-environment reproduction.
+  `emacs -Q -batch -L lisp -l ert -l test/some-test.el -f ert-run-tests-batch-and-exit`.
+  `just test` builds the `elisp-test` flake check, which globs and loads
+  **every** `*.el` under `test/` (any name) with `-L lisp` — new test
+  files need no registration.
+- Lint gauntlet before considering Elisp done: the `elisp-lint` flake
+  check (parens) and `elisp-compile` (byte-compile, warnings-as-errors)
+  — both run under `just check` — plus `M-x checkdoc` and `relint` for
+  regexps. (`just check-elisp` / `just compile` are disabled stubs.)
+  Emacs 30's `package-isolate` runs a subprocess with only named
+  packages for clean-environment reproduction.
