@@ -13,7 +13,8 @@ such guards are dead and misleading.
 ### Runtime / compiler
 - **Native compilation on by default** when libgccjit is present; bytecode
   loaded eagerly. `compilation-safety` option added.
-- New byte-compiler warnings (all fail `just compile`): missing
+- New byte-compiler warnings (all fail the `elisp-compile` flake check,
+  run via `just check`): missing
   `lexical-binding` cookie, empty bodies, quoted error names in
   `condition-case`/`ignore-error`, `condition-case` without handlers,
   `unwind-protect` without unwind forms, **mutation of constants**, ignored
