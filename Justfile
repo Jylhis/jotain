@@ -1,8 +1,9 @@
 # Jotain Emacs configuration — task runner.
 #
-# All recipes assume the devenv shell is active (direnv handles this
-# automatically via .envrc). If you don't use direnv, prefix any
-# command with `devenv shell --`, e.g. `devenv shell -- just check`.
+# All recipes assume the devenv shell is active. Enter it with
+# `devenv shell`, or prefix any command with `devenv shell --`,
+# e.g. `devenv shell -- just check`. direnv users can create their
+# own (untracked) .envrc with `eval "$(devenv direnvrc)"` + `use devenv`.
 
 config_dir := justfile_directory()
 
@@ -20,14 +21,16 @@ default:
 # All recipes in this section depend on `emacs` / `emacsclient` being
 # on PATH. Emacs is temporarily not installed into the devenv shell
 # (see top-of-file note in devenv.nix), so they print a notice and
-# exit 0 instead of failing cryptically. Use `just run-built` to build
-# Emacs via Nix and launch it with this configuration.
+# exit 1 — a stub must never look like a passing run to a script or
+# an agent. Use `just run-built` to build Emacs via Nix and launch it
+# with this configuration.
 
 # [DISABLED] Launch Emacs with this config in isolation (--init-directory).
 [group('run')]
 run *ARGS:
     @echo "just run is disabled — emacs is not in the devenv shell."
     @echo "Try: just run-built  (builds Emacs via Nix, then launches it)"
+    @exit 1
 # Original:
 #   emacs --init-directory={{config_dir}} {{ARGS}}
 
@@ -35,7 +38,8 @@ run *ARGS:
 [group('run')]
 debug *ARGS:
     @echo "just debug is disabled — emacs is not in the devenv shell."
-    @echo "Try: just run-built  (then re-enable when wired back up)"
+    @echo "Try: just run-built-debug  (builds Emacs via Nix, --debug-init)"
+    @exit 1
 # Original:
 #   emacs --init-directory={{config_dir}} --debug-init \
 #         --eval '(setq debug-on-error t)' {{ARGS}}
@@ -44,6 +48,7 @@ debug *ARGS:
 [group('run')]
 tty *ARGS:
     @echo "just tty is disabled — emacs is not in the devenv shell."
+    @exit 1
 # Original:
 #   emacs -nw --init-directory={{config_dir}} {{ARGS}}
 
@@ -51,6 +56,7 @@ tty *ARGS:
 [group('run')]
 daemon *ARGS:
     @echo "just daemon is disabled — emacs is not in the devenv shell."
+    @exit 1
 # Original:
 #   emacs --fg-daemon --init-directory={{config_dir}} {{ARGS}}
 
@@ -58,6 +64,7 @@ daemon *ARGS:
 [group('run')]
 client *ARGS:
     @echo "just client is disabled — emacsclient is not in the devenv shell."
+    @exit 1
 # Original:
 #   emacsclient -c --alternate-editor='emacs --init-directory={{config_dir}}' {{ARGS}}
 
@@ -65,6 +72,7 @@ client *ARGS:
 [group('run')]
 client-tty *ARGS:
     @echo "just client-tty is disabled — emacsclient is not in the devenv shell."
+    @exit 1
 # Original:
 #   emacsclient -t --alternate-editor='emacs -nw --init-directory={{config_dir}}' {{ARGS}}
 
@@ -72,6 +80,7 @@ client-tty *ARGS:
 [group('run')]
 quick *ARGS:
     @echo "just quick is disabled — emacs is not in the devenv shell."
+    @exit 1
 # Original:
 #   emacs -Q -nw --eval "(load-theme 'wombat t)" {{ARGS}}
 
@@ -90,6 +99,7 @@ check:
 check-elisp:
     @echo "just check-elisp is disabled — emacs is not in the devenv shell."
     @echo "Equivalent: just check  (runs the elisp-lint flake check)"
+    @exit 1
 # Original:
 #   emacs -Q --batch --eval '(check-parens for early-init.el init.el lisp/init-*.el)'
 
@@ -99,6 +109,7 @@ check-elisp:
 compile:
     @echo "just compile is disabled — emacs is not in the devenv shell."
     @echo "Equivalent: just check  (runs the elisp-compile flake check)"
+    @exit 1
 # Original:
 #   emacs --batch --init-directory={{config_dir}} \
 #       --eval '(setq byte-compile-error-on-warn t)' \
@@ -114,6 +125,7 @@ compile:
 compile-native:
     @echo "just compile-native is disabled — emacs is not in the devenv shell."
     @echo "Try: just run-built  (builds Emacs via Nix, then launches it)"
+    @exit 1
 # Original:
 #   emacs --batch --init-directory={{config_dir}} \
 #       --eval '(setq native-comp-speed 2)' \
@@ -136,6 +148,7 @@ test:
 [group('check')]
 bench output="":
     @echo "just bench is disabled — emacs is not in the devenv shell."
+    @exit 1
 # Original:
 #   JOTAIN_BENCH_OUTPUT=... emacs --init-directory={{config_dir}}/bench
 
@@ -143,6 +156,7 @@ bench output="":
 [group('check')]
 bench-open output="":
     @echo "just bench-open is disabled — emacs is not in the devenv shell."
+    @exit 1
 # Original:
 #   JOTAIN_BENCH_OPEN_OUTPUT=... emacs --init-directory={{config_dir}}/bench
 
