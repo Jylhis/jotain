@@ -390,6 +390,24 @@ verify:
     done
     exit $fail
 
+# Re-vendor website/public/ds from the jylhis/design rev pinned in
+# nix/design-pin.nix — the same pin the Emacs themes are built from.
+# Run after bumping that pin; the `ds-in-sync` flake check fails until
+# the committed copy matches.
+[group('pins')]
+ds-sync:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{config_dir}}"
+    out=$(nix build --no-link --print-out-paths .#ds-assets)
+    # Wipe first: this is what removes fonts retired by an upstream type
+    # change (v2 dropped all eight Literata/JetBrains Mono slices).
+    rm -rf website/public/ds
+    mkdir -p website/public/ds
+    cp -r "$out/." website/public/ds/
+    chmod -R u+w website/public/ds
+    echo "Re-vendored website/public/ds from $(nix eval --raw --file nix/design-pin.nix rev)"
+
 
 # ── Cleanup ─────────────────────────────────────────────────────────
 

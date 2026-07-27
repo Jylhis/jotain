@@ -4,8 +4,9 @@ The landing page and docs site for Jotain, styled as an Emacs frame: a tab
 bar of three buffers (`README.org` landing, `*Man JOTAIN(7)*` docs index,
 `keybindings`), a modeline, and a minibuffer with `I-search` over the site's
 sections. Implements the "Jotain Website" Claude Design prototype on the
-[Jylhis design system](https://github.com/jylhis/design) (Paper/Roast themes,
-copper accent, JetBrains Mono + Literata).
+[Jylhis design system](https://github.com/jylhis/design) v2 "The Survey"
+(Sheet/Field themes, bronze accent, Zilla Slab + Hanken Grotesk + IBM Plex
+Mono).
 
 ## Layout
 
@@ -16,8 +17,12 @@ copper accent, JetBrains Mono + Literata).
   - `js/app.js` — buffer switching, `C-s` I-search, `C-x b` / `n` / `p`
     keys, modeline position, theme toggle (persisted to `localStorage`)
   - `ds/` — Jylhis design system CSS (`tokens.css`, `fonts.css`,
-    `colors_and_type.css`, `motion.css`) and self-hosted variable woff2
-    fonts (fontsource 5.2.8, latin + latin-ext slices)
+    `colors_and_type.css`, `motion.css`) and self-hosted woff2 fonts
+    (fontsource 5.x, latin + latin-ext slices of the three v2 families),
+    copied verbatim from upstream — never edit them here. The revision
+    they come from is pinned in `nix/design-pin.nix`, the same pin the
+    Emacs themes are built from; `just ds-sync` re-vendors this directory
+    from it and the `ds-in-sync` flake check fails when the two disagree.
   - `_headers` — long-lived immutable caching for fonts, basic security
     headers (honored by Cloudflare's static-asset serving)
 - `wrangler.jsonc` — Cloudflare Workers static-assets config
@@ -69,6 +74,14 @@ python3 -m http.server -d website/public 8080   # shell only
 
 - No hex literals in `site.css` — colors come from `ds/tokens.css`
   custom properties, so both themes stay in sync.
-- Both themes always ship: Paper (light) is `:root`, Roast (dark) is
+- Four places cannot use a custom property and hold hand-synced copies of
+  token values instead: the `theme-color` metas in `index.html` and in
+  `nix/site.nix`'s generated-page template, and `favicon.svg`. Update all
+  four on every retheme.
+- Generated markup (makeinfo, pandoc, mandoc) is styled by `manual.css`,
+  `pandoc-page.css` and `docs.css`, which pin `h1`–`h6` to `--font-mono`
+  on purpose: an unstyled heading inherits `--font-heading`, the design
+  system's slab display face at `--type-scale-0` (3.25rem).
+- Both themes always ship: Sheet (light) is `:root`, Field (dark) is
   `[data-theme="dark"]` on `<html>`.
 - Fonts are self-hosted; no third-party requests at runtime.

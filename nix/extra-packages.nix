@@ -27,18 +27,18 @@ efinal: eprev: {
     '';
   };
 
-  jylhis-emacs-themes = efinal.trivialBuild {
-    pname = "jylhis-emacs-themes";
-    version = "0.4.0-unstable-2026-07-24";
-    src =
-      pkgs.fetchFromGitHub {
-        owner = "Jylhis";
-        repo = "design";
-        rev = "2b56be9992dbaf647b73817e1d7c691737376a55";
-        sha256 = "00kcfp1n7kzy4ma5gddbba9bbc2jw5lix4yczskzc3irphhx7qwy";
-      }
-      + "/platforms/emacs";
-  };
+  # Pinned in nix/design-pin.nix, shared with the website's vendored CSS so
+  # the editor and jotain.j10s.io can never sit on different versions of the
+  # design system.  v2 renamed the themes: jylhis-sheet / jylhis-field.
+  jylhis-emacs-themes =
+    let
+      pin = import ./design-pin.nix;
+    in
+    efinal.trivialBuild {
+      pname = "jylhis-emacs-themes";
+      inherit (pin) version;
+      src = pkgs.fetchFromGitHub { inherit (pin) owner repo rev sha256; } + "/platforms/emacs";
+    };
 
   claude-code-ide = efinal.trivialBuild {
     pname = "claude-code-ide";
