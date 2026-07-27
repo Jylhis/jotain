@@ -13,7 +13,14 @@
 { pkgs }:
 let
   pin = import ./design-pin.nix;
-  src = pkgs.fetchFromGitHub { inherit (pin) owner repo rev sha256; };
+  src = pkgs.fetchFromGitHub {
+    inherit (pin)
+      owner
+      repo
+      rev
+      sha256
+      ;
+  };
 in
 pkgs.runCommandLocal "jylhis-ds-assets"
   {
