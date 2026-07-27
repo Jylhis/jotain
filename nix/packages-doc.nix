@@ -71,6 +71,10 @@ let
       title = "prog-mode, treesit, eglot";
     }
     {
+      file = "init-snippets.el";
+      title = "Tempel snippets";
+    }
+    {
       file = "init-project.el";
       title = "Per-project commands";
     }
