@@ -14,14 +14,16 @@ jotain/
 ├── early-init.el       # Pre-package/GUI initialisation
 ├── init.el             # Entry point — loads modules in order
 ├── lisp/               # Modular Elisp config (init-*.el, one per concern)
-├── emacs.nix           # GNU Emacs build from source
-├── default.nix         # Distribution wrapper (Emacs + tree-sitter grammars)
+├── emacs.nix           # GNU Emacs build from source (cache-parity invariant)
+├── default.nix         # Non-flake entry point (flake-compat wrapper)
+├── overlay.nix         # Standalone nixpkgs overlay (wraps nix/mk-overlay.nix)
 ├── module.nix          # Home Manager module for the daemon
 ├── nix/
-│   ├── devenv-emacs-lisp.nix  # devenv language module for Elisp
-│   ├── ellsp.nix              # ellsp (Emacs LSP) package definition
-│   └── elsa.nix               # elsa (Elisp static analyser)
-├── devenv.nix          # Development shell
+│   ├── mk-overlay.nix         # Overlay implementation — distribution assembly
+│   ├── checks.nix             # Flake checks (lint, compile, tests, builds)
+│   ├── use-package.nix        # use-package scanner (Elisp → epkgs mapping)
+│   └── ...                    # docs, extra packages, treefmt, devenv helpers
+├── devenv.nix          # Development shell (tooling only — no Emacs)
 ├── devenv.yaml         # devenv inputs (pinned to flake.lock revs)
 ├── flake.nix           # Flake entry point — source of truth for pins
 ├── Justfile            # Task runner recipes
@@ -55,6 +57,6 @@ The Nix layer provides reproducible Emacs builds:
 
 ### Development Layer
 
-- **`devenv.nix`** — development shell. Provides the local Emacs build (so `emacs` in the shell matches `just build-bare`), Nerd Fonts, `nil`, `nixfmt-rfc-style`, and `treefmt`. Enables the custom `languages.emacs-lisp` module from `nix/devenv-emacs-lisp.nix`, which provides Emacs + `eask-cli` (with `ellsp` and `elsa` off by default).
-- **`Justfile`** — every recipe you run day-to-day: `run`, `debug`, `tty`, `check`, `compile`, `test`, the `build-*` matrix, `fmt`, `update`, `verify`, `clean`, `clean-all`.
-- **Pinning** — `flake.lock` is the single source of truth; `default.nix` and `emacs.nix` read it directly via `fetchTarball` so non-flake `nix-build` consumers get the same pin. `devenv.yaml` mirrors the flake's shared input revs (`nixpkgs`, `treefmt-nix`), and `just update` keeps `devenv.lock` in lockstep.
+- **`devenv.nix`** — development shell, **tooling only**: there is no `emacs` binary in it (see its top-of-file note). It ships Nix tooling and linters (`nil`, `nixfmt-rfc-style`, `treefmt`, `statix`, `deadnix`), the language servers and CLIs the Elisp config shells out to, the docs toolchain, and the fonts the UI config probes. Build and launch the editor with `just run-built` (see the current-state note in [Launching Emacs](/usage/launching)).
+- **`Justfile`** — every recipe you run day-to-day: `run-built` / `run-built-debug` (build via Nix, then launch), `check`, `test`, the `build-*` matrix, `fmt`, `update`, `verify`, `clean`, `clean-all`. The direct-launch and in-shell compile recipes (`run`, `debug`, `tty`, `check-elisp`, `compile`, `bench`, …) are disabled stubs; their coverage lives in the `elisp-lint` / `elisp-compile` / `elisp-test` flake checks.
+- **Pinning** — `flake.lock` is the single source of truth; `default.nix` and `emacs.nix` read it directly via `fetchTarball` so non-flake `nix-build` consumers get the same pin. `devenv.yaml` mirrors the flake's shared input revs (`nixpkgs`, `treefmt-nix`, `emacs-overlay`), and `just update` keeps `devenv.lock` in lockstep.

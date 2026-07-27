@@ -12,12 +12,14 @@
 ;;     (a nixd preconfigured with the project's devenv options) while
 ;;     `nil' keeps serving every other Nix buffer.
 ;;
-;; Environment loading stays with envrc (init-prog.el): `.envrc' says
-;; `use devenv', so every project buffer already carries the devenv
-;; shell environment buffer-locally.  The library's own native loader
-;; (`devenv-env-global-mode') is deliberately NOT enabled here — it
-;; exists for devenv projects without direnv, and its predicate skips
-;; envrc-managed projects anyway.
+;; Environment loading is done natively by the library's own loader
+;; (`devenv-env-global-mode', enabled below): direnv/envrc is disabled
+;; (init-prog.el), so `devenv print-dev-env' is evaluated per project and
+;; applied buffer-locally.  `devenv-env-defer-to-direnv' is set to nil so
+;; the loader owns the environment for every trusted devenv project rather
+;; than deferring to a `.envrc'.  Projects must be trusted once with
+;; `devenv-allow' (`C-c v'); until then the mode line shows devenv[!] and
+;; no environment is applied.
 ;;
 ;; The devenv-side counterpart of this integration is the Claude Code
 ;; MCP wiring in devenv.nix (`claude.code.enable'); see also
@@ -30,9 +32,9 @@
 ;;; `devenv test`/`build` through compilation-mode with Nix error
 ;;; matching, a process-manager dashboard (start/stop/restart/logs),
 ;;; and environment introspection (`devenv eval`/`info`/`search`).
-;;; `devenv-reload` refreshes the project environment through envrc
-;;; (the direnv substrate configured in init-prog) and offers to
-;;; reconnect eglot servers so they see the new environment.
+;;; `devenv-reload` re-runs `devenv print-dev-env` and re-applies the
+;;; environment buffer-locally via the native loader
+;;; (`devenv-env-global-mode`), and offers to reconnect eglot servers.
 ;;; devenv.nix buffers are routed to the bundled `devenv lsp` server
 ;;; while `nil` keeps serving other Nix files, and `devenv-mcp-setup`
 ;;; registers the project's `devenv mcp` server with mcp.el so gptel
@@ -51,7 +53,15 @@
              devenv-allow devenv-revoke devenv-eglot-setup
              devenv-mcp-setup devenv-env-global-mode)
   :bind ("C-c v" . devenv)
-  :hook (after-init . devenv-modeline-mode)
+  :custom
+  ;; direnv/envrc is disabled (init-prog.el), so the native loader owns the
+  ;; environment for every trusted devenv project, not just direnv-less ones.
+  (devenv-env-defer-to-direnv nil)
+  :hook ((after-init . devenv-modeline-mode)
+         ;; Load and apply the project's devenv environment buffer-locally
+         ;; (envrc-style) so eglot and CLI tools resolve from the devenv
+         ;; toolchain.  Autoloaded, so devenv.el loads at after-init.
+         (after-init . devenv-env-global-mode))
   :init
   ;; Route devenv.nix buffers to `devenv lsp' once eglot is loaded.
   ;; Gated on the binary so a machine without devenv keeps eglot's

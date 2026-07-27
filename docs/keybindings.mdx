@@ -23,6 +23,7 @@ following:
 | `C-c c` | org-capture | `org-capture` |
 | `C-c d` | dirvish | `dirvish` |
 | `C-c D` | dirvish-side | `dirvish-side` |
+| `C-c e` | eca | `eca` |
 | `C-c g` | magit-file | `magit-file-dispatch` |
 | `C-c h` | consult-history | `consult-history` |
 | `C-c i` | consult-info | `consult-info` |
@@ -31,14 +32,13 @@ following:
 | `C-c m` | — | `consult-man` |
 | `C-c n` | **org-roam** prefix | `n f` find, `n i` insert, `n c` capture |
 | `C-c o` | **combobulate** prefix | structural editing dispatch |
+| `C-c q` | claude-code-ide | `claude-code-ide-menu` |
 | `C-c r` | **eglot-refactor** prefix | `r r` rename, `r f` format, `r a` actions, `r o` organize-imports, `r q` quickfix |
+| `C-c s` | gptel-send | `gptel-send` |
+| `C-c S` | gptel-menu | `gptel-menu` |
 | `C-c t` | toggle-theme | `auto-dark-toggle-appearance` |
 | `C-c v` | devenv | `devenv` transient — tasks, scripts, processes, env |
-| `C-c RET` | gptel-send | `gptel-send` |
-| `C-c M-RET` | gptel-menu | `gptel-menu` |
 | `C-c M-x` | consult-mode-command | `consult-mode-command` |
-| `C-c C-'` | claude-code-ide | `claude-code-ide-menu` |
-| `C-c C-<` | — | `mc/mark-all-like-this` |
 
 ## `C-x` — control namespace
 
@@ -49,8 +49,10 @@ Built-in Emacs prefix extended with a handful of Jotain additions:
 | `C-x C-a` | **dape (debug)** prefix | `dape-global-map` — Debug Adapter Protocol: start, step, breakpoints, REPL |
 | `C-x b` | — | `consult-buffer` |
 | `C-x g` | magit-status | `magit-status` |
+| `C-x G` | git-status-file | `jotain-switch-git-status-buffer` |
 | `C-x M-g` | magit-dispatch | `magit-dispatch` |
 | `C-x j` | rotate-window-split | `jotain-toggle-window-split` |
+| `C-x J` | jj-status-file | `jotain-switch-jj-status-buffer` |
 | `C-x p b` | — | `consult-project-buffer` |
 | `C-x r b` | — | `consult-bookmark` |
 | `C-x t b` | — | `consult-buffer-other-tab` |
@@ -71,6 +73,11 @@ window switching, spell-check, region growth, and multi-cursor.
 | `C-=` | `expreg-expand` |
 | `C->` | `mc/mark-next-like-this` |
 | `C-<` | `mc/mark-previous-like-this` |
+| `C-S-c C-S-c` | `mc/mark-all-like-this` |
+| `C-h .` | `helpful-at-point` (via `[remap display-local-help]`) |
+| `C-.` | `embark-act` |
+| `C-;` | `embark-dwim` |
+| `C-h B` | `embark-bindings` |
 
 ## Disabled by default
 
@@ -84,9 +91,42 @@ window switching, spell-check, region growth, and multi-cursor.
 A few major modes rebind `C-c` leaves locally:
 
 - `dired-mode`: `C-c C-e` → `wdired-change-to-wdired-mode` (toggle writable dired)
-- `helpful-mode`: `C-c C-d` → `helpful-at-point`
 - `sops-mode`: `C-c C-c` save, `C-c C-k` cancel, `C-c C-d` edit
 - `embark` exports: `C-c C-o` → `embark-export`
+
+## Embark action menu
+
+`C-.` (`embark-act`) opens a keyboard-driven "right-click" menu of the
+actions that apply to the thing at point — a minibuffer candidate, a
+file name, a buffer, a URL, an Elisp symbol, the active region. `C-;`
+(`embark-dwim`) skips the menu and runs the default action. The keys
+below are pressed *after* `C-.`, inside the action menu:
+
+| Key | Action |
+| --- | --- |
+| `C-h` | Searchable `completing-read` of every applicable action — the discovery entry point |
+| `E` | `embark-export` — promote the candidate set to a buffer (grep for ripgrep/grep, occur for `consult-line`, dired for files, ibuffer for buffers) |
+| `A` | `embark-act-all` — run one action on *every* current candidate |
+| `B` | `embark-become` — re-run the input you typed through a different command |
+| `i` | Insert the candidate into the buffer you came from |
+| `w` | Copy the candidate to the kill-ring |
+
+Two habits worth forming:
+
+- **Search → edit.** `consult-ripgrep` → `C-. E` exports to a grep
+  buffer, then `C-x C-q` (`wgrep`) makes it editable so you can rewrite
+  every match in place and save across all files at once.
+- **Keep the session alive.** Acting on a candidate exits the
+  minibuffer by default; call it with a prefix (`C-u C-.`) to stay in
+  the minibuffer for successive actions — handy for deleting or
+  renaming several files in a row.
+
+Because Embark resolves candidate paths through `project.el`, the full
+file-action arsenal (`w` copy path, `r` rename, `d` delete, `j` jump to
+dired) works directly on the project-relative candidates of
+`project-find-file` without a dired detour. `embark-become`'s file map
+already offers `p` for `project-find-file`, so `C-. B p` re-runs a
+plain `C-x C-f` input through the project finder.
 
 ## Window navigation
 

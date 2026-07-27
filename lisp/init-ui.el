@@ -13,15 +13,21 @@
   "User-facing UI knobs for the Jotain configuration."
   :group 'convenience)
 
-;;;; Theme — Jylhis paper/roast, switched by system appearance
+;;;; Theme — Jylhis sheet/field, switched by system appearance
 
-(defcustom jotain-theme-light 'jylhis-paper
-  "Theme to use when the system is in light mode."
+(defcustom jotain-theme-light 'jylhis-sheet
+  "Theme to use when the system is in light mode.
+Renamed in v2 of the Jylhis design system: `jylhis-paper' became
+`jylhis-sheet'.  A machine-local config still setting the old symbol
+will fail to load a theme."
   :type 'symbol
   :group 'jotain-ui)
 
-(defcustom jotain-theme-dark 'jylhis-roast
-  "Theme to use when the system is in dark mode."
+(defcustom jotain-theme-dark 'jylhis-field
+  "Theme to use when the system is in dark mode.
+Renamed in v2 of the Jylhis design system: `jylhis-roast' became
+`jylhis-field'.  A machine-local config still setting the old symbol
+will fail to load a theme."
   :type 'symbol
   :group 'jotain-ui)
 
@@ -38,25 +44,37 @@ and the result is a face-attribute soup."
 
 (advice-add 'load-theme :before #'jotain-ui--disable-other-themes)
 
-;; Register the Jylhis theme directory on custom-theme-load-path.
-;; The package ships jylhis-themes.el as the entry point for this.
-(if (require 'jylhis-themes nil t)
-    ;; Pre-load both themes so auto-dark can flip between them without
-    ;; re-evaluating the .el files on every appearance change.  Guarded
-    ;; against batch mode where custom-theme-load-path may be incomplete.
-    (unless noninteractive
-      (load-theme jotain-theme-light t t)
-      (load-theme jotain-theme-dark  t t))
+(defun jotain-ui--fall-back-to-modus (reason)
+  "Point the theme variables at the built-in Modus themes.
+REASON is reported so the downgrade is visible in *Messages*."
   (setopt jotain-theme-light 'modus-operandi
           jotain-theme-dark 'modus-vivendi)
-  (message "jylhis-themes is unavailable; falling back to Modus themes"))
+  (message "jotain: %s; falling back to Modus themes" reason))
+
+;; Register the Jylhis theme directory on custom-theme-load-path.
+;; The package ships jylhis-themes.el as the entry point for this.
+(if (not (require 'jylhis-themes nil t))
+    (jotain-ui--fall-back-to-modus "jylhis-themes is unavailable")
+  ;; Pre-load both themes so auto-dark can flip between them without
+  ;; re-evaluating the .el files on every appearance change.  Guarded
+  ;; against batch mode where custom-theme-load-path may be incomplete.
+  ;;
+  ;; `load-theme' signals if the theme file is missing, and init.el
+  ;; requires this module unguarded — so an upstream rename (v1's
+  ;; paper/roast became v2's sheet/field) would otherwise take out every
+  ;; module loaded after init-ui.  Degrade to Modus instead.
+  (unless noninteractive
+    (condition-case err
+        (progn
+          (load-theme jotain-theme-light t t)
+          (load-theme jotain-theme-dark t t))
+      (error (jotain-ui--fall-back-to-modus (error-message-string err))))))
 
 ;;; @doc Flips between `jotain-theme-light` and `jotain-theme-dark`
 ;;; following the system appearance — works on macOS, GNOME, and
 ;;; anything that exposes a dark/light setting. C-c t toggles
 ;;; manually.
 (use-package auto-dark
-  :diminish
   :demand t
   :bind ("C-c t" . auto-dark-toggle-appearance)
   :custom
@@ -67,6 +85,17 @@ and the result is a face-attribute soup."
 
 ;;;; Modeline
 
+(defun jotain-ui--apply-modeline-icons (&optional frame)
+  "Enable doom-modeline glyphs only on a graphical FRAME.
+Terminal frames have no Nerd Font, so the icons render as tofu; gate
+`doom-modeline-icon' on `display-graphic-p'.  Runs on
+`server-after-make-frame-hook' so a daemon's GUI client frames still get
+glyphs even though no graphical frame exists at daemon start (mirrors
+`jotain-ui-apply-font')."
+  (when (boundp 'doom-modeline-icon)
+    (setopt doom-modeline-icon (and (display-graphic-p frame) t))
+    (force-mode-line-update t)))
+
 ;;; @doc A dense, IDE-style modeline with LSP/eglot status, project
 ;;; buffer info, and Nerd Font glyphs. Loaded after init so the
 ;;; primary frame doesn't redraw before fonts are ready.
@@ -75,10 +104,19 @@ and the result is a face-attribute soup."
   :custom
   (doom-modeline-height 28)
   (doom-modeline-bar-width 4)
-  (doom-modeline-icon t)
   (doom-modeline-lsp t)
   (doom-modeline-github nil)
-  (doom-modeline-buffer-encoding nil))
+  (doom-modeline-buffer-encoding nil)
+  :config
+  (jotain-ui--apply-modeline-icons)
+  (add-hook 'server-after-make-frame-hook #'jotain-ui--apply-modeline-icons))
+
+;; doom-modeline's minor-modes segment is off by default, so lighters
+;; are hidden there without any diminish-style setup.  For the vanilla
+;; modeline (doom-modeline unavailable or disabled), Emacs 31's built-in
+;; `mode-line-collapse-minor-modes' collapses them behind one indicator.
+(when (boundp 'mode-line-collapse-minor-modes)
+  (setopt mode-line-collapse-minor-modes t))
 
 ;;;; Fonts
 
@@ -91,23 +129,33 @@ machine-local config)."
   :group 'jotain-ui)
 
 (defcustom jotain-font-preferences
-  '(("JetBrainsMono Nerd Font" . 140)
+  '(("BlexMono Nerd Font"      . 140)
+    ("JetBrainsMono Nerd Font" . 140)
     ("Iosevka Nerd Font"       . 140)
     ("DejaVu Sans Mono"        . 130))
   "Ordered list of (FAMILY . HEIGHT) pairs to try for the default face.
 HEIGHT is in 1/10 pt units (140 = 14 pt).  The first installed family
-wins.  All heights are multiplied by `jotain-font-scale' at runtime."
+wins.  All heights are multiplied by `jotain-font-scale' at runtime.
+
+BlexMono is IBM Plex Mono with Nerd Font glyphs patched in — the mono
+role of the Jylhis design system, so the editor matches jylhis.com.
+Entries containing \"Nerd Font\" also supply `nerd-icons-font-family';
+keep at least one such family ahead of the plain fallbacks."
   :type '(alist :key-type string :value-type integer)
   :group 'jotain-ui)
 
 (defcustom jotain-variable-pitch-font-preferences
-  '(("Literata"     . 150)
-    ("Iosevka Aile" . 150)
-    ("Noto Sans"    . 150)
-    ("DejaVu Sans"  . 140))
+  '(("Hanken Grotesk" . 150)
+    ("Literata"       . 150)
+    ("Iosevka Aile"   . 150)
+    ("Noto Sans"      . 150)
+    ("DejaVu Sans"    . 140))
   "Ordered list of (FAMILY . HEIGHT) pairs to try for the variable-pitch face.
 Heights are larger than the monospace default: proportional fonts render
-visually smaller at the same point size."
+visually smaller at the same point size.
+
+Hanken Grotesk is the body role of the Jylhis design system; Literata,
+the v1 body face, is kept behind it as a fallback."
   :type '(alist :key-type string :value-type integer)
   :group 'jotain-ui)
 
@@ -219,7 +267,6 @@ availability on the right display."
 ;;; multiplier — a Jotain staple.
 (use-package which-key
   :ensure nil
-  :diminish
   :config (which-key-mode 1))
 
 ;;; @doc Built-in calendar. Configured for ISO week numbering and a
@@ -246,14 +293,25 @@ availability on the right display."
 ;;; nerd-icons-* family draws on. Picks the font family from
 ;;; `jotain-font-preferences` so the icons match the editor face.
 (use-package nerd-icons
+  ;; Deferred: doom-modeline pulls it in at after-init, and the :after
+  ;; chains below (corfu/completion/ibuffer glue) follow it there.
+  :defer t
+  :preface
+  (defun jotain-ui--apply-nerd-icons-font (&optional frame)
+    "Set `nerd-icons-font-family' from `jotain-font-preferences' for FRAME.
+Runs on `server-after-make-frame-hook' so daemon-created GUI frames
+get the matched Nerd Font too — at daemon load time no graphical
+frame exists yet, so a load-time-only probe would never fire."
+    (when (display-graphic-p frame)
+      (when-let* ((nerd-font
+                   (cl-loop for (family . _height) in jotain-font-preferences
+                            when (and (string-match-p "Nerd Font" family)
+                                      (find-font (font-spec :family family) frame))
+                            return family)))
+        (setopt nerd-icons-font-family nerd-font))))
   :config
-  (when (display-graphic-p)
-    (when-let* ((nerd-font
-                 (cl-loop for (family . _height) in jotain-font-preferences
-                          when (and (string-match-p "Nerd Font" family)
-                                    (find-font (font-spec :family family)))
-                          return family)))
-      (setopt nerd-icons-font-family nerd-font))))
+  (jotain-ui--apply-nerd-icons-font)
+  (add-hook 'server-after-make-frame-hook #'jotain-ui--apply-nerd-icons-font))
 
 ;;; @doc Decorates corfu candidates with a kind-specific glyph in the
 ;;; margin, so completions are scannable at a glance.
@@ -297,16 +355,14 @@ availability on the right display."
 ;;; (other-window, xref, consult-line). Tells the eye where the
 ;;; cursor went without staring.
 (use-package pulsar
-  :demand t
-  :functions (pulsar-global-mode)
+  :hook (after-init . pulsar-global-mode)
   :custom
   (pulsar-pulse-functions
    '(recenter-top-bottom move-to-window-line-top-bottom reposition-window
      bookmark-jump other-window delete-window delete-other-windows
      forward-page backward-page scroll-up-command scroll-down-command
      xref-find-definitions xref-find-references xref-go-back
-     consult-line consult-goto-line imenu))
-  :config (pulsar-global-mode 1))
+     consult-line consult-goto-line imenu)))
 
 ;;; @doc Colourises matching parens by depth in Lisp buffers — almost
 ;;; essential for navigating deeply nested forms.

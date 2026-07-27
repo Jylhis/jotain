@@ -8,7 +8,7 @@ config_dir := justfile_directory()
 
 # Emacs build flavours target the current system by default. Override
 # with `just system=x86_64-linux build-nox` etc.
-system := `nix eval --impure --raw --expr 'builtins.currentSystem'`
+system := arch() + "-" + if os() == "macos" { "darwin" } else { "linux" }
 
 # List available recipes.
 default:
@@ -123,8 +123,9 @@ compile-native:
 # Run the ERT tests under test/ via the flake check (the dev shell has
 # no emacs; the check builds one). Direct equivalent once Emacs is back
 # in the shell:
-#   emacs --batch -L lisp -L test -l ert -l test/devenv-test.el \
-#       -f ert-run-tests-batch-and-exit
+#   emacs --batch -L lisp -L test \
+#       --eval '(dolist (f (directory-files "test" t "\\.el$")) (load f nil t))' \
+#       -l ert -f ert-run-tests-batch-and-exit
 [group('check')]
 test:
     nix build .#checks.{{system}}.elisp-test --no-link --print-build-logs
@@ -210,10 +211,17 @@ build-git:
 build-igc:
     nix-build --arg variant '"igc"' --argstr system {{system}} emacs.nix
 
-# Build for aarch64-linux nox (Termux/Android).
+# Build a bare aarch64-linux nox Emacs (Termux/Android) — kept for
+# cache-parity testing of emacs.nix; `run-built` uses build-nox-full.
 [group('build')]
 build-android:
     nix-build --arg noGui true --argstr system aarch64-linux emacs.nix
+
+# Build the full terminal-only distribution (noGui Emacs + packages +
+# grammars) for the current system.
+[group('build')]
+build-nox-full:
+    nix build .#emacs-nox -o result
 
 # Auto-detect platform, build, then launch Emacs with this configuration.
 [group('build')]
@@ -224,16 +232,19 @@ run-built *ARGS:
     case "$platform" in
         Darwin-arm64)  target=build       ;;
         Darwin-*)      target=build       ;;
-        Linux-aarch64) target=build-android ;;
+        Linux-aarch64) target=build-nox-full ;;
         *)             target=build       ;;
     esac
     echo "Platform: $platform → just $target"
     just "$target"
     echo "Build output: $(readlink result)"
     echo "Launching Emacs from result/bin/emacs..."
-    ./result/bin/emacs --debug-init \
-        --eval '(setq debug-on-error t)' \
-        --init-directory="{{config_dir}}" {{ARGS}}
+    ./result/bin/emacs --init-directory="{{config_dir}}" {{ARGS}}
+
+# Same, with init debugging enabled.
+[group('build')]
+run-built-debug *ARGS:
+    just run-built --debug-init --eval '(setq debug-on-error t)' {{ARGS}}
 
 # Headless screenshot: build Emacs, launch under Xvfb with this config,
 # capture the frame via jotain-screenshot, write OUT (PNG). Linux only;
@@ -275,7 +286,7 @@ docs:
 info:
     nix build .#info -o result-info
     @echo "Info manual → result-info/share/info/jotain.info"
-    @echo "Open with 'just run' then C-h i d m Jotain RET."
+    @echo "Open with 'just run-built' then C-h i d m Jotain RET."
 
 # Build the per-package reference (HTML + texi + Mintlify .mdx).
 [group('build')]
@@ -296,6 +307,20 @@ docs-refresh-packages: build-packages-doc
 # Build both HTML docs and the Info manual.
 [group('build')]
 docs-all: docs info
+
+# Build the full jotain.j10s.io site: landing SPA + docs pages +
+# manual (HTML/Info) + man pages + GNU Emacs/Elisp manuals + options
+# and package references. Deployed from the `site` branch by the
+# Cloudflare GitHub integration (see .github/workflows/deploy.yml).
+[group('build')]
+site:
+    nix build .#site -o result-site
+    @echo "Site → result-site/public/index.html"
+
+# Build and locally serve the full site.
+[group('build')]
+serve-site: site
+    python3 -m http.server -d result-site/public 8080
 
 
 # ── Format ──────────────────────────────────────────────────────────
@@ -320,9 +345,14 @@ update:
     tmpfile=$(mktemp)
     cp devenv.yaml "$tmpfile"
     for input in {{ shared_inputs }}; do
-        owner=$(jq -r ".nodes.\"$input\".locked.owner" flake.lock)
-        repo=$(jq -r ".nodes.\"$input\".locked.repo" flake.lock)
-        rev=$(jq -r ".nodes.\"$input\".locked.rev" flake.lock)
+        node=$(jq -r ".nodes.root.inputs.\"$input\" // empty" flake.lock)
+        if [ -z "$node" ]; then
+            echo "ERROR: input '$input' missing from flake.lock root inputs" >&2
+            exit 1
+        fi
+        owner=$(jq -r ".nodes.\"$node\".locked.owner" flake.lock)
+        repo=$(jq -r ".nodes.\"$node\".locked.repo" flake.lock)
+        rev=$(jq -r ".nodes.\"$node\".locked.rev" flake.lock)
         echo "Syncing devenv.yaml: $input -> $rev"
         sed -i.bak "s|url: github:$owner/$repo/[^[:space:]]*|url: github:$owner/$repo/$rev|" "$tmpfile"
         rm -f "$tmpfile.bak"
@@ -338,8 +368,17 @@ verify:
     set -euo pipefail
     fail=0
     for input in {{ shared_inputs }}; do
-        flake_rev=$(jq -r ".nodes.\"$input\".locked.rev" flake.lock)
-        devenv_rev=$(jq -r ".nodes.\"$input\".locked.rev" devenv.lock)
+        flake_node=$(jq -r ".nodes.root.inputs.\"$input\" // empty" flake.lock)
+        devenv_node=$(jq -r ".nodes.root.inputs.\"$input\" // empty" devenv.lock)
+        if [ -z "$flake_node" ] || [ -z "$devenv_node" ]; then
+            echo "FAIL: $input missing from a lock file's root inputs"
+            echo "  flake node:  ${flake_node:-<missing>}"
+            echo "  devenv node: ${devenv_node:-<missing>}"
+            fail=1
+            continue
+        fi
+        flake_rev=$(jq -r ".nodes.\"$flake_node\".locked.rev" flake.lock)
+        devenv_rev=$(jq -r ".nodes.\"$devenv_node\".locked.rev" devenv.lock)
         if [ "$flake_rev" != "$devenv_rev" ]; then
             echo "FAIL: $input revs diverged"
             echo "  flake:  $flake_rev"
@@ -350,6 +389,24 @@ verify:
         fi
     done
     exit $fail
+
+# Re-vendor website/public/ds from the jylhis/design rev pinned in
+# nix/design-pin.nix — the same pin the Emacs themes are built from.
+# Run after bumping that pin; the `ds-in-sync` flake check fails until
+# the committed copy matches.
+[group('pins')]
+ds-sync:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{config_dir}}"
+    out=$(nix build --no-link --print-out-paths .#ds-assets)
+    # Wipe first: this is what removes fonts retired by an upstream type
+    # change (v2 dropped all eight Literata/JetBrains Mono slices).
+    rm -rf website/public/ds
+    mkdir -p website/public/ds
+    cp -r "$out/." website/public/ds/
+    chmod -R u+w website/public/ds
+    echo "Re-vendored website/public/ds from $(nix eval --raw --file nix/design-pin.nix rev)"
 
 
 # ── Cleanup ─────────────────────────────────────────────────────────

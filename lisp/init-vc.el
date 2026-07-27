@@ -15,6 +15,10 @@
 
 ;;; Code:
 
+;; Defined in init-project.el, which init.el loads after this file;
+;; magit only reads it from its (deferred) :config block below.
+(defvar jotain-repositories-roots)
+
 ;;; @doc Built-in version control. Pinned to Git + Jujutsu — every
 ;;; other backend is a slow startup tax (probes every visited file's
 ;;; parents) you almost never benefit from. JJ is supplied by `vc-jj'
@@ -43,7 +47,10 @@
 ;;; from Rahul M. Juliato's emacs-solo/switch-git-status-buffer.
 (use-package vc-git
   :ensure nil
-  :bind ("C-x C-g" . jotain-switch-git-status-buffer)
+  ;; C-x G (not C-x C-g — a sequence ending in C-g would swallow the
+  ;; "pressed C-x, changed my mind, C-g aborts" gesture) sits mnemonically
+  ;; next to C-x g magit-status / C-x M-g magit-dispatch below.
+  :bind ("C-x G" . jotain-switch-git-status-buffer)
   :preface
   (declare-function vc-git-root "vc-git" (file))
   (defun jotain-switch-git-status-buffer ()
@@ -110,13 +117,14 @@ working-tree file no longer exists to open."
 ;;; set via `jj config edit --user' so vc/diff-hl/smerge read jj diffs
 ;;; and conflicts in the format they expect.
 ;;;
-;;; `jotain-switch-jj-status-buffer' (C-x C-j) is the jj twin of the
+;;; `jotain-switch-jj-status-buffer' (C-x J — not C-x C-j, which stays
+;;; on its Emacs 28+ default `dired-jump') is the jj twin of the
 ;;; git status jump above: it parses `jj diff --summary -r @' and offers
 ;;; the changed files (deletions omitted — the file is gone) through
 ;;; `completing-read'. The richer interactive view is `majutsu' (C-c j).
 (use-package vc-jj
   :after vc
-  :bind ("C-x C-j" . jotain-switch-jj-status-buffer)
+  :bind ("C-x J" . jotain-switch-jj-status-buffer)
   :preface
   (defun jotain-switch-jj-status-buffer ()
     "Switch to a file `jj' reports as changed in the working copy.
@@ -165,8 +173,13 @@ working-tree file no longer exists to open."
   (magit-diff-hide-trailing-cr-characters t)
   (magit-diff-context-lines 5)
   (magit-save-repository-buffers 'dontask)
-  (magit-repository-directories '(("~/Developer" . 2)))
   :config
+  ;; Repository roots come from `jotain-repositories-roots'
+  ;; (init-project.el). Set here rather than in :custom because
+  ;; init-project.el loads after this file; by the time magit itself
+  ;; loads, the defcustom exists.
+  (setopt magit-repository-directories
+          (mapcar (lambda (root) (cons root 2)) jotain-repositories-roots))
   ;; Show worktrees as a section in magit-status when more than one exists.
   (add-hook 'magit-status-sections-hook 'magit-insert-worktrees t))
 
@@ -215,17 +228,20 @@ working-tree file no longer exists to open."
 ;;; you're editing. `diff-hl-flydiff-mode` updates pre-save so the
 ;;; indicators reflect uncommitted edits, not just the last save.
 (use-package diff-hl
-  :after magit
-  :demand t
-  :functions (diff-hl-flydiff-mode diff-hl-magit-post-refresh diff-hl-dired-mode)
+  :functions (diff-hl-flydiff-mode)
   :custom
   (diff-hl-draw-borders nil)
   (fringes-outside-margins t)
   (diff-hl-side 'left)
   :hook
+  ;; No `:after magit'/`:demand' — adding a function to
+  ;; magit-post-refresh-hook is safe before magit loads (hooks are
+  ;; just variables), and gating on magit would postpone the
+  ;; after-init registration past after-init itself.  diff-hl 1.11
+  ;; obsoleted `diff-hl-magit-pre-refresh' (aliased to `ignore');
+  ;; only the post-refresh half is needed on Magit 2.4+.
   ((after-init . global-diff-hl-mode)
    (dired-mode . diff-hl-dired-mode)
-   (magit-pre-refresh  . ignore)
    (magit-post-refresh . diff-hl-magit-post-refresh))
   :config
   ;; Live, pre-save diff indicators.
@@ -527,52 +543,30 @@ invalidation after `magit-post-refresh-hook'."
            jotain-git-stats--cache)
   (force-mode-line-update t))
 
-;; `doom-modeline-def-segment' and `doom-modeline-def-modeline' are
-;; macros; make them available at byte-compile time so their forms
-;; below get expanded instead of treated as unknown function calls.
-(eval-when-compile (require 'doom-modeline))
+;; Attach the counters through `mode-line-misc-info' instead of
+;; re-declaring doom-modeline's `main' modeline with a hand-copied
+;; segment list (which would silently drift as upstream adds/renames
+;; segments).  doom-modeline renders misc-info in its default `main',
+;; and the stock mode line shows it too, so the counter survives
+;; upstream changes and works without doom-modeline loaded.
+(add-to-list 'mode-line-misc-info
+             '(:eval (when-let* ((file buffer-file-name)
+                                 (rb (and (mode-line-window-selected-p)
+                                          (jotain-git-stats--root-and-backend file))))
+                       (progn (jotain-git-stats--maybe-refresh (car rb) (cdr rb))
+                              (or (jotain-git-stats--render (car rb)) ""))))
+             t)
 
-(with-eval-after-load 'doom-modeline
-  (doom-modeline-def-segment jotain-git-stats
-    "Uncommitted-changes / commits-today counters (git or jj)."
-    (let* ((file buffer-file-name)
-           (rb (and (mode-line-window-selected-p)
-                    file
-                    (jotain-git-stats--root-and-backend file))))
-      (if (not rb)
-          ""
-        (jotain-git-stats--maybe-refresh (car rb) (cdr rb))
-        (or (jotain-git-stats--render (car rb)) ""))))
+(add-hook 'after-save-hook #'jotain-git-stats--invalidate-current-buffer)
+(add-hook 'magit-post-refresh-hook #'jotain-git-stats--invalidate-current-buffer)
+(unless jotain-git-stats--timer
+  (setq jotain-git-stats--timer
+        (run-with-idle-timer jotain-git-stats-update-interval t
+                             #'jotain-git-stats--tick)))
 
-  ;; Re-declare the `main' modeline with the new segment appended to the
-  ;; right-hand list, just before `time'. Mirrors doom-modeline's default
-  ;; main definition; only the trailing segment list differs.
-  (doom-modeline-def-modeline 'main
-    '(eldoc bar workspace-name window-number modals matches follow
-            buffer-info remote-host buffer-position word-count
-            parrot selection-info)
-    '(compilation objed-state misc-info battery grip irc mu4e gnus github
-                  debug repl lsp minor-modes input-method indent-info
-                  buffer-encoding major-mode process vcs jotain-git-stats
-                  check time))
-
-  (add-hook 'after-save-hook #'jotain-git-stats--invalidate-current-buffer)
-  (add-hook 'magit-post-refresh-hook #'jotain-git-stats--invalidate-current-buffer)
-  (unless jotain-git-stats--timer
-    (setq jotain-git-stats--timer
-          (run-with-idle-timer jotain-git-stats-update-interval t
-                               #'jotain-git-stats--tick))))
-
-;;; @doc Built-in conflict-marker editor. Custom prefix C-c ^ groups
-;;; upper/lower/next/prev so resolving merges doesn't require
-;;; scrolling through the smerge menu.
-(use-package smerge-mode
-  :ensure nil
-  :bind (:map smerge-mode-map
-              ("C-c ^ u" . smerge-keep-upper)
-              ("C-c ^ l" . smerge-keep-lower)
-              ("C-c ^ n" . smerge-next)
-              ("C-c ^ p" . smerge-prev)))
+;; smerge-mode needs no block here: it activates itself on conflict
+;; detection and already binds C-c ^ u/l/n/p (keep-upper/keep-lower/
+;; next/prev) via `smerge-command-prefix'.
 
 ;;; @doc Built-in interactive diff. Configured with `plain` window setup
 ;;; so the control panel doesn't pop a separate frame, plus

@@ -30,12 +30,6 @@ Persist point per file across sessions. Built-in. The advice
 below recenters the buffer after restore so you don't reopen on
 the bottom line.
 
-### `diminish`
-
-Hides minor-mode lighters from the modeline. Loaded early and
-:demand t so that downstream use-package blocks can use the
-:diminish keyword without macro-expansion errors.
-
 ### `files` *(built-in / Nix)*
 
 Built-in file-handling tweaks: no auto-save side files, no
@@ -48,9 +42,10 @@ Repeat-mode lets you press the trailing key alone after a prefix
 command (e.g. C-x o o o instead of C-x o C-x o). Built-in,
 enabled globally. `repeat-exit-timeout' clears the transient map
 after two idle seconds so the user doesn't have to think about
-exiting it — the ergonomic "one-shot modifier" pattern. A
-window-resize repeat-map filling the one gap in the built-in
-coverage lives in init-keys.el.
+exiting it — the ergonomic "one-shot modifier" pattern. The
+built-in maps cover window resizing too (`resize-window-repeat-map'),
+so `C-x ^ ^ v' just works; init-keys.el only adds a map for the
+Emacs 31 `window-layout-*' commands.
 
 ### `uniquify` *(built-in / Nix)*
 
@@ -77,7 +72,7 @@ demand only.
 Inherits PATH, MANPATH, and other shell-managed vars from the
 user's login shell so GUI / launchd / systemd-spawned Emacs
 matches what the terminal sees. module.nix prepends Nix-store
-binaries (rg, fd, git, direnv, coreutils) to the wrapper's
+binaries (rg, fd, git, jj, zoxide, coreutils) to the wrapper's
 PATH — this picks up ~/.nix-profile and user toolchains.
 
 ### `autorevert` *(built-in / Nix)*
@@ -294,7 +289,9 @@ under `d' during `save-some-buffers' is already built in since Emacs
 ### `whitespace` *(built-in / Nix)*
 
 Strip trailing whitespace and stray tabs on save without
-reformatting the rest of the buffer. Built-in.
+reformatting the rest of the buffer. Built-in. Skipped during
+super-save's automatic saves so its except-current-line
+handling keeps whitespace at point intact.
 
 ### `subword` *(built-in / Nix)*
 
@@ -313,6 +310,8 @@ treat blank lines the same as content lines;
 `comment-auto-fill-only-comments' keeps automatic line wrapping
 (when `auto-fill-mode' is on) confined to comments. C-c ; is an
 ergonomic alias for `comment-line' — C-; is taken by embark-dwim.
+Deliberate tradeoff: org-mode shadows C-c ; with `org-toggle-comment',
+which is the org equivalent anyway.
 Per-mode overrides go in the language module via a named hook:
   (defun my-foo-mode-setup ()
     (setq-local comment-multi-line nil))
@@ -327,22 +326,6 @@ C-x C-t (lines), and C-M-t (sexps, tree-sitter aware in Emacs
 30+). Caveat: transpose-lines works on real newlines, so it
 gives surprising results under visual-line-mode where wrapped
 "lines" are visual only.
-
-### `newcomment` *(built-in / Nix)*
-
-Defaults for the built-in comment commands (M-;, C-x C-;, M-j).
-`comment-multi-line' makes M-j continue inside an open block
-comment instead of closing/reopening; `extra-line' style puts
-opening and closing delimiters on their own lines for
-`comment-region'; `comment-empty-lines' makes `comment-region'
-treat blank lines the same as content lines;
-`comment-auto-fill-only-comments' keeps automatic line wrapping
-(when `auto-fill-mode' is on) confined to comments. C-c ; is an
-ergonomic alias for `comment-line' — C-; is taken by embark-dwim.
-Per-mode overrides go in the language module via a named hook:
-  (defun my-foo-mode-setup ()
-    (setq-local comment-multi-line nil))
-  (add-hook 'foo-mode-hook #'my-foo-mode-setup)
 
 ### `replace` *(built-in / Nix)*
 
@@ -361,7 +344,7 @@ much less code now that treesit is everywhere.
 ### `multiple-cursors`
 
 Visual multi-cursor editing. C-> and C-< select the next/prev
-occurrence; C-c C-< selects every occurrence in the buffer.
+occurrence; C-S-c C-S-c selects every occurrence in the buffer.
 
 ### `vundo`
 
@@ -435,15 +418,27 @@ replaces a dozen built-ins with a single, consistent UI.
 
 ### `embark`
 
-Right-click for the keyboard. C-. on any candidate (file,
-symbol, region, command name) opens a menu of actions valid for
-that thing. C-h B replaces describe-bindings with a paged view.
+Right-click for the keyboard. `C-.' (embark-act) on any
+candidate — file, symbol, region, buffer, command name, URL —
+opens a menu of actions valid for that thing; `C-;' (embark-dwim)
+skips the menu and runs the default action (visit the file, browse
+the URL, jump to the definition). Press `C-h' after `C-.' to turn
+the menu into a searchable `completing-read' — the best way to
+discover what applies. Inside the menu `i'/`w' insert or copy the
+candidate, `A' (embark-act-all) acts on every candidate at once,
+and `B' (embark-become) re-runs the typed input through another
+command; `C-u C-.' keeps the minibuffer open for successive
+actions. `C-h B' replaces describe-bindings with a paged view.
 
 ### `embark-consult`
 
-Glue between embark and consult — exports a consult result
-list (e.g. consult-ripgrep) into a grep buffer with C-c C-o for
-the classic search → wgrep refactor flow.
+Glue between embark and consult — teaches `embark-export' to
+turn a consult result list into the right major mode: consult-grep
+and consult-ripgrep become a grep buffer, consult-line an occur
+buffer, file candidates a dired buffer, buffer candidates an
+ibuffer buffer. The grep/ripgrep export is the classic search →
+`C-c C-o' → wgrep (`C-x C-q') refactor flow that edits every match
+in place across all the matched files.
 
 ### `avy`
 
@@ -456,11 +451,26 @@ Frecency-ranked directory jump (like the shell zoxide). Adds
 visited files automatically; M-g z surfaces the most-recent
 matches first.
 
+### `emacs` *(built-in / Nix)*
+
+`tab-always-indent' = t is the stock Emacs default, restored here
+deliberately: TAB indents the line and does nothing else.
+`indent-for-tab-command's only call to `completion-at-point' is
+guarded by (eq tab-always-indent 'complete), so with t that branch is
+unreachable and TAB provably cannot summon a capf. Completion lives on
+`C-M-i' instead (`jotain-completion-key'). `tab-first-completion' is
+inert unless `tab-always-indent' is `complete', so it is irrelevant
+here and is never set.
+
 ### `corfu`
 
 In-buffer completion popup — the corfu equivalent of company.
-Auto-triggered after 2 chars so it feels like a modern editor
-without a long delay.
+The popup appears on its own only in the modes listed by
+`jotain-completion-auto-modes' (default: programming modes), so prose
+stays quiet and completes only when asked via `C-M-i'. RET and TAB are
+unbound in `corfu-map', so Enter always inserts a newline and TAB
+always indents, even while the popup is showing. `M-n'/`M-p' move,
+`C-g' dismisses, `C-M-i' accepts.
 
 ### `corfu-history` *(built-in / Nix)*
 
@@ -472,7 +482,12 @@ corfu.
 
 Completion-at-point Extensions — extra capf functions (dabbrev,
 file path, keyword) that feed corfu when the major mode's own
-capf finds nothing useful.
+capf finds nothing useful. These three go on the *global*
+`completion-at-point-functions' so they act as fallbacks after the
+buffer-local, major-mode capfs run. `cape-elisp-symbol' is instead
+added buffer-locally in Elisp buffers, where it completes symbols
+even inside comments and docstrings (out there `elisp-completion-at-point'
+only fires in code), without polluting completion elsewhere.
 
 ## `init-navigation.el` — dired, project, windows
 
@@ -589,7 +604,8 @@ modeline VC state, and `project.el' all light up on jj repos
 set via `jj config edit --user' so vc/diff-hl/smerge read jj diffs
 and conflicts in the format they expect.
 
-`jotain-switch-jj-status-buffer' (C-x C-j) is the jj twin of the
+`jotain-switch-jj-status-buffer' (C-x J — not C-x C-j, which stays
+on its Emacs 28+ default `dired-jump') is the jj twin of the
 git status jump above: it parses `jj diff --summary -r @' and offers
 the changed files (deletions omitted — the file is gone) through
 `completing-read'. The richer interactive view is `majutsu' (C-c j).
@@ -632,12 +648,6 @@ Fringe indicators for added/changed/removed lines in the buffer
 you're editing. `diff-hl-flydiff-mode` updates pre-save so the
 indicators reflect uncommitted edits, not just the last save.
 
-### `smerge-mode` *(built-in / Nix)*
-
-Built-in conflict-marker editor. Custom prefix C-c ^ groups
-upper/lower/next/prev so resolving merges doesn't require
-scrolling through the smerge menu.
-
 ### `ediff` *(built-in / Nix)*
 
 Built-in interactive diff. Configured with `plain` window setup
@@ -663,15 +673,6 @@ Defer fontification of newly exposed text by a few hundredths of
 a second so heavy treesit level-4 font-lock never blocks keystrokes or
 scrolling. Pairs with `redisplay-skip-fontification-on-input' (set in
 init-core) — matters more on this slower Intel CPU.
-
-### `treesit-auto`
-
-Auto-routes `foo-mode` → `foo-ts-mode` whenever the grammar is
-loadable. Grammar installation is suppressed because Nix
-provides them via `treesit-extra-load-path` (set from
-$TREE_SITTER_DIR in early-init.el). We use only the alist hook
-— `global-treesit-auto-mode` advises `set-auto-mode-0` and
-costs ~3.6 s per find-file in this config.
 
 ### `treesit-fold`
 
@@ -720,7 +721,8 @@ commands carry repeat-maps, so `C-x C-a n n n` keeps stepping.
 
 Built-in inline diagnostic display. Indicator chars (! ? ·) and
 end-of-line message rendering keep diagnostics legible without
-opening a side window. M-n / M-p navigate.
+opening a side window: `short' shows only the most severe diagnostic
+per line, so a busy line stays readable. M-n / M-p navigate.
 
 ### `eldoc` *(built-in / Nix)*
 
@@ -753,16 +755,6 @@ people reach for projectile or compilation-multi alternatives.
 Honour `.editorconfig` files (indent style/width, line endings,
 trailing whitespace). Built-in since Emacs 30.
 
-### `envrc`
-
-Apply the project's `.envrc` / Nix shell to every buffer in
-that project. Strictly better than direnv-mode because the env
-is buffer-local, not global — multiple projects can coexist in
-one Emacs without leaking environment. `C-c e' is envrc's command
-prefix: `C-c e a' allow, `C-c e r' reload, `C-c e R' reload-all
-(the last picks up a `direnv allow' run in a terminal). Manual
-allow is kept as the secure default — no auto-allow whitelist.
-
 ### `apheleia`
 
 Async format-on-save through external formatters (ruff, nixfmt,
@@ -789,7 +781,7 @@ having to special-case every project's tab/space convention.
 Built-in project tracker. Extra root markers below mean a
 project is recognised when any of these is present, not just
 on a VCS root. Project list lives under var/. `C-x p P' scans
-`jotain-projects-directories' to add+open projects not yet in
+`jotain-repositories-roots' to add+open projects not yet in
 the known list.
 
 ### `projection`
@@ -839,9 +831,9 @@ library). `C-c v` opens a transient with task and script runners,
 `devenv test`/`build` through compilation-mode with Nix error
 matching, a process-manager dashboard (start/stop/restart/logs),
 and environment introspection (`devenv eval`/`info`/`search`).
-`devenv-reload` refreshes the project environment through envrc
-(the direnv substrate configured in init-prog) and offers to
-reconnect eglot servers so they see the new environment.
+`devenv-reload` re-runs `devenv print-dev-env` and re-applies the
+environment buffer-locally via the native loader
+(`devenv-env-global-mode`), and offers to reconnect eglot servers.
 devenv.nix buffers are routed to the bundled `devenv lsp` server
 while `nil` keeps serving other Nix files, and `devenv-mcp-setup`
 registers the project's `devenv mcp` server with mcp.el so gptel
@@ -857,9 +849,10 @@ not on PATH.
 ### `claude-code-ide` *(built-in / Nix)*
 
 Agentic multi-file editing through the Claude Code CLI. Bound to
-C-c C-' so the menu is one key away whenever a refactor needs more
-context than a single LSP rename can carry. Provided by Nix
-(manzaltu/claude-code-ide.el is not on MELPA).
+C-c q (user-reserved space, so no major mode shadows it) so the menu
+is one key away whenever a refactor needs more context than a single
+LSP rename can carry. Provided by Nix (manzaltu/claude-code-ide.el is
+not on MELPA).
 
 ### `eca`
 
@@ -867,7 +860,7 @@ Editor Code Assistant — AI pair-programming client (chat, inline
 completion, rewrite, MCP) talking to an external `eca' server over
 JSONRPC. The server binary is provided by Nix and found on $PATH, so
 nothing is downloaded; provider keys come from the environment, same as
-gptel. C-c C-e starts a session and opens the chat.
+gptel. C-c e starts a session and opens the chat.
 
 ### `gptel`
 
@@ -875,15 +868,17 @@ Conversational LLM front-end with multiple backends. OpenRouter
 — an OpenAI-compatible aggregator fronting Claude, GPT, Gemini,
 DeepSeek, Qwen, GLM and more behind one key — is the default; direct
 Anthropic, Gemini and local Ollama backends stay selectable from the
-C-c M-RET menu. Bound to C-c RET / C-c M-RET for quick send and full
-menu. Keys come from the environment first, then auth-source via
+C-c S menu. Bound to C-c s / C-c S for quick send and full menu —
+user-reserved space, so org-mode and friends can't shadow them. Keys
+come from the environment first, then auth-source via
 auth-source-1password.
 
 ### `mcp`
 
 Model Context Protocol bridge — lets gptel call MCP tools so the
 LLM can read files, query databases, and act through registered
-servers. Loaded after gptel.
+servers. Loaded on demand via its autoloads (`devenv-mcp-setup',
+M-x mcp-connect-server) — nothing here forces a load.
 
 ## `init-shell.el` — Shells
 
@@ -920,8 +915,9 @@ is downloaded into the writable elpa/ dir on first `M-x ghostel'.
 
 Kitty Keyboard Protocol — lets terminal Emacs distinguish
 C-i/TAB, C-m/RET, C-[/ESC, and pass Shift-modified function
-keys through. No-op in GUI frames, so safe to enable
-unconditionally.
+keys through. Only loaded in tty and daemon sessions — the
+daemon arm matters because a daemon can later serve
+`emacsclient -nw' frames; pure GUI sessions skip it entirely.
 
 ### `clipetty`
 
@@ -991,8 +987,15 @@ text-mode buffer and opted out of the column-sensitive ones: YAML
 ### `jinx`
 
 Just-in-time spell check using enchant — no on-save scan, no
-per-buffer flyspell setup. M-$ corrects the word at point;
-C-M-$ switches dictionaries.
+per-buffer flyspell setup. `global-jinx-mode' replaces both
+`flyspell-mode' and `flyspell-prog-mode' in one shot: jinx keys off
+faces, so in a code buffer it checks only comments and strings and
+leaves the code alone, no `flyspell-prog-mode' equivalent needed.
+Enabled from `emacs-startup' rather than a bag of per-mode hooks so
+prose *and* code get checked. M-$ corrects the word at point
+(C-u M-$ walks every misspelling); C-M-$ switches dictionaries.
+Data/config buffers that only look like prose opt back out in
+init-lang-data.
 
 ### `markdown-mode`
 
@@ -1003,7 +1006,8 @@ dialect.
 ### `denote`
 
 Plain-text note system with strict file-naming rules so notes
-are findable years later. Stored under `~/Documents/notes`.
+are findable years later. Stored under `jotain-notes-directory`
+(default `~/Documents/notes`), shared with Org (init-org.el).
 
 ### `pdf-tools`
 
@@ -1198,13 +1202,17 @@ covers `.j2`, `.jinja`, and `.jinja2`.
 Major mode for gnuplot script files (`.plt`). Useful when an
 analysis pipeline emits its own plotting scripts.
 
-## `init-lang-systems.el` — Systems (C/C++, Haskell, Zig)
+## `init-lang-systems.el` — Systems (C/C++, Haskell, OCaml, Zig)
 
 ### `cc-mode` *(built-in / Nix)*
 
 Built-in C/C++ mode with a Stroustrup style bias. The header
 extensions below default to C++ — Jotain assumes that's the
-more common case in modern repos.
+more common case in modern repos. C/C++ deliberately stay on
+cc-mode rather than c-ts-mode/c++-ts-mode — the style setup below
+is not migrated — and `jotain-prog-warn-non-ts-exclude'
+(init-prog.el) records that choice so the tree-sitter gap
+detector stays quiet about it.
 
 ### `cmake-mode`
 
@@ -1222,6 +1230,21 @@ apheleia, using the Meson CLI supplied by the dev shell.
 Haskell major mode. Loaded on demand only — keeps the rare
 Haskell editing session from costing every Emacs start.
 
+### `tuareg`
+
+Tuareg — the standard OCaml major mode for `.ml`/`.mli` sources
+(OCaml has no built-in tree-sitter mode). Eglot already maps
+`tuareg-mode' to `ocamllsp' and apheleia maps it to `ocamlformat',
+so the generic eglot auto-start and format-on-save in init-prog pick
+OCaml up with no extra wiring. All OCaml tooling (ocamllsp,
+ocamlformat) comes from the project/host PATH, not this config.
+
+### `dune`
+
+Dune major mode for the OCaml build system's `dune`,
+`dune-project`, and `dune-workspace` files — the OCaml counterpart to
+the CMake/Meson modes above.
+
 ### `zig-ts-mode`
 
 Tree-sitter Zig mode (MELPA). Eglot wires zls in init-prog;
@@ -1234,7 +1257,11 @@ format-on-save runs `zig fmt' through apheleia.
 Lightweight template/snippet engine from the corfu/cape author.
 Templates are read from `templates/*.eld' (keyed by major mode);
 `M-+' completes a snippet by name, `M-*' inserts one interactively,
-and once fields are active `TAB'/`S-TAB' move between them.
+and once fields are active `M-}'/`M-{' or `C-M-n'/`C-M-p' move
+between them, with `M-RET' to finish. TAB is deliberately not
+involved: in this configuration TAB indents and nothing else. Set
+`jotain-completion-snippets' to nil to keep snippet names out of the
+completion popup; `M-+' and `M-*' still work.
 
 ### `eglot-tempel`
 

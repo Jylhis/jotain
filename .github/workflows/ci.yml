@@ -1,16 +1,19 @@
 # CI for the Jotain Emacs configuration — pull requests only.
 #
-# Runs the lightweight subset of nix/checks.nix on every PR. The heavy
-# checks (elisp-compile, packages-default, packages-info) are deferred
-# to deploy.yml on main so PR latency stays low even on cache miss.
+# Runs the lightweight subset of nix/checks.nix on every PR, plus
+# elisp-compile: the default Emacs is the unstable variant (Emacs 31
+# pretest), so the warnings-as-errors byte-compile gate must catch 31
+# obsoletions before merge, not on main. The heavy package builds
+# (packages-default, packages-info) stay deferred to deploy.yml on main
+# so PR latency stays low even on cache miss.
 #
 # Two parallel jobs on x86_64-linux:
 #
 #   check — formatting, statix, deadnix, module-eval,
-#           packages-doc-in-sync, packages-doc, options-doc, elisp-lint
-#           (paren check; transitively builds the bare jotainEmacs from
-#           cache).  Skips elisp-compile and the full grammar
-#           distribution — those run in deploy.yml.
+#           packages-doc-in-sync, ds-in-sync, packages-doc, options-doc, elisp-lint
+#           (paren check), elisp-compile (both transitively build the
+#           bare jotainEmacs from cache).  Skips the full grammar
+#           distribution — that runs in deploy.yml.
 #   test  — devenv test (dev environment assertions from devenv.nix).
 #
 # The jylhis cachix cache is pull-only here: PR runs (including from
@@ -19,8 +22,12 @@
 # branches.
 name: CI
 
+# workflow_dispatch exists because pushes from the Claude Code GitHub
+# App don't create pull_request synchronize runs — CI on such PRs is
+# kicked manually (gh workflow run ci.yml --ref <branch>).
 on:
   pull_request:
+  workflow_dispatch:
 
 # Cancel superseded runs on the same PR.
 concurrency:
@@ -43,6 +50,9 @@ jobs:
       - uses: cachix/cachix-action@v17
         with:
           name: jylhis
+          # The default jotainEmacs base (emacs-unstable, Emacs 31
+          # pretest) is cached on nix-community.cachix.org.
+          extraPullNames: nix-community
 
       # Each check is a separate step so a failure surfaces by name in
       # the GitHub Actions UI without needing log access.
@@ -68,6 +78,9 @@ jobs:
       - name: Check — packages-doc-in-sync
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.packages-doc-in-sync
 
+      - name: Check — ds-in-sync
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.ds-in-sync
+
       - name: Check — packages-doc
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.packages-doc
 
@@ -76,6 +89,32 @@ jobs:
 
       - name: Check — elisp-lint
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.elisp-lint
+
+      - name: Check — elisp-compile
+        run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.elisp-compile
+
+  site:
+    name: Site
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: cachix/install-nix-action@v31
+
+      - uses: cachix/cachix-action@v17
+        with:
+          name: jylhis
+          # The site renders man pages and the Emacs/Elisp manuals from
+          # jotainEmacs (emacs-unstable base, cached on nix-community).
+          extraPullNames: nix-community
+
+      # Validate the full jotain.j10s.io site assembly (docs pages,
+      # manual HTML, man pages, Emacs/Elisp manuals, options/package
+      # references) so a docs or website change can't break the
+      # site-branch deploy that runs post-merge in deploy.yml.
+      - name: Build site
+        run: nix build --no-link --print-build-logs .#site
 
   test:
     name: Dev environment
@@ -91,7 +130,7 @@ jobs:
       - uses: cachix/cachix-action@v17
         with:
           name: jylhis
-          extraPullNames: devenv
+          extraPullNames: devenv,nix-community
 
       - name: Install devenv.sh
         run: nix profile add nixpkgs#devenv

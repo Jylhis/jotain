@@ -41,14 +41,13 @@
 ;;; that include source, callers, examples, and active keybindings
 ;;; — the single biggest discoverability upgrade in Emacs.
 (use-package helpful
-  :diminish
   :bind
   (("C-h f"   . helpful-callable)
    ("C-h v"   . helpful-variable)
    ("C-h k"   . helpful-key)
    ("C-h F"   . helpful-function)
    ("C-h C"   . helpful-command)
-   ("C-c C-d" . helpful-at-point)
+   ([remap display-local-help] . helpful-at-point)
    ([remap describe-symbol] . helpful-symbol)))
 
 (provide 'init-help)

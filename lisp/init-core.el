@@ -31,21 +31,47 @@ immediately for writes."
 
 (ignore-errors (make-directory jotain-var-dir t))
 
-;; Restore a sane GC threshold after the early-init.el bump. 16 MiB is the
-;; common compromise: high enough that typing/scrolling never trips a GC,
-;; low enough that an idle GC actually completes quickly. Combined with
-;; the idle-timer below, total pause time stays well under perceptible.
-(setq gc-cons-threshold (* 16 1024 1024)
-      gc-cons-percentage 0.1)
-(run-with-idle-timer 5 t #'garbage-collect)
+;; Restore a sane GC threshold after the early-init.el bump — on
+;; `emacs-startup-hook' (late depth), so the whole of init still runs
+;; under the bumped threshold instead of paying GC pauses from the first
+;; module load onwards. 16 MiB is the common compromise: high enough
+;; that typing/scrolling never trips a GC, low enough that an idle GC
+;; actually completes quickly. Combined with the idle-timer below, total
+;; pause time stays well under perceptible. Caveat: if init errors out,
+;; the threshold stays at `most-positive-fixnum' until the idle timer or
+;; the minibuffer hooks below touch it.
+(defconst jotain-core-gc-cons-threshold (* 16 1024 1024)
+  "Steady-state `gc-cons-threshold' after startup.")
+
+(defun jotain-core--gc-restore-after-startup ()
+  "Drop `gc-cons-threshold' to its steady-state value once startup is done."
+  (setq gc-cons-threshold jotain-core-gc-cons-threshold
+        gc-cons-percentage 0.1))
+(add-hook 'emacs-startup-hook #'jotain-core--gc-restore-after-startup 90)
+
+;; Explicit `garbage-collect' ignores the threshold, so skip the idle
+;; collection while a minibuffer is open — otherwise idling five seconds
+;; mid-completion would run the very GC pause the hooks below prevent.
+(defun jotain-core--gc-idle-collect ()
+  "Run a full GC when Emacs has been idle, unless a minibuffer is open."
+  (unless (active-minibuffer-window)
+    (garbage-collect)))
+(run-with-idle-timer 5 t #'jotain-core--gc-idle-collect)
 
 ;; Pause GC entirely while the minibuffer is open. Completion frameworks
 ;; allocate aggressively and a GC mid-keystroke is the single biggest
-;; source of perceptible input lag.
-(add-hook 'minibuffer-setup-hook
-          (lambda () (setq gc-cons-threshold most-positive-fixnum)))
-(add-hook 'minibuffer-exit-hook
-          (lambda () (setq gc-cons-threshold (* 16 1024 1024))))
+;; source of perceptible input lag. Named functions so the hooks are
+;; removable; the depth guard keeps the pause in force while an outer
+;; minibuffer is still active (`enable-recursive-minibuffers' is t).
+(defun jotain-core--gc-defer ()
+  "Pause GC for the duration of a minibuffer session."
+  (setq gc-cons-threshold most-positive-fixnum))
+(defun jotain-core--gc-restore ()
+  "Restore steady-state GC once the outermost minibuffer exits."
+  (when (< (minibuffer-depth) 2)
+    (setq gc-cons-threshold jotain-core-gc-cons-threshold)))
+(add-hook 'minibuffer-setup-hook #'jotain-core--gc-defer)
+(add-hook 'minibuffer-exit-hook #'jotain-core--gc-restore)
 
 ;; UTF-8 everywhere. Modern systems are UTF-8; the locale dance only
 ;; matters if you ssh into something ancient.
@@ -121,12 +147,6 @@ immediately for writes."
   (advice-add 'save-place-find-file-hook :after
               #'jotain-core--recenter-after-save-place))
 
-;;; @doc Hides minor-mode lighters from the modeline. Loaded early and
-;;; :demand t so that downstream use-package blocks can use the
-;;; :diminish keyword without macro-expansion errors.
-(use-package diminish
-  :demand t)
-
 (declare-function jotain-core--auto-create-missing-dirs nil)
 ;;; @doc Built-in file-handling tweaks: no auto-save side files, no
 ;;; backup `~` files, no kill-process confirmation, plus a hook that
@@ -178,9 +198,10 @@ immediately for writes."
 ;;; command (e.g. C-x o o o instead of C-x o C-x o). Built-in,
 ;;; enabled globally. `repeat-exit-timeout' clears the transient map
 ;;; after two idle seconds so the user doesn't have to think about
-;;; exiting it — the ergonomic "one-shot modifier" pattern. A
-;;; window-resize repeat-map filling the one gap in the built-in
-;;; coverage lives in init-keys.el.
+;;; exiting it — the ergonomic "one-shot modifier" pattern. The
+;;; built-in maps cover window resizing too (`resize-window-repeat-map'),
+;;; so `C-x ^ ^ v' just works; init-keys.el only adds a map for the
+;;; Emacs 31 `window-layout-*' commands.
 (use-package repeat
   :ensure nil
   :custom
@@ -273,11 +294,11 @@ freezes — start, reproduce, stop."
 ;;; @doc Inherits PATH, MANPATH, and other shell-managed vars from the
 ;;; user's login shell so GUI / launchd / systemd-spawned Emacs
 ;;; matches what the terminal sees. module.nix prepends Nix-store
-;;; binaries (rg, fd, git, direnv, coreutils) to the wrapper's
+;;; binaries (rg, fd, git, jj, zoxide, coreutils) to the wrapper's
 ;;; PATH — this picks up ~/.nix-profile and user toolchains.
 (use-package exec-path-from-shell
   :if (or (daemonp)
-          (memq window-system '(mac ns x)))
+          (memq window-system '(mac ns x pgtk)))
   :demand t
   :functions (exec-path-from-shell-initialize)
   :custom
@@ -345,9 +366,8 @@ freezes — start, reproduce, stop."
 ;;; @doc Live-highlight regexp constructs (groups, alternation, escapes,
 ;;; char classes) in the minibuffer while typing a regexp for
 ;;; `query-replace-regexp', `isearch-*-regexp', `keep-lines', etc.
-;;; Built-in since Emacs 30; no-op guard keeps older Emacs happy.
-(when (fboundp 'minibuffer-regexp-mode)
-  (minibuffer-regexp-mode 1))
+;;; Built-in since Emacs 30.
+(minibuffer-regexp-mode 1)
 
 ;;; @doc Built-in HTML renderer used by eww, gnus, elfeed. Suppress page
 ;;; colours and proportional fonts so rendered HTML inherits the

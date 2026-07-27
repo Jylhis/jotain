@@ -38,6 +38,25 @@
 ;; which is outside `var/' and never gets loaded — quickstart then pays
 ;; its refresh + byte-compile cost on every `package-install' without
 ;; providing any startup speedup.
+;;
+;; The quickstart file caches absolute load-path entries — under the Nix
+;; distribution those are /nix/store paths that go stale whenever the
+;; closure changes, while var/ persists across deployments. Invalidate
+;; the cache when the Nix load-path generation (EMACSLOADPATH already
+;; encodes the deps derivation store path) changes, so a redeploy never
+;; silently activates old package versions from a stale quickstart.
+(let* ((qs (expand-file-name "var/package-quickstart.el" user-emacs-directory))
+       (stamp (expand-file-name "var/package-quickstart.gen" user-emacs-directory))
+       (gen (secure-hash 'sha256 (or (getenv "EMACSLOADPATH") "")))
+       (old (ignore-errors (with-temp-buffer
+                             (insert-file-contents stamp) (buffer-string)))))
+  (when (and (file-exists-p qs) (not (equal gen old)))
+    (ignore-errors (delete-file qs))
+    (ignore-errors (delete-file (concat qs "c"))))
+  (unless (equal gen old)
+    (ignore-errors
+      (make-directory (file-name-directory stamp) t)
+      (write-region gen nil stamp nil 'silent))))
 (defvar package-quickstart nil)
 (setq package-quickstart-file
       (expand-file-name "var/package-quickstart.el" user-emacs-directory)
@@ -103,14 +122,15 @@
 (defvar native-comp-async-on-battery-power nil)
 (when (and (fboundp 'native-comp-available-p)
            (native-comp-available-p))
-  ;; Cap async (background) native compilation at 3 jobs. This machine has
-  ;; 4 physical / 8 logical cores; the default of 0 means "half the logical
-  ;; CPUs" (=4) and lets a background recompile starve redisplay and input.
-  ;; Leaving one physical core free keeps the editor responsive while the
-  ;; eln-cache warms.
+  ;; Async (background) native compilation jobs: half the logical cores,
+  ;; capped at 3, min 1. The cap keeps a background recompile from
+  ;; starving redisplay and input on big machines (responsiveness over
+  ;; eln-cache warm-up speed); the floor keeps small hosts (2-core VMs,
+  ;; nix-on-droid) at a single job. `num-processors' shipped in 28.1,
+  ;; below the Emacs 30 floor, so no guard is needed.
   (setq native-comp-async-report-warnings-errors nil
         native-comp-speed 2
-        native-comp-async-jobs-number 3
+        native-comp-async-jobs-number (max 1 (min 3 (/ (num-processors) 2)))
         ;; Emacs 31+: pause background native compilation while on
         ;; battery so a recompile doesn't spin the fans on an unplugged
         ;; laptop. Inert on Emacs 30 (the symbol is just an unused var).
@@ -120,10 +140,10 @@
      (convert-standard-filename
       (expand-file-name "var/eln-cache/" user-emacs-directory)))))
 
-;; Tree-sitter grammars provided out-of-band (Nix sets TREE_SITTER_DIR).
-(defvar treesit-extra-load-path nil)
-(when-let* ((ts-dir (getenv "TREE_SITTER_DIR")))
-  (setq treesit-extra-load-path (list ts-dir)))
+;; Tree-sitter grammars come from Nixpkgs' own site-start.el, which sets
+;; `treesit-extra-load-path' to the bundled grammar directory in the full
+;; distribution (see init-prog.el, which propagates that path to async
+;; native-comp workers).  No `TREE_SITTER_DIR' handling is needed here.
 
 ;; Ghostty advertises TERM=xterm-ghostty but Emacs doesn't ship a matching
 ;; term/xterm-ghostty.el. Aliasing to xterm-256color makes term/xterm.el

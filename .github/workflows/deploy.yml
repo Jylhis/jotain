@@ -43,6 +43,9 @@ jobs:
         with:
           name: jylhis
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          # The default jotainEmacs base (emacs-unstable, Emacs 31
+          # pretest) is cached on nix-community.cachix.org.
+          extraPullNames: nix-community
 
       - name: nix flake check
         run: nix flake check --print-build-logs
@@ -62,13 +65,60 @@ jobs:
         with:
           name: jylhis
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          extraPullNames: devenv
+          extraPullNames: devenv,nix-community
 
       - name: Install devenv.sh
         run: nix profile add nixpkgs#devenv
 
       - name: devenv test
         run: devenv test
+
+  deploy-site:
+    # Build the full jotain.j10s.io site and publish it to the `site`
+    # branch. The Cloudflare GitHub integration watches that branch
+    # (Workers Builds: production branch `site`, root `/`; the
+    # wrangler.jsonc at the branch root serves public/ as static
+    # assets) — no Cloudflare credentials live in this repo.
+    name: Site branch
+    if: github.ref == 'refs/heads/main'
+    needs: check
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: site-branch
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: cachix/install-nix-action@v31
+
+      - uses: cachix/cachix-action@v17
+        with:
+          name: jylhis
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          # The site renders man pages and the Emacs/Elisp manuals from
+          # jotainEmacs (emacs-unstable base, cached on nix-community).
+          extraPullNames: nix-community
+
+      - name: Build site
+        run: nix build .#site -o result-site
+
+      - name: Assemble site branch payload
+        run: |
+          mkdir -p site-dist
+          cp -rL result-site/. site-dist/
+          chmod -R u+w site-dist
+
+      - name: Push to site branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: site
+          publish_dir: site-dist
+          force_orphan: true
+          commit_message: "site: build from ${{ github.sha }}"
 
   build-pages:
     name: Build docs
@@ -90,6 +140,7 @@ jobs:
         with:
           name: jylhis
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          extraPullNames: nix-community
 
       - name: Build option docs
         run: nix build .#docs -o result-docs

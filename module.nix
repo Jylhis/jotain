@@ -71,22 +71,39 @@ let
   # falling back to a stray ~/.emacs.d/ on the user's machine.
   initDirectory = "${config.xdg.configHome}/emacs";
 
-  # Runtime dependencies the Elisp config invokes unconditionally (outside
-  # of envrc-managed project buffers). Prepending these to PATH in the
-  # wrapper keeps them available regardless of launch context — notably
-  # launchd on macOS, which doesn't inherit the user's login-shell PATH.
+  # Byte-compiled copy of the Jotain config, so the daemon executes the
+  # same .elc artifact the elisp-compile flake check verifies instead of
+  # interpreting raw .el on every start. Loading .elc is also what lets
+  # deferred native compilation produce .eln files into the writable
+  # var/eln-cache — JIT native comp never triggers for plain .el loads.
+  # Modelled on nix/checks.nix elisp-compile: the pcre2el require is
+  # load-bearing (magit-todos pulls in pcre2el, whose defadvice
+  # byte-compiles its advice body and fails under error-on-warn; see
+  # journal/2026-04-16.md). The .el sources are kept beside the .elc so
+  # `find-function' and native compilation can still read them.
+  compiledConfig = pkgs.runCommand "jotain-config-compiled" { } ''
+    mkdir -p $out/lisp
+    cp ${./early-init.el} $out/early-init.el
+    cp ${./init.el} $out/init.el
+    cp -r ${./lisp}/. $out/lisp/
+    chmod -R u+w $out
+    cd $out
+    ${selectedPackage}/bin/emacs --batch \
+      -L lisp \
+      --eval "(require 'pcre2el)" \
+      --eval "(setq byte-compile-error-on-warn t)" \
+      -f batch-byte-compile early-init.el init.el lisp/devenv.el lisp/init-*.el
+  '';
+
+  # Runtime dependencies the Elisp config invokes unconditionally,
+  # factored into nix/runtime-deps.nix so module-system.nix and
+  # module-nix-on-droid.nix satisfy the same contract. Prepending these
+  # to PATH in the wrapper keeps them available regardless of launch
+  # context — notably launchd on macOS, which doesn't inherit the
+  # user's login-shell PATH.
   runtimeDeps =
-    with pkgs;
-    [
-      ripgrep # xref-search-program, consult-ripgrep
-      fd # project/consult fallback finder
-      git # magit, vc
-      jujutsu # vc-jj, majutsu, jotain-vc-stats (jj binary)
-      direnv # envrc
-      coreutils # gls, used by dirvish-listing-switches on darwin
-      pkgsWithOverlay.eca # eca-emacs server; prevents runtime download fallback
-      rsync # dired-rsync (C-c C-r)
-    ]
+    import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; }
+    ++ lib.optional cfg.devenv.enable pkgs.devenv
     ++ lib.optional cfg.sonarlint.enable pkgs.sonarlint-ls
     ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server;
 
@@ -94,6 +111,13 @@ let
   # lisp/init-ui.el.  macOS ships Apple Color Emoji system-wide, so the
   # Nix font would just bloat the closure there.
   emojiFontPackages = lib.optional isLinux pkgs.noto-fonts-color-emoji;
+
+  # Nerd Font glyphs for the icon stack (nerd-icons, doom-modeline,
+  # corfu/marginalia margins, dirvish, ibuffer). BlexMono (IBM Plex Mono
+  # patched) is the first entry in `jotain-font-preferences'
+  # (lisp/init-ui.el), so the icons match the default editor face out of
+  # the box; keep the two in step when either changes.
+  iconFontPackages = [ pkgs.nerd-fonts.blex-mono ];
 
   runtimePath = lib.makeBinPath runtimeDeps;
 
@@ -267,6 +291,32 @@ in
       enable = lib.mkEnableOption "SonarLint language server ({command}`M-x jotain-sonarlint`)";
     };
 
+    devenv = {
+      enable = lib.mkEnableOption ''
+        the {command}`devenv` CLI on the wrapper PATH, for the native
+        environment loader (`devenv-env-global-mode`, lisp/devenv.el)
+        under launchd/systemd daemons whose login shell does not export
+        it. Opt-in because exec-path-from-shell normally finds the
+        user's own devenv, and `pkgs.devenv` bundles its own nix and
+        can version-skew against per-project devenv installs
+      '';
+    };
+
+    spell = {
+      dictionaries = lib.mkOption {
+        type = with lib.types; listOf package;
+        default = [ pkgs.aspellDicts.en ];
+        defaultText = lib.literalExpression "[ pkgs.aspellDicts.en ]";
+        example = lib.literalExpression "[ pkgs.aspellDicts.en pkgs.aspellDicts.fi ]";
+        description = ''
+          Aspell dictionary packages for jinx spell-checking
+          (lisp/init-writing.el). Installed into the profile, where
+          libaspell's NIX_PROFILES patch finds them at runtime and
+          enchant's aspell backend hands them to jinx.
+        '';
+      };
+    };
+
     openrouter = {
       enable = lib.mkEnableOption ''
         the OpenRouter provider for {command}`eca` by installing
@@ -328,17 +378,25 @@ in
       # that ships inside the selected package.
       (lib.hiPrio emacsWrapper)
     ]
+    ++ cfg.spell.dictionaries
     ++ emojiFontPackages
+    ++ iconFontPackages
     ++ lib.optional (cfg.client.enable && pkgs.stdenv.isLinux) (lib.hiPrio clientDesktopItem);
 
     # Install the Jotain Emacs configuration into ~/.config/emacs so the
     # daemon picks up early-init.el, init.el, the lisp/ modules, and the
     # tempel snippet templates (lisp/init-snippets.el resolves
-    # `tempel-path' against user-emacs-directory).
+    # `tempel-path' against user-emacs-directory). lisp/ and the two
+    # entry files come from compiledConfig, so the daemon loads .elc
+    # (with the .el kept alongside); the .elc entries for early-init and
+    # init are separate because repointing only "emacs/lisp" would leave
+    # the entry files interpreted.
     xdg.configFile = {
       "emacs/early-init.el".source = ./early-init.el;
+      "emacs/early-init.elc".source = "${compiledConfig}/early-init.elc";
       "emacs/init.el".source = ./init.el;
-      "emacs/lisp".source = ./lisp;
+      "emacs/init.elc".source = "${compiledConfig}/init.elc";
+      "emacs/lisp".source = "${compiledConfig}/lisp";
       "emacs/templates".source = ./templates;
     }
     // lib.optionalAttrs cfg.openrouter.enable {

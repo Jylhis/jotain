@@ -136,7 +136,7 @@ let
     }
     {
       file = "init-lang-systems.el";
-      title = "Systems (C/C++, Haskell, Zig)";
+      title = "Systems (C/C++, Haskell, OCaml, Zig)";
     }
   ];
 

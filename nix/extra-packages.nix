@@ -2,19 +2,52 @@
 # GNU ELPA, NonGNU ELPA).  Shared between default.nix and devenv.nix.
 { pkgs }:
 
-efinal: _eprev: {
-  jylhis-emacs-themes = efinal.trivialBuild {
-    pname = "jylhis-emacs-themes";
-    version = "0.3.0";
-    src =
-      pkgs.fetchFromGitHub {
-        owner = "Jylhis";
-        repo = "design";
-        rev = "0e59959881172c7010c051507b2d4f07a18eb26d";
-        sha256 = "1qa8zq1lhprvv702rfnc6xjlfrl0mx5ianph2n23k2wx37s157p0";
-      }
-      + "/platforms/emacs";
+efinal: eprev: {
+  # TEMPORARY (2026-07-21): emacs-overlay's ghostel epkg builds the
+  # libghostty-vt native module with zig, and the module's zig-deps
+  # fixed-output fetch is currently unbuildable on GitHub CI runners —
+  # zig's HTTP/git fetcher fails deterministically against github.com
+  # (HttpConnectionClosing / WriteFailed, three runs on 2026-07-21).
+  # Rebuild the package Elisp-only from the same pinned MELPA source so
+  # the distribution stays buildable; `ghostel-module-auto-install
+  # 'download` (lisp/init-terminal.el) restores the module at runtime.
+  # Revert to the plain epkgs.ghostel once the upstream fetch works.
+  ghostel = efinal.trivialBuild {
+    pname = "ghostel";
+    version = eprev.ghostel.version or "0";
+    src = eprev.ghostel.src;
+    packageRequires = eprev.ghostel.packageRequires or [ ];
+    # The MELPA recipe cherry-picks the elisp out of the repo; trivialBuild
+    # wants it at the source root, so point sourceRoot at ghostel.el's dir.
+    postUnpack = ''
+      elFile=$(find "$sourceRoot" -name ghostel.el -print -quit)
+      if [ -n "$elFile" ]; then
+        sourceRoot=$(dirname "$elFile")
+      fi
+    '';
   };
+
+  # Pinned in nix/design-pin.nix, shared with the website's vendored CSS so
+  # the editor and jotain.j10s.io can never sit on different versions of the
+  # design system.  v2 renamed the themes: jylhis-sheet / jylhis-field.
+  jylhis-emacs-themes =
+    let
+      pin = import ./design-pin.nix;
+    in
+    efinal.trivialBuild {
+      pname = "jylhis-emacs-themes";
+      inherit (pin) version;
+      src =
+        pkgs.fetchFromGitHub {
+          inherit (pin)
+            owner
+            repo
+            rev
+            sha256
+            ;
+        }
+        + "/platforms/emacs";
+    };
 
   claude-code-ide = efinal.trivialBuild {
     pname = "claude-code-ide";

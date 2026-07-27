@@ -3,6 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    # nixpkgs-unstable (26.11) dropped x86_64-darwin; 26.05 is its last
+    # supported release. Pinned for that one platform only — every other
+    # system uses the unstable channel above. See `nixpkgsFor`.
+    nixpkgs-x86_64-darwin.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
@@ -12,14 +16,21 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # Supplies the git-based variants used by emacs.nix: emacs-git
-    # (master), emacs-unstable (latest release tag), emacs-igc
-    # (feature/igc3). The default mainline build uses nixpkgs' default
+    # (master), emacs-unstable (Emacs 31 release branch — the default
+    # base for jotainEmacs, see nix/mk-overlay.nix), emacs-igc
+    # (feature/igc3). The "mainline" variant uses nixpkgs' default
     # emacs attribute and does not need the overlay.
     emacs-overlay = {
       url = "github:nix-community/emacs-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    jylhis-emacs.url = "github:jylhis/emacs/dev";
+    # Only the source tree is consumed (mk-overlay.nix passes it to
+    # emacs-jylhis.nix as `src`); `flake = false` keeps its transitive
+    # inputs (nixpkgs, emacs-overlay, …) out of flake.lock.
+    jylhis-emacs = {
+      url = "github:jylhis/emacs/dev";
+      flake = false;
+    };
     # Android (Termux/proot) Nix environment. Only consumed by
     # `nixOnDroidModules` / the example `nixOnDroidConfigurations`; other
     # outputs do not depend on it.
@@ -41,13 +52,18 @@
       systems = [
         "x86_64-linux"
         "aarch64-linux"
+        # x86_64-darwin is pinned to nixpkgs-26.05-darwin (see the
+        # nixpkgs-x86_64-darwin input); unstable dropped the platform.
         "x86_64-darwin"
         "aarch64-darwin"
       ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
+      # x86_64-darwin uses the 26.05 pin (unstable dropped it); every other
+      # system uses nixpkgs-unstable.
+      nixpkgsFor = system: if system == "x86_64-darwin" then inputs."nixpkgs-x86_64-darwin" else nixpkgs;
       pkgsFor =
         system:
-        import nixpkgs {
+        import (nixpkgsFor system) {
           inherit system;
           overlays = [
             emacs-overlay.overlays.default
@@ -59,7 +75,7 @@
       # packages.default / the system modules stay full-grammar cache hits.
       pkgsForLite =
         system:
-        import nixpkgs {
+        import (nixpkgsFor system) {
           inherit system;
           overlays = [
             emacs-overlay.overlays.default
@@ -75,6 +91,16 @@
           projectRootFile = "flake.nix";
           programs = import ./nix/treefmt.nix;
         };
+      # Overlay handed to the HM / NixOS / nix-darwin / nix-on-droid module
+      # outputs. emacs-overlay is composed underneath the jotain overlay so
+      # module installs resolve the emacs-git/unstable/igc bases and their
+      # epkgs from the same snapshot `packages.default` (and CI) build —
+      # otherwise module-built distributions would silently diverge from
+      # the flake-built, cachix-cached one. Consumer trade-off: consumers
+      # following jotain's nixpkgs pin get jylhis-cachix hits; consumers
+      # overriding nixpkgs with their own (24.05+) lose Hydra-cached epkgs
+      # and build the overlay's MELPA snapshot locally instead.
+      moduleOverlay = nixpkgs.lib.composeExtensions emacs-overlay.overlays.default self.overlays.default;
     in
     {
       overlays.default = import ./nix/mk-overlay.nix {
@@ -85,20 +111,20 @@
         { ... }:
         {
           imports = [ ./module.nix ];
-          _module.args.jotainOverlay = self.overlays.default;
+          _module.args.jotainOverlay = moduleOverlay;
         };
       nixosModules.default =
         { ... }:
         {
           imports = [ ./module-system.nix ];
-          _module.args.jotainOverlay = self.overlays.default;
+          _module.args.jotainOverlay = moduleOverlay;
         };
       darwinModules.default = self.nixosModules.default;
       nixOnDroidModules.default =
         { ... }:
         {
           imports = [ ./module-nix-on-droid.nix ];
-          _module.args.jotainOverlay = self.overlays.default;
+          _module.args.jotainOverlay = moduleOverlay;
         };
 
       lib = import ./nix/use-package.nix { inherit (nixpkgs) lib; };
@@ -109,6 +135,17 @@
         # smaller closure, far less to build from source. Opt-in.
         emacs-lite = (pkgsForLite system).jotainEmacsPackages;
         emacs = (pkgsFor system).jotainEmacs;
+        # Bare Emacs on nixpkgs' default attr (Emacs 30, Hydra-cached) —
+        # the pre-switch default, kept as an escape hatch now that
+        # jotainEmacs defaults to the unstable (Emacs 31 pretest) variant.
+        emacs-mainline = import ./emacs.nix {
+          pkgs = pkgsFor system;
+          variant = "mainline";
+        };
+        # Full terminal-only distribution (noGui Emacs + packages +
+        # grammars) — same attribute the nix-on-droid module ships.
+        # `just run-built` launches this on aarch64-linux.
+        emacs-nox = (pkgsFor system).jotainEmacsPackagesNoGui;
         emacs-jylhis = (pkgsFor system).jylhisEmacs;
         jylhis-emacs = (pkgsFor system).jylhisEmacs;
         info = (pkgsFor system).jotainInfo;
@@ -119,6 +156,20 @@
         packages-doc = import ./nix/packages-doc.nix {
           pkgs = pkgsFor system;
           src = self;
+        };
+        # No `src = self` here: site.nix (via info-manual.nix) selects
+        # files with lib.fileset, which requires a real path — the
+        # string-like flake source is rejected. The default src (../.
+        # relative to nix/) is the same tree as a path, matching how
+        # mk-overlay.nix wires jotainInfo.
+        site = import ./nix/site.nix {
+          pkgs = pkgsFor system;
+        };
+        # Design-system CSS + fonts at the pinned jylhis/design rev, as
+        # website/public/ds is expected to contain them. `just ds-sync`
+        # copies from here; the ds-in-sync check diffs against it.
+        ds-assets = import ./nix/ds-assets.nix {
+          pkgs = pkgsFor system;
         };
       });
 

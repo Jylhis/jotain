@@ -136,6 +136,15 @@ Otherwise processes run attached in a live output buffer."
   "Mode-line lighter for `devenv-env-mode'."
   :type 'string)
 
+(defcustom devenv-env-defer-to-direnv t
+  "When non-nil, `devenv-env-global-mode' skips direnv-managed projects.
+The native loader then activates only in devenv projects that have no
+`.envrc' above them and no active `envrc-mode', leaving the environment
+to direnv where it is in charge.  Set to nil to let the native loader
+own the environment for every trusted devenv project regardless of a
+`.envrc' (use this when direnv/envrc is disabled)."
+  :type 'boolean)
+
 (defcustom devenv-processes-log-lines 200
   "Number of log lines fetched by `devenv-processes-logs'."
   :type 'natnum)
@@ -341,6 +350,14 @@ Return the compilation buffer."
   "Cache of introspection results keyed by (ROOT . KEY).
 Values are (TIMESTAMP . VALUE) conses; see `devenv-cache-ttl'.")
 
+(defconst devenv-env--cache-ttl 3600
+  "Seconds to keep a fetched environment or trust state.
+Deliberately much longer than `devenv-cache-ttl': the shell env
+only changes when the config does (and `devenv-reload'
+invalidates it explicitly), while trust only changes via
+`devenv-allow' and `devenv-revoke', which both invalidate their
+cache entry.")
+
 (defun devenv--cache-fresh-p (entry &optional now)
   "Return non-nil when cache ENTRY is younger than `devenv-cache-ttl'.
 ENTRY is a (TIMESTAMP . VALUE) cons; NOW defaults to the current
@@ -410,21 +427,26 @@ to preserve that version's behaviour)."
 (defun devenv--trust-state (root)
   "Return ROOT's auto-activation trust state (cached).
 See `devenv--activation-state' for the possible values."
-  (devenv--cached
-   root 'trust
-   (lambda ()
-     (if (not (executable-find devenv-executable))
-         'unsupported
-       (let ((default-directory root)
-             (process-environment (append devenv-extra-env
-                                          process-environment)))
-         (with-temp-buffer
-           (let ((exit (ignore-errors
-                         (apply #'call-process devenv-executable
-                                nil '(t nil) nil
-                                (append devenv-global-arguments
-                                        '("hook-should-activate"))))))
-             (devenv--activation-state exit (buffer-string)))))))))
+  ;; Trust only changes via `devenv-allow'/`devenv-revoke', which both
+  ;; invalidate this cache explicitly — cache it for the long TTL so
+  ;; the synchronous `hook-should-activate' subprocess is not re-paid
+  ;; every `devenv-cache-ttl' seconds on the find-file path.
+  (let ((devenv-cache-ttl devenv-env--cache-ttl))
+    (devenv--cached
+     root 'trust
+     (lambda ()
+       (if (not (executable-find devenv-executable))
+           'unsupported
+         (let ((default-directory root)
+               (process-environment (append devenv-extra-env
+                                            process-environment)))
+           (with-temp-buffer
+             (let ((exit (ignore-errors
+                           (apply #'call-process devenv-executable
+                                  nil '(t nil) nil
+                                  (append devenv-global-arguments
+                                          '("hook-should-activate"))))))
+               (devenv--activation-state exit (buffer-string))))))))))
 
 ;;;###autoload
 (defun devenv-allow ()
@@ -1021,12 +1043,6 @@ reconnect any eglot servers so they see the new environment."
 (defvar devenv-env--eglot-replay nil
   "Buffers whose deferred `eglot-ensure' replays after env load.")
 
-(defconst devenv-env--cache-ttl 3600
-  "Seconds to keep a fetched environment.
-Deliberately much longer than `devenv-cache-ttl': the shell env
-only changes when the config does, and `devenv-reload'
-invalidates it explicitly.")
-
 (defun devenv-env--parse (json-string &optional ignored)
   "Parse `devenv print-dev-env --json' JSON-STRING output.
 Return a list of \"NAME=VALUE\" strings for every exported
@@ -1145,20 +1161,32 @@ without direnv."
 
 (defun devenv-env--turn-on ()
   "Enable `devenv-env-mode' when this buffer should manage its env.
-The buffer must sit inside a devenv project that direnv does not
-already cover (no .envrc anywhere above), with the devenv binary
+The buffer must sit inside a devenv project with the devenv binary
 available, and the project must be trusted for auto-activation
-\(`devenv allow'; see `devenv-allow').  Never activates in the
-minibuffer or remote buffers."
+\(`devenv allow'; see `devenv-allow').  When `devenv-env-defer-to-direnv'
+is non-nil the buffer must also not be under direnv (no .envrc above, no
+active `envrc-mode'), so direnv keeps ownership where it is configured.
+Never activates in the minibuffer or remote buffers."
   (let ((root (and (not (minibufferp))
                    (not (file-remote-p default-directory))
                    (executable-find devenv-executable)
                    (devenv-project-root))))
     (when (and root
-               (not (locate-dominating-file default-directory ".envrc"))
-               (not (bound-and-true-p envrc-mode))
+               (or (not devenv-env-defer-to-direnv)
+                   (and (not (locate-dominating-file default-directory ".envrc"))
+                        (not (bound-and-true-p envrc-mode))))
                (devenv--activation-permits-p (devenv--trust-state root)))
       (devenv-env-mode 1))))
+
+(defun devenv-env-loading-p (&optional buffer)
+  "Non-nil when BUFFER's devenv environment fetch is still in flight.
+BUFFER defaults to the current buffer.  Used by callers (e.g. eglot
+auto-start) to hold off decisions that depend on the buffer-local
+`exec-path' until the async `devenv print-dev-env' has landed."
+  (with-current-buffer (or buffer (current-buffer))
+    (and (bound-and-true-p devenv-env-mode)
+         (when-let* ((root (devenv-project-root)))
+           (and (gethash root devenv-env--pending) t)))))
 
 (defun devenv-env--around-eglot-ensure (orig-fun &rest args)
   "Defer ORIG-FUN (`eglot-ensure', ARGS) while the env is loading.
