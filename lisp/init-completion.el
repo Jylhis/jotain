@@ -13,6 +13,109 @@
 
 ;;; Code:
 
+;;;; User options
+;;
+;; Every knob below is read once, at load time, and needs a restart to take
+;; effect -- there are deliberately no `:set' functions.  Half-reactive
+;; options are worse than clearly static ones: core's own
+;; `text-mode-ispell-word-completion' splits its `:set' across a keymap and a
+;; mode-entry read, and that split is a documented source of confusion.
+;;
+;; For a one-off change without a restart, `M-x corfu-mode' toggles the popup
+;; in the current buffer and `M-x global-corfu-mode' toggles the whole stack.
+
+(defgroup jotain-completion nil
+  "In-buffer completion behaviour for the Jotain configuration."
+  :group 'convenience)
+
+(defcustom jotain-completion-auto-modes '(prog-mode-hook)
+  "Hooks whose buffers get the corfu popup automatically.
+Everywhere else completion happens only when asked for, via
+`jotain-completion-key'.  Set to nil for manual-only completion
+everywhere, including code.
+
+`corfu-auto' is read once when `corfu-mode' turns on, so these must be
+mode hooks that run before it: `global-corfu-mode' dispatches from
+`after-change-major-mode-hook', which runs after major-mode hooks.
+Buffers already open when corfu first starts keep their old value."
+  :type '(repeat symbol)
+  :group 'jotain-completion)
+
+(defcustom jotain-completion-auto-delay 0.1
+  "Idle seconds before the automatic popup appears.
+Applies only in `jotain-completion-auto-modes' buffers.  This value is
+not tuned -- no measurement backs it."
+  :type 'number
+  :group 'jotain-completion)
+
+(defcustom jotain-completion-auto-prefix 2
+  "Characters typed before the automatic popup appears.
+Applies only in `jotain-completion-auto-modes' buffers."
+  :type 'integer
+  :group 'jotain-completion)
+
+(defcustom jotain-completion-key "C-M-i"
+  "Key bound to `completion-at-point', or nil to bind nothing.
+`C-M-i' is the binding the Emacs manual recommends, which also steers
+users away from `M-TAB' because window managers reserve Alt+Tab.  Note
+that binding it here replaces the stock global `complete-symbol', so
+`C-u C-M-i' no longer runs `info-complete-symbol'.
+
+On a terminal `C-M-i', `M-TAB' and `ESC TAB' are the same event and
+cannot be told apart."
+  :type '(choice (string :tag "Key sequence") (const :tag "Do not bind" nil))
+  :group 'jotain-completion)
+
+(defcustom jotain-completion-free-return t
+  "When non-nil, RET never accepts a completion candidate.
+Corfu binds RET to `corfu-insert' by default; this unbinds it so RET is
+always a newline.  Freeing RET is an upstream-documented configuration.
+Set to nil to restore corfu's default."
+  :type 'boolean
+  :group 'jotain-completion)
+
+(defcustom jotain-completion-free-tab t
+  "When non-nil, TAB never completes -- it only indents.
+Two things are needed for that: `tab-always-indent' set to t (the stock
+Emacs default), and corfu's own TAB binding removed, since the popup's
+keymap would otherwise take precedence while it is open.  This option
+covers the second.  Set to nil to restore corfu's default."
+  :type 'boolean
+  :group 'jotain-completion)
+
+(defcustom jotain-completion-fallbacks t
+  "When non-nil, add the cape fallback capfs to the global capf list.
+These are `cape-dabbrev', `cape-file' and `cape-keyword' -- the generic
+sources that run when a buffer has nothing better to offer."
+  :type 'boolean
+  :group 'jotain-completion)
+
+(defcustom jotain-completion-snippets t
+  "When non-nil, snippet names appear as candidates in the popup.
+`tempel-complete' is added to the buffer-local capf list, and in
+eglot-managed buffers it is merged with the server's capf so snippet and
+server candidates share one popup.  nil adds no tempel capf; `M-+' and
+`M-*' keep working.
+
+Read at load time by `init-snippets.el'."
+  :type 'boolean
+  :group 'jotain-completion)
+
+(defcustom jotain-completion-eglot-nonexclusive t
+  "When non-nil, stop the LSP capf suppressing the cape fallbacks.
+`eglot.el' declares no `:exclusive' property, so its capf is exclusive
+and every capf ordered after it is skipped -- and `cape-capf-super'
+propagates non-exclusivity only when *every* input is non-exclusive, so
+merging a snippet capf into it does not help.  The upshot is that
+`cape-dabbrev', `cape-file' and `cape-keyword' never run in an LSP
+buffer.  Wrapping the merged capf in `cape-capf-nonexclusive' lets them
+run when the server offers nothing for the text at point.
+
+Both halves of that are measured in `test/completion-test.el'.  nil
+leaves the capf exactly as eglot installs it."
+  :type 'boolean
+  :group 'jotain-completion)
+
 ;;;; Minibuffer defaults
 
 ;;; @doc Built-in minibuffer customisation: detailed annotations and
@@ -264,27 +367,67 @@
 
 ;;;; In-buffer completion
 
-;;; @doc `tab-always-indent' = `complete' turns TAB into the single
-;;; trigger for the whole completion stack: it indents the line when
-;;; indentation is pending and otherwise summons corfu with every
-;;; `completion-at-point-functions' entry — the major mode's own capf
-;;; plus the cape fallbacks wired up below. Auto-completion still fires
-;;; on its own, but this gives an explicit, muscle-memory trigger.
+;;; @doc `tab-always-indent' = t is the stock Emacs default, restored here
+;;; deliberately: TAB indents the line and does nothing else.
+;;; `indent-for-tab-command's only call to `completion-at-point' is
+;;; guarded by (eq tab-always-indent 'complete), so with t that branch is
+;;; unreachable and TAB provably cannot summon a capf. Completion lives on
+;;; `C-M-i' instead (`jotain-completion-key'). `tab-first-completion' is
+;;; inert unless `tab-always-indent' is `complete', so it is irrelevant
+;;; here and is never set.
 (use-package emacs
   :ensure nil
   :custom
-  (tab-always-indent 'complete))
+  (tab-always-indent t))
+
+;; The one completion gesture.  `completion-at-point' rather than the stock
+;; `complete-symbol' is load-bearing: `corfu-map' contains a
+;; `<remap> <completion-at-point>' entry, and a remap only fires for the
+;; command the key actually resolves to.  Binding the command itself is
+;; therefore what makes the same key accept the selected candidate while the
+;; popup is open, so no second accept key is needed.
+(when jotain-completion-key
+  (keymap-global-set jotain-completion-key #'completion-at-point))
 
 ;;; @doc In-buffer completion popup — the corfu equivalent of company.
-;;; Auto-triggered after 2 chars so it feels like a modern editor
-;;; without a long delay.
+;;; The popup appears on its own only in the modes listed by
+;;; `jotain-completion-auto-modes' (default: programming modes), so prose
+;;; stays quiet and completes only when asked via `C-M-i'. RET and TAB are
+;;; unbound in `corfu-map', so Enter always inserts a newline and TAB
+;;; always indents, even while the popup is showing. `M-n'/`M-p' move,
+;;; `C-g' dismisses, `C-M-i' accepts.
 (use-package corfu
   :hook (after-init . global-corfu-mode)
+  :preface
+  ;; `corfu-map' is a `defvar-keymap' inside corfu.el, which is not loaded
+  ;; when this file is byte-compiled; declare it so the `:config' keymap
+  ;; edits below compile clean under `byte-compile-error-on-warn'.
+  (defvar corfu-map)
+  (defun jotain-completion--enable-auto ()
+    "Turn on corfu's auto-popup in the current buffer.
+Must run before `corfu-mode' is enabled: `corfu-auto' is read exactly
+once, in the `corfu-mode' body, and nothing re-reads it afterwards.
+Major-mode hooks satisfy that because `global-corfu-mode' dispatches from
+`after-change-major-mode-hook', which `run-mode-hooks' runs after them.
+Setting `corfu-auto' from `corfu-mode-hook' would be too late, since
+`define-minor-mode' runs the mode hook after the body."
+    (setq-local corfu-auto t))
+  :init
+  (dolist (hook jotain-completion-auto-modes)
+    (add-hook hook #'jotain-completion--enable-auto))
   :custom
   (corfu-cycle t)
-  (corfu-auto t)
-  (corfu-auto-prefix 2)
-  (corfu-auto-delay 0.1))
+  (corfu-auto nil)
+  (corfu-auto-prefix jotain-completion-auto-prefix)
+  (corfu-auto-delay jotain-completion-auto-delay)
+  :config
+  ;; REMOVE = t genuinely deletes the entry rather than binding it to nil,
+  ;; so the key falls through to the buffer and global maps.
+  (when jotain-completion-free-return
+    (keymap-unset corfu-map "RET" t))
+  (when jotain-completion-free-tab
+    (keymap-unset corfu-map "TAB" t)
+    (keymap-unset corfu-map "<tab>" t)))
 
 ;;; @doc Persists corfu's pick history into savehist so frequent
 ;;; completions float to the top across sessions. Bundled with
@@ -311,9 +454,10 @@
   (cape-file-directory-must-exist t)
   (cape-file-prefix '("~" "/" "./" "../"))
   :init
-  (add-hook 'completion-at-point-functions #'cape-dabbrev)
-  (add-hook 'completion-at-point-functions #'cape-file)
-  (add-hook 'completion-at-point-functions #'cape-keyword)
+  (when jotain-completion-fallbacks
+    (add-hook 'completion-at-point-functions #'cape-dabbrev)
+    (add-hook 'completion-at-point-functions #'cape-file)
+    (add-hook 'completion-at-point-functions #'cape-keyword))
   (defun jotain-cape-setup-elisp ()
     "Add `cape-elisp-symbol' as an Elisp fallback capf.
 The positive depth appends it after the mode's own
