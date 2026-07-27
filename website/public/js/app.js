@@ -58,7 +58,7 @@
     document.documentElement.dataset.theme = dark ? 'dark' : '';
     try { localStorage.setItem('jotain-theme', dark ? 'dark' : 'light'); } catch (e) { /* private mode */ }
     renderTheme();
-    msg('Theme: ' + (dark ? 'jylhis-roast (dark)' : 'jylhis-paper (light)'), 2000);
+    msg('Theme: ' + (dark ? 'jylhis-field (dark)' : 'jylhis-sheet (light)'), 2000);
   }
 
   /* ── echo area ──────────────────────────────────────── */

@@ -113,10 +113,11 @@ let
   emojiFontPackages = lib.optional isLinux pkgs.noto-fonts-color-emoji;
 
   # Nerd Font glyphs for the icon stack (nerd-icons, doom-modeline,
-  # corfu/marginalia margins, dirvish, ibuffer). JetBrains Mono is the
-  # first entry in `jotain-font-preferences' (lisp/init-ui.el), so the
-  # icons match the default editor face out of the box.
-  iconFontPackages = [ pkgs.nerd-fonts.jetbrains-mono ];
+  # corfu/marginalia margins, dirvish, ibuffer). BlexMono (IBM Plex Mono
+  # patched) is the first entry in `jotain-font-preferences'
+  # (lisp/init-ui.el), so the icons match the default editor face out of
+  # the box; keep the two in step when either changes.
+  iconFontPackages = [ pkgs.nerd-fonts.blex-mono ];
 
   runtimePath = lib.makeBinPath runtimeDeps;
 

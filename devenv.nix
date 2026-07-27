@@ -98,11 +98,19 @@ in
       # Fonts used by the Emacs configuration (init-ui.el looks them up by name).
       # These are only active while you're inside the devenv shell; on your real
       # system they come from home-manager or equivalent.
+      # BlexMono is IBM Plex Mono with Nerd Font glyphs — the Jylhis
+      # design system's mono role and the first default-face candidate.
+      nerd-fonts.blex-mono
       nerd-fonts.jetbrains-mono
       nerd-fonts.iosevka
-      # Only Literata is probed from the Google Fonts collection
-      # (init-ui.el variable-pitch face); the full collection is ~1 GB.
-      (google-fonts.override { fonts = [ "Literata" ]; })
+      # Only the families init-ui.el probes are pulled from the Google
+      # Fonts collection (variable-pitch face); the full set is ~1 GB.
+      (google-fonts.override {
+        fonts = [
+          "Hanken Grotesk"
+          "Literata"
+        ];
+      })
     ]
     # Virtual X server for `just screenshot` — headless capture of the
     # Nix-built Emacs so an AI agent in a CI/cloud container can see the
