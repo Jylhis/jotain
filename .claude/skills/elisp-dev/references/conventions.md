@@ -85,7 +85,8 @@ at the end — that is the required shape, don't add full FSF headers to them.
   `\\{map}` for a mode's own bindings.
 - Never indent continuation lines to align with source; verify with
   `M-x checkdoc`. Emacs 30 warns on control chars and (separately) overwide
-  docstrings — both are byte-compile warnings, which `just compile` fails on.
+  docstrings — both are byte-compile warnings, which the `elisp-compile`
+  flake check (run via `just check`) fails on.
 
 ## Etiquette that catches config bugs
 

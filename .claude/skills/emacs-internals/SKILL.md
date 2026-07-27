@@ -32,8 +32,9 @@ self-contained:
 - Native-comp eln cache is redirected to `var/eln-cache/` in `early-init.el`;
   `just clean` removes it. The `igc` build variant (`just build-igc`) uses the
   MPS garbage collector.
-- Startup/benchmarking: `just bench` wraps `require` with timing advice
-  (`bench/early-init.el`).
+- Startup/benchmarking: `bench/early-init.el` wraps `require` with timing
+  advice (the `just bench` recipe that drove it is currently a disabled
+  stub — no Emacs in the dev shell).
 
 When a claim here conflicts with the actual manual, trust the manual: use
 `C-h S` (`info-lookup-symbol`) or the online GNU Elisp Reference Manual, and

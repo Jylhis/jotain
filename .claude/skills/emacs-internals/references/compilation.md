@@ -2,8 +2,9 @@
 
 Sources: GNU Elisp Reference Manual (Emacs 30.2) Byte Compilation & Native
 Compilation chapters; `src/comp.c`, `lisp/emacs-lisp/comp*.el`; Corallo et
-al., "Bringing GNU Emacs to Native Code" (ELS'20). This repo runs Emacs 30
-with native-comp on by default.
+al., "Bringing GNU Emacs to Native Code" (ELS'20). This repo's default
+build is the Emacs 31 pretest (emacs-overlay `unstable` variant) with
+native-comp on by default; Emacs 30 remains the `mainline` escape hatch.
 
 ## Byte compilation
 
@@ -25,8 +26,8 @@ with native-comp on by default.
   `(defvar foo)` for a variable defined elsewhere, `declare-function` for a
   function, `(with-suppressed-warnings ...)` for a specific known-safe call.
 - `disassemble` shows the bytecode; `byte-compile-error-on-warn` turns
-  warnings into hard errors — this repo's `just compile` uses it, so
-  warning-clean code is mandatory.
+  warnings into hard errors — this repo's `elisp-compile` flake check
+  (run via `just check`) uses it, so warning-clean code is mandatory.
 
 ## Native compilation (gccemacs)
 

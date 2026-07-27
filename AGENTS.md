@@ -2,11 +2,11 @@
 
 ## Project Structure & Module Organization
 
-Jotain is an Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer. Startup files are `early-init.el` and `init.el`; feature modules live in `lisp/init-*.el` and are loaded from `init.el` in order. Nix build and module code lives at the root (`flake.nix`, `emacs.nix`, `overlay.nix`, `module.nix`, `module-system.nix`) with helpers in `nix/` (`mk-overlay.nix` is the overlay implementation). Documentation sources are in `docs/`, benchmark wrappers are in `bench/`, and ERT tests live in `test/` — every `test/*.el` file is loaded by the test check. `journal/`, `plan.md`, and `TODO.md` are working notes that may be stale — when they disagree with the code, the code wins.
+Jotain is an Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer. Startup files are `early-init.el` and `init.el`; feature modules live in `lisp/init-*.el` and are loaded from `init.el` in order. Nix build and module code lives at the root (`flake.nix`, `emacs.nix`, `overlay.nix`, `module.nix`, `module-system.nix`) with helpers in `nix/` (`mk-overlay.nix` is the overlay implementation). Documentation sources are in `docs/`, the jotain.j10s.io site shell is in `website/` (assembled by `nix build .#site`, deployed from `main` via the orphan `site` branch), benchmark wrappers are in `bench/`, and ERT tests live in `test/` — every `test/*.el` file is loaded by the test check. `journal/`, `plan.md`, and `TODO.md` are working notes that may be stale — when they disagree with the code, the code wins.
 
 ## Build, Test, and Development Commands
 
-Use the devenv shell; with direnv this is automatic. Without it, prefix commands with `devenv shell --`. The shell provides tooling only — Emacs itself is **not** in it, so the direct-launch and in-shell compile recipes (`just run`, `debug`, `tty`, `check-elisp`, `compile`, `bench`, …) are disabled stubs that print a notice and exit 0.
+Use the devenv shell: `devenv shell`, or prefix commands with `devenv shell --` (no `.envrc` is tracked; direnv users create their own). In an environment with no Nix at all, run `scripts/bootstrap-agent-env.sh` first. The shell provides tooling only — Emacs itself is **not** in it, so the direct-launch and in-shell compile recipes (`just run`, `debug`, `tty`, `check-elisp`, `compile`, `bench`, …) are disabled stubs that print a notice and exit 1.
 
 - `just run-built [ARGS]`: build Emacs via Nix for this platform, then launch `result/bin/emacs` using this repo as `--init-directory`.
 - `just run-built-debug [ARGS]`: same, with `--debug-init` and `debug-on-error`.
@@ -27,7 +27,7 @@ Place ERT files under `test/` — the elisp-test check globs and loads every `*.
 
 ## Commit & Pull Request Guidelines
 
-Recent commits use short, imperative subjects such as `Add todo` or `Pin nix-ts-mode to Nix to prevent MELPA/grammar version conflicts`. Keep subjects concise and describe the behavioral change. PRs should include a summary, relevant issue links, test/check results, and screenshots only when UI-facing Emacs behavior changes.
+Commits use a `scope: subject` convention with a short, imperative subject — e.g. `docs: make CLAUDE.md match the repo's current reality`, `elisp: default to the unstable variant`, `ci: gate lock-file sync`. Common scopes: `docs`, `elisp`, `nix`, `ci`, `site`, `ui`, `completion`, `themes`, `build(deps)`. Keep subjects concise and describe the behavioral change. PRs should include a summary, relevant issue links, test/check results, and screenshots only when UI-facing Emacs behavior changes.
 
 ## Security & Configuration Tips
 

@@ -18,8 +18,10 @@ appendix, the official style guidance, and this repo's own conventions
    `:ensure nil` (because `use-package-always-ensure` is `t`).
 4. No builtins/third-party split — a package enhancing a built-in lives in
    the same `lisp/init-*.el` module as the built-in.
-5. Byte-compilation is a gate: `just compile` runs with
-   `byte-compile-error-on-warn`, so any warning fails CI. Write
+5. Byte-compilation is a gate: the `elisp-compile` flake check runs with
+   `byte-compile-error-on-warn`, so any warning fails CI (run it via
+   `just check`, or alone with
+   `nix build --no-link .#checks.x86_64-linux.elisp-compile`). Write
    warning-clean code (declare functions, require at compile time, no
    obsolete APIs).
 6. LSP (`eglot-ensure` hooks) and formatters (apheleia) are centralised in
@@ -43,8 +45,12 @@ Read the one(s) relevant to the task:
 
 - New module: create `lisp/init-<concern>.el` with the file shape above, add
   `(require 'init-<concern>)` to `init.el` at the right load point.
-- Validate: `just check-elisp` (fast paren/syntax), `just compile`
-  (byte-compile, warnings as errors), `just test` (ERT under `test/`,
-  `test-*.el`, loaded with `-L lisp`).
-- Run isolated: `just run` (uses `--init-directory`, never touches
-  `~/.emacs.d`); `just debug` for `--debug-init`.
+- Validate (the in-shell recipes `just check-elisp`/`just compile` are
+  disabled stubs — no Emacs in the dev shell): `just check` runs every
+  flake check; individually, `elisp-lint` is the paren/syntax check,
+  `elisp-compile` the warnings-as-errors byte-compile, and `just test`
+  builds `elisp-test` — ERT over every `*.el` under `test/` (any name,
+  not just `test-*.el`), loaded with `-L lisp`.
+- Run isolated: `just run-built` (builds Emacs via Nix, uses
+  `--init-directory`, never touches `~/.emacs.d`);
+  `just run-built-debug` for `--debug-init`.
