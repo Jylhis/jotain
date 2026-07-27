@@ -124,7 +124,7 @@ Missing means some archive in `package-archives' lacks a cached
 (require 'init-snippets)     ; tempel snippets + eglot-tempel LSP expansion
 (require 'init-project)      ; project + projection + compile-multi
 (require 'init-devenv)       ; devenv.sh: tasks, processes, env, LSP, MCP
-(require 'init-ai)           ; claude-code-ide, gptel, mcp
+(require 'init-ai)           ; eca, claude-code-ide, gptel, mcp
 (require 'init-shell)        ; eshell, comint, ielm
 (require 'init-terminal)     ; ghostel terminal + tty integration (kkp, clipetty)
 (require 'init-systems)      ; sops, logview, auth-source-1password

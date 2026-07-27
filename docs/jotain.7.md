@@ -12,22 +12,23 @@ jotain — a custom GNU Emacs configuration built from scratch
 
 # SYNOPSIS
 
-**just** *run* | *debug* | *tty*
+**just** *run-built* | *run-built-debug*
 
-**just** *build* · **just** *check* · **just** *compile* · **just** *fmt* · **just** *update*
+**just** *build* · **just** *check* · **just** *fmt* · **just** *update*
 
 # DESCRIPTION
 
-*Jotain* is Finnish for "something" — a GNU Emacs 30+ configuration with
-no framework underneath. Instead of layering on Doom or Spacemacs, it is
-built from scratch: Nix builds the editor from source, plain Elisp
-configures it.
+*Jotain* is Finnish for "something" — a GNU Emacs 31 configuration
+(floor: Emacs 30.1) with no framework underneath. Instead of layering
+on Doom or Spacemacs, it is built from scratch: Nix builds the editor
+from source, plain Elisp configures it.
 
 The repository ships both a modular Elisp configuration
 (*early-init.el*, *init.el*, *lisp/init-\*.el*) and the Nix expressions
 that build Emacs itself (*emacs.nix*, *overlay.nix*, *default.nix*,
-*flake.nix*). The two are coupled: the dev shell's *emacs* is exactly
-what **just build** produces.
+*flake.nix*). The dev shell provides tooling only — Emacs is not in
+it; **just run-built** builds the editor via Nix and launches it with
+this configuration.
 
 # MANUAL SECTIONS
 
