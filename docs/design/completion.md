@@ -1,8 +1,12 @@
 # Completion and snippets — design specification
 
 **Date:** 2026-07-26
-**Status:** Specification. Not implemented; no Elisp in `lisp/` was changed in the
-round that produced this document.
+**Status:** Implemented 2026-07-27 in `lisp/init-completion.el` and
+`lisp/init-snippets.el`, with coverage in `test/completion-test.el`. Both items
+this document recorded as blocking were settled by measurement rather than
+deferred — see §2.3 and §2.4. Where the implementation departs from the
+specification as
+first written, the section says so instead of being quietly edited to match.
 **Evidence base:** [`docs/reviews/2026-07-completion-research.md`](../reviews/2026-07-completion-research.md).
 Section references below of the form *(research §2.1)* point into that report.
 Claims marked **[unverified]** here are ones the research explicitly could not
@@ -100,12 +104,22 @@ matters most:
 (keymap-unset corfu-map "<tab>" t)
 ```
 
-**The one deliberate exception: `tempel-map`.** While a snippet session is live,
-`TAB` moves to the next field and `S-TAB` to the previous
-(`lisp/init-snippets.el`:41-43). This is a *transient, modal* keymap — it is active
-only between template insertion and `tempel-done`/`tempel-abort`, and in that
-window there is no indentation semantics to preserve. This is called out as an
-exception rather than silently kept, and it carries its own opt-out (§3).
+**Superseded — there is no exception.** This section originally kept `TAB` for
+snippet field navigation as the one deliberate exception. That exception is gone:
+fields now move on `M-}`/`M-{` (tempel's own keys) or `C-M-n`/`C-M-p`, and `TAB`
+appears nowhere.
+
+The exception turned out to rest on a false premise. **Upstream `tempel-map`
+never bound `TAB` at all** — it ships `M-}`/`M-{`, `M-RET` (`tempel-done`),
+`M-<up>`/`M-<down>` and a set of command remaps. The `TAB`/`S-TAB` pair was this
+configuration's own addition in `init-snippets.el`'s `:bind` block. Removing it
+is a deletion, not a substitution, and tempel's own keys take over for free.
+
+`C-M-n`/`C-M-p` are added alongside as a mnemonic alias. No field key may
+collide with corfu's `M-n`/`M-p`: `tempel-map` is installed as an overlay
+`keymap` property, which is consulted *before* minor-mode maps, so a shared key
+would be stolen from the popup mid-snippet. `M-[` would have been actively
+hostile on a TTY — `ESC [` is the CSI introducer.
 
 Other TAB consumers that bypass `tab-always-indent` entirely and are **not**
 touched by this design (research §2.2): `org-cycle`, `message-tab`, shell-mode's
@@ -143,13 +157,21 @@ This is a supported configuration, not a workaround. If shell/comint buffers lat
 need RET to send input, upstream's `menu-item` `:filter` form is the sanctioned
 pattern.
 
-> **Open item — needs a live Emacs to settle.** With both TAB and RET unbound in
-> `corfu-map`, the remaining accept path is `C-M-i` (`corfu-map` binds the
-> `completion-at-point` key to `corfu-complete`). Whether `corfu-complete` alone
-> gives an acceptable "accept the candidate I navigated to with `M-n`" gesture — or
-> whether a dedicated `corfu-insert` binding on a non-RET key is also wanted — was
-> **not verified** and must be checked in a running Emacs before implementation.
-> Do not implement §2.3 without resolving this.
+**Resolved — and it turned on a mechanism, not a preference.** `corfu-map`
+contains a `<remap> <completion-at-point>` entry pointing at `corfu-complete`,
+and a remap fires only for the command the key actually *resolves to*. Binding
+`C-M-i` to `completion-at-point` — rather than leaving the stock global
+`complete-symbol`, which is not remapped — is therefore what makes the same key
+both open the popup and accept inside it. No second accept key is needed, and
+the choice of `completion-at-point` is load-bearing rather than cosmetic.
+
+Asserted in `completion-test-one-key-opens-and-accepts`.
+
+One thing this does *not* settle: whether `corfu-complete`'s behaviour after
+navigating with `M-n` (it extends the common prefix, and inserts when the
+selection is unambiguous) feels right in practice. That needs a live Emacs. If
+it disappoints, the lever is `corfu-preselect` / `corfu-on-exact-match`, not a
+second accept key.
 
 ### 2.4 The chain (R3)
 
@@ -182,17 +204,42 @@ design reaches the same end through the capf list instead, which keeps a single
 `completion-at-point` entry point and avoids a second, parallel expansion
 mechanism. `hippie-expand` is **not** adopted.
 
-> **Blocking open question — do not implement §2.4 without resolving it.**
-> **eglot's capf is exclusive** (it declares no `:exclusive` at all), so anything
-> ordered *after* it is shadowed — including the cape fallbacks (research §1.3).
-> Whether `cape-capf-nonexclusive` around `eglot-completion-at-point` is the
-> upstream-endorsed fix, and how it compares with the current `cape-capf-super`
-> merge, produced **zero verified claims across two research rounds** (research
-> §6.6). Separately, `completion--capf-wrapper`'s `:exclusive 'no` fallthrough is a
-> *prefix* `try-completion` test, and its own FIXME warns it "will not work (or not
-> right)" for non-prefix completion — **this config runs orderless**. Whether
-> tempel's fallthrough behaves correctly under orderless is **unverified** and
-> could silently break the chain.
+**Resolved by measurement — and it exposed a live bug.** All four facts below
+are asserted in `test/completion-test.el`; none came from documentation.
+
+1. **An exclusive capf shadows everything after it, unconditionally** — even
+   when nothing it offers matches the text at point.
+2. **`cape-capf-nonexclusive` is the fix.** Wrapping the exclusive capf restores
+   the fallthrough, while still keeping control when its own candidates match.
+3. **`cape-capf-super` propagates non-exclusivity only when *every* input is
+   non-exclusive.** One exclusive input makes the whole merge exclusive.
+4. **The `:exclusive no` fallthrough ignores `completion-styles`.** It is decided
+   by a bare `try-completion`, so `foo` is discarded against `barfoo` under
+   orderless exactly as under `basic` — even though orderless itself matches.
+   The `minibuffer.el` FIXME is real, not theoretical.
+
+**Facts 1 and 3 together were a live bug.** `init-snippets.el` merges the
+snippet capf with eglot's. Tempel is non-exclusive but eglot is not, so the
+merged capf inherited eglot's exclusivity — meaning **`cape-dabbrev`, `cape-file`
+and `cape-keyword` never ran in any LSP buffer.** They were configured and dead.
+The implementation wraps the merged capf in `cape-capf-nonexclusive`, gated by
+`jotain-completion-eglot-nonexclusive`.
+
+**Fact 4 bounds a residual weakness**, which the merge happens to mitigate. A
+non-exclusive capf loses candidates a non-prefix pattern would have matched. For
+`tempel-complete` alone that would mean snippet names vanishing whenever you type
+an orderless-style pattern. Inside the merge the collection also holds the
+server's candidates, so the prefix test generally succeeds and the merged capf is
+kept. This is a real argument for the merge that the original rationale never
+made — but it is mitigation, not a fix, and the underlying approximation is
+upstream's.
+
+**Departure from the specification as written.** §2.4 originally proposed
+replacing `tempel-complete` with `tempel-expand` (exact-match, no popup entry).
+The implementation keeps `tempel-complete` and the merge, on the owner's
+decision that snippet names should stay visible in the popup. `tempel-expand`
+would have been structurally immune to fact 4 — it never hands the wrapper a
+partial prefix — so that immunity was traded for discoverability, knowingly.
 
 **Correction to the current config's stated rationale.** `lisp/init-snippets.el`:45-48
 says prepending `tempel-complete` would shadow LSP candidates. It would not —
@@ -275,13 +322,22 @@ All under a new `(defgroup jotain-completion nil … :group 'convenience)` in
 | `jotain-completion-auto-prefix` | `2` | — (tuning) |
 | `jotain-completion-free-return` | `t` | `nil` ⇒ restore corfu's default `RET` = `corfu-insert`. |
 | `jotain-completion-free-tab` | `t` | `nil` ⇒ restore corfu's default `TAB` = `corfu-complete`. |
-| `jotain-completion-snippet-tab` | `t` | `nil` ⇒ drop `TAB`/`S-TAB` field navigation in `tempel-map` (the §2.2 exception). |
+| `jotain-completion-eglot-nonexclusive` | `t` | `nil` ⇒ leave the LSP capf exclusive, so the cape fallbacks stay suppressed in LSP buffers (see §2.4). |
 | `jotain-completion-key` | `"C-M-i"` | The chain key. `nil` ⇒ bind nothing, leaving the stock global binding intact. |
 | `jotain-completion-fallbacks` | `t` | `nil` ⇒ omit `cape-dabbrev` / `cape-file` / `cape-keyword` from the global capf list. |
 | `jotain-completion-snippets` | `t` | `nil` ⇒ do not add any tempel capf (`M-+`/`M-*` still work). |
 
 **Granularity rule:** every knob disables exactly one mechanism, and `nil` always
 means "behave as stock Emacs/corfu would". No knob silently re-enables another.
+
+**Substitution, recorded:** the ninth knob was originally
+`jotain-completion-snippet-tab`, gating the `TAB` field-navigation exception.
+That exception no longer exists (§2.2), so the knob would have gated nothing —
+and its `nil` branch would have meant "restore a binding upstream never had",
+violating the rule above. It is replaced by
+`jotain-completion-eglot-nonexclusive`, which gates a mechanism the
+implementation genuinely adds and which the original table omitted. The count is
+still nine.
 
 ### 3.3 Timing semantics — stated, because it is not uniform
 
@@ -336,14 +392,17 @@ What implementing this would change. Nothing here is done yet.
 | `lisp/init-snippets.el`:51 | Consider `tempel-expand` (exact-match, no UI) for the buffer-local prog-mode capf instead of `tempel-complete`, per §2.4. |
 | `docs/` | Document the chain key and the opt-out table; regenerate the package reference if any `@doc` block changes. |
 
-**Preconditions before any of it lands** — both are blocking:
+**Both preconditions are discharged.** They were recorded as needing a live
+Emacs, and they did — but a *batch* one, not an interactive one, which is
+cheaper than this document assumed. The `elisp-test` check already runs
+`emacs --batch` against the full package set, so capf dispatch and keymap state
+are both directly assertable. The lesson worth keeping: "needs a running Emacs"
+is not the same as "needs a human at a GUI".
 
-1. Resolve the **eglot-exclusivity / orderless-fallthrough** question in §2.4. The
-   chain's correctness depends on it and it is unverified.
-2. Resolve the **accept-key** question in §2.3 on a live Emacs.
-
-Neither can be settled from documentation; both need a running Emacs, which the
-dev shell deliberately does not provide (`just run-built` is the path).
+What still genuinely needs eyes on a screen is narrower than the original list:
+how `corfu-complete` *feels* as an accept gesture after `M-n` (§2.3), and
+whether the auto-popup delay is comfortable — the latter having no evidence base
+at all (§2.1).
 
 ---
 
