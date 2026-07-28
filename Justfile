@@ -266,6 +266,28 @@ run-built *ARGS:
 run-built-debug *ARGS:
     just run-built --debug-init --eval '(setq debug-on-error t)' {{ARGS}}
 
+# Like run-built-debug, but with every debugging facility on (--debug-init,
+# debug-on-error, unbounded *Messages*, verbose warnings + native-comp,
+# full eglot/jsonrpc traffic) and every message, warning and error backtrace
+# mirrored into var/debug/<timestamp>/ (gitignored via var/). stderr is teed
+# there live too; stdout stays on the tty so a GUI or -nw Emacs both work.
+# Inspect the files afterwards, or M-x jotain-debug-dump-now to flush mid-run.
+[group('build')]
+[doc('Launch with full debugging on; logs to var/debug/<timestamp>/')]
+run-built-debug-log *ARGS:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ts="$(date +%Y%m%d-%H%M%S)"
+    dir="{{config_dir}}/var/debug/$ts"
+    mkdir -p "$dir"
+    export JOTAIN_DEBUG_DIR="$dir"
+    echo "Debug session → $dir"
+    # Redirect only fd 2 through tee: stderr (build logs + Emacs native-comp /
+    # GTK / --debug-init output) is saved and still shown, without touching
+    # stdout, so the interactive Emacs tty is left intact.
+    exec 2> >(tee "$dir/stderr.log" >&2)
+    just run-built --debug-init --load "{{config_dir}}/etc/debug-init.el" {{ARGS}}
+
 # Headless screenshot: build Emacs, launch under Xvfb with this config,
 # capture the frame via jotain-screenshot, write OUT (PNG). Linux only;
 # needs xvfb-run from the devenv shell. First run is slow: nix build
