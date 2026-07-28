@@ -11,7 +11,7 @@ Jotain uses Nix for reproducible Emacs builds with fine-grained control over com
 
 ### emacs.nix
 
-The core build expression. It selects a base package per variant — nixpkgs' default `emacs` attribute for `mainline` (the bare-file default), emacs-overlay's `emacs-git`/`emacs-unstable`/`emacs-igc` for the git-based variants, and nixpkgs' `emacs-macport` alias for macport — and calls `.override { ... }` with every upstream build flag exposed as a file-level argument. The distribution (`jotainEmacs`, built through `nix/mk-overlay.nix`) passes `variant = "unstable"`, so the shipped default is the Emacs 31 release branch. The [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay) that supplies the git-based variants is a flake input composed into every overlay consumer in `flake.nix`; `emacs.nix` and `overlay.nix` re-apply it from `flake.lock` when imported standalone.
+The core build expression. It selects a base package per variant — nixpkgs' default `emacs` attribute for `mainline` (the bare-file default), emacs-overlay's `emacs-git`/`emacs-unstable`/`emacs-igc` for the git-based variants, and nixpkgs' `emacs-macport` alias for macport — and calls `.override { ... }` with every upstream build flag exposed as a file-level argument. The distribution (`jotainEmacs`, built through `nix/mk-overlay.nix`) passes `variant = "unstable"`, so the shipped default is the Emacs 31 release branch, and `withPgtk = final.stdenv.hostPlatform.isLinux`, so the **Linux GUI default is pgtk** (pure GTK) rather than X11/Lucid — pgtk honors each backend's advertised scale (Wayland fractional scale, `GDK_SCALE`/`Xft.dpi` on X11) so a fixed point size tracks the system. When `withPgtk = true` the base selection picks the prebuilt `*-pgtk` sibling (`emacs-unstable-pgtk` etc.) directly instead of overriding `withPgtk` on the non-pgtk base, because the two build identical content under different derivation names and the sibling is the one the cache holds (`packages.<system>.emacs-x11` is the X11 escape hatch; Darwin keeps its NS default). The [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay) that supplies the git-based variants is a flake input composed into every overlay consumer in `flake.nix`; `emacs.nix` and `overlay.nix` re-apply it from `flake.lock` when imported standalone.
 
 Supported:
 
@@ -51,11 +51,14 @@ nix-instantiate --eval --strict -E '
       };
       pkgs = import nixpkgs { overlays = [ (import overlay) (import ./overlay.nix) ]; };
   in {
-    default  = pkgs.jotainEmacs.outPath == pkgs.emacs-unstable.outPath;
-    mainline = (import ./emacs.nix {}).outPath == pkgs.emacs.outPath;
-    git      = (import ./emacs.nix { variant = "git"; }).outPath == pkgs.emacs-git.outPath;
-    unstable = (import ./emacs.nix { variant = "unstable"; }).outPath == pkgs.emacs-unstable.outPath;
-    igc      = (import ./emacs.nix { variant = "igc"; }).outPath == pkgs.emacs-igc.outPath;
+    # jotainEmacs is pgtk on Linux (mk-overlay passes withPgtk = isLinux),
+    # so on this x86_64-linux eval it maps to the emacs-unstable-pgtk sibling.
+    default       = pkgs.jotainEmacs.outPath == pkgs.emacs-unstable-pgtk.outPath;
+    mainline      = (import ./emacs.nix {}).outPath == pkgs.emacs.outPath;
+    git           = (import ./emacs.nix { variant = "git"; }).outPath == pkgs.emacs-git.outPath;
+    unstable      = (import ./emacs.nix { variant = "unstable"; }).outPath == pkgs.emacs-unstable.outPath;
+    unstable-pgtk = (import ./emacs.nix { variant = "unstable"; withPgtk = true; }).outPath == pkgs.emacs-unstable-pgtk.outPath;
+    igc           = (import ./emacs.nix { variant = "igc"; }).outPath == pkgs.emacs-igc.outPath;
   }'
 ```
 
@@ -86,7 +89,7 @@ Grammar bundling lives in `nix/mk-overlay.nix`, not in `default.nix`: the distri
 |---|---|---|
 | `variant` | `"mainline"` | Emacs source variant — `mainline` / `git` / `unstable` / `macport` / `igc`; `nix/mk-overlay.nix` passes `"unstable"` (the distribution default) |
 | `noGui` | `false` | Terminal only — `--without-x --without-ns` |
-| `withPgtk` | `false` | Pure GTK (Wayland) — `--with-pgtk` |
+| `withPgtk` | `false` (bare `emacs.nix`); `nix/mk-overlay.nix` sets it to `stdenv.hostPlatform.isLinux` so the distribution's Linux GUI default is pgtk | Pure GTK (Wayland) — `--with-pgtk`; selects the prebuilt `*-pgtk` sibling for cache parity |
 | `withGTK3` | `withPgtk && !noGui` | GTK3 toolkit — `--with-x-toolkit=gtk3` |
 | `withNativeCompilation` | auto | libgccjit AOT compilation |
 | `withTreeSitter` | `true` | Built-in tree-sitter support |

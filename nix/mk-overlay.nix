@@ -149,9 +149,17 @@ let
       '';
 in
 {
+  # Linux GUI default is pgtk (pure GTK): unlike the X11/Lucid build it
+  # honors each backend's advertised scale — hyprland/KDE/GNOME Wayland
+  # fractional scale, and Xft.dpi/GDK_SCALE when GDK runs on X11 — so a
+  # fixed point size tracks the system like other native GTK apps. pgtk
+  # selects emacs-overlay's prebuilt `*-pgtk` sibling in emacs.nix, so
+  # this stays a binary-cache hit. Darwin keeps its NS default (retina
+  # already scales); the noGui build below never gets a GUI toolkit.
   jotainEmacs = import ../emacs.nix {
     pkgs = final;
     inherit variant;
+    withPgtk = final.stdenv.hostPlatform.isLinux;
   };
 
   # Terminal-only (`-nw`) build, used by the nix-on-droid module: Android
