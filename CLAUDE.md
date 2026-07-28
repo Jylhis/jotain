@@ -51,6 +51,7 @@ Build & launch recipes (targeting the current system by default; override with `
 
 - `just run-built [ARGS]` — **the way to launch this config**: auto-detect the platform, build the full distribution (on aarch64-linux, the full terminal-only distribution), then launch `./result/bin/emacs` with `--init-directory` pointed at this repo (isolated from `~/.emacs.d`).
 - `just run-built-debug [ARGS]` — same, plus `--debug-init` and `debug-on-error`.
+- `just run-built-debug-log [ARGS]`: like `run-built-debug` but with every debugging facility on and all messages, warnings, and error backtraces mirrored into `var/debug/<timestamp>/` (gitignored via `var/`); loads the harness `etc/debug-init.el` and exposes `M-x jotain-debug-dump-now`. stderr is teed to the session dir; stdout stays on the tty so GUI or `-nw` both work.
 - `just build` — full distribution (`jotainEmacsPackages`: Emacs + all ~275 tree-sitter grammars) via plain `nix-build`.
 - `just build-lite` — full distribution with the curated ~26-grammar subset (`packages.emacs-lite`). Opt-in. Builds into `result-emacs-lite/`, not `result/`, so it does not feed `just run-built`.
 - `just build-nox-full` — full terminal-only distribution (`packages.emacs-nox`, the same attribute the nix-on-droid module ships).
