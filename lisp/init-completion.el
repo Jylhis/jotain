@@ -360,6 +360,14 @@ leaves the capf exactly as eglot installs it."
   ;; find-file hook rather than shell out to a missing binary on
   ;; every file open.
   :if (executable-find "zoxide")
+  :custom
+  ;; Pin the binary at init time, when `exec-path' is still the global
+  ;; wrapper PATH where zoxide is present.  Left unset, the defcustom
+  ;; default re-derives it via `executable-find' at lazy-load time, which
+  ;; can happen inside a buffer whose `devenv-env-mode' `exec-path' lacks
+  ;; zoxide — capturing nil for the session and breaking every
+  ;; `zoxide-add' on `find-file' with "Wrong type argument: stringp, nil".
+  (zoxide-executable (executable-find "zoxide"))
   :bind
   (("M-g z"   . zoxide-find-file)
    ("M-g M-z" . zoxide-find-file))
