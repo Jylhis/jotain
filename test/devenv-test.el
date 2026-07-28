@@ -220,8 +220,11 @@
       (should (= (length eglot-server-programs) len)))))
 
 (ert-deftest devenv-test-eglot-contact-fallback-for-plain-nix ()
-  "Non-devenv Nix buffers get the captured fallback contact."
-  (let ((devenv--eglot-fallback-contact '("nil")))
+  "Non-devenv Nix buffers get the captured fallback contact.
+No Nix LSP is configured, so the fallback branch is reached even when
+nixd happens to be on PATH (e.g. the CI sandbox)."
+  (let ((devenv--eglot-fallback-contact '("nil"))
+        (devenv-nix-lsp-servers nil))
     (with-temp-buffer
       ;; No file name: never a devenv.nix buffer.
       (should (equal (devenv--eglot-contact) '("nil"))))))
@@ -229,9 +232,18 @@
 (ert-deftest devenv-test-eglot-contact-functional-fallback ()
   "A functional fallback (eglot-alternatives) is called through."
   (let ((devenv--eglot-fallback-contact
-         (lambda (&optional _interactive) '("alt-server"))))
+         (lambda (&optional _interactive) '("alt-server")))
+        (devenv-nix-lsp-servers nil))
     (with-temp-buffer
       (should (equal (devenv--eglot-contact) '("alt-server"))))))
+
+(ert-deftest devenv-test-eglot-contact-prefers-nix-lsp ()
+  "An ordinary Nix buffer uses the resolved Nix LSP over the fallback."
+  (let ((devenv--eglot-fallback-contact '("nil")))
+    (cl-letf (((symbol-function 'devenv--nix-lsp-program)
+               (lambda () "/usr/bin/nixd")))
+      (with-temp-buffer
+        (should (equal (devenv--eglot-contact) '("/usr/bin/nixd")))))))
 
 (ert-deftest devenv-test-eglot-entry-covers-nix-p ()
   "Key matching handles symbols, lists, and :language-id forms."
