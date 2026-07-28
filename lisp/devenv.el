@@ -149,6 +149,12 @@ own the environment for every trusted devenv project regardless of a
   "Number of log lines fetched by `devenv-processes-logs'."
   :type 'natnum)
 
+(defcustom devenv-log-max-output 4000
+  "Byte cap for the output shown per entry in `devenv-log-buffer-name'.
+Output above this is summarized (for a successful command) or
+truncated on a line boundary (for a failed one)."
+  :type 'natnum)
+
 ;;;; Project root and executable discovery
 
 (defun devenv-project-root (&optional dir)
@@ -179,27 +185,117 @@ Return the resolved executable path."
 (defvar devenv-log-buffer-name "*devenv log*"
   "Name of the buffer recording every devenv CLI invocation.")
 
+(defface devenv-log-timestamp '((t :inherit shadow))
+  "Face for the timestamp, separator, and elision notes in the log.")
+
+(defface devenv-log-directory '((t :inherit font-lock-string-face))
+  "Face for the project directory on a log entry's header.")
+
+(defface devenv-log-command '((t :inherit font-lock-function-name-face))
+  "Face for the `$ command' line of a log entry.")
+
+(defface devenv-log-success '((t :inherit success))
+  "Face for the exit line of a successful log entry.")
+
+(defface devenv-log-failure '((t :inherit error))
+  "Face for the exit line of a failed or timed-out log entry.")
+
+(defface devenv-log-info '((t :inherit warning))
+  "Face for the exit line of a still-running (dispatched) entry.")
+
+(defun devenv--log-exit (exit)
+  "Return a (GLYPH FACE LABEL) list describing EXIT for the header."
+  (cond ((eql exit 0)       (list "✓" 'devenv-log-success (format "%s" exit)))
+        ((eq exit 'compile) (list "▶" 'devenv-log-info "dispatched"))
+        ((eq exit 'timeout) (list "✗" 'devenv-log-failure "timeout"))
+        (t                  (list "✗" 'devenv-log-failure (format "%s" exit)))))
+
+(defun devenv--log-summarize (output)
+  "Return a one-line summary string describing OUTPUT."
+  (let ((lines (max 1 (cl-count ?\n output))))
+    (format "<output: %s, %d line%s>"
+            (file-size-human-readable (string-bytes output))
+            lines (if (= lines 1) "" "s"))))
+
+(defun devenv--log-truncate (output)
+  "Return OUTPUT cut on a line boundary near `devenv-log-max-output'.
+A shadow-faced note reports how many bytes were elided."
+  (let* ((cap devenv-log-max-output)
+         (nl (cl-position ?\n output :from-end t :end (min cap (length output))))
+         (cut (or nl cap))
+         (elided (- (string-bytes output) (string-bytes (substring output 0 cut)))))
+    (concat (substring output 0 cut) "\n"
+            (propertize (format "[+%s truncated]"
+                                (file-size-human-readable elided))
+                        'face 'devenv-log-timestamp))))
+
+(defun devenv--log-pretty-json (output)
+  "Return OUTPUT re-indented as JSON, or nil when it is not JSON."
+  (ignore-errors
+    (with-temp-buffer
+      (insert (ansi-color-filter-apply output))
+      (json-pretty-print-buffer)
+      (buffer-string))))
+
+(defun devenv--log-insert-body (text)
+  "Insert TEXT as a log entry body, rendering ANSI colors."
+  (let ((start (point)))
+    (insert text)
+    (unless (string-suffix-p "\n" text) (insert "\n"))
+    (ansi-color-apply-on-region start (point))))
+
+(defun devenv--log-insert-output (exit output)
+  "Insert OUTPUT for a log entry whose command exited EXIT.
+Successful large output is summarized behind an expand button that
+pretty-prints JSON on demand; failed output is kept and truncated."
+  (when (and output (not (string-empty-p output)))
+    (if (and (eql exit 0) (> (string-bytes output) devenv-log-max-output))
+        (let ((from (copy-marker (point))))
+          (insert (propertize (devenv--log-summarize output)
+                              'face 'devenv-log-timestamp)
+                  " ")
+          (insert-text-button
+           "[expand]"
+           'action (lambda (button)
+                     (let ((inhibit-read-only t)
+                           (at (button-get button 'devenv-from)))
+                       (delete-region at (save-excursion
+                                           (goto-char at)
+                                           (forward-line 1)
+                                           (point)))
+                       (goto-char at)
+                       (devenv--log-insert-body
+                        (or (devenv--log-pretty-json output) output))))
+           'devenv-from from
+           'help-echo "Show the full output"
+           'follow-link t)
+          (insert "\n"))
+      (devenv--log-insert-body
+       (if (> (string-bytes output) devenv-log-max-output)
+           (devenv--log-truncate output)
+         output)))))
+
 (defun devenv--log (root argv exit output)
   "Append an invocation record to `devenv-log-buffer-name'.
 ROOT is the project directory, ARGV the full command list, EXIT
 the numeric exit status (or a symbol while still running), and
-OUTPUT the captured text (truncated for display)."
+OUTPUT the captured text (summarized or truncated for display)."
   (with-current-buffer (get-buffer-create devenv-log-buffer-name)
     (unless (derived-mode-p 'special-mode)
       (special-mode))
     (let ((inhibit-read-only t))
-      (goto-char (point-max))
-      (insert (format "\n[%s] %s\n$ %s\n=> %s\n"
-                      (format-time-string "%F %T")
-                      (abbreviate-file-name root)
-                      (mapconcat #'identity argv " ")
-                      exit))
-      (when (and output (not (string-empty-p output)))
-        (insert (if (> (length output) 4000)
-                    (concat (substring output 0 4000) "…[truncated]\n")
-                  output))
-        (unless (string-suffix-p "\n" output)
-          (insert "\n"))))))
+      (pcase-let ((`(,glyph ,face ,label) (devenv--log-exit exit)))
+        (goto-char (point-max))
+        (insert (propertize (concat (make-string 60 ?─) "\n")
+                            'face 'devenv-log-timestamp)
+                (propertize (format "[%s] " (format-time-string "%F %T"))
+                            'face 'devenv-log-timestamp)
+                (propertize (concat (abbreviate-file-name root) "\n")
+                            'face 'devenv-log-directory)
+                (propertize (format "$ %s\n" (mapconcat #'identity argv " "))
+                            'face 'devenv-log-command)
+                (propertize (format "%s %s\n" glyph label) 'face face))
+        (devenv--log-insert-output exit output)))))
 
 (defun devenv-show-log ()
   "Display the devenv invocation log buffer."
@@ -1362,7 +1458,28 @@ the segment is empty."
 (defvar devenv--eglot-fallback-contact '("nil")
   "Contact used for Nix buffers that are not devenv.nix files.
 Captured from `eglot-server-programs' by `devenv-eglot-setup' so
-ordinary Nix buffers keep whatever server they had before.")
+ordinary Nix buffers keep whatever server they had before.  Only
+reached when neither the project nor this editor ships a Nix LSP.")
+
+(defcustom devenv-nix-lsp-servers '("nixd" "nil")
+  "Nix language servers to try for an ordinary Nix buffer, best first.
+Resolved to an absolute path at eglot connect time by
+`devenv--nix-lsp-program', preferring the project's environment
+before the server shipped with this editor."
+  :type '(repeat string)
+  :group 'devenv)
+
+(defun devenv--nix-lsp-program ()
+  "Return the absolute path of a Nix LSP to use here, or nil.
+Search the buffer-local `exec-path' first, so a server provided by
+the project's devenv wins; then fall back to Emacs's global
+`exec-path', i.e. the server shipped with this editor.  Returning an
+absolute path lets the `eglot-ensure' auto-start gate in
+`init-prog.el' find it even though the shipped server is not on the
+buffer-local devenv PATH."
+  (or (seq-some #'executable-find devenv-nix-lsp-servers)
+      (let ((exec-path (default-value 'exec-path)))
+        (seq-some #'executable-find devenv-nix-lsp-servers))))
 
 (defun devenv--devenv-nix-file-p (file)
   "Return non-nil when FILE is a devenv config inside a devenv project.
@@ -1377,18 +1494,29 @@ that a devenv project root covers the file."
 (defun devenv--eglot-contact (&optional interactive _project)
   "Return the eglot contact for the current Nix buffer.
 Buffers visiting devenv.nix / devenv.local.nix get the bundled
-`devenv lsp' server (a nixd preconfigured with the project's
-devenv options); every other Nix buffer is delegated to the
-previously registered contact.  INTERACTIVE is passed through
-when the fallback is itself a contact function, as produced by
-`eglot-alternatives'."
-  (if (and (devenv--devenv-nix-file-p (buffer-file-name))
-           (executable-find devenv-executable))
-      (list devenv-executable "lsp")
+`devenv lsp' server (a nixd preconfigured with the project's devenv
+options).  Every other Nix buffer prefers a Nix LSP from the project's
+environment and otherwise uses the one shipped with this editor (see
+`devenv--nix-lsp-program' and `devenv-nix-lsp-servers').  Only when
+neither exists does it delegate to the previously registered contact;
+INTERACTIVE is passed through when that fallback is itself a contact
+function, as produced by `eglot-alternatives'."
+  (cond
+   ;; devenv.nix / devenv.local.nix: the project's own `devenv lsp' (a
+   ;; nixd preloaded with the project's devenv options).
+   ((and (devenv--devenv-nix-file-p (buffer-file-name))
+         (executable-find devenv-executable))
+    (list devenv-executable "lsp"))
+   ;; Any other Nix buffer: the project's Nix LSP if its env provides one,
+   ;; else the one shipped with this editor.
+   ((when-let* ((prog (devenv--nix-lsp-program))) (list prog)))
+   ;; Neither: defer to whatever eglot had registered (may report that no
+   ;; server is available).
+   (t
     (let ((fallback devenv--eglot-fallback-contact))
       (if (functionp fallback)
           (funcall fallback interactive)
-        fallback))))
+        fallback)))))
 
 (defun devenv--eglot-entry-covers-nix-p (key)
   "Return non-nil when `eglot-server-programs' KEY covers Nix modes."

@@ -19,6 +19,17 @@ let
   usePackage = import ./use-package.nix { inherit (final) lib; };
   extraPackages = import ./extra-packages.nix { pkgs = final; };
 
+  # Runtime binaries the Elisp config shells out to (nix/runtime-deps.nix).
+  # Bundled onto every distribution wrapper's PATH below with `--suffix', so
+  # a bare `just run-built' is self-contained (carries the shipped nixd LSP
+  # fallback and friends) — not only the module/daemon installs, which wrap
+  # this same list. `--suffix' keeps ambient / project tools ahead of the
+  # bundled copies, so a devenv-provided server still wins.
+  runtimeDeps = import ./runtime-deps.nix {
+    pkgs = final;
+    pkgsWithOverlay = final;
+  };
+
   # Spell dictionaries bundled into the distribution so `jinx' works out of
   # the box (lisp/init-writing.el) without an externally-populated profile.
   # jinx links enchant, whose aspell backend delegates to libaspell, but the
@@ -143,6 +154,7 @@ let
           orig=$(readlink -f "$prog")
           rm "$prog"
           makeBinaryWrapper "$orig" "$prog" \
+            --suffix PATH : "${final.lib.makeBinPath runtimeDeps}" \
             --suffix INFOPATH : "${final.jotainInfo}/share/info:" \
             --set-default ASPELL_CONF "${spellConf}"
         done

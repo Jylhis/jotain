@@ -20,6 +20,8 @@ with pkgs;
   zoxide # zoxide-add on find-file-hook, zoxide-find-file (M-g z)
   pkgsWithOverlay.eca # eca-emacs server; prevents runtime download fallback
   rsync # dired-rsync (C-c C-r)
+  nixd # shipped Nix LSP fallback (devenv--nix-lsp-program) when a devenv
+  # project's own env provides no nixd/nil for eglot
 ]
 # GNU userland for the wrapper only. On darwin the g-prefixed variant is
 # load-bearing twice over: init-navigation.el probes `gls' by that name
