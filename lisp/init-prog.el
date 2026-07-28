@@ -587,6 +587,11 @@ hard-error on every prog-mode buffer)."
   (add-to-list 'apheleia-formatters
                '(buildifier . ("buildifier" "-path" (or filepath "BUILD"))))
   (add-to-list 'apheleia-mode-alist '(bazel-mode . buildifier))
+  ;; Newer nixfmt deprecates bare invocation ("Use 'nixfmt -' for anonymous
+  ;; stdin"); prepend an explicit-"-" entry to shadow apheleia's built-in
+  ;; nixfmt formatter so format-on-save stays quiet and keeps working when
+  ;; the deprecation becomes a hard error.
+  (add-to-list 'apheleia-formatters '(nixfmt . ("nixfmt" "-")))
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
 ;;; @doc Edit grep / ripgrep result buffers in place; saving propagates
@@ -602,6 +607,10 @@ hard-error on every prog-mode buffer)."
 ;;; @doc Detect indentation width from file contents — saves us from
 ;;; having to special-case every project's tab/space convention.
 (use-package dtrt-indent
+  ;; 0 silences the per-file "Note: standard-indent/indent-tabs-mode
+  ;; adjusted" narration (gated on `dtrt-indent-verbosity' >= 1);
+  ;; detection is unaffected.
+  :custom (dtrt-indent-verbosity 0)
   :hook (prog-mode . dtrt-indent-mode))
 
 (provide 'init-prog)
