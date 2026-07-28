@@ -217,17 +217,32 @@ let
   #     --with-mps=yes and the mps buildInput)
   #   * macport — nixpkgs emacs-macport alias → emacs30-macport
   #     (jdtsmith/emacs-mac fork, still Emacs 30.2.50 upstream)
+  #
+  # When withPgtk is requested, select the prebuilt `*-pgtk` sibling
+  # (emacs-overlay for git/unstable/igc, nixpkgs for mainline) instead of
+  # overriding withPgtk on the non-pgtk base. Both build byte-identical
+  # *content*, but the sibling carries a distinct derivation `name`
+  # (`…-pgtk-…`) that feeds the output-path hash — so a plain
+  # `emacs-unstable.override { withPgtk = true; }` lands on a *different*
+  # store path and misses the binary cache, rebuilding the same bytes
+  # from source. Starting from the sibling preserves cache parity: this
+  # file's computed pgtk args (withGTK3 = true, withX = withCairo =
+  # withXinput2 = false, withGlibNetworking = true, withXwidgets off for
+  # git-variants) exactly match how emacs-overlay built the sibling, so
+  # the `basePackage.override` below is a no-op. `or`-guarded so a
+  # downstream consumer on an older nixpkgs that lacks a given sibling
+  # falls back to overriding the non-pgtk base (correct, from source).
   basePackage =
     if variant == "macport" then
       pkgs.emacs-macport
     else if variant == "git" then
-      pkgs.emacs-git
+      (if withPgtk then pkgs.emacs-git-pgtk or pkgs.emacs-git else pkgs.emacs-git)
     else if variant == "unstable" then
-      pkgs.emacs-unstable
+      (if withPgtk then pkgs.emacs-unstable-pgtk or pkgs.emacs-unstable else pkgs.emacs-unstable)
     else if variant == "igc" then
-      pkgs.emacs-igc
+      (if withPgtk then pkgs.emacs-igc-pgtk or pkgs.emacs-igc else pkgs.emacs-igc)
     else
-      pkgs.emacs;
+      (if withPgtk then pkgs.emacs-pgtk or pkgs.emacs else pkgs.emacs);
 
   # ── Forward all boolean flags to make-emacs.nix ──────────────────
   #
@@ -249,7 +264,9 @@ let
   #
   # Verify after any change to defaults (also with variant '"git"' vs
   # pkgs.emacs-git, '"unstable"' vs pkgs.emacs-unstable, '"igc"' vs
-  # pkgs.emacs-igc):
+  # pkgs.emacs-igc, and each `withPgtk = true;` build vs the matching
+  # `*-pgtk` sibling — pkgs.emacs-pgtk / emacs-unstable-pgtk /
+  # emacs-git-pgtk / emacs-igc-pgtk):
   #     nix-instantiate --eval --strict -E \
   #       'let lock = builtins.fromJSON (builtins.readFile ./flake.lock);
   #            nixpkgsNode = lock.nodes.root.inputs.nixpkgs;
@@ -258,7 +275,10 @@ let
   #            nixpkgs = fetchTarball { url = "https://github.com/${n.owner}/${n.repo}/archive/${n.rev}.tar.gz"; sha256 = n.narHash; };
   #            overlay = fetchTarball { url = "https://github.com/${ov.owner}/${ov.repo}/archive/${ov.rev}.tar.gz"; sha256 = ov.narHash; };
   #            pkgs = import nixpkgs { overlays = [ (import overlay) ]; };
-  #        in (import ./emacs.nix {}).outPath == pkgs.emacs.outPath'
+  #        in {
+  #             mainline = (import ./emacs.nix {}).outPath == pkgs.emacs.outPath;
+  #             unstable-pgtk = (import ./emacs.nix { variant = "unstable"; withPgtk = true; }).outPath == pkgs.emacs-unstable-pgtk.outPath;
+  #           }'
   #
   # ── nixpkgs-version-portable override ────────────────────────────
   #

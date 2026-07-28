@@ -142,6 +142,16 @@
           pkgs = pkgsFor system;
           variant = "mainline";
         };
+        # X11 escape hatch on the unstable (Emacs 31) variant: the
+        # pre-switch Linux GUI backend, for setups where the pgtk default
+        # misbehaves. Forcing withPgtk = false restores X11/Lucid on Linux
+        # (a binary-cache hit against pkgs.emacs-unstable); on Darwin it is
+        # simply the NS build. `emacs-mainline` is the Emacs 30 counterpart.
+        emacs-x11 = import ./emacs.nix {
+          pkgs = pkgsFor system;
+          variant = "unstable";
+          withPgtk = false;
+        };
         # Full terminal-only distribution (noGui Emacs + packages +
         # grammars) — same attribute the nix-on-droid module ships.
         # `just run-built` launches this on aarch64-linux.

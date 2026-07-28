@@ -205,6 +205,12 @@ build-pgtk:
 build-gtk3:
     nix-build --arg withGTK3 true --argstr system {{system}} emacs.nix
 
+# Build the X11/Lucid escape hatch (unstable/Emacs 31, pgtk off) — the
+# pre-switch Linux GUI backend, for when the pgtk default misbehaves.
+[group('build')]
+build-x11:
+    nix-build --arg variant '"unstable"' --arg withPgtk false --argstr system {{system}} emacs.nix
+
 # Build a terminal-only Emacs (--without-x --without-ns).
 [group('build')]
 build-nox:
