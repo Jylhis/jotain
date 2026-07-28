@@ -212,7 +212,7 @@ Return the resolved executable path."
 
 (defun devenv--log-summarize (output)
   "Return a one-line summary string describing OUTPUT."
-  (let ((lines (max 1 (cl-count ?\n output))))
+  (let ((lines (1+ (cl-count ?\n (string-remove-suffix "\n" output)))))
     (format "<output: %s, %d line%s>"
             (file-size-human-readable (string-bytes output))
             lines (if (= lines 1) "" "s"))))

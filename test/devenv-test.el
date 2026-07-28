@@ -311,5 +311,73 @@ subcommand on devenv 1.x) is `unsupported'."
       (should (string-suffix-p " mcp" cmd))
       (should (string-prefix-p "cd " cmd)))))
 
+;;;; Invocation log formatting
+
+(ert-deftest devenv-test-log-exit ()
+  "Exit values map to a glyph, a face, and a label."
+  (should (equal (devenv--log-exit 0) '("✓" devenv-log-success "0")))
+  (should (equal (devenv--log-exit 1) '("✗" devenv-log-failure "1")))
+  (should (equal (devenv--log-exit 'timeout)
+                 '("✗" devenv-log-failure "timeout")))
+  (should (equal (devenv--log-exit 'compile)
+                 '("▶" devenv-log-info "dispatched"))))
+
+(ert-deftest devenv-test-log-summarize ()
+  "Summaries carry a human size and a line count that pluralizes."
+  (should (string-match-p "1 line>" (devenv--log-summarize "one line")))
+  (should (string-match-p "3 lines>" (devenv--log-summarize "a\nb\nc"))))
+
+(ert-deftest devenv-test-log-pretty-json ()
+  "Valid JSON is re-indented; anything else yields nil."
+  (should (string-match-p "\n  \"a\": 1" (devenv--log-pretty-json "{\"a\":1}")))
+  (should (null (devenv--log-pretty-json "garbage {"))))
+
+(ert-deftest devenv-test-log-truncate ()
+  "Over-cap output is cut on a line boundary with an elision note."
+  (let* ((devenv-log-max-output 10)
+         (output "line one\nline two\nline three\n")
+         (cut (devenv--log-truncate output)))
+    (should (< (length cut) (length output)))
+    (should (string-match-p "truncated" cut))
+    ;; The cut lands on the first newline, keeping only "line one".
+    (should (string-prefix-p "line one\n" cut))
+    (should-not (string-match-p "line three" cut))))
+
+(ert-deftest devenv-test-log-renders-ansi-and-keeps-failures ()
+  "A failed entry strips ANSI escapes but keeps the trace text."
+  (let ((devenv-log-buffer-name " *devenv-test-log*"))
+    (unwind-protect
+        (progn
+          (devenv--log "/p/" '("devenv" "-q" "info") 1
+                       "\e[31m× boom\e[0m\ntrace line\n")
+          (with-current-buffer devenv-log-buffer-name
+            (let ((s (buffer-string)))
+              (should-not (string-search "\e[31m" s))
+              (should (string-search "× boom" s))
+              (should (string-search "trace line" s))
+              (should (string-search "✗ 1" s)))))
+      (when (get-buffer devenv-log-buffer-name)
+        (kill-buffer devenv-log-buffer-name)))))
+
+(ert-deftest devenv-test-log-summarizes-large-success-with-expand ()
+  "Large successful JSON is summarized behind an expand button.
+Activating the button replaces the summary with pretty JSON."
+  (let ((devenv-log-buffer-name " *devenv-test-log*")
+        (devenv-log-max-output 100))
+    (unwind-protect
+        (progn
+          (devenv--log "/p/" '("devenv" "-q" "print-dev-env" "--json") 0
+                       (concat "{\"data\":\"" (make-string 200 ?x) "\",\"n\":7}"))
+          (with-current-buffer devenv-log-buffer-name
+            (should (string-search "<output:" (buffer-string)))
+            (let ((btn (next-button (point-min))))
+              (should btn)
+              (button-activate btn))
+            (let ((s (buffer-string)))
+              (should-not (string-search "<output:" s))
+              (should (string-search "\n  \"n\": 7" s)))))
+      (when (get-buffer devenv-log-buffer-name)
+        (kill-buffer devenv-log-buffer-name)))))
+
 (provide 'devenv-test)
 ;;; devenv-test.el ends here
