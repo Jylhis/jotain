@@ -442,12 +442,37 @@ fmt:
 # Inputs shared between flake.nix and devenv.yaml — both locks must agree on these revs.
 shared_inputs := "nixpkgs treefmt-nix emacs-overlay"
 
-# Update flake inputs and sync matching devenv.yaml URLs to the new revs.
+# Update flake inputs, then sync devenv.yaml/devenv.lock to the new revs.
 [group('pins')]
 update:
     #!/usr/bin/env bash
     set -euo pipefail
     nix flake update
+    just sync-devenv all
+    echo "Done."
+
+# Sync devenv.yaml/devenv.lock to the revs already in flake.lock.
+[group('pins')]
+sync-devenv scope="shared":
+    #!/usr/bin/env bash
+    # Deliberately does NOT run `nix flake update`, so it is safe on a
+    # Dependabot PR — those bump flake.lock alone, and
+    # .github/workflows/sync-devenv.yml runs exactly this recipe to make
+    # such a PR self-consistent.
+    #
+    # scope=shared (default) re-locks only the shared inputs. scope=all
+    # re-resolves every devenv input including the unpinned `devenv`
+    # module input itself, which is what `just update` has always done —
+    # fine with a human reading the diff, but unreviewed drift in an
+    # automated commit.
+    set -euo pipefail
+    case "{{ scope }}" in
+        shared | all) ;;
+        *)
+            echo "ERROR: scope must be 'shared' or 'all', got '{{ scope }}'" >&2
+            exit 1
+            ;;
+    esac
     tmpfile=$(mktemp)
     cp devenv.yaml "$tmpfile"
     for input in {{ shared_inputs }}; do
@@ -464,37 +489,21 @@ update:
         rm -f "$tmpfile.bak"
     done
     mv "$tmpfile" devenv.yaml
-    devenv update
-    echo "Done."
+    if [ "{{ scope }}" = "all" ]; then
+        devenv update
+    else
+        for input in {{ shared_inputs }}; do
+            devenv update "$input"
+        done
+    fi
 
 # Verify that flake.lock and devenv.lock agree on every shared input's rev.
 [group('pins')]
 verify:
     #!/usr/bin/env bash
+    # Shares one implementation with the `locks-in-sync` flake check.
     set -euo pipefail
-    fail=0
-    for input in {{ shared_inputs }}; do
-        flake_node=$(jq -r ".nodes.root.inputs.\"$input\" // empty" flake.lock)
-        devenv_node=$(jq -r ".nodes.root.inputs.\"$input\" // empty" devenv.lock)
-        if [ -z "$flake_node" ] || [ -z "$devenv_node" ]; then
-            echo "FAIL: $input missing from a lock file's root inputs"
-            echo "  flake node:  ${flake_node:-<missing>}"
-            echo "  devenv node: ${devenv_node:-<missing>}"
-            fail=1
-            continue
-        fi
-        flake_rev=$(jq -r ".nodes.\"$flake_node\".locked.rev" flake.lock)
-        devenv_rev=$(jq -r ".nodes.\"$devenv_node\".locked.rev" devenv.lock)
-        if [ "$flake_rev" != "$devenv_rev" ]; then
-            echo "FAIL: $input revs diverged"
-            echo "  flake:  $flake_rev"
-            echo "  devenv: $devenv_rev"
-            fail=1
-        else
-            echo "OK: $input -> $flake_rev"
-        fi
-    done
-    exit $fail
+    SHARED_INPUTS="{{ shared_inputs }}" bash scripts/verify-locks.sh .
 
 # Re-vendor website/public/ds from the jylhis/design rev pinned in
 # nix/design-pin.nix — the same pin the Emacs themes are built from.

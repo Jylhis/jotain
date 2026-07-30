@@ -181,6 +181,37 @@ in
         touch $out
       '';
 
+  # ── flake.lock and devenv.lock must pin the same shared revs ─────
+  #
+  # nix flake check never reads devenv.lock, so without this check the
+  # only gate on lock drift is PR CI's `just verify` step — and nothing
+  # at all guards pushes to main/next. Dependabot's "nix" ecosystem
+  # bumps flake.lock alone, which is exactly how the two drift apart.
+  # Same script the Justfile recipe runs, so the two can't disagree.
+  locks-in-sync =
+    pkgs.runCommandLocal "check-locks-in-sync"
+      {
+        inherit src;
+        nativeBuildInputs = [ pkgs.jq ];
+      }
+      ''
+        # Checked separately so an untracked/renamed script reports
+        # itself instead of masquerading as lock drift.
+        if [ ! -f "$src/scripts/verify-locks.sh" ]; then
+          echo "scripts/verify-locks.sh is missing from the flake source." >&2
+          echo "If you just created it, git add it — the flake source is" >&2
+          echo "tracked files only." >&2
+          exit 1
+        fi
+        if ! bash "$src/scripts/verify-locks.sh" "$src"; then
+          echo "" >&2
+          echo "flake.lock and devenv.lock disagree on a shared input's rev." >&2
+          echo "Re-sync them with: just sync-devenv" >&2
+          exit 1
+        fi
+        touch $out
+      '';
+
   # ── Home Manager module evaluation ───────────────────────────────
   module-eval =
     pkgs.runCommandLocal "check-module-eval"
