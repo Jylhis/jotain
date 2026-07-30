@@ -38,77 +38,24 @@
 ;; `M-x customize' has somewhere to scribble without touching init.el.
 (setq custom-file (locate-user-emacs-file "var/custom.el"))
 
-;; Package archive fetching is OPTIONAL and must never block startup or
-;; crash the daemon.  Nix (and, in dev, the devenv shell) provides every
-;; package this config `:ensure's, so a fresh archive download is only
-;; needed for ad-hoc hand installs.  Two rules keep it cheap:
+;; Package archives are registered above but never fetched on the startup
+;; path.  Nix (and, in dev, the devenv shell) provides every package this
+;; config `:ensure's, so a launch-time archive download buys nothing: it
+;; slows startup and, on a flaky network, risks taking a daemon with it.
 ;;
-;;   1. The "package is missing" case is left to package.el itself:
-;;      `package-install' calls `package--archives-initialize', which
-;;      reads the on-disk archive cache (no network) and only refreshes
-;;      when that cache is genuinely empty.  We add nothing for it.
-;;   2. The "cache is stale" case is handled here, in the background,
-;;      once Emacs is idle, and only when the newest cached
-;;      `archive-contents' is older than `jotain-package-refresh-max-age'
-;;      (or an archive has no cache at all).
+;; Refreshes happen exactly where they are needed, all of it package.el's
+;; own behaviour:
 ;;
-;; The background refresh is async and wrapped in `with-demoted-errors',
-;; so a dead network downgrades to a log line instead of a fatal error.
-;; Per-host opt-out via the JOTAIN_NO_PACKAGE_REFRESH env var (e.g. set it
-;; in the systemd unit on offline machines), no need to edit this shared
-;; config.
+;;   * `package-install' (including the `:ensure t' path) calls
+;;     `package--archives-initialize', which reads the on-disk cache and
+;;     downloads only when that cache is genuinely empty.
+;;   * `M-x package-refresh-contents' / `M-x list-packages' refresh on
+;;     demand, when the user asks for it.
 ;;
-;; Why a disk-mtime check and not `package-archive-contents': this config
-;; sets `package-quickstart' (see early-init.el), so `package-activate-all'
-;; never runs the full `package-initialize' and `package-archive-contents'
-;; is nil on every startup.  A guard on that variable would therefore fire
-;; a refresh on every launch; the cache files on disk are the reliable
-;; signal for "when did we last refresh".
-(defvar jotain-refresh-package-archives
-  (not (getenv "JOTAIN_NO_PACKAGE_REFRESH"))
-  "When non-nil, warm package archives in the background after startup.")
-
-(defvar jotain-package-refresh-max-age (* 7 24 60 60) ; 7 days
-  "Seconds before the cached package archives are considered stale.
-The background warm-up refreshes archives only when the newest cached
-`archive-contents' file is older than this, or when a configured archive
-has no cached file at all.")
-
-(defun jotain--package-archives-stale-p ()
-  "Return non-nil when the on-disk package archive cache is missing or old.
-Missing means some archive in `package-archives' lacks a cached
-`archive-contents'; old means the newest cached file predates
-`jotain-package-refresh-max-age'."
-  (let ((files (mapcar (lambda (archive)
-                         (expand-file-name
-                          (format "archives/%s/archive-contents" (car archive))
-                          package-user-dir))
-                       package-archives)))
-    (or (seq-some (lambda (f) (not (file-exists-p f))) files)
-        (> (- (float-time)
-              (seq-max (mapcar (lambda (f)
-                                 (float-time
-                                  (file-attribute-modification-time
-                                   (file-attributes f))))
-                               files)))
-           jotain-package-refresh-max-age))))
-
-;; Warm the archive cache in the background once Emacs is idle and only
-;; when it is actually stale, so the next hand install doesn't pay the
-;; network cost.  Async download + demoted errors: never blocks the
-;; daemon, never fails the service.
-(defun jotain--refresh-package-archives-maybe ()
-  "Refresh the package archive cache in the background when it is stale."
-  (when (jotain--package-archives-stale-p)
-    (with-demoted-errors "jotain: background package refresh failed: %S"
-      (package-refresh-contents t))))
-
-(defun jotain--schedule-package-refresh ()
-  "Schedule a background archive refresh for the next idle moment."
-  (run-with-idle-timer 2 nil #'jotain--refresh-package-archives-maybe))
-
-(when jotain-refresh-package-archives
-  (add-hook 'emacs-startup-hook #'jotain--schedule-package-refresh))
+;; There was a staleness-gated background warm-up here.  It fired on every
+;; fresh host (an empty `elpa/archives/' counts as stale) and every 7 days
+;; after — i.e. on exactly the Nix deployments where nothing was missing.
+;; Don't add it back.
 
 (require 'init-core)         ; GC, encoding, var/ paths, sane defaults
 (require 'init-keys)         ; Global keymap and leader-key setup
