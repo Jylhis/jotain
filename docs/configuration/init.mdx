@@ -10,7 +10,7 @@ description: Main Emacs configuration entry point
 1. Register MELPA and NonGNU ELPA as fallback archives for anything Nix does not ship.
 2. Put `lisp/` on the load-path.
 3. Point `custom-file` at `var/custom.el` so `M-x customize` has somewhere to scribble.
-4. `require` each module in the right order. Archive refresh is *not* on the startup path: a background refresh runs on an idle timer only when the newest cached `archive-contents` is older than 7 days (or an archive has no cache at all); set `JOTAIN_NO_PACKAGE_REFRESH` to opt out entirely.
+4. `require` each module in the right order. Archive refresh is *not* on the startup path — there is no background warm-up at all; archives are fetched only on demand.
 
 Everything else — GC, encoding, theme, modeline, keybindings, package configuration — lives in `early-init.el` or one of the `lisp/init-*.el` modules.
 
@@ -23,6 +23,13 @@ Everything else — GC, encoding, theme, modeline, keybindings, package configur
 ```
 
 Nix provides most packages via `load-path`, so `use-package` finds them without touching the network. The archives above only come into play for packages that Nix does not ship.
+
+Registering an archive performs no I/O, and nothing in the config refreshes the archive index at launch. A download happens only when it is actually needed:
+
+- `package-install` — including the `:ensure t` path — calls `package--archives-initialize`, which reads the on-disk cache under `elpa/archives/` and downloads only when that cache is empty.
+- `M-x package-refresh-contents` and `M-x list-packages` refresh when you ask them to.
+
+So a fresh Nix deployment, where every `:ensure`d package is already on `load-path`, starts up without contacting MELPA at all.
 
 ## Load path
 
