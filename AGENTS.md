@@ -31,4 +31,4 @@ Commits use a `scope: subject` convention with a short, imperative subject — e
 
 ## Security & Configuration Tips
 
-`flake.lock` is the source of truth for pinned inputs. When updating pins, use `just update` and then `just verify` to keep `flake.lock` and `devenv.lock` aligned. Do not commit generated state such as `elpa/`, `var/`, `result*`, or compiled `*.elc` files.
+`flake.lock` is the source of truth for pinned inputs. When updating pins, use `just update` and then `just verify` to keep `flake.lock` and `devenv.lock` aligned. `just sync-devenv` is the sync half alone, for when `flake.lock` moved without a `just update` — Dependabot's nix PRs are exactly that case, and `.github/workflows/sync-devenv.yml` runs it on them automatically so they land green. Lock drift is enforced by the `locks-in-sync` flake check as well as the PR CI step. Do not commit generated state such as `elpa/`, `var/`, `result*`, or compiled `*.elc` files.
