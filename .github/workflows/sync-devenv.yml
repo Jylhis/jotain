@@ -54,12 +54,18 @@ jobs:
       BRANCH: ${{ github.head_ref || github.ref_name }}
     steps:
       # pull_request checks out refs/pull/N/merge, which is detached and
-      # unpushable — take the PR head branch instead, with the PAT, so
-      # the persisted credentials authorize the push below.
+      # unpushable — take the PR head branch instead.
+      #
+      # Checkout deliberately uses the default read-only GITHUB_TOKEN and
+      # persist-credentials: false. Passing the PAT here would write it
+      # into .git/config for every later step, exposing a repository-write
+      # credential to two third-party actions and to `devenv update`,
+      # which evaluates and builds arbitrary Nix code from flake inputs.
+      # The PAT is injected only in the push step below.
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.head_ref || github.ref_name }}
-          token: ${{ secrets.DEVENV_SYNC_TOKEN }}
+          persist-credentials: false
 
       - uses: cachix/install-nix-action@v31
         with:
@@ -84,6 +90,12 @@ jobs:
       # out of scope. This guard is also what terminates the
       # push -> synchronize -> sync cycle: the second run finds no diff.
       - name: Commit and push if anything drifted
+        env:
+          # Scoped to this step alone — see the checkout comment above.
+          # Passed in the push URL rather than a persisted credential or
+          # an http.extraheader: Actions masks raw secret values in logs,
+          # but not a base64-encoded transformation of one.
+          SYNC_TOKEN: ${{ secrets.DEVENV_SYNC_TOKEN }}
         run: |
           if git diff --quiet -- devenv.yaml devenv.lock; then
             echo "devenv pins already match flake.lock — nothing to push."
@@ -101,7 +113,14 @@ jobs:
             -m 'build(deps): sync devenv pins with flake.lock' \
             -m "Dependabot's nix updates bump flake.lock only. Re-run the sync half of \`just update\` so devenv.yaml and devenv.lock pin the same revs for nixpkgs, treefmt-nix and emacs-overlay, and \`just verify\` passes." \
             -m '[dependabot skip]'
-          git push origin "HEAD:${BRANCH}"
+          if [ -z "${SYNC_TOKEN:-}" ]; then
+            echo "DEVENV_SYNC_TOKEN is not set. It must exist in BOTH the" >&2
+            echo "Actions and Dependabot secret stores — Dependabot-triggered" >&2
+            echo "runs cannot read Actions secrets, and the follow-up" >&2
+            echo "synchronize run cannot read Dependabot secrets." >&2
+            exit 1
+          fi
+          git push "https://x-access-token:${SYNC_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${BRANCH}"
 
       # Belt and braces: fail loudly if the sync did not converge.
       - name: Verify both locks now agree
