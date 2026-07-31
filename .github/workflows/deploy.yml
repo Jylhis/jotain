@@ -1,12 +1,19 @@
 # Full validation + deploy for protected branches.
 #
-# On push to main:  check (full nix flake check) → test (devenv test) →
-#                   build-pages → deploy-pages.  GitHub Pages publishes
-#                   the option-reference docs and the jotain.info
-#                   manual; the jylhis cachix cache is repopulated with
-#                   any newly built artifacts.
+# On push to main:  check (full nix flake check) → test (devenv test),
+#                   then two independent publishes.  deploy-site pushes
+#                   the built site to the `site` branch, which Cloudflare
+#                   deploys as jotain.j10s.io; build-pages → deploy-pages
+#                   publishes the option-reference docs and the
+#                   jotain.info manual to GitHub Pages.  The jylhis
+#                   cachix cache is repopulated with any newly built
+#                   artifacts.
 #
-# On push to next:  check + test only (no Pages deploy).
+# On push to next:  check + test only (no deploys).
+#
+# Every `uses:` here must be github-owned or match cachix/*: the repo
+# restricts Actions to those, and a disallowed action fails the entire
+# run at startup with no logs.  Reach for a `run:` step instead.
 #
 # This workflow is the only place where heavy artifacts (full grammar
 # distribution, jotainInfo, options-doc) are re-validated and pushed
@@ -102,23 +109,17 @@ jobs:
           # jotainEmacs (emacs-unstable base, cached on nix-community).
           extraPullNames: nix-community
 
-      - name: Build site
-        run: nix build .#site -o result-site
-
-      - name: Assemble site branch payload
-        run: |
-          mkdir -p site-dist
-          cp -rL result-site/. site-dist/
-          chmod -R u+w site-dist
-
-      - name: Push to site branch
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: site
-          publish_dir: site-dist
-          force_orphan: true
-          commit_message: "site: build from ${{ github.sha }}"
+      # `just deploy-site` builds .#site and force-pushes the output as
+      # an orphan commit, using the credentials actions/checkout wrote
+      # into the local git config. Deliberately not a third-party
+      # publish action: this repo's Actions policy allows only
+      # github-owned and cachix/* actions, and a disallowed `uses:`
+      # fails the whole workflow at startup, not just its own job.
+      - name: Build and publish to the site branch
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: nix run --inputs-from . nixpkgs#just -- deploy-site
 
   build-pages:
     name: Build docs
