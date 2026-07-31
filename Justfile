@@ -304,7 +304,12 @@ screenshot out="var/screenshots/headless.png":
     out="{{out}}"
     case "$out" in /*) ;; *) out="{{config_dir}}/$out" ;; esac
     mkdir -p "$(dirname "$out")"
-    JOTAIN_SCREENSHOT_OUT="$out" timeout 600 xvfb-run -a -s '-screen 0 1920x1080x24' \
+    # JOTAIN_NO_PACKAGE_REFRESH: init.el warms the package archives on a
+    # 2-second idle timer, and a headless capture is idle from the moment
+    # init finishes — so on a stale or missing cache the refresh fires one
+    # second before the capture and lands in the frame.
+    JOTAIN_SCREENSHOT_OUT="$out" JOTAIN_NO_PACKAGE_REFRESH=1 \
+    timeout 600 xvfb-run -a -s '-screen 0 1920x1080x24' \
         ./result/bin/emacs --init-directory="{{config_dir}}" \
         --eval '(run-at-time 3 nil (lambda ()
                   (condition-case err
@@ -314,6 +319,30 @@ screenshot out="var/screenshots/headless.png":
                            (kill-emacs 2)))))'
     test -s "$out" || { echo "FAIL: no screenshot written"; exit 1; }
     echo "Screenshot → $out"
+
+# Headless showcase: build Emacs, launch under Xvfb with this config, and
+# capture every scene in etc/showcase.el under both Jylhis themes into DIR
+# (one PNG per scene per theme). Linux only; needs xvfb-run. Same cold-cache
+# caveat as `screenshot` — raise the timeout if the first build is slow.
+[group('build')]
+[linux]
+showcase dir="var/showcase":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    command -v xvfb-run >/dev/null 2>&1 || {
+        echo "xvfb-run not on PATH — enter the devenv shell (direnv/devenv shell)"; exit 1; }
+    just build
+    out="{{dir}}"
+    case "$out" in /*) ;; *) out="{{config_dir}}/$out" ;; esac
+    mkdir -p "$out"
+    JOTAIN_SHOWCASE_DIR="$out" JOTAIN_NO_PACKAGE_REFRESH=1 \
+    timeout 900 xvfb-run -a -s '-screen 0 1920x1080x24' \
+        ./result/bin/emacs --init-directory="{{config_dir}}" \
+        --load "{{config_dir}}/etc/showcase.el" \
+        --eval '(run-at-time 3 nil (function jotain-showcase-batch))'
+    count=$(find "$out" -name '*.png' -size +0c | wc -l)
+    test "$count" -gt 0 || { echo "FAIL: no images written"; exit 1; }
+    echo "Showcase → $out ($count images)"
 
 
 # Build option reference documentation (HTML for GitHub Pages).

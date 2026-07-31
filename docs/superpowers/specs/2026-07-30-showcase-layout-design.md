@@ -189,6 +189,32 @@ built Emacs and a display).
 - TTY capture. Review finding 3 wants a terminal frame, but `x-export-frames`
   cannot produce one; that needs a different mechanism (a terminal emulator
   screenshot, or `ansi-term` capture) and is its own piece of work.
-- A per-feature gallery. One dense frame was chosen; the spec/driver split
-  leaves room for named scenes if a gallery is wanted later.
+- Wiring the PNGs into the README or the site build.
+
+## Addendum — what actually shipped (2026-07-31)
+
+The design above called for **one dense frame**. That was changed to a **set of
+scenes** on request, and the scenes were then captured for real. What changed:
+
+- `jotain-showcase-scenes` is an alist of seven named scenes — `code`,
+  `completion`, `popup`, `files`, `vc`, `org`, `overview` — each captured under
+  both themes, so 14 PNGs rather than 2. The dense frame survives as the
+  `overview` scene.
+- Transient scenes (`completion`, `popup`) take the capture thunk as an
+  argument and capture themselves, since the UI they exist to show only lives
+  inside a command that has not returned.
+- **`jotain-screenshot` cannot capture a child frame.** `x-export-frames`
+  exports one frame's own contents, so corfu's popup — a separate child frame —
+  is absent from its output. `jotain-showcase-child-frame-scenes` routes those
+  scenes through ImageMagick's `import -window root`, which composites every
+  mapped window. This is a real limitation of `jotain-screenshot` worth
+  recording independently of the showcase.
+- **The `popup` scene still does not show the popup.** corfu displays from
+  `post-command-hook`, which never runs when `completion-at-point` is called
+  from a timer instead of the command loop. Driving it through
+  `execute-kbd-macro` so a real command loop iteration occurs is the likely
+  fix; untested. The scene currently captures the buffer without the popup.
+- The images were produced on a substitute Emacs, not the distribution — see
+  the capture notes committed alongside them. Findings 1, 3 and 4 of the UI
+  review are therefore still unsettled by these captures.
 - Wiring the PNGs into the README or the site build.
