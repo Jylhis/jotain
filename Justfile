@@ -365,6 +365,70 @@ serve-site: site
     python3 -m http.server -d result-site/public 8080
 
 
+# ── Site deployment ─────────────────────────────────────────────────
+
+# Remote and branch the built site is published to. Cloudflare Workers
+# Builds watches `site_branch`; override either for a test deploy.
+site_remote := "origin"
+site_branch := "site"
+
+# Builds `.#site` and force-pushes the output as a single orphan commit
+# to `site_branch`. Nothing from the source tree is carried over, so
+# the branch is exactly what Cloudflare serves: wrangler.jsonc at the
+# root, the site under public/. deploy.yml runs this on push to main.
+#
+#   just deploy-site                        # build + push to origin/site
+#   just site_branch=site-preview deploy-site
+#   DRY_RUN=1 just deploy-site              # build + commit, no push
+#
+# The commit is written with plumbing inside this repo, so the push uses
+# whatever credentials the repo already has (a local SSH remote, or the
+# token actions/checkout configured in CI).
+#
+# Build and publish the full site to the `site` deploy branch.
+[group('deploy')]
+deploy-site:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ config_dir }}"
+
+    sha=$(git rev-parse HEAD)
+    if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+        echo "warning: tracked files are modified, so the build is not $sha as committed" >&2
+    fi
+
+    out=$(nix build --no-link --print-out-paths .#site)
+
+    # Stage the store output as a work tree with its own index, then
+    # commit it parentless. -f because the store copy carries no
+    # .gitignore and a global excludes file must not eat site files.
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+    cp -rL "$out/." "$tmp/dist"
+    chmod -R u+w "$tmp/dist"
+
+    export GIT_INDEX_FILE="$tmp/index"
+    git --work-tree="$tmp/dist" add -Af "$tmp/dist"
+    tree=$(git write-tree)
+    unset GIT_INDEX_FILE
+
+    export GIT_AUTHOR_NAME="${GIT_AUTHOR_NAME:-$(git config user.name || echo jotain-site)}"
+    export GIT_AUTHOR_EMAIL="${GIT_AUTHOR_EMAIL:-$(git config user.email || echo noreply@jylhis.com)}"
+    export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
+    export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
+    commit=$(git commit-tree "$tree" -m "site: build from $sha")
+
+    if [ -n "${DRY_RUN:-}" ]; then
+        echo "DRY_RUN: built $commit from $sha, not pushing. Branch root:"
+        git ls-tree --name-only "$commit" | sed 's/^/  /'
+        echo "  ($(git ls-tree -r --name-only "$commit" | wc -l) files total)"
+        exit 0
+    fi
+
+    git push --force "{{ site_remote }}" "$commit:refs/heads/{{ site_branch }}"
+    echo "Deployed $sha → {{ site_remote }}/{{ site_branch }} ($commit)"
+
+
 # ── Format ──────────────────────────────────────────────────────────
 
 # Format all Nix files.

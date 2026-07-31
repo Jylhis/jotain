@@ -48,10 +48,12 @@ adds everything the repo can generate:
 
 ## Deployment
 
-`deploy.yml` builds `.#site` on every push to main and publishes the
-result to the **`site` branch** (wrangler.jsonc at the root, the site
-under `public/`). Deployment itself happens on the Cloudflare side via
-the GitHub integration:
+`deploy.yml` runs `just deploy-site` on every push to main: it builds
+`.#site` and force-pushes the output to the **`site` branch** as an
+orphan commit (wrangler.jsonc at the root, the site under `public/`).
+The same recipe publishes by hand, and `DRY_RUN=1 just deploy-site`
+builds and reports without pushing. Deployment itself happens on the
+Cloudflare side via the GitHub integration:
 
 - **Workers Builds**: connect this repo in the Cloudflare dashboard,
   set the production branch to `site` and the root directory to `/` —
