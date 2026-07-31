@@ -138,7 +138,22 @@
   (when (fboundp 'startup-redirect-eln-cache)
     (startup-redirect-eln-cache
      (convert-standard-filename
-      (expand-file-name "var/eln-cache/" user-emacs-directory)))))
+      (expand-file-name "var/eln-cache/" user-emacs-directory))))
+  ;; Store-resident AOT .eln for *this config*, produced by
+  ;; nix/config-compiled.nix and pointed here by module.nix's emacs
+  ;; wrapper when `services.jotain.nativeCompile.enable' is on. Unset
+  ;; everywhere else (a plain `just run-built'), where JIT native
+  ;; compilation into var/eln-cache above keeps working unchanged.
+  ;;
+  ;; APPEND, never prepend: `startup-redirect-eln-cache' above `setcar's
+  ;; the head of the list, so anything placed at position 0 would be
+  ;; silently dropped — and the head must stay the writable cache, since
+  ;; Emacs writes JIT output to the first writable entry.
+  (let ((store (getenv "JOTAIN_ELN_PATH")))
+    (when (and store (file-directory-p store))
+      (add-to-list 'native-comp-eln-load-path
+                   (file-name-as-directory store)
+                   t))))
 
 ;; Tree-sitter grammars come from Nixpkgs' own site-start.el, which sets
 ;; `treesit-extra-load-path' to the bundled grammar directory in the full

@@ -8,10 +8,15 @@
   # `packages.emacs-mainline`.
   variant ? "unstable",
   # When true, bundle only the tree-sitter grammars this config actually
-  # routes (~26) instead of the full set (~275). Smaller closure / much
-  # less to build from source. Default false keeps with-all-grammars so
-  # the `jotain-emacs-full` derivation hash is unchanged and the binary
-  # cache still hits — see flake.nix `emacs-lite` for the opt-in path.
+  # routes (~26) instead of the full set (~275).
+  #
+  # This is a closure/download saving, NOT a build saving: every grammar
+  # is its own derivation upstream, and both `with-all-grammars' and
+  # `with-grammars' are linkFarms over the *same* store paths — so
+  # narrowing or widening the list rebuilds a `mkdir' + `ln -s' and never
+  # recompiles a parser. Default false keeps with-all-grammars so the
+  # `jotain-emacs-full` derivation hash is unchanged and the binary cache
+  # still hits — see flake.nix `emacs-lite` for the opt-in path.
   curatedGrammars ? false,
 }:
 final: _prev:

@@ -88,9 +88,21 @@ quick *ARGS:
 # ── Check / compile ─────────────────────────────────────────────────
 
 # Run all checks: eval, flake, devenv, linting.
+#
+# Does NOT build the jylhis Meson fork — that has no cache parity, so it
+# compiled a whole Emacs from source here while PR CI never built it.
+# It runs in deploy.yml on protected branches; `just check-jylhis` runs
+# it on demand.
 [group('check')]
 check:
     nix flake check
+
+# Build the jylhis Meson fork and smoke-test it. Expect a from-source
+# Emacs build unless the jylhis cachix already has this revision.
+[group('check')]
+check-jylhis:
+    nix build --no-link --print-build-logs .#jylhis-emacs
+    nix run --print-build-logs .#jylhis-emacs -- --batch --eval '(princ emacs-version)'
 
 # Equivalent coverage lives in the `elisp-lint` flake check; `just check`
 # runs it via `nix flake check`.
@@ -116,21 +128,20 @@ compile:
 #       --eval '(byte-recompile-directory "{{config_dir}}/lisp" 0 t)' \
 #       -f batch-byte-compile early-init.el init.el
 
-# Equivalent AOT coverage belongs in the Nix/home-manager deploy of the
-# config so the daemon loads precompiled .eln instead of JIT-compiling
-# each module every session (the eln-cache otherwise holds only a
-# trampoline). This recipe is the interim, in-tree way to warm it.
 # [DISABLED] Native-compile every config module ahead of time.
+#
+# This recipe's premise — that AOT coverage "belongs in the Nix /
+# home-manager deploy of the config" — is now implemented, so there is
+# nothing interim left to warm in-tree. nix/config-compiled.nix takes a
+# `nativeCompile' flag that emits .eln into the store, and module.nix
+# exposes it as `services.jotain.nativeCompile.enable'. Read the gate
+# comment in nix/config-compiled.nix before turning it on.
 [group('check')]
 compile-native:
-    @echo "just compile-native is disabled — emacs is not in the devenv shell."
-    @echo "Try: just run-built  (builds Emacs via Nix, then launches it)"
+    @echo "just compile-native is disabled — AOT now happens in the Nix build."
+    @echo "Enable it with: services.jotain.nativeCompile.enable = true;"
+    @echo "See the gate command in nix/config-compiled.nix first."
     @exit 1
-# Original:
-#   emacs --batch --init-directory={{config_dir}} \
-#       --eval '(setq native-comp-speed 2)' \
-#       --eval '(native-compile-async (list "{{config_dir}}/early-init.el" "{{config_dir}}/init.el" "{{config_dir}}/lisp") (quote recursively))' \
-#       --eval '(while (or comp-files-queue (> (comp-async-runnings) 0)) (sleep-for 1))'
 
 # Run the ERT tests under test/ via the flake check (the dev shell has
 # no emacs; the check builds one). Direct equivalent once Emacs is back
