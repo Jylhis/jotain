@@ -51,10 +51,14 @@ around that — Elisp, Org, dired and diff need no grammar.
 ### What the images *do* legitimately show
 
 The theme itself — background, foreground, syntax colours, the bronze accent —
-plus `tab-bar` with two tabs, `display-line-numbers`, `hl-line`, `show-paren`,
-`rainbow-delimiters`, `diff-hl`, `flymake`, `eldoc`, the `devenv` modeline
-segment, and the vertico + marginalia + orderless minibuffer stack. The
-`completion` scene is the strongest of the set.
+plus `display-line-numbers`, `hl-line`, `show-paren`, `rainbow-delimiters`,
+`diff-hl`, `flymake`, `eldoc`, the `devenv` modeline segment, and the
+vertico + marginalia + orderless minibuffer stack. The `completion` scene is
+the strongest of the set.
+
+No tab bar appears: `tab-bar-show` is 1, so the bar stays hidden at a single
+tab. The scenes deliberately do not create a second tab to force it into view —
+that would show a workspace setup that isn't in use.
 
 ### Known defect
 

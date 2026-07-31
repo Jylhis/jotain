@@ -80,8 +80,7 @@ reimplementing `x-export-frames`.
 One 1920×1080 frame:
 
 ```
-┌─ tab-bar: jotain │ notes ──────────────────────────────┐
-├──────────────────────────┬─────────────────────────────┤
+┌──────────────────────────┬─────────────────────────────┐
 │ breadcrumb header-line   │  dirvish                    │
 │ lisp/init-ui.el          │  (nerd-icons, vc-state,     │
 │   line numbers,          │   file-size / file-time)    │
@@ -96,8 +95,11 @@ One 1920×1080 frame:
 └────────────────────────────────────────────────────────┘
 ```
 
-**Two tabs.** `tab-bar-show 1` (`lisp/init-tabs.el:30`) hides the bar with only
-one tab, so a single-tab scene silently loses a whole UI element.
+**No tabs.** An earlier draft created a second tab so the bar would render,
+since `tab-bar-show 1` (`lisp/init-tabs.el:30`) hides it at a single tab. That
+was removed: fabricating a workspace that isn't in use misrepresents the setup,
+and a screenshot that stages its own subject is worth less than one that
+doesn't.
 
 **An Elisp file in the main window**, not Nix: it exercises
 `rainbow-delimiters` (hooked to `emacs-lisp-mode` only, `init-ui.el:369-370`)
@@ -173,7 +175,7 @@ Automated testing is not meaningful here — the artifact is a picture, and the
 The check is manual:
 
 1. `just showcase` produces two non-empty PNGs.
-2. Both are visually inspected for: tab bar present with two tabs, doom-modeline
+2. Both are visually inspected for: doom-modeline
    with glyphs, breadcrumb header-line, line numbers, indent bars, corfu popup
    with nerd-icons, dirvish icons, magit, org-modern styling.
 3. The light PNG settles review findings 2 and 4; the pair together settles

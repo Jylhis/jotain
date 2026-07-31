@@ -187,15 +187,10 @@ where magit is absent."
         (goto-char (point-min))))))
 
 (defun jotain-showcase-scene-overview ()
-  "Four windows and a tab bar: the whole editor at once."
-  (jotain-showcase--step "overview tabs"
-    (when (fboundp 'tab-bar-new-tab)
-      ;; `tab-bar-show' is 1, so the bar is invisible below two tabs.
-      (unless (cdr (tab-bar-tabs))
-        (tab-bar-new-tab)
-        (tab-bar-rename-tab "notes"))
-      (tab-bar-select-tab 1)
-      (tab-bar-rename-tab "jotain")))
+  "Several windows at once: the whole editor in one frame.
+No tabs are created.  `tab-bar-show' is 1, so the bar stays hidden at a
+single tab — which is the honest default; fabricating a second tab just
+to make the bar appear would show a workspace setup that isn't in use."
   (jotain-showcase--visit "lisp/init-completion.el" 400)
   (let ((right (jotain-showcase--step "split right" (split-window-right 110))))
     (when right
