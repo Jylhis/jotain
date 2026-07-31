@@ -1,0 +1,127 @@
+# Keep Dependabot's nix PRs self-consistent.
+#
+# The "nix" ecosystem updates flake.lock and nothing else, but
+# devenv.yaml pins the three shared inputs (nixpkgs, treefmt-nix,
+# emacs-overlay) by rev and devenv.lock records them a second time. A
+# raw Dependabot PR therefore always fails ci.yml's first step
+# (`just verify`) until someone re-runs the sync half of `just update`
+# by hand. This workflow does it automatically, so the PR lands green.
+#
+# Why a PAT and not GITHUB_TOKEN: a push made with GITHUB_TOKEN does not
+# start a fresh ci.yml run (workflow_dispatch and repository_dispatch
+# are the only exceptions), so the synced head would end up with no CI
+# result at all, or an approval-gated one. DEVENV_SYNC_TOKEN is a
+# fine-grained PAT scoped to this repository with Contents: read+write
+# and nothing else. It must exist in BOTH secret stores:
+# Dependabot-triggered runs cannot see Actions secrets, and the
+# follow-up synchronize run (actor = the PAT owner) cannot see
+# Dependabot secrets.
+name: Sync devenv pins
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  # For testing against a hand-made branch without waiting for Dependabot.
+  workflow_dispatch:
+
+# A Dependabot rebase supersedes the run it interrupts — that run's push
+# would be rejected as non-fast-forward anyway.
+concurrency:
+  group: devenv-sync-${{ github.ref }}
+  cancel-in-progress: true
+
+# Dependabot-triggered runs get a read-only token by default. The push
+# below uses the PAT, so this only needs to cover the checkout.
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync devenv pins
+    # Guard on head_ref, not github.actor: the actor becomes the PAT
+    # owner on the synchronize event this job's own push creates. The
+    # same-repo test keeps fork PRs (which get no secrets) from entering
+    # the job at all. No `paths:` filter — a path-filtered workflow
+    # reports no run, which becomes a permanently pending required check
+    # if this is ever added to branch protection.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       startsWith(github.head_ref, 'dependabot/nix/'))
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    env:
+      BRANCH: ${{ github.head_ref || github.ref_name }}
+    steps:
+      # pull_request checks out refs/pull/N/merge, which is detached and
+      # unpushable — take the PR head branch instead.
+      #
+      # Checkout deliberately uses the default read-only GITHUB_TOKEN and
+      # persist-credentials: false. Passing the PAT here would write it
+      # into .git/config for every later step, exposing a repository-write
+      # credential to two third-party actions and to `devenv update`,
+      # which evaluates and builds arbitrary Nix code from flake inputs.
+      # The PAT is injected only in the push step below.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          persist-credentials: false
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - uses: cachix/cachix-action@v17
+        with:
+          name: jylhis
+          extraPullNames: devenv,nix-community
+
+      - name: Install devenv.sh
+        run: nix profile add nixpkgs#devenv
+
+      # sync-devenv, never `just update`: update runs `nix flake update`,
+      # which would throw away the revs Dependabot just pinned. Invoked
+      # directly rather than through another recipe because `nix run`
+      # execs the binary without putting `just` on PATH.
+      - name: Sync devenv.yaml and devenv.lock to flake.lock
+        run: nix run nixpkgs#just -- sync-devenv
+
+      # The pathspec keeps .devenv/ scratch output and result* symlinks
+      # out of scope. This guard is also what terminates the
+      # push -> synchronize -> sync cycle: the second run finds no diff.
+      - name: Commit and push if anything drifted
+        env:
+          # Scoped to this step alone — see the checkout comment above.
+          # Passed in the push URL rather than a persisted credential or
+          # an http.extraheader: Actions masks raw secret values in logs,
+          # but not a base64-encoded transformation of one.
+          SYNC_TOKEN: ${{ secrets.DEVENV_SYNC_TOKEN }}
+        run: |
+          if git diff --quiet -- devenv.yaml devenv.lock; then
+            echo "devenv pins already match flake.lock — nothing to push."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add devenv.yaml devenv.lock
+          # [dependabot skip] is load-bearing: Dependabot stops rebasing a
+          # PR once extra commits are pushed to it, and this trailer is
+          # the documented opt-out. Separate -m flags rather than a
+          # heredoc — a heredoc terminator cannot be indented inside a
+          # YAML block scalar.
+          git commit \
+            -m 'build(deps): sync devenv pins with flake.lock' \
+            -m "Dependabot's nix updates bump flake.lock only. Re-run the sync half of \`just update\` so devenv.yaml and devenv.lock pin the same revs for nixpkgs, treefmt-nix and emacs-overlay, and \`just verify\` passes." \
+            -m '[dependabot skip]'
+          if [ -z "${SYNC_TOKEN:-}" ]; then
+            echo "DEVENV_SYNC_TOKEN is not set. It must exist in BOTH the" >&2
+            echo "Actions and Dependabot secret stores — Dependabot-triggered" >&2
+            echo "runs cannot read Actions secrets, and the follow-up" >&2
+            echo "synchronize run cannot read Dependabot secrets." >&2
+            exit 1
+          fi
+          git push "https://x-access-token:${SYNC_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${BRANCH}"
+
+      # Belt and braces: fail loudly if the sync did not converge.
+      - name: Verify both locks now agree
+        run: nix run nixpkgs#just -- verify
