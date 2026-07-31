@@ -14,9 +14,10 @@
 ;;
 ;; Environment loading is done natively by the library's own loader
 ;; (`devenv-env-global-mode', enabled below): direnv/envrc is disabled
-;; (init-prog.el), so `devenv print-dev-env' is evaluated per project and
-;; applied buffer-locally.  `devenv-env-defer-to-direnv' is set to nil so
-;; the loader owns the environment for every trusted devenv project rather
+;; (init-prog.el), so `devenv print-dev-env' is sourced per project
+;; (shellHook included, see `devenv-env-loader') and the result applied
+;; buffer-locally.  `devenv-env-defer-to-direnv' is set to nil so the
+;; loader owns the environment for every trusted devenv project rather
 ;; than deferring to a `.envrc'.  Projects must be trusted once with
 ;; `devenv-allow' (`C-c v'); until then the mode line shows devenv[!] and
 ;; no environment is applied.
