@@ -45,10 +45,9 @@
 ;;   `devenv-reload'           Refresh the environment (delegates to
 ;;                             envrc when it manages the project) and
 ;;                             offer to reconnect eglot servers.
-;;   `devenv-env-global-mode'  Optional native environment loader for
-;;                             devenv projects without direnv: applies
-;;                             `devenv print-dev-env --json' buffer-
-;;                             locally, envrc-style.
+;;   `devenv-env-global-mode'  Native environment loader: reproduces a
+;;                             terminal `devenv shell' and applies it
+;;                             buffer-locally, envrc-style.
 ;;   `devenv-eglot-setup'      Route devenv.nix buffers to the bundled
 ;;                             `devenv lsp' server (a nixd preloaded
 ;;                             with the project's devenv options) while
@@ -57,13 +56,24 @@
 ;;                             stdio server with mcp.el so gptel and
 ;;                             friends can call its tools.
 ;;
-;; Environment loading: with direnv, the recommended substrate is
-;; envrc.el plus `use devenv' in .envrc — this library detects that
-;; and stays out of the way.  `devenv-env-global-mode' exists for
-;; devenv projects without direnv; its predicate skips any project
-;; that has a .envrc, so the two loaders can never double-manage a
-;; buffer.  Buffer-local values propagate to temp buffers through
-;; inheritenv when that package is installed (envrc depends on it).
+;; Environment loading: `devenv-env-global-mode' is the native loader.
+;; It sources `devenv print-dev-env' in bash, shellHook included, and
+;; applies the result buffer-locally, so a buffer sees what a terminal
+;; `devenv shell' sees.  `devenv-env-loader' can switch to parsing the
+;; JSON form instead, which runs no project code but misses everything
+;; the shellHook sets.  Either way PATH and XDG_DATA_DIRS are layered
+;; over the login values (`devenv-env-layered-variables') and the
+;; derivation-only variables the JSON carries are dropped
+;; (`devenv-env-never-applied-variables'): applied verbatim they point
+;; TMPDIR at the build sandbox's /build, which breaks every tool that
+;; needs a temp dir, rust-analyzer's proc-macro server included.
+;;
+;; With direnv, envrc.el plus `use devenv' in .envrc is an equally good
+;; substrate: `devenv-env-defer-to-direnv' (default t) keeps the native
+;; loader out of projects that have a .envrc, so the two can never
+;; double-manage a buffer.  Buffer-local values propagate to temp
+;; buffers through inheritenv when that package is installed (envrc
+;; depends on it).
 ;;
 ;; All subprocess invocations set AI_AGENT=1 (see `devenv-extra-env'),
 ;; which puts devenv 2.1+ into quiet mode: the TUI is suppressed and
@@ -128,8 +138,80 @@ the progress TUI never interleaves with machine-readable output."
 Otherwise processes run attached in a live output buffer."
   :type 'boolean)
 
-(defcustom devenv-env-ignored-variables '("PS1" "SHLVL" "TERM" "HOME")
-  "Variables from `devenv print-dev-env' never applied to buffers."
+(defcustom devenv-env-loader 'shell
+  "How the native loader obtains a project's environment.
+
+The symbol `shell' sources `devenv print-dev-env' in bash and dumps
+the resulting environment.  This runs the project's shellHook, so
+hook-only variables (LOCALE_ARCHIVE, MANPATH, PATH additions such as
+$CARGO_HOME/bin, anything `enterShell' exports) are included, exactly
+as in a terminal shell.  Only projects trusted for auto-activation
+\(`devenv-allow') are sourced.
+
+The symbol `json' parses `devenv print-dev-env --json' and filters it
+down to what a shell would keep.  No project code runs, but the
+shellHook's effects are missing.  This is also the fallback whenever
+sourcing is unavailable or fails."
+  :type '(choice (const :tag "Source the dev-env in bash" shell)
+                 (const :tag "Parse the JSON dev-env" json)))
+
+(defconst devenv-env-never-applied-variables
+  '(;; nix's `ignoreVars' (src/nix/develop.cc): dropped from every
+    ;; `nix develop' shell, so devenv's own projection never has them.
+    ;; The TMP* family and NIX_BUILD_TOP are actively harmful — they
+    ;; name the build sandbox's /build, which does not exist on the
+    ;; host, and rust-analyzer's proc-macro server dies creating its
+    ;; temp dir under it.
+    "BASHOPTS" "HOME" "NIX_BUILD_TOP" "NIX_ENFORCE_PURITY" "NIX_LOG_FD"
+    "NIX_REMOTE" "PPID" "SHELL" "SHELLOPTS" "SSL_CERT_FILE" "TEMP"
+    "TEMPDIR" "TERM" "TMP" "TMPDIR" "TZ" "UID"
+    ;; Derivation-only stdenv variables that devenv's shellHook
+    ;; `unset's before it hands the shell over.
+    "HOST_PATH" "NIX_BUILD_CORES" "__structuredAttrs" "buildInputs"
+    "buildPhase" "builder" "depsBuildBuild" "depsBuildBuildPropagated"
+    "depsBuildTarget" "depsBuildTargetPropagated" "depsHostHost"
+    "depsHostHostPropagated" "depsTargetTarget"
+    "depsTargetTargetPropagated" "dontAddDisableDepTrack" "doCheck"
+    "doInstallCheck" "nativeBuildInputs" "out" "outputs" "patches"
+    "phases" "preferLocalBuild" "propagatedBuildInputs"
+    "propagatedNativeBuildInputs" "shell" "shellHook" "stdenv"
+    "strictDeps"
+    ;; Shell bookkeeping that means nothing in Emacs.
+    "PS1" "SHLVL" "PWD" "OLDPWD")
+  "Variables `devenv print-dev-env' reports that a shell never exports.
+The JSON form is the raw derivation build environment: a terminal
+devenv shell sees it only after nix drops its `ignoreVars' and the
+shellHook unsets the stdenv build variables.  Applying the unfiltered
+set is what makes Emacs and the terminal diverge.  Add project- or
+user-specific extras with `devenv-env-ignored-variables'.")
+
+(defcustom devenv-env-ignored-variables nil
+  "Extra variables from `devenv print-dev-env' never applied to buffers.
+Filtered on top of `devenv-env-never-applied-variables', which already
+covers everything a real devenv shell drops."
+  :type '(repeat string))
+
+(defcustom devenv-env-shell-ignored-variables
+  '("\\`_"
+    "\\`BASH_" "\\`COMP_" "\\`READLINE_" "\\`PROMPT"
+    "\\`STARSHIP_" "\\`__fish" "\\`DIRENV_" "\\`nix_saved_"
+    "\\`\\(SHELL\\|SHELLOPTS\\|BASHOPTS\\|HISTCMD\\|HISTFILE\\)\\'"
+    "\\`\\(PS[1-4]\\|MAILCHECK\\|COLUMNS\\|LINES\\|LINENO\\)\\'"
+    "\\`\\(RANDOM\\|SRANDOM\\|SECONDS\\)\\'"
+    "\\`\\(EPOCHSECONDS\\|EPOCHREALTIME\\)\\'")
+  "Regexps for variables the `shell' loader ignores when diffing.
+Mirrors devenv's own `__devenv_ignored_var' (see the shell rcfile it
+generates): interactive-shell bookkeeping that changes on its own and
+must never be pinned into a buffer's environment.  Names in
+`devenv-env-never-applied-variables' are ignored as well."
+  :type '(repeat regexp))
+
+(defcustom devenv-env-layered-variables '("PATH" "XDG_DATA_DIRS")
+  "Colon-path variables extended with, not replaced by, the global value.
+A terminal devenv shell prepends the project's entries to the ones it
+inherited (see `nix_saved_PATH' in the script devenv generates).
+Replacing them instead hides every tool outside the project profile,
+the devenv CLI itself included."
   :type '(repeat string))
 
 (defcustom devenv-env-lighter " devenv"
@@ -168,9 +250,14 @@ supported and return nil."
         (expand-file-name root)))))
 
 (defun devenv--ensure-executable ()
-  "Signal a `user-error' unless the devenv executable is on PATH.
-Return the resolved executable path."
-  (or (executable-find devenv-executable)
+  "Return the program to spawn for devenv, or signal a `user-error'.
+`devenv-executable' is returned as-is when the current `exec-path'
+resolves it, else its absolute location on the global `exec-path': a
+project's devenv profile need not contain the devenv CLI itself, so a
+buffer-local PATH must never be able to hide it."
+  (or (and (executable-find devenv-executable) devenv-executable)
+      (let ((exec-path (default-value 'exec-path)))
+        (executable-find devenv-executable))
       (user-error "Cannot find `%s' on PATH; install devenv or set \
 `devenv-executable'" devenv-executable)))
 
@@ -304,11 +391,12 @@ OUTPUT the captured text (summarized or truncated for display)."
 
 ;;;; Subprocess plumbing
 
-(defun devenv--command (args &optional global-args)
+(defun devenv--command (args &optional global-args program)
   "Return the full argv for a devenv invocation with ARGS.
 GLOBAL-ARGS are extra global flags (e.g. from the transient)
-inserted between `devenv-global-arguments' and ARGS."
-  (cons devenv-executable
+inserted between `devenv-global-arguments' and ARGS.  PROGRAM
+overrides `devenv-executable' (see `devenv--ensure-executable')."
+  (cons (or program devenv-executable)
         (append devenv-global-arguments global-args args)))
 
 (defun devenv--shell-command (argv)
@@ -325,10 +413,10 @@ inserted between `devenv-global-arguments' and ARGS."
   "Run devenv with ARGS synchronously in ROOT; return stdout.
 Waits at most `devenv-command-timeout' seconds.  A non-zero exit
 signals a `user-error' carrying the first stderr line."
-  (devenv--ensure-executable)
-  (let* ((default-directory root)
+  (let* ((program (devenv--ensure-executable))
+         (default-directory root)
          (process-environment (append devenv-extra-env process-environment))
-         (argv (devenv--command args))
+         (argv (devenv--command args nil program))
          (stdout (generate-new-buffer " *devenv-stdout*"))
          (stderr (generate-new-buffer " *devenv-stderr*")))
     (unwind-protect
@@ -382,33 +470,38 @@ nil.  Signals on malformed input."
 (defun devenv--run (root args callback &optional name)
   "Run devenv with ARGS asynchronously in ROOT.
 CALLBACK receives (EXIT-CODE OUTPUT) when the process finishes.
-NAME labels the process.  If `make-process' itself fails,
-CALLBACK still runs (with exit code 127) so callers never
-deadlock waiting for a result."
-  (devenv--ensure-executable)
+NAME labels the process.  If the executable cannot be resolved or
+`make-process' itself fails, CALLBACK still runs (with exit code
+127) so callers never deadlock waiting for a result."
   (let* ((default-directory root)
          (process-environment (append devenv-extra-env process-environment))
-         (argv (devenv--command args))
          (buffer (generate-new-buffer
                   (format " *devenv-%s*" (or name "async")))))
-    (condition-case nil
-        (make-process
-         :name (format "devenv-%s" (or name "async"))
-         :buffer buffer :command argv :noquery t :connection-type 'pipe
-         :sentinel
-         (lambda (proc _event)
-           (when (memq (process-status proc) '(exit signal))
-             (let* ((buf (process-buffer proc))
-                    (exit (process-exit-status proc))
-                    (output (if (buffer-live-p buf)
-                                (with-current-buffer buf (buffer-string))
-                              "")))
-               (devenv--log root argv exit output)
-               (when (buffer-live-p buf) (kill-buffer buf))
-               (funcall callback exit output)))))
+    (condition-case err
+        ;; Resolving the executable can signal, so it stays inside the
+        ;; guard: a caller left waiting for CALLBACK would keep its
+        ;; project marked as "environment loading" forever.
+        (let ((argv (devenv--command args nil (devenv--ensure-executable))))
+          (make-process
+           :name (format "devenv-%s" (or name "async"))
+           :buffer buffer :command argv :noquery t :connection-type 'pipe
+           :sentinel
+           (lambda (proc _event)
+             (when (memq (process-status proc) '(exit signal))
+               (let* ((buf (process-buffer proc))
+                      (exit (process-exit-status proc))
+                      (output (if (buffer-live-p buf)
+                                  (with-current-buffer buf (buffer-string))
+                                "")))
+                 (devenv--log root argv exit output)
+                 (when (buffer-live-p buf) (kill-buffer buf))
+                 (funcall callback exit output))))))
       (error
-       (when (buffer-live-p buffer) (kill-buffer buffer))
-       (funcall callback 127 "")))))
+       (let ((description (error-message-string err)))
+         (devenv--log root (devenv--command args) 127 description)
+         (when (buffer-live-p buffer) (kill-buffer buffer))
+         (message "devenv: %s" description)
+         (funcall callback 127 description))))))
 
 (defvar devenv-compilation-error-regexp-alist-alist
   '((devenv-nix-trace
@@ -427,10 +520,10 @@ deadlock waiting for a result."
   "Run devenv ARGS in ROOT through `compilation-start'.
 GLOBAL-ARGS are global CLI flags inserted before the subcommand.
 Return the compilation buffer."
-  (devenv--ensure-executable)
-  (let* ((default-directory root)
+  (let* ((program (devenv--ensure-executable))
+         (default-directory root)
          (compilation-environment devenv-extra-env)
-         (argv (devenv--command args global-args))
+         (argv (devenv--command args global-args program))
          (command (devenv--shell-command argv)))
     (devenv--log root argv 'compile nil)
     (compilation-start
@@ -1131,7 +1224,7 @@ reconnect any eglot servers so they see the new environment."
     (devenv-modeline--refresh-root root)
     (devenv--offer-eglot-reconnect root)))
 
-;;;; Native environment loader (opt-in; envrc is the default substrate)
+;;;; Native environment loader
 
 (defvar devenv-env--pending (make-hash-table :test #'equal)
   "Roots with an environment fetch in flight, mapped to buffers.")
@@ -1139,12 +1232,27 @@ reconnect any eglot servers so they see the new environment."
 (defvar devenv-env--eglot-replay nil
   "Buffers whose deferred `eglot-ensure' replays after env load.")
 
+(defmacro devenv-env--with-global-env (&rest body)
+  "Run BODY with Emacs's global environment, ignoring buffer-local values.
+The loader must probe and source from a pristine environment: a reload
+triggered from a buffer that already has the project env applied would
+otherwise stack the project's PATH on top of itself and mis-diff the
+result."
+  (declare (indent 0) (debug t))
+  `(let ((process-environment (default-value 'process-environment))
+         (exec-path (default-value 'exec-path)))
+     ,@body))
+
+(defun devenv-env--ignored-variables ()
+  "Return the variable names the loader never applies to a buffer."
+  (append devenv-env-never-applied-variables devenv-env-ignored-variables))
+
 (defun devenv-env--parse (json-string &optional ignored)
   "Parse `devenv print-dev-env --json' JSON-STRING output.
 Return a list of \"NAME=VALUE\" strings for every exported
-variable, skipping names in IGNORED (defaults to
-`devenv-env-ignored-variables')."
-  (let* ((ignored (or ignored devenv-env-ignored-variables))
+variable, skipping names in IGNORED, which overrides the default
+of `devenv-env--ignored-variables'."
+  (let* ((ignored (or ignored (devenv-env--ignored-variables)))
          (parsed (devenv--json-parse json-string))
          (variables (alist-get 'variables parsed))
          pairs)
@@ -1159,22 +1267,64 @@ variable, skipping names in IGNORED (defaults to
           (push (concat name "=" value) pairs))))
     (nreverse pairs)))
 
+(defun devenv-env--split-pair (pair)
+  "Split PAIR into a (NAME . VALUE) cons, or nil when it has no \"=\".
+A pair without \"=\" is a bare name, which Emacs reads as \"unset\"."
+  (when-let* ((idx (string-search "=" pair)))
+    (cons (substring pair 0 idx) (substring pair (1+ idx)))))
+
+(defun devenv-env--pair-value (pairs name)
+  "Return the value of NAME in the \"NAME=VALUE\" list PAIRS, or nil."
+  (let ((prefix (concat name "=")))
+    (when-let* ((pair (seq-find (lambda (p) (string-prefix-p prefix p))
+                                pairs)))
+      (substring pair (length prefix)))))
+
+(defun devenv-env--layer-value (name value)
+  "Return NAME's VALUE layered over the global environment's value.
+VALUE's entries come first, then the ones Emacs inherited, with empty
+and duplicate components dropped and the order otherwise preserved.
+The global side is read from the default `process-environment', never
+the buffer-local one, so re-applying an environment is idempotent."
+  (let ((global (getenv-internal name (default-value 'process-environment))))
+    (mapconcat #'identity
+               (delete-dups
+                (append (split-string (or value "") path-separator t)
+                        (split-string (or global "") path-separator t)))
+               path-separator)))
+
+(defun devenv-env--layer-pairs (pairs)
+  "Return PAIRS with `devenv-env-layered-variables' layered, others as-is."
+  (mapcar (lambda (pair)
+            (let ((cell (devenv-env--split-pair pair)))
+              (if (and cell (member (car cell) devenv-env-layered-variables))
+                  (concat (car cell) "="
+                          (devenv-env--layer-value (car cell) (cdr cell)))
+                pair)))
+          pairs))
+
 (defun devenv-env--path-from-pairs (pairs)
-  "Return the `exec-path' list encoded in PAIRS' PATH entry, or nil."
-  (when-let* ((path-entry (seq-find (lambda (pair)
-                                      (string-prefix-p "PATH=" pair))
-                                    pairs)))
-    (append (parse-colon-path (substring path-entry 5))
-            (list exec-directory))))
+  "Return the `exec-path' list encoded in PAIRS' PATH entry, or nil.
+`exec-directory' stays at the tail, envrc-style, so Emacs's own helper
+programs remain reachable.  PAIRS is expected to be layered already
+\(see `devenv-env--layer-pairs'), which is what keeps `exec-path' and
+the PATH subprocesses see in step."
+  (when-let* ((value (devenv-env--pair-value pairs "PATH")))
+    (delete-dups
+     (append (delq nil (parse-colon-path value)) (list exec-directory)))))
 
 (defun devenv-env--apply (buffer pairs)
-  "Apply environment PAIRS buffer-locally to BUFFER, envrc-style."
+  "Apply environment PAIRS buffer-locally to BUFFER, envrc-style.
+Layering happens here rather than in the cache, so `exec-path' and the
+PATH subprocesses see are always derived from the same string and a
+change to Emacs's own PATH is picked up on the next application."
   (when (buffer-live-p buffer)
     (with-current-buffer buffer
-      (setq-local process-environment
-                  (append pairs (default-value 'process-environment)))
-      (when-let* ((path (devenv-env--path-from-pairs pairs)))
-        (setq-local exec-path path))
+      (let ((pairs (devenv-env--layer-pairs pairs)))
+        (setq-local process-environment
+                    (append pairs (default-value 'process-environment)))
+        (when-let* ((path (devenv-env--path-from-pairs pairs)))
+          (setq-local exec-path path)))
       (devenv-modeline--update buffer 'no-probe))))
 
 (defun devenv-env--cached-pairs (root)
@@ -1184,39 +1334,228 @@ variable, skipping names in IGNORED (defaults to
     (when (devenv--cache-fresh-p entry)
       (cdr entry))))
 
+(defun devenv-env--release-eglot (buffers &optional replay)
+  "Unpark BUFFERS from `devenv-env--eglot-replay'; return how many were left.
+With REPLAY non-nil each one's deferred `eglot-ensure' runs, guarded so
+a single failure cannot strand the rest.  Buffers parked for another,
+still-pending root stay parked.  The return value counts the buffers
+released without connecting, i.e. the ones now missing their server."
+  (let ((parked devenv-env--eglot-replay)
+        (released 0))
+    (setq devenv-env--eglot-replay nil)
+    (dolist (buffer parked)
+      (cond
+       ((not (buffer-live-p buffer)))
+       ((not (memq buffer buffers))
+        (push buffer devenv-env--eglot-replay))
+       (replay
+        (with-demoted-errors "devenv: deferred eglot-ensure failed: %S"
+          (with-current-buffer buffer
+            (when (fboundp 'eglot-ensure) (eglot-ensure)))))
+       (t (cl-incf released))))
+    released))
+
+(defun devenv-env--handle-pairs (root pairs)
+  "Apply PAIRS to ROOT's pending buffers and release deferred eglot calls.
+PAIRS nil means the fetch failed.  ROOT is dropped from
+`devenv-env--pending' and its buffers are released from
+`devenv-env--eglot-replay' on every path, failures included: leaving
+either in place would keep `devenv-env-loading-p' non-nil forever and
+so disable eglot auto-start for the whole project.  A failed load
+deliberately does not connect eglot with the global environment, which
+would be the wrong toolchain for a project whose server only exists
+inside devenv."
+  (let ((buffers (gethash root devenv-env--pending)))
+    (remhash root devenv-env--pending)
+    (unwind-protect
+        (when pairs
+          (puthash (cons root 'env) (cons (float-time) pairs) devenv--cache)
+          (dolist (buffer buffers)
+            (devenv-env--apply buffer pairs))
+          (message "devenv: environment loaded for %s"
+                   (abbreviate-file-name root)))
+      (let ((released (devenv-env--release-eglot buffers (and pairs t))))
+        (unless pairs
+          (message "devenv: loading environment for %s failed%s; see %s"
+                   (abbreviate-file-name root)
+                   (if (> released 0)
+                       (format " (%d buffer%s without LSP, M-x eglot to retry)"
+                               released (if (= released 1) "" "s"))
+                     "")
+                   devenv-log-buffer-name))))))
+
+(defconst devenv-env--shell-hook-eval "eval \"${shellHook:-}\""
+  "The line devenv appends to its dev-env script to run the shellHook.")
+
+(defconst devenv-env--source-script "{ . \"$1\"; } >&2; env -0"
+  "Bash snippet that sources the dev-env script and dumps the result.
+The hook's own output goes to stderr, where it lands in
+`devenv-log-buffer-name', so stdout stays a clean `env -0' dump.")
+
+(defun devenv-env--script-with-hook (script)
+  "Return SCRIPT, made to evaluate its shellHook exactly once.
+devenv's own dev-env script ends with the eval; a plain nix projection
+does not, and would leave every hook-set variable missing."
+  (if (string-search devenv-env--shell-hook-eval script)
+      script
+    (concat script "\n" devenv-env--shell-hook-eval "\n")))
+
+(defun devenv-env--parse-dump (dump)
+  "Parse NUL-separated `env -0' DUMP into an alist of (NAME . VALUE)."
+  (delq nil (mapcar #'devenv-env--split-pair (split-string dump "\0" t))))
+
+(defun devenv-env--shell-ignored-p (name)
+  "Return non-nil when NAME must not be taken from a sourced shell."
+  (or (member name (devenv-env--ignored-variables))
+      (seq-some (lambda (regexp) (string-match-p regexp name))
+                devenv-env-shell-ignored-variables)))
+
+(defun devenv-env--dump-delta (vars)
+  "Return VARS as environment pairs relative to Emacs's global environment.
+VARS is a (NAME . VALUE) alist from a shell that inherited that
+environment, so only the difference has to be applied: unchanged
+variables are dropped, new or changed ones become \"NAME=VALUE\", and
+variables the shell removed become a bare \"NAME\", which Emacs reads
+as unset.  Names matching `devenv-env-shell-ignored-variables' or the
+never-applied set are ignored in both directions.  The baseline
+includes `devenv-extra-env', which the loader passes to the shell but
+must not hand on to the project's own subprocesses."
+  (let* ((base (append devenv-extra-env
+                       (default-value 'process-environment)))
+         (vars (seq-remove (lambda (cell)
+                             (devenv-env--shell-ignored-p (car cell)))
+                           vars))
+         pairs)
+    (dolist (cell vars)
+      (unless (equal (cdr cell) (getenv-internal (car cell) base))
+        (push (concat (car cell) "=" (cdr cell)) pairs)))
+    (dolist (entry base)
+      (when-let* ((cell (devenv-env--split-pair entry))
+                  (name (car cell))
+                  ((not (devenv-env--shell-ignored-p name)))
+                  ((not (assoc name vars))))
+        (push name pairs)))
+    (delete-dups (nreverse pairs))))
+
+(defun devenv-env--source-shell (root script callback)
+  "Source SCRIPT in bash under ROOT and pass its env dump to CALLBACK.
+CALLBACK receives (EXIT-CODE DUMP); a non-zero exit means the dump is
+unusable.  The child gets no stdin and is killed after
+`devenv-command-timeout' seconds, so a hook that waits for input
+cannot park the loader forever."
+  (let* ((file (make-temp-file "devenv-env" nil ".sh"
+                               (devenv-env--script-with-hook script)))
+         (default-directory root)
+         (process-environment (append devenv-extra-env
+                                      (default-value 'process-environment)))
+         (bash (or (let ((exec-path (default-value 'exec-path)))
+                     (executable-find "bash"))
+                   "bash"))
+         (argv (list bash "--noprofile" "--norc" "-c"
+                     devenv-env--source-script "devenv-env" file))
+         (stdout (generate-new-buffer " *devenv-env-dump*"))
+         (stderr (generate-new-buffer " *devenv-env-hook*"))
+         (finish (lambda (exit dump hook)
+                   (devenv--log root argv exit hook)
+                   (ignore-errors (delete-file file))
+                   (when (buffer-live-p stdout) (kill-buffer stdout))
+                   (when (buffer-live-p stderr) (kill-buffer stderr))
+                   (funcall callback exit dump)))
+         timer)
+    (condition-case err
+        (let ((proc (make-process
+                     :name "devenv-env-source"
+                     :buffer stdout :stderr stderr
+                     :command argv :noquery t :connection-type 'pipe
+                     :sentinel
+                     (lambda (proc _event)
+                       (when (memq (process-status proc) '(exit signal))
+                         (when timer (cancel-timer timer))
+                         ;; Let the stderr pipe drain before reading it.
+                         (accept-process-output nil 0.05)
+                         (funcall finish
+                                  (process-exit-status proc)
+                                  (with-current-buffer stdout (buffer-string))
+                                  (with-current-buffer stderr
+                                    (buffer-string))))))))
+          ;; Neither the process nor its stderr pipe may prompt on exit.
+          (set-process-query-on-exit-flag proc nil)
+          (when-let* ((err-proc (get-buffer-process stderr)))
+            (set-process-query-on-exit-flag err-proc nil))
+          (process-send-eof proc)
+          (setq timer (run-at-time devenv-command-timeout nil
+                                   (lambda ()
+                                     (when (process-live-p proc)
+                                       (delete-process proc)))))
+          proc)
+      (error
+       (funcall finish 127 "" (error-message-string err))))))
+
+(defun devenv-env--shell-loader-p (root)
+  "Return non-nil when ROOT's environment may be loaded by sourcing bash.
+Sourcing evaluates the project's shellHook, so it is limited to
+projects trusted for auto-activation (`devenv-allow')."
+  (and (eq devenv-env-loader 'shell)
+       (let ((exec-path (default-value 'exec-path)))
+         (and (executable-find "bash") t))
+       (devenv--activation-permits-p (devenv--trust-state root))))
+
+(defun devenv-env--fetch-json (root &optional reason)
+  "Fetch ROOT's environment from `print-dev-env --json' and apply it.
+REASON, when non-nil, is reported as why sourcing was not used."
+  (when reason
+    (message "devenv: %s; using print-dev-env --json" reason))
+  (devenv-env--with-global-env
+    (devenv--run
+     root '("print-dev-env" "--json")
+     (lambda (exit output)
+       (devenv-env--handle-pairs
+        root (and (zerop exit)
+                  (condition-case nil
+                      (devenv-env--parse output)
+                    (error nil)))))
+     "print-dev-env")))
+
+(defun devenv-env--fetch-shell (root)
+  "Fetch ROOT's environment by sourcing `devenv print-dev-env' in bash.
+Either step failing falls back to `devenv-env--fetch-json', so a
+project is never left without an environment."
+  (devenv-env--with-global-env
+    (devenv--run
+     root '("print-dev-env")
+     (lambda (exit script)
+       (if (or (not (zerop exit)) (string-blank-p script))
+           ;; Exit 127 means the CLI never ran, so the JSON form would
+           ;; fail identically: report once instead of retrying.
+           (if (eql exit 127)
+               (devenv-env--handle-pairs root nil)
+             (devenv-env--fetch-json root "print-dev-env failed"))
+         ;; Anything unexpected here (no temp dir, no bash) must still
+         ;; end in a fetch, or the root stays pending forever.
+         (condition-case err
+             (devenv-env--source-shell
+              root script
+              (lambda (exit dump)
+                (let* ((vars (and (zerop exit) (devenv-env--parse-dump dump)))
+                       (pairs (and vars (devenv-env--dump-delta vars))))
+                  (if pairs
+                      (devenv-env--handle-pairs root pairs)
+                    (devenv-env--fetch-json
+                     root "sourcing the dev-env script failed")))))
+           (error (devenv-env--fetch-json
+                   root (format "sourcing the dev-env script failed (%s)"
+                                (error-message-string err)))))))
+     "print-dev-env")))
+
 (defun devenv-env--fetch (root)
   "Fetch ROOT's environment asynchronously and apply it when done.
-All buffers registered under ROOT in `devenv-env--pending' get
-the result; deferred `eglot-ensure' calls are replayed."
-  (devenv--run
-   root '("print-dev-env" "--json")
-   (lambda (exit output)
-     (let ((buffers (gethash root devenv-env--pending))
-           (pairs (when (zerop exit)
-                    (condition-case nil
-                        (devenv-env--parse output)
-                      (error nil)))))
-       (remhash root devenv-env--pending)
-       (if (null pairs)
-           (message "devenv: loading environment for %s failed; see %s"
-                    (abbreviate-file-name root) devenv-log-buffer-name)
-         (puthash (cons root 'env) (cons (float-time) pairs)
-                  devenv--cache)
-         (dolist (buffer buffers)
-           (devenv-env--apply buffer pairs))
-         (message "devenv: environment loaded for %s"
-                  (abbreviate-file-name root))
-         (let ((replay devenv-env--eglot-replay))
-           (setq devenv-env--eglot-replay nil)
-           (dolist (buffer replay)
-             (cond
-              ((not (buffer-live-p buffer)))
-              ((memq buffer buffers)
-               (with-current-buffer buffer
-                 (when (fboundp 'eglot-ensure) (eglot-ensure))))
-              ;; Belongs to a different, still-pending root: keep it.
-              (t (push buffer devenv-env--eglot-replay))))))))
-   "print-dev-env"))
+All buffers registered under ROOT in `devenv-env--pending' get the
+result; deferred `eglot-ensure' calls are replayed.  A trusted project
+is loaded by sourcing the printed dev-env script so its shellHook runs
+\(see `devenv-env-loader'); otherwise the JSON form is parsed."
+  (if (devenv-env--with-global-env (devenv-env--shell-loader-p root))
+      (devenv-env--fetch-shell root)
+    (devenv-env--fetch-json root)))
 
 (defun devenv-env--buffers (root)
   "Return live buffers under ROOT that have `devenv-env-mode' on."
@@ -1234,11 +1573,13 @@ the result; deferred `eglot-ensure' calls are replayed."
 ;;;###autoload
 (define-minor-mode devenv-env-mode
   "Apply the project's devenv environment buffer-locally.
-Fetches `devenv print-dev-env --json' asynchronously (cached per
-project) and sets `process-environment' and `exec-path' locally
-in this buffer, in the style of envrc.  Prefer envrc + direnv
-when the project has a .envrc; this mode is for devenv projects
-without direnv."
+Fetches the environment asynchronously (cached per project, see
+`devenv-env-loader') and sets `process-environment' and `exec-path'
+locally in this buffer, in the style of envrc.  The result mirrors a
+terminal `devenv shell': PATH is layered over the login one and the
+derivation-only variables the JSON form carries are dropped.  Where
+direnv is in charge, envrc + `use devenv' does the same job; see
+`devenv-env-defer-to-direnv'."
   :lighter devenv-env-lighter
   (if devenv-env-mode
       (let ((root (devenv-project-root)))

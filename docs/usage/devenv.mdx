@@ -52,25 +52,58 @@ asynchronously so the UI never blocks.
 
 ## Environment loading and reload
 
-Environment loading stays with **envrc + direnv** (see `init-prog`):
-`.envrc` says `use devenv`, so every project buffer already carries the
-devenv shell environment buffer-locally — eglot servers, apheleia
-formatters, `M-x compile`, and the ghostel terminal all see
+Environment loading is done by the library's **native loader**
+(`devenv-env-global-mode`, enabled by `init-devenv`; direnv/envrc is
+disabled in `init-prog`). Every buffer inside a trusted devenv project
+carries the project environment buffer-locally, so eglot servers,
+apheleia formatters, `M-x compile`, and the ghostel terminal all see
 devenv-provided tools with no extra configuration.
 
-After changing `devenv.nix`, run `devenv-reload` (`C-c v r`). It
-invalidates the library's caches, refreshes the environment through
-`envrc-reload-all`, and — because eglot snapshots the environment when
-a server starts — offers to `eglot-reconnect` every server serving the
-project so language servers pick up new `PATH` entries.
+The goal is parity with a terminal `devenv shell`, which takes more
+than reading `devenv print-dev-env`:
 
-For devenv projects **without** direnv, `devenv-env-global-mode` is an
-optional native loader: it fetches `devenv print-dev-env --json`
-asynchronously and applies it buffer-locally, envrc-style. Its
-predicate skips any project with a `.envrc`, so it can never
-double-manage a buffer envrc owns. While a fetch is in flight,
-`eglot-ensure` is deferred and replayed once the environment lands, so
-language servers never start with the wrong `PATH`.
+- **`devenv-env-loader` = `shell` (default)** sources the printed
+  dev-env script in bash, shellHook included, and diffs the resulting
+  environment against Emacs's own. Hook-only values therefore reach
+  Emacs too: `LOCALE_ARCHIVE`, `MANPATH`, `CARGO_INSTALL_ROOT`,
+  `$CARGO_HOME/bin` on `PATH`, and anything `enterShell` exports.
+  Because sourcing runs project code it is limited to projects trusted
+  with `devenv allow` (see below).
+- **`devenv-env-loader` = `json`** parses `devenv print-dev-env --json`
+  instead. No project code runs, but the shellHook's effects are
+  missing. This is also the automatic fallback when sourcing is
+  unavailable or fails.
+- **`PATH` and `XDG_DATA_DIRS` are layered**, not replaced
+  (`devenv-env-layered-variables`), matching the `nix_saved_PATH`
+  restore in devenv's own script. Without this, everything outside the
+  project profile disappears from `exec-path` — the `devenv` CLI
+  included, which then breaks `C-c v` inside the very projects it
+  manages.
+- **Derivation-only variables are dropped**
+  (`devenv-env-never-applied-variables`): nix's own `ignoreVars` plus
+  the stdenv build variables devenv's shellHook unsets. The JSON form
+  is the raw *build* environment, so applying it verbatim sets
+  `TMPDIR`/`NIX_BUILD_TOP` to the build sandbox's `/build`, which does
+  not exist on the host. That breaks every tool needing a temp
+  directory: rust-analyzer's proc-macro server dies with `proc-macro
+  server did not respond with data`, and cargo build scripts fail.
+
+While a fetch is in flight, `eglot-ensure` is deferred and replayed
+once the environment lands, so language servers never start with the
+wrong `PATH`. If the fetch fails, the deferred buffers are released
+without connecting (starting a server with the login environment would
+be the wrong toolchain) and the message says how many are without an
+LSP; `M-x eglot` or `C-c v r` retries.
+
+After changing `devenv.nix`, run `devenv-reload` (`C-c v r`). It
+invalidates the library's caches, re-fetches the environment, and —
+because eglot snapshots the environment when a server starts — offers
+to `eglot-reconnect` every server serving the project so language
+servers pick up new `PATH` entries. Where direnv is in charge instead,
+`envrc` + `use devenv` is an equally good substrate: set
+`devenv-env-defer-to-direnv` back to `t` and the native loader stays
+out of any project with a `.envrc`, delegating reload to
+`envrc-reload-all`.
 
 ## Auto-activation trust (`devenv allow` / `revoke`)
 
@@ -80,7 +113,9 @@ allow` and `devenv revoke`. The integration honours the same
 contract: the native loader (`devenv-env-global-mode`) consults the
 internal `devenv hook-should-activate` check and **never evaluates an
 untrusted devenv.nix automatically** — exactly like the zsh/fish/nu
-shell hooks. `devenv-allow` (`C-c v a`) trusts the project and
+shell hooks. The same gate decides whether the environment may be
+obtained by sourcing (which runs the project's shellHook); an untrusted
+or unverifiable project falls back to the JSON loader. `devenv-allow` (`C-c v a`) trusts the project and
 immediately activates the loader in its buffers; `devenv-revoke`
 (`C-c v x`) untrusts it and drops the native environment. On devenv
 versions without the trust model (< 2.1) the loader behaves as
@@ -129,6 +164,14 @@ The `devenv` customization group covers the executable name
 (`devenv-executable`), the quiet-mode environment
 (`devenv-extra-env`), global CLI flags (`devenv-global-arguments`),
 cache TTL and command timeout, detached `up`
-(`devenv-up-detached`), variables the native loader never applies
-(`devenv-env-ignored-variables`), and the dashboard's log line count
+(`devenv-up-detached`), and the dashboard's log line count
 (`devenv-processes-log-lines`).
+
+The native loader adds: how the environment is obtained
+(`devenv-env-loader`), whether direnv keeps ownership
+(`devenv-env-defer-to-direnv`), extra variables to drop
+(`devenv-env-ignored-variables`, filtered on top of the built-in
+`devenv-env-never-applied-variables`), which variables extend rather
+than replace the global value (`devenv-env-layered-variables`), and the
+shell bookkeeping ignored when diffing a sourced environment
+(`devenv-env-shell-ignored-variables`).

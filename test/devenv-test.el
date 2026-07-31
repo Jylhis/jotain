@@ -13,6 +13,7 @@
 ;;; Code:
 
 (require 'ert)
+(require 'cl-lib)
 (require 'eglot) ; make `eglot-server-programs' a special variable
 (require 'devenv)
 
@@ -106,28 +107,79 @@
    "\"PATH\":{\"type\":\"exported\",\"value\":\"/nix/store/aaa/bin:/usr/bin\"},"
    "\"DEVENV_ROOT\":{\"type\":\"exported\",\"value\":\"/proj\"},"
    "\"PS1\":{\"type\":\"exported\",\"value\":\"$ \"},"
-   "\"shellHook\":{\"type\":\"var\",\"value\":\"echo hi\"},"
+   ;; Build-only variables devenv's own shellHook unsets or nix never
+   ;; exports.  TMPDIR names the build sandbox and must never be applied.
+   "\"TMPDIR\":{\"type\":\"exported\",\"value\":\"/build\"},"
+   "\"TMP\":{\"type\":\"exported\",\"value\":\"/build\"},"
+   "\"NIX_BUILD_TOP\":{\"type\":\"exported\",\"value\":\"/build\"},"
+   "\"NIX_ENFORCE_PURITY\":{\"type\":\"exported\",\"value\":\"1\"},"
+   "\"HOME\":{\"type\":\"exported\",\"value\":\"/homeless-shelter\"},"
+   "\"SHELL\":{\"type\":\"exported\",\"value\":\"/nix/store/bbb/bin/bash\"},"
+   "\"out\":{\"type\":\"exported\",\"value\":\"/nix/store/ccc-shell-env\"},"
+   "\"outputs\":{\"type\":\"exported\",\"value\":\"out\"},"
+   "\"stdenv\":{\"type\":\"exported\",\"value\":\"/nix/store/ddd-stdenv\"},"
+   ;; Real devenv exports shellHook; it is filtered by name, not by type.
+   "\"shellHook\":{\"type\":\"exported\",\"value\":\"echo hi\"},"
+   ;; Genuinely non-exported, so the type gate keeps its coverage.
+   "\"checkPhase\":{\"type\":\"var\",\"value\":\"runHook check\"},"
+   ;; Variables a terminal shell does get, and the loader must keep.
+   "\"SOURCE_DATE_EPOCH\":{\"type\":\"exported\",\"value\":\"315532800\"},"
+   "\"IN_NIX_SHELL\":{\"type\":\"exported\",\"value\":\"impure\"},"
+   "\"NIX_CFLAGS_COMPILE\":{\"type\":\"exported\",\"value\":\"-isystem /x\"},"
+   "\"CC\":{\"type\":\"exported\",\"value\":\"gcc\"},"
+   "\"RUST_SRC_PATH\":{\"type\":\"exported\",\"value\":\"/nix/store/eee-src\"},"
+   "\"MY_APP_ENV\":{\"type\":\"exported\",\"value\":\"dev\"},"
    "\"BROKEN\":{\"type\":\"exported\",\"value\":null}"
    "}}")
   "Canned `devenv print-dev-env --json' output.")
 
+(defun devenv-test--pair (pairs name)
+  "Return NAME's applied value in PAIRS, or nil."
+  (devenv-env--pair-value pairs name))
+
 (ert-deftest devenv-test-env-parse-exported-only ()
   "Only exported string variables become NAME=VALUE pairs."
-  (let* ((devenv-env-ignored-variables '("PS1" "SHLVL" "TERM" "HOME"))
-         (pairs (devenv-env--parse devenv-test--env-json)))
+  (let ((pairs (devenv-env--parse devenv-test--env-json)))
     (should (member "PATH=/nix/store/aaa/bin:/usr/bin" pairs))
     (should (member "DEVENV_ROOT=/proj" pairs))
     ;; Ignored variable filtered out.
-    (should-not (seq-find (lambda (p) (string-prefix-p "PS1=" p)) pairs))
+    (should-not (devenv-test--pair pairs "PS1"))
     ;; Non-exported and null-valued variables filtered out.
-    (should-not (seq-find (lambda (p) (string-prefix-p "shellHook=" p)) pairs))
-    (should-not (seq-find (lambda (p) (string-prefix-p "BROKEN=" p)) pairs))))
+    (should-not (devenv-test--pair pairs "checkPhase"))
+    (should-not (devenv-test--pair pairs "BROKEN"))))
+
+(ert-deftest devenv-test-env-parse-drops-build-only-vars ()
+  "Variables a real devenv shell never exports are never applied.
+TMPDIR and friends name the build sandbox's /build, which does not
+exist on the host: applying them breaks every tool that needs a temp
+directory, rust-analyzer's proc-macro server included."
+  (let ((pairs (devenv-env--parse devenv-test--env-json)))
+    (dolist (name '("TMPDIR" "TMP" "NIX_BUILD_TOP" "NIX_ENFORCE_PURITY"
+                    "HOME" "SHELL" "out" "outputs" "stdenv" "shellHook"
+                    "PS1"))
+      (should-not (devenv-test--pair pairs name)))))
+
+(ert-deftest devenv-test-env-parse-keeps-toolchain-vars ()
+  "Variables a terminal devenv shell does get survive the filter."
+  (let ((pairs (devenv-env--parse devenv-test--env-json)))
+    (dolist (name '("PATH" "DEVENV_ROOT" "SOURCE_DATE_EPOCH" "IN_NIX_SHELL"
+                    "NIX_CFLAGS_COMPILE" "CC" "RUST_SRC_PATH" "MY_APP_ENV"))
+      (should (devenv-test--pair pairs name)))))
 
 (ert-deftest devenv-test-env-parse-custom-ignore ()
-  "The IGNORED argument overrides `devenv-env-ignored-variables'."
+  "The IGNORED argument overrides every default ignore list."
   (let ((pairs (devenv-env--parse devenv-test--env-json '("PATH"))))
-    (should-not (seq-find (lambda (p) (string-prefix-p "PATH=" p)) pairs))
-    (should (seq-find (lambda (p) (string-prefix-p "PS1=" p)) pairs))))
+    (should-not (devenv-test--pair pairs "PATH"))
+    (should (devenv-test--pair pairs "PS1"))))
+
+(ert-deftest devenv-test-env-parse-extra-ignored ()
+  "`devenv-env-ignored-variables' filters on top of the constant set."
+  (let* ((devenv-env-ignored-variables '("MY_APP_ENV"))
+         (pairs (devenv-env--parse devenv-test--env-json)))
+    (should-not (devenv-test--pair pairs "MY_APP_ENV"))
+    ;; The built-in set still applies.
+    (should-not (devenv-test--pair pairs "TMPDIR"))
+    (should (devenv-test--pair pairs "CC"))))
 
 (ert-deftest devenv-test-env-path-extraction ()
   "PATH pairs convert to an `exec-path'-shaped list."
@@ -151,6 +203,245 @@
     (should (member "/devenv-test-bin/" exec-path)))
   ;; Global environment untouched.
   (should-not (getenv "DEVENV_TEST_MARKER")))
+
+;;;; Environment layering (PATH must extend, not replace)
+
+(ert-deftest devenv-test-env-layer-value ()
+  "A layered value keeps its own entries first and the login ones after."
+  (cl-letf (((default-value 'process-environment)
+             '("PATH=/b:/usr/bin" "TMPDIR=/tmp")))
+    ;; Project entries first, login tail preserved, /b deduped.
+    (should (equal (devenv-env--layer-value "PATH" "/a:/b")
+                   "/a:/b:/usr/bin"))
+    ;; Empty components dropped.
+    (should (equal (devenv-env--layer-value "PATH" "/a::")
+                   "/a:/b:/usr/bin"))
+    ;; No project value: just the inherited one.
+    (should (equal (devenv-env--layer-value "PATH" "") "/b:/usr/bin"))
+    ;; Unknown variable has no global side.
+    (should (equal (devenv-env--layer-value "NOPE" "/a") "/a"))))
+
+(ert-deftest devenv-test-env-layer-pairs ()
+  "Only `devenv-env-layered-variables' are layered; others pass through."
+  (cl-letf (((default-value 'process-environment)
+             '("PATH=/usr/bin" "XDG_DATA_DIRS=/usr/share")))
+    (let ((pairs (devenv-env--layer-pairs
+                  '("PATH=/nix/bin"
+                    "XDG_DATA_DIRS=/nix/share"
+                    "FOO=bar"
+                    ;; A value containing "=" must not be mangled.
+                    "NIX_LDFLAGS=-L/x -Wl,-rpath=/y"
+                    "UNSET_ME"))))
+      (should (equal (devenv-env--pair-value pairs "PATH")
+                     "/nix/bin:/usr/bin"))
+      (should (equal (devenv-env--pair-value pairs "XDG_DATA_DIRS")
+                     "/nix/share:/usr/share"))
+      (should (member "FOO=bar" pairs))
+      (should (member "NIX_LDFLAGS=-L/x -Wl,-rpath=/y" pairs))
+      ;; Bare names (meaning "unset") survive untouched.
+      (should (member "UNSET_ME" pairs)))))
+
+(ert-deftest devenv-test-env-apply-layers-path ()
+  "An applied PATH keeps the login entries reachable, `devenv' included."
+  (cl-letf (((default-value 'process-environment)
+             '("PATH=/login/bin" "TMPDIR=/tmp")))
+    (with-temp-buffer
+      (devenv-env--apply (current-buffer) '("PATH=/nix/store/aaa/bin"))
+      (should (equal (getenv "PATH") "/nix/store/aaa/bin:/login/bin"))
+      (should (member "/nix/store/aaa/bin/" exec-path))
+      (should (member "/login/bin/" exec-path))
+      (should (equal (car (last exec-path)) exec-directory)))))
+
+(ert-deftest devenv-test-env-apply-is-idempotent ()
+  "Re-applying the same pairs does not stack PATH entries."
+  (cl-letf (((default-value 'process-environment) '("PATH=/login/bin")))
+    (with-temp-buffer
+      (devenv-env--apply (current-buffer) '("PATH=/nix/bin"))
+      (let ((first (getenv "PATH")))
+        (devenv-env--apply (current-buffer) '("PATH=/nix/bin"))
+        (should (equal (getenv "PATH") first))))))
+
+(ert-deftest devenv-test-env-apply-keeps-host-tmpdir ()
+  "The host TMPDIR survives, so temp-dir-using tools keep working.
+Regression test for rust-analyzer's proc-macro server dying on the
+build sandbox's TMPDIR=/build."
+  (cl-letf (((default-value 'process-environment)
+             '("PATH=/login/bin" "TMPDIR=/tmp")))
+    (with-temp-buffer
+      (devenv-env--apply (current-buffer)
+                         (devenv-env--parse devenv-test--env-json))
+      (should (equal (getenv "TMPDIR") "/tmp"))
+      (should-not (getenv "NIX_BUILD_TOP"))
+      (should-not (getenv "out"))
+      ;; The toolchain variables are still there.
+      (should (equal (getenv "CC") "gcc")))))
+
+;;;; Environment sourcing (print-dev-env in bash)
+
+(ert-deftest devenv-test-env-script-with-hook ()
+  "The shellHook eval is added when missing and never duplicated."
+  (let ((with-eval (concat "export FOO=1\n" devenv-env--shell-hook-eval "\n")))
+    (should (equal (devenv-env--script-with-hook with-eval) with-eval)))
+  (let ((script (devenv-env--script-with-hook "export FOO=1")))
+    (should (string-suffix-p (concat devenv-env--shell-hook-eval "\n") script))
+    (should (equal 1 (cl-count-if
+                      (lambda (line)
+                        (equal line devenv-env--shell-hook-eval))
+                      (split-string script "\n"))))))
+
+(ert-deftest devenv-test-env-parse-dump ()
+  "A NUL-separated `env -0' dump parses into name/value cells."
+  (let ((vars (devenv-env--parse-dump
+               (concat "PATH=/nix/bin\0"
+                       "MULTI=line one\nline two\0"
+                       "EQUALS=-Wl,-rpath=/y\0"
+                       "NOVALUE=\0"
+                       "junk-without-equals\0"))))
+    (should (equal (cdr (assoc "PATH" vars)) "/nix/bin"))
+    (should (equal (cdr (assoc "MULTI" vars)) "line one\nline two"))
+    (should (equal (cdr (assoc "EQUALS" vars)) "-Wl,-rpath=/y"))
+    (should (equal (cdr (assoc "NOVALUE" vars)) ""))
+    (should-not (assoc "junk-without-equals" vars))))
+
+(ert-deftest devenv-test-env-dump-delta ()
+  "Only the difference against Emacs's own environment is applied."
+  (cl-letf (((default-value 'process-environment)
+             '("PATH=/login/bin" "TMPDIR=/tmp" "GONE=1" "SAME=keep")))
+    (let ((pairs (devenv-env--dump-delta
+                  '(("PATH" . "/nix/bin:/login/bin")
+                    ("SAME" . "keep")
+                    ("NEW" . "yes")
+                    ("TMPDIR" . "/tmp")
+                    ;; Shell bookkeeping, ignored in both directions.
+                    ("SHLVL" . "2")
+                    ("_" . "/nix/bin/env")
+                    ("BASH_VERSION" . "5.3")
+                    ("nix_saved_PATH" . "/login/bin")))))
+      (should (member "PATH=/nix/bin:/login/bin" pairs))
+      (should (member "NEW=yes" pairs))
+      ;; Unchanged variables are not repeated.
+      (should-not (member "SAME=keep" pairs))
+      (should-not (member "TMPDIR=/tmp" pairs))
+      ;; A variable the shell removed becomes a bare name, i.e. unset.
+      (should (member "GONE" pairs))
+      (dolist (name '("SHLVL" "_" "BASH_VERSION" "nix_saved_PATH"))
+        (should-not (devenv-env--pair-value pairs name))))))
+
+(ert-deftest devenv-test-env-dump-delta-drops-extra-env ()
+  "`devenv-extra-env' is loader plumbing and never reaches the project.
+It is handed to the sourcing shell, so the dump echoes it back; applying
+it would export the quiet-mode flag to every tool the project runs."
+  (cl-letf (((default-value 'process-environment) '("PATH=/login/bin")))
+    (let* ((devenv-extra-env '("AI_AGENT=1"))
+           (pairs (devenv-env--dump-delta '(("PATH" . "/nix/bin")
+                                           ("AI_AGENT" . "1")))))
+      (should-not (devenv-env--pair-value pairs "AI_AGENT"))
+      (should-not (member "AI_AGENT" pairs))
+      (should (member "PATH=/nix/bin" pairs)))))
+
+(ert-deftest devenv-test-env-dump-delta-unset-applies ()
+  "A bare name from the delta really unsets the variable in a buffer."
+  (cl-letf (((default-value 'process-environment)
+             '("PATH=/login/bin" "GONE=1")))
+    (with-temp-buffer
+      (devenv-env--apply (current-buffer)
+                         (devenv-env--dump-delta '(("PATH" . "/nix/bin"))))
+      (should-not (getenv "GONE")))))
+
+;;;; Executable resolution
+
+(ert-deftest devenv-test-ensure-executable-global-fallback ()
+  "A buffer-local PATH cannot hide the devenv CLI.
+The project's own profile need not contain devenv, so resolution falls
+back to the global `exec-path' and returns an absolute path."
+  (let* ((dir (make-temp-file "devenv-bin" t))
+         (name "devenv-test-fake")
+         (program (expand-file-name name dir)))
+    (unwind-protect
+        (progn
+          (with-temp-file program (insert "#!/bin/sh\nexit 0\n"))
+          (set-file-modes program #o755)
+          (let ((devenv-executable name))
+            ;; Reachable from this buffer: used as given.
+            (let ((exec-path (list dir)))
+              (should (equal (devenv--ensure-executable) name)))
+            ;; Hidden by a buffer-local `exec-path' (what the devenv env
+            ;; loader installs), still on the global one: absolute path.
+            (let ((exec-path (list dir)))
+              (with-temp-buffer
+                (setq-local exec-path '("/devenv-test-nonexistent"))
+                (should (equal (devenv--ensure-executable) program))))
+            ;; Nowhere at all: a clean user error.
+            (let ((exec-path '("/devenv-test-nonexistent")))
+              (should-error (devenv--ensure-executable) :type 'user-error))))
+      (delete-directory dir t))))
+
+;;;; Environment fetch bookkeeping
+
+(defvar devenv-test--eglot-calls 0
+  "Stubbed `eglot-ensure' call count (see `devenv-test--with-env-state').")
+
+(defmacro devenv-test--with-env-state (&rest body)
+  "Run BODY with fresh loader state and a stubbed `eglot-ensure'.
+The variable `devenv-test--eglot-calls' counts replayed calls."
+  (declare (indent 0) (debug t))
+  `(let ((devenv-env--pending (make-hash-table :test #'equal))
+         (devenv--cache (make-hash-table :test #'equal))
+         (devenv-env--eglot-replay nil)
+         (devenv-test--eglot-calls 0))
+     (cl-letf (((symbol-function 'eglot-ensure)
+                (lambda () (cl-incf devenv-test--eglot-calls))))
+       ,@body)))
+
+(ert-deftest devenv-test-env-handle-pairs-failure-clears-pending ()
+  "A failed load clears pending state instead of parking eglot forever.
+Leaving the root pending keeps `devenv-env-loading-p' non-nil, which
+silently disables eglot auto-start for the whole project."
+  (devenv-test--with-env-state
+    (let ((buffer (generate-new-buffer " *devenv-test*"))
+          (root "/proj/"))
+      (unwind-protect
+          (progn
+            (puthash root (list buffer) devenv-env--pending)
+            (setq devenv-env--eglot-replay (list buffer))
+            (devenv-env--handle-pairs root nil)
+            (should-not (gethash root devenv-env--pending))
+            (should-not devenv-env--eglot-replay)
+            ;; Released, deliberately not connected with the global env.
+            (should (equal devenv-test--eglot-calls 0))
+            (should-not (gethash (cons root 'env) devenv--cache)))
+        (kill-buffer buffer)))))
+
+(ert-deftest devenv-test-env-handle-pairs-success-replays-eglot ()
+  "A successful load applies the env, caches it, and replays eglot once."
+  (devenv-test--with-env-state
+    (let ((buffer (generate-new-buffer " *devenv-test*"))
+          (root "/proj/"))
+      (unwind-protect
+          (progn
+            (puthash root (list buffer) devenv-env--pending)
+            (setq devenv-env--eglot-replay (list buffer))
+            (devenv-env--handle-pairs root '("DEVENV_TEST_OK=1"))
+            (should-not (gethash root devenv-env--pending))
+            (should-not devenv-env--eglot-replay)
+            (should (equal devenv-test--eglot-calls 1))
+            (should (gethash (cons root 'env) devenv--cache))
+            (with-current-buffer buffer
+              (should (equal (getenv "DEVENV_TEST_OK") "1"))))
+        (kill-buffer buffer)))))
+
+(ert-deftest devenv-test-env-release-eglot-keeps-other-roots ()
+  "Buffers parked for another still-pending root stay parked."
+  (devenv-test--with-env-state
+    (let ((mine (generate-new-buffer " *devenv-test-mine*"))
+          (other (generate-new-buffer " *devenv-test-other*")))
+      (unwind-protect
+          (progn
+            (setq devenv-env--eglot-replay (list mine other))
+            (should (equal (devenv-env--release-eglot (list mine)) 1))
+            (should (equal devenv-env--eglot-replay (list other))))
+        (kill-buffer mine)
+        (kill-buffer other)))))
 
 ;;;; Process list parsing
 
