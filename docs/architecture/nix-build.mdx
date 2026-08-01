@@ -64,17 +64,6 @@ nix-instantiate --eval --strict -E '
 
 The override arg set is filtered through `lib.intersectAttrs (lib.functionArgs basePackage.override)`, so only the flags the base `make-emacs.nix` actually defines are forwarded. This keeps the build evaluating when a downstream flake overrides `nixpkgs` with an older release (24.05+): arguments that newer `make-emacs.nix` versions added are dropped rather than throwing "called with unexpected argument". On the pinned unstable every argument is accepted, so the intersection is a no-op and cache parity is unaffected.
 
-### emacs-jylhis.nix
-
-The fork build expression. It builds the pinned `github:jylhis/emacs` Meson branch and stays separate from `emacs.nix` so the default cache-parity path remains unchanged. In the flake, the fork source comes from the non-flake input `jylhis-emacs`; standalone `nix-build emacs-jylhis.nix` falls back to the pinned `rev` / `hash` arguments in the file.
-
-The overlay exposes both bare and full fork-backed packages:
-
-- `jylhisEmacs` / `packages.${system}.jylhis-emacs`
-- `jylhisEmacsPackages` — overlay attribute only; intentionally **not** exposed as a flake `packages` output
-
-The full fork-backed package set is still experimental because the Meson fork has previously crashed while byte-compiling downstream Emacs packages, so it is not advertised as a buildable flake output. It remains reachable through the Home Manager `services.jotain.emacsBackend = "jylhis"` option, which consumes the `jylhisEmacsPackages` overlay attribute directly.
-
 ### default.nix
 
 The non-flake entry point — a thin flake-compat wrapper, not a distribution layer. It reads the pinned `flake-compat` rev from `flake.lock`, evaluates `flake.nix`, and promotes the current system's packages to the top level: plain `nix-build` builds the full distribution (`jotainEmacsPackages`), `nix-build -A emacs` the bare Emacs. Variant builds still target `emacs.nix` directly (e.g. `nix-build emacs.nix --arg withPgtk true`).
@@ -108,27 +97,6 @@ The `igc` variant builds Emacs's `feature/igc3` branch, which replaces the defau
 ## Git Variants
 
 The `git`, `unstable`, and `igc` variants build the revision pinned inside emacs-overlay (updated daily upstream, advanced here by `just update`) and are binary-cache hits from `nix-community.cachix.org`. To pin a different commit, pass `--argstr rev "..."` — `emacs.nix` then fetches it from `https://git.savannah.gnu.org/git/emacs.git` via `fetchgit`; the first build reports the correct hash to pass back via `--argstr hash "sha256-..."`. In that case `postPatch` substitutes the pinned revision into `lisp/loadup.el` so `emacs-repository-get-version` returns the expected value without a `.git` directory in the build tree. On `aarch64-linux`, the overlay's bases include `--enable-check-lisp-object-type` to avoid segfaults.
-
-## Consumer Flake Backend Selection
-
-Home Manager, NixOS, and nix-darwin consumers choose the fork with:
-
-```nix
-services.jotain.emacsBackend = "jylhis";
-```
-
-The default remains `"mainline"`. Use `"custom"` only when also setting `services.jotain.package`.
-
-Downstream flakes can replace the pinned fork input:
-
-```nix
-inputs.jotain.url = "github:jylhis/jotain";
-inputs.my-emacs-fork = {
-  url = "github:jylhis/emacs/my-branch-or-rev";
-  flake = false;
-};
-inputs.jotain.inputs.jylhis-emacs.follows = "my-emacs-fork";
-```
 
 ## nix-on-droid
 

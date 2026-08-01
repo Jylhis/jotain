@@ -1,5 +1,4 @@
 {
-  jylhisEmacsSrc ? null,
   # Emacs source variant for jotainEmacs / jotainEmacsNoGui (see
   # emacs.nix). Defaults to "unstable": emacs-overlay's emacs-unstable,
   # the Emacs 31 release branch (currently the 31.0.90 pretest), cached
@@ -188,15 +187,6 @@ in
     noGui = true;
   };
 
-  jylhisEmacs = import ../emacs-jylhis.nix (
-    {
-      pkgs = final;
-    }
-    // final.lib.optionalAttrs (jylhisEmacsSrc != null) {
-      src = jylhisEmacsSrc;
-    }
-  );
-
   sonarlintLs = final.sonarlint-ls;
 
   # Prebuilt ECA server binary for the eca-emacs client (lisp/init-ai.el).
@@ -228,10 +218,5 @@ in
   jotainEmacsPackagesNoGui = mkJotainEmacsPackages {
     name = "jotain-emacs-full-nox";
     package = final.jotainEmacsNoGui;
-  };
-
-  jylhisEmacsPackages = mkJotainEmacsPackages {
-    name = "jylhis-emacs-full";
-    package = final.jylhisEmacs;
   };
 }

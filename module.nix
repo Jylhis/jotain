@@ -23,13 +23,7 @@ let
   cfg = config.services.jotain;
   jotainOverlay = args.jotainOverlay or (import ./overlay.nix);
   pkgsWithOverlay = pkgs.extend jotainOverlay;
-  selectedPackage =
-    if cfg.package != null then
-      cfg.package
-    else if cfg.emacsBackend == "jylhis" then
-      pkgsWithOverlay.jylhisEmacsPackages
-    else
-      pkgsWithOverlay.jotainEmacsPackages;
+  selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.jotainEmacsPackages;
   inherit (pkgs.stdenv.hostPlatform) isLinux;
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
   startWithSession =
@@ -80,9 +74,9 @@ let
   # This *is* nix/checks.nix' `elisp-compile': both call the same
   # nix/config-compiled.nix, so on the default configuration they are the
   # same store path and `home-manager switch' substitutes CI's artifact
-  # from cachix instead of running Emacs locally. They diverge under
-  # `emacsBackend = "jylhis"', a custom `package', or a different nixpkgs
-  # — inherent, and only costs the old behaviour of building it here.
+  # from cachix instead of running Emacs locally. They diverge under a
+  # custom `services.jotain.package' or a different nixpkgs pin —
+  # inherent, and only costs the old behaviour of building it here.
   #
   # `.core' is the inner emacsWithPackages result: the outer wrapper adds
   # a runtime PATH, INFOPATH and ASPELL_CONF, none of which a batch
@@ -212,29 +206,13 @@ in
   options.services.jotain = {
     enable = lib.mkEnableOption "the Jotain Emacs daemon";
 
-    emacsBackend = lib.mkOption {
-      type = lib.types.enum [
-        "mainline"
-        "jylhis"
-        "custom"
-      ];
-      default = "mainline";
-      example = "jylhis";
-      description = ''
-        Which Emacs backend to install. `"mainline"` uses the
-        cache-friendly Emacs build from `emacs.nix`; `"jylhis"` uses
-        the pinned `github:jylhis/emacs` Meson fork; `"custom"` uses
-        `services.jotain.package`.
-      '';
-    };
-
     package = lib.mkOption {
       type = lib.types.nullOr lib.types.package;
       default = null;
       defaultText = lib.literalExpression "null";
       description = ''
-        Custom Jotain Emacs package to use. Leave this unset to use
-        `services.jotain.emacsBackend`.
+        Custom Jotain Emacs package to use. Leave this unset to use the
+        cache-friendly default build from `emacs.nix`.
 
         This is also how to install the curated tree-sitter grammar set
         (~26 instead of ~275) — set it to the flake's
@@ -377,10 +355,6 @@ in
 
   config = lib.mkIf cfg.enable {
     assertions = [
-      {
-        assertion = cfg.emacsBackend != "custom" || cfg.package != null;
-        message = "services.jotain.emacsBackend = \"custom\" requires services.jotain.package.";
-      }
       {
         assertion = !cfg.socketActivation.enable || isLinux;
         message = "services.jotain.socketActivation.enable is only supported on Linux/systemd.";

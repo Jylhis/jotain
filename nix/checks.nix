@@ -127,9 +127,6 @@ let
   graphicalModule = evalHomeModule {
     startWithUserSession = "graphical";
   };
-  jylhisModule = evalHomeModule {
-    emacsBackend = "jylhis";
-  };
 
   # Minimal stand-in for the nix-on-droid module system so the Jotain
   # nix-on-droid module evaluates here on x86_64 (eval only — the actual
@@ -174,17 +171,6 @@ in
   packages-default = pkgs.jotainEmacsPackages;
   packages-emacs = pkgs.jotainEmacs;
   packages-info = pkgs.jotainInfo;
-
-  # NOTE: `packages-jylhis-emacs' and `jylhis-emacs-smoke' used to live
-  # here.  emacs-jylhis.nix is a from-scratch Meson stdenv.mkDerivation
-  # with no cache parity to anything, so it compiled a whole Emacs from
-  # source on every cold `nix flake check' — the dominant term in the
-  # "30+ min" figure — while PR CI never built it at all.  The build and
-  # the smoke test now run as explicit steps in deploy.yml's `check' job
-  # (protected branches only, where the cachix push happens), and
-  # `just check-jylhis' runs them locally on demand.  Eval coverage is
-  # unaffected: `module-eval' below still instantiates
-  # jylhisEmacsPackages without forcing a build.
 
   # ── Option documentation ─────────────────────────────────────────
   options-doc = import ./options-doc.nix { inherit pkgs src; };
@@ -280,7 +266,6 @@ in
     pkgs.runCommandLocal "check-module-eval"
       {
         defaultEditorConfigured = if defaultModule.config.home.sessionVariables ? EDITOR then "1" else "0";
-        jylhisPackageName = (builtins.head jylhisModule.config.home.packages).name;
         graphicalTarget =
           if pkgs.stdenv.hostPlatform.isLinux then
             builtins.toJSON graphicalModule.config.systemd.user.services.jotain.Install.WantedBy

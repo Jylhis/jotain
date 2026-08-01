@@ -88,21 +88,9 @@ quick *ARGS:
 # ── Check / compile ─────────────────────────────────────────────────
 
 # Run all checks: eval, flake, devenv, linting.
-#
-# Does NOT build the jylhis Meson fork — that has no cache parity, so it
-# compiled a whole Emacs from source here while PR CI never built it.
-# It runs in deploy.yml on protected branches; `just check-jylhis` runs
-# it on demand.
 [group('check')]
 check:
     nix flake check
-
-# Build the jylhis Meson fork and smoke-test it. Expect a from-source
-# Emacs build unless the jylhis cachix already has this revision.
-[group('check')]
-check-jylhis:
-    nix build --no-link --print-build-logs .#jylhis-emacs
-    nix run --print-build-logs .#jylhis-emacs -- --batch --eval '(princ emacs-version)'
 
 # Equivalent coverage lives in the `elisp-lint` flake check; `just check`
 # runs it via `nix flake check`.
@@ -194,17 +182,6 @@ build-lite:
 build-bare-lite:
     nix-build --arg withXwidgets false --arg withMailutils false \
         --argstr system {{system}} emacs.nix
-
-# Build the bare github:jylhis/emacs Meson fork.
-[group('build')]
-build-jylhis:
-    nix build .#jylhis-emacs -o result-jylhis-emacs
-
-# Note: the full fork-backed package set (`jylhisEmacsPackages`) is no
-# longer exposed as a flake `packages` output — the Meson fork still
-# crashes byte-compiling some bundled Emacs packages. It remains
-# reachable via the Home Manager `services.jotain.emacsBackend = "jylhis"`
-# option, which consumes the overlay attribute directly.
 
 # Build with --with-pgtk for Wayland.
 [group('build')]

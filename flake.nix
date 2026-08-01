@@ -24,13 +24,6 @@
       url = "github:nix-community/emacs-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Only the source tree is consumed (mk-overlay.nix passes it to
-    # emacs-jylhis.nix as `src`); `flake = false` keeps its transitive
-    # inputs (nixpkgs, emacs-overlay, …) out of flake.lock.
-    jylhis-emacs = {
-      url = "github:jylhis/emacs/dev";
-      flake = false;
-    };
     # Android (Termux/proot) Nix environment. Only consumed by
     # `nixOnDroidModules` / the example `nixOnDroidConfigurations`; other
     # outputs do not depend on it.
@@ -79,10 +72,7 @@
           inherit system;
           overlays = [
             emacs-overlay.overlays.default
-            (import ./nix/mk-overlay.nix {
-              jylhisEmacsSrc = inputs."jylhis-emacs";
-              curatedGrammars = true;
-            })
+            (import ./nix/mk-overlay.nix { curatedGrammars = true; })
           ];
         };
       treefmtEval =
@@ -103,9 +93,7 @@
       moduleOverlay = nixpkgs.lib.composeExtensions emacs-overlay.overlays.default self.overlays.default;
     in
     {
-      overlays.default = import ./nix/mk-overlay.nix {
-        jylhisEmacsSrc = inputs."jylhis-emacs";
-      };
+      overlays.default = import ./nix/mk-overlay.nix { };
 
       homeManagerModules.default =
         { ... }:
@@ -156,8 +144,6 @@
         # grammars) — same attribute the nix-on-droid module ships.
         # `just run-built` launches this on aarch64-linux.
         emacs-nox = (pkgsFor system).jotainEmacsPackagesNoGui;
-        emacs-jylhis = (pkgsFor system).jylhisEmacs;
-        jylhis-emacs = (pkgsFor system).jylhisEmacs;
         info = (pkgsFor system).jotainInfo;
         docs = import ./nix/options-doc.nix {
           pkgs = pkgsFor system;

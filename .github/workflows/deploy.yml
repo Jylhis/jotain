@@ -5,9 +5,10 @@
 #                   the built site to the `site` branch, which Cloudflare
 #                   deploys as jotain.j10s.io; build-pages → deploy-pages
 #                   publishes the option-reference docs and the
-#                   jotain.info manual to GitHub Pages.  The jylhis
-#                   cachix cache is repopulated with any newly built
-#                   artifacts.
+#                   jotain.info manual to GitHub Pages.  The `jylhis`
+#                   cachix cache (the owner's personal cache; unrelated
+#                   to any Emacs fork) is repopulated with any newly
+#                   built artifacts.
 #
 # On push to next:  check + test only (no deploys).
 #
@@ -56,20 +57,6 @@ jobs:
 
       - name: nix flake check
         run: nix flake check --print-build-logs
-
-      # The jylhis Meson fork used to be `checks.packages-jylhis-emacs` /
-      # `checks.jylhis-emacs-smoke`. It has no cache parity with anything,
-      # so it compiled a whole Emacs from source on every cold local
-      # `nix flake check` while PR CI never built it at all. It lives here
-      # now: protected branches only, where the cachix push below actually
-      # makes the result reusable. Eval coverage stays in
-      # `checks.module-eval`, which instantiates jylhisEmacsPackages
-      # without forcing a build. Locally: `just check-jylhis`.
-      - name: Build the jylhis Emacs fork
-        run: nix build --no-link --print-build-logs .#jylhis-emacs
-
-      - name: Smoke — jylhis Emacs runs
-        run: nix run --print-build-logs .#jylhis-emacs -- --batch --eval '(princ emacs-version)'
 
   test:
     name: Dev environment

@@ -34,7 +34,6 @@ just build           # full distribution: Emacs 31 (unstable) + every grammar (d
 just build-lite      # full distribution with the curated ~26-grammar subset
 just build-nox-full  # full terminal-only distribution (same attr the nix-on-droid module ships)
 just build-bare      # bare Emacs from emacs.nix — no packages, no grammars
-just build-jylhis    # bare github:jylhis/emacs Meson fork
 just build-pgtk      # --with-pgtk (pure GTK, Wayland — the Linux GUI default)
 just build-gtk3      # --with-x-toolkit=gtk3 (X11 + GTK3)
 just build-x11       # X11/Lucid escape hatch (unstable variant, pgtk off)
@@ -62,7 +61,7 @@ nix-build emacs.nix  --arg variant '"macport"'           # macOS macport fork
 
 ## Installing from a Consumer Flake
 
-Jotain exposes Home Manager, NixOS, and nix-darwin modules. The default backend stays on the cache-friendly `emacs.nix` build:
+Jotain exposes Home Manager, NixOS, and nix-darwin modules. They all install the cache-friendly `emacs.nix` build by default:
 
 ```nix
 {
@@ -72,7 +71,7 @@ Jotain exposes Home Manager, NixOS, and nix-darwin modules. The default backend 
 }
 ```
 
-To install the same Jotain setup on the `github:jylhis/emacs` Meson fork, select the fork backend:
+`services.jotain.package` swaps in any other Jotain-shaped distribution — for example the curated tree-sitter grammar set:
 
 ```nix
 {
@@ -80,23 +79,10 @@ To install the same Jotain setup on the `github:jylhis/emacs` Meson fork, select
 
   services.jotain = {
     enable = true;
-    emacsBackend = "jylhis";
+    package = inputs.jotain.packages.${system}.emacs-lite;
   };
 }
 ```
-
-Downstream flakes can override the fork source by following the `jylhis-emacs` input:
-
-```nix
-inputs.jotain.url = "github:jylhis/jotain";
-inputs.my-emacs-fork = {
-  url = "github:jylhis/emacs/my-branch-or-rev";
-  flake = false;
-};
-inputs.jotain.inputs.jylhis-emacs.follows = "my-emacs-fork";
-```
-
-The bare fork package is checked directly. The full fork-backed package set is **not** exposed as a flake `packages` output, because the Meson fork still crashes while byte-compiling some bundled Emacs packages. It remains reachable via the Home Manager `services.jotain.emacsBackend = "jylhis"` option (which consumes the `jylhisEmacsPackages` overlay attribute directly) for those who want to exercise that experimental path.
 
 ### nix-on-droid (Android)
 
