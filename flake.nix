@@ -119,8 +119,11 @@
 
       packages = forAllSystems (system: {
         default = (pkgsFor system).jotainEmacsPackages;
-        # Full distribution with a curated grammar subset (~26 vs ~275):
-        # smaller closure, far less to build from source. Opt-in.
+        # Full distribution with a curated grammar subset (~26 vs ~275).
+        # Closure-only saving (~200 MB / 8%, measured 2026-08-01 — see
+        # nix/mk-overlay.nix curatedGrammars): every grammar is already
+        # its own derivation, so narrowing the list never touches a
+        # build, only which linkFarm entries get substituted. Opt-in.
         emacs-lite = (pkgsForLite system).jotainEmacsPackages;
         emacs = (pkgsFor system).jotainEmacs;
         # Bare Emacs on nixpkgs' default attr (Emacs 30, Hydra-cached) —

@@ -13,9 +13,14 @@
   # is its own derivation upstream, and both `with-all-grammars' and
   # `with-grammars' are linkFarms over the *same* store paths — so
   # narrowing or widening the list rebuilds a `mkdir' + `ln -s' and never
-  # recompiles a parser. Default false keeps with-all-grammars so the
-  # `jotain-emacs-full` derivation hash is unchanged and the binary cache
-  # still hits — see flake.nix `emacs-lite` for the opt-in path.
+  # recompiles a parser. Measured (2026-08-01, x86_64-linux): full
+  # closure 2.5 GiB vs curated 2.3 GiB — only ~200 MB / 8%, smaller than
+  # the ~275-vs-26 package-count ratio suggests, because grammar `.so`
+  # files are small relative to Emacs + the ~96 ELPA packages + system
+  # libraries that dominate the closure either way. Default false keeps
+  # with-all-grammars so the `jotain-emacs-full` derivation hash is
+  # unchanged and the binary cache still hits — see flake.nix
+  # `emacs-lite` for the opt-in path.
   curatedGrammars ? false,
 }:
 final: _prev:

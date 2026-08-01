@@ -172,7 +172,9 @@ build:
 build-bare:
     nix-build --argstr system {{system}} emacs.nix
 
-# Build the full distribution with only the grammars this config uses (~26 vs ~275; smaller, lighter to build). Opt-in.
+# Build the full distribution with only the grammars this config uses
+# (~26 vs ~275; ~200 MB / 8% smaller closure, not a build-time saving —
+# see nix/mk-overlay.nix curatedGrammars). Opt-in.
 [group('build')]
 build-lite:
     nix build .#emacs-lite -o result-emacs-lite
