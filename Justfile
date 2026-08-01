@@ -219,6 +219,16 @@ build-git:
 build-igc:
     nix-build --arg variant '"igc"' --argstr system {{system}} emacs.nix
 
+# Build IGC with ccache. On Darwin, nix-community.cachix.org has no
+# prebuilt igc, so plain build-igc is already a from-source build there
+# (plan.md §3) — ccache makes repeat local rebuilds cheaper. Needs a
+# ccache sandbox exception set up first; see the useCcache doc comment
+# in emacs.nix. No-op improvement elsewhere: everywhere else, igc is a
+# cache hit and this just adds ccache overhead for nothing.
+[group('build')]
+build-igc-ccache:
+    nix-build --arg variant '"igc"' --arg useCcache true --argstr system {{system}} emacs.nix
+
 # Build a bare aarch64-linux nox Emacs (Termux/Android) — kept for
 # cache-parity testing of emacs.nix; `run-built` uses build-nox-full.
 [group('build')]

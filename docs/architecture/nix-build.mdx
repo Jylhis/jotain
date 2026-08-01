@@ -87,12 +87,13 @@ Grammar bundling lives in `nix/mk-overlay.nix`, not in `default.nix`: the distri
 | `withRoundUndecoratedFramePatch` | `false` | (Darwin) rounded borderless frames |
 | `withFixWindowRolePatch` | `false` | (Darwin, Emacs 30 only) fix NSAccessibility role for tiling WMs |
 | `rev` / `hash` | `null` | Pin a specific commit for `git` / `unstable` / `igc` / `macport` variants |
+| `useCcache` | `false` | Build with `pkgs.ccacheStdenv`. Only useful for builds already off the cache-parity path (custom `rev`, an enabled Darwin patch, or `igc` on Darwin — see below); needs a machine-level ccache sandbox exception first |
 
 See `emacs.nix` for the complete argument list and defaults.
 
 ## IGC Variant
 
-The `igc` variant builds Emacs's `feature/igc3` branch, which replaces the default mark-and-sweep garbage collector with the [Memory Pool System](https://memory-pool-system.readthedocs.io). The base package is emacs-overlay's `emacs-igc`, which already carries `--with-mps=yes` and the `mps` build input, so no manual steps are needed — the overlay-pinned revision is a binary-cache hit.
+The `igc` variant builds Emacs's `feature/igc3` branch, which replaces the default mark-and-sweep garbage collector with the [Memory Pool System](https://memory-pool-system.readthedocs.io). The base package is emacs-overlay's `emacs-igc`, which already carries `--with-mps=yes` and the `mps` build input, so no manual steps are needed on Linux — the overlay-pinned revision is a binary-cache hit there. On Darwin, `nix-community.cachix.org` has no prebuilt `emacs-igc`, so `just build-igc` compiles it from source even at the default revision; `just build-igc-ccache` (`useCcache = true`) makes repeat local rebuilds on that platform cheaper once ccache is set up (see the `useCcache` doc comment in `emacs.nix`).
 
 ## Git Variants
 

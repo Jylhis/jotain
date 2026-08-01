@@ -32,6 +32,15 @@
 # the hash to pass back:
 #   nix-build emacs.nix --arg variant '"git"' --argstr rev "abc123..." --argstr hash "sha256-..."
 #
+# igc on Darwin has no prebuilt upstream (plan.md §3), so it is a
+# from-source build there even at the default rev. For that case, and
+# for any custom-rev/patched build above, --arg useCcache true swaps in
+# pkgs.ccacheStdenv to make repeat local rebuilds cheaper — see its doc
+# comment below for the (required, one-time, machine-level) ccache
+# setup. It is a no-op improvement, not a cache-parity path: never turn
+# it on for a plain default-rev build that would otherwise hit the
+# binary cache.
+#
 # Adapted from the `next` branch. Source for nixpkgs is the flake.lock-pinned
 # nixpkgs-unstable channel; pass --arg pkgs '<nixpkgs>' or override `pkgs`
 # at the command line to use a different one.
@@ -94,6 +103,28 @@
   #   --argstr rev "abc123..." --argstr hash "sha256-..."
   rev ? null,
   hash ? null,
+
+  # Build with pkgs.ccacheStdenv instead of the default stdenv. This is
+  # ONLY useful — and only meant to be turned on — for a build that is
+  # already off the cache-parity path documented below: a custom `rev`,
+  # an enabled Darwin patch flag, or the `igc` variant on Darwin (which
+  # nix-community.cachix.org does not carry a prebuilt for, so `just
+  # build-igc` is a from-source build on that platform even at the
+  # default rev — see plan.md §3). Swapping stdenv changes the
+  # derivation hash unconditionally, so this flag must stay `false` for
+  # every default-rev, no-patch build: turning it on for e.g. plain
+  # `variant = "unstable"` on Linux would trade an existing binary-cache
+  # hit for a slower, ALSO-uncached local build, the opposite of the
+  # point.
+  #
+  # Requires ccache set up on the machine before this has any effect:
+  #   - a Nix build user with ccache's sandbox exception, e.g. in
+  #     nix.conf: `extra-sandbox-paths = /var/cache/ccache`
+  #   - `CCACHE_DIR` pointed at that path (ccacheStdenv reads it)
+  # Without both, `.override { stdenv = pkgs.ccacheStdenv; }` still
+  # produces a valid (from-source) build — ccache just never gets a hit,
+  # so the rebuild is exactly as slow as without this flag, only louder.
+  useCcache ? false,
 
   # ── GUI toolkit ──────────────────────────────────────────────────
   noGui ? false, # terminal only (--without-x --without-ns)
@@ -258,9 +289,12 @@ let
   # — and variant "git"/"unstable"/"igc" the store path of the matching
   # emacs-overlay attr — so binary caches (Hydra, nix-community.cachix.org,
   # jylhis) hit and we never rebuild Emacs from source. Only custom rev
-  # pins and the Darwin patch flags are expected to diverge — those
-  # paths run through `overrideAttrs` below and intentionally bust the
-  # cache.
+  # pins, the Darwin patch flags, and an explicit `useCcache = true`
+  # (see its doc comment above — off by default, and meant only for
+  # builds already in one of the first two categories) are expected to
+  # diverge — the rev/patch paths run through `overrideAttrs` below and
+  # intentionally bust the cache; `useCcache` does the same through
+  # `.override` alone.
   #
   # Verify after any change to defaults (also with variant '"git"' vs
   # pkgs.emacs-git, '"unstable"' vs pkgs.emacs-unstable, '"igc"' vs
@@ -341,6 +375,12 @@ let
   # intentionally busts the cache, like the rev pins.
   // lib.optionalAttrs (withXwidgets != xwidgetsBaseDefault) {
     inherit withXwidgets;
+  }
+  # See the `useCcache ?` doc comment above: default false forwards
+  # nothing here, so the default path is byte-for-byte what it was
+  # before this flag existed.
+  // lib.optionalAttrs useCcache {
+    stdenv = pkgs.ccacheStdenv;
   };
 
   overridden = basePackage.override (
