@@ -146,3 +146,50 @@ jobs:
 
       - name: devenv test
         run: devenv test
+
+  # SCRATCH — one-off measurement, not meant to stay in CI. Quantifies the
+  # closure-size delta between the full ~275-grammar distribution and the
+  # curated ~26-grammar subset, to put a real number on the
+  # nix/mk-overlay.nix curatedGrammars comment. Remove this job once the
+  # numbers are read out of the run log.
+  measure-grammars:
+    name: Measure grammar closure delta (scratch)
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: cachix/install-nix-action@v31
+
+      - uses: cachix/cachix-action@v17
+        with:
+          name: jylhis
+          extraPullNames: nix-community
+
+      - name: Build full distribution (packages.default)
+        run: nix build --no-link --print-build-logs --show-trace -o result-default .#default
+
+      - name: Build curated distribution (packages.emacs-lite)
+        run: nix build --no-link --print-build-logs --show-trace -o result-lite .#emacs-lite
+
+      - name: Report closure sizes
+        run: |
+          echo "=== packages.default (full ~275 grammars) ==="
+          nix path-info -Sh ./result-default | tail -1
+          echo
+          echo "=== packages.emacs-lite (curated ~26 grammars) ==="
+          nix path-info -Sh ./result-lite | tail -1
+          echo
+          echo "=== shared store paths (requisites in common) ==="
+          comm -12 \
+            <(nix-store -q --requisites ./result-default | sort) \
+            <(nix-store -q --requisites ./result-lite | sort) \
+            | wc -l
+          echo "=== tree-sitter grammar paths: default vs lite ==="
+          nix-store -q --requisites ./result-default | grep -c tree-sitter || true
+          nix-store -q --requisites ./result-lite | grep -c tree-sitter || true
+          echo "=== grammar paths NOT shared between the two (should be all default-only, i.e. the ~249 dropped grammars) ==="
+          comm -23 \
+            <(nix-store -q --requisites ./result-default | grep tree-sitter | sort) \
+            <(nix-store -q --requisites ./result-lite | grep tree-sitter | sort) \
+            | wc -l
