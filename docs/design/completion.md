@@ -372,10 +372,10 @@ Documented for the user, because they cost nothing to support:
   persist across sessions by design. Opt-outs belong in the user's own init or in
   a machine-local file, not in Customize.
 
-An environment-variable opt-out (precedent: `JOTAIN_NO_PACKAGE_REFRESH`) is
-**deliberately not proposed**. That precedent exists for a startup-path network
-action that must be suppressible before Lisp runs; completion behavior has no such
-constraint, and a defcustom is more discoverable.
+An environment-variable opt-out (precedent: `JOTAIN_INFO_DIR`) is **deliberately
+not proposed**. That precedent exists for a value that must be readable before
+Lisp can discover it; completion behavior has no such constraint, and a defcustom
+is more discoverable.
 
 ---
 
