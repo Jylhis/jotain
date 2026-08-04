@@ -367,7 +367,8 @@ in
   # usual runCommandLocal calculus (allowSubstitutes = false, because
   # fetching a trivial output costs more than rebuilding it) inverts when
   # rebuilding the output requires a multi-hundred-MB Emacs closure.
-  # Substituting a ~0-byte marker from jylhis.cachix.org is strictly
+  # Substituting a ~0-byte marker (lint/test) or the small
+  # compiled-config tree (compile) from jylhis.cachix.org is strictly
   # cheaper than substituting the toolchain in order to recreate it.
   # deploy.yml pushes these on main, so a PR that touches neither lisp/
   # nor test/ gets them for free and never pulls Emacs at all.  The cheap

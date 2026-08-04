@@ -228,17 +228,21 @@ in
       example = true;
       description = ''
         AOT native-compile the Jotain config into the store, so the
-        daemon loads `.eln` from `services.jotain`'s own derivation
-        instead of JIT-compiling into `var/eln-cache` after every
-        deploy (every deploy that touches `lisp/` moves the store path,
-        which invalidates the JIT cache).
+        daemon loads `.eln` for `init.el` and the `lisp/` modules from
+        `services.jotain`'s own derivation instead of JIT-compiling
+        into `var/eln-cache` after every deploy (every deploy that
+        touches `lisp/` moves the store path, which invalidates the
+        JIT cache). `early-init.el` is structurally excluded: its
+        `.eln` lookup happens before the load path is extended, so it
+        always runs from `.elc` — with or without this option.
 
-        Off by default because it only pays off when Emacs resolves the
-        source path through symlinks before hashing it into the `.eln`
-        filename — see the gate command in `nix/config-compiled.nix`.
-        Enabling it also adds a native-compilation pass to every
-        activation that rebuilds the config, and roughly 50–150 MB of
-        `.eln` to the closure.
+        The store-`.eln`-through-symlinks mechanism is sound: Emacs
+        `realpath()`s the source before hashing it into the `.eln`
+        name (src/comp.c, Bug#44701), so the HM symlinks resolve to
+        the exact path the AOT step compiled against. Off by default
+        only because enabling it adds a native-compilation pass to
+        every activation that rebuilds the config, and roughly
+        50–150 MB of `.eln` to the closure.
       '';
     };
 
@@ -399,9 +403,16 @@ in
     # ./early-init.el and ./init.el: those are *different* store paths,
     # and a native-compiled .eln is named after a hash of its source
     # path. Serving the sources from anywhere other than where the AOT
-    # step compiled them gives a permanent .eln miss for exactly the two
-    # files that run first. (lisp/ was already correct — it is a single
-    # symlink to ${compiledConfig}/lisp.)
+    # step compiled them would give a permanent .eln miss. In practice
+    # this matters for init.el; early-init.el's AOT .eln is structurally
+    # unreachable regardless — its eln lookup happens in Fload *before*
+    # early-init.el runs, i.e. before the code that adds JOTAIN_ELN_PATH
+    # to native-comp-eln-load-path has executed, so early-init always
+    # loads its .elc (a known Emacs limitation, same reason its JIT eln
+    # in var/eln-cache never loads either). Serving it from
+    # compiledConfig is still right: one source of truth, and find-file
+    # agreement with the .elc next to it. (lisp/ was already correct —
+    # it is a single symlink to ${compiledConfig}/lisp.)
     xdg.configFile = {
       "emacs/early-init.el".source = "${compiledConfig}/early-init.el";
       "emacs/early-init.elc".source = "${compiledConfig}/early-init.elc";

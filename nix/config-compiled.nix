@@ -31,23 +31,21 @@
   emacs,
   src ? ../.,
   # AOT native-compile into $out/share/emacs/native-lisp so the daemon
-  # loads store .eln instead of JIT-compiling into var/eln-cache after
-  # every deploy.  Off by default: it only pays off if Emacs resolves
-  # the source path through symlinks before hashing it into the .eln
-  # filename, which is deployment-specific.  Verify before enabling:
-  #
-  #   mkdir -p /tmp/elntest/real && cp lisp/init-core.el /tmp/elntest/real/
-  #   ln -s /tmp/elntest/real /tmp/elntest/link
-  #   nix run .#emacs -- --batch --eval '
-  #    (progn (require (quote comp))
-  #      (princ (format "real=%s\nlink=%s\n"
-  #        (comp-el-to-eln-rel-filename "/tmp/elntest/real/init-core.el")
-  #        (comp-el-to-eln-rel-filename "/tmp/elntest/link/init-core.el"))))'
-  #
-  # Identical strings → the store .eln is reachable through the
-  # xdg.configFile symlinks module.nix installs.  Different → leave this
-  # off; early-init.el's var/eln-cache JIT path is then the only thing
-  # that can work.
+  # loads store .eln for init.el and lisp/ instead of JIT-compiling
+  # into var/eln-cache after every deploy.  The
+  # store-.eln-through-symlinks mechanism is verified sound at the
+  # source level: `comp-el-to-eln-rel-filename` (src/comp.c) calls
+  # realpath() on the source before hashing it into the .eln name —
+  # "Resolve possible symlinks in FILENAME, so that path_hash below
+  # always compares equal. (Bug#44701)" — so module.nix's
+  # xdg.configFile symlinks resolve to the exact store path this
+  # derivation compiled against.  Two scope limits: early-init.el's
+  # .eln is structurally unreachable (its eln lookup runs before
+  # early-init.el itself extends native-comp-eln-load-path), and the
+  # verification was read on the Emacs 30.2 source tree while this
+  # repo ships 31 — the mechanism predates both.  Off by default only
+  # for the cost: an extra native-comp pass whenever the config
+  # rebuilds, and ~50-150 MB of .eln in the closure.
   nativeCompile ? false,
 }:
 let

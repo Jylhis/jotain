@@ -117,14 +117,20 @@
   # hit for a slower, ALSO-uncached local build, the opposite of the
   # point.
   #
-  # Requires ccache set up on the machine before this has any effect:
-  #   - a Nix build user with ccache's sandbox exception, e.g. in
-  #     nix.conf: `extra-sandbox-paths = /var/cache/ccache`
-  #   - `CCACHE_DIR` pointed at that path (ccacheStdenv reads it)
-  # Without both, `.override { stdenv = pkgs.ccacheStdenv; }` still
-  # produces a valid (from-source) build — ccache just never gets a hit,
-  # so the rebuild is exactly as slow as without this flag, only louder.
+  # Requires one piece of machine setup before this has any effect: the
+  # cache directory must be writable inside the build sandbox, e.g. in
+  # nix.conf: `extra-sandbox-paths = /var/cache/ccache` (and the dir
+  # created writable by the build users). The CCACHE_DIR half is wired
+  # below via ccacheStdenv's `extraConfig` — a bare `pkgs.ccacheStdenv`
+  # would default to $HOME/.ccache, which is /homeless-shelter inside
+  # the sandbox and can never hit; environment variables set on the
+  # machine do not reach sandboxed builders. Without the sandbox
+  # exception the build still succeeds (from source) — ccache just
+  # misses every time.
   useCcache ? false,
+  # Where ccache keeps its cache (must match the extra-sandbox-paths
+  # entry above). Only read when useCcache = true.
+  ccacheDir ? "/var/cache/ccache",
 
   # ── GUI toolkit ──────────────────────────────────────────────────
   noGui ? false, # terminal only (--without-x --without-ns)
@@ -378,9 +384,17 @@ let
   }
   # See the `useCcache ?` doc comment above: default false forwards
   # nothing here, so the default path is byte-for-byte what it was
-  # before this flag existed.
+  # before this flag existed. The extraConfig override is what points
+  # ccache at the sandbox-visible cache dir — bare ccacheStdenv would
+  # write to $HOME/.ccache (= /homeless-shelter in the sandbox) and
+  # never hit.
   // lib.optionalAttrs useCcache {
-    stdenv = pkgs.ccacheStdenv;
+    stdenv = pkgs.ccacheStdenv.override {
+      extraConfig = ''
+        export CCACHE_DIR=${ccacheDir}
+        export CCACHE_UMASK=007
+      '';
+    };
   };
 
   overridden = basePackage.override (
