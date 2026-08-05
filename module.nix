@@ -211,14 +211,9 @@ in
       default = null;
       defaultText = lib.literalExpression "null";
       description = ''
-        Custom Jotain Emacs package to use. Leave this unset to use the
-        cache-friendly default build from `emacs.nix`.
-
-        This is also how to install the curated tree-sitter grammar set
-        (~26 instead of ~275) — set it to the flake's
-        `packages.<system>.emacs-lite`. Both grammar sets are `linkFarm`s
-        over the *same* per-grammar store paths, so that swap is purely a
-        closure/download saving: no parser is ever recompiled either way.
+        Custom Jotain Emacs package to use. Leave this unset to use
+        the default distribution from `emacs.nix` (pgtk/Wayland GUI on
+        Linux, patched NS GUI on Darwin).
       '';
     };
 

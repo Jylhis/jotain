@@ -167,49 +167,17 @@ bench-open output="":
 build:
     nix-build
 
-# Build a bare Emacs (no tree-sitter grammars).
+# Build a bare Emacs (no tree-sitter grammars): the matrix GUI for the
+# platform — pgtk/Wayland on Linux, patched NS on Darwin (the latter is
+# a from-source build by design; see emacs.nix).
 [group('build')]
 build-bare:
     nix-build --argstr system {{system}} emacs.nix
-
-# Build the full distribution with only the grammars this config uses
-# (~26 vs ~275; ~200 MB / 8% smaller closure, not a build-time saving —
-# see nix/mk-overlay.nix curatedGrammars). Opt-in.
-[group('build')]
-build-lite:
-    nix build .#emacs-lite -o result-emacs-lite
-
-# Build a bare Emacs from source, trimmed (no xwidgets/mailutils) for fewer build inputs. Opt-in.
-[group('build')]
-build-bare-lite:
-    nix-build --arg withXwidgets false --arg withMailutils false \
-        --argstr system {{system}} emacs.nix
-
-# Build with --with-pgtk for Wayland.
-[group('build')]
-build-pgtk:
-    nix-build --arg withPgtk true --argstr system {{system}} emacs.nix
-
-# Build with --with-x-toolkit=gtk3 (X11 + GTK3).
-[group('build')]
-build-gtk3:
-    nix-build --arg withGTK3 true --argstr system {{system}} emacs.nix
-
-# Build the X11/Lucid escape hatch (unstable/Emacs 31, pgtk off) — the
-# pre-switch Linux GUI backend, for when the pgtk default misbehaves.
-[group('build')]
-build-x11:
-    nix-build --arg variant '"unstable"' --arg withPgtk false --argstr system {{system}} emacs.nix
 
 # Build a terminal-only Emacs (--without-x --without-ns).
 [group('build')]
 build-nox:
     nix-build --arg noGui true --argstr system {{system}} emacs.nix
-
-# Build the macport variant (Darwin only).
-[group('build')]
-build-macport:
-    nix-build --arg variant '"macport"' --argstr system {{system}} emacs.nix
 
 # Build from git master (the revision pinned by emacs-overlay, binary-cached).
 [group('build')]

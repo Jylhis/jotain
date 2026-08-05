@@ -63,18 +63,6 @@
             self.overlays.default
           ];
         };
-      # Same as pkgsFor but with the overlay configured to bundle only the
-      # grammars this config uses. Kept out of the default overlay so
-      # packages.default / the system modules stay full-grammar cache hits.
-      pkgsForLite =
-        system:
-        import (nixpkgsFor system) {
-          inherit system;
-          overlays = [
-            emacs-overlay.overlays.default
-            (import ./nix/mk-overlay.nix { curatedGrammars = true; })
-          ];
-        };
       treefmtEval =
         system:
         treefmt-nix.lib.evalModule (pkgsFor system) {
@@ -117,32 +105,16 @@
 
       lib = import ./nix/use-package.nix { inherit (nixpkgs) lib; };
 
+      # THE BUILD MATRIX: exactly two Emacs builds per platform —
+      # `emacs` (bare: pgtk/Wayland GUI on Linux, patched NS GUI on
+      # Darwin) inside `default` (the full distribution), and
+      # `emacs-nox` (terminal-only distribution) — on {x86_64, aarch64}
+      # × {Linux, Darwin}. The former emacs-mainline / emacs-x11 /
+      # emacs-lite escape hatches are gone; emacs.nix asserts the
+      # unsupported GUI combinations away.
       packages = forAllSystems (system: {
         default = (pkgsFor system).jotainEmacsPackages;
-        # Full distribution with a curated grammar subset (~26 vs ~275).
-        # Closure-only saving (~200 MB / 8%, measured 2026-08-01 — see
-        # nix/mk-overlay.nix curatedGrammars): every grammar is already
-        # its own derivation, so narrowing the list never touches a
-        # build, only which linkFarm entries get substituted. Opt-in.
-        emacs-lite = (pkgsForLite system).jotainEmacsPackages;
         emacs = (pkgsFor system).jotainEmacs;
-        # Bare Emacs on nixpkgs' default attr (Emacs 30, Hydra-cached) —
-        # the pre-switch default, kept as an escape hatch now that
-        # jotainEmacs defaults to the unstable (Emacs 31 pretest) variant.
-        emacs-mainline = import ./emacs.nix {
-          pkgs = pkgsFor system;
-          variant = "mainline";
-        };
-        # X11 escape hatch on the unstable (Emacs 31) variant: the
-        # pre-switch Linux GUI backend, for setups where the pgtk default
-        # misbehaves. Forcing withPgtk = false restores X11/Lucid on Linux
-        # (a binary-cache hit against pkgs.emacs-unstable); on Darwin it is
-        # simply the NS build. `emacs-mainline` is the Emacs 30 counterpart.
-        emacs-x11 = import ./emacs.nix {
-          pkgs = pkgsFor system;
-          variant = "unstable";
-          withPgtk = false;
-        };
         # Full terminal-only distribution (noGui Emacs + packages +
         # grammars) — same attribute the nix-on-droid module ships.
         # `just run-built` launches this on aarch64-linux.

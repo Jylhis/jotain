@@ -11,16 +11,16 @@ Jotain uses Nix for reproducible Emacs builds with fine-grained control over com
 
 ### emacs.nix
 
-The core build expression. It selects a base package per variant — nixpkgs' default `emacs` attribute for `mainline` (the bare-file default), emacs-overlay's `emacs-git`/`emacs-unstable`/`emacs-igc` for the git-based variants, and nixpkgs' `emacs-macport` alias for macport — and calls `.override { ... }` with every upstream build flag exposed as a file-level argument. The distribution (`jotainEmacs`, built through `nix/mk-overlay.nix`) passes `variant = "unstable"`, so the shipped default is the Emacs 31 release branch, and `withPgtk = final.stdenv.hostPlatform.isLinux`, so the **Linux GUI default is pgtk** (pure GTK) rather than X11/Lucid — pgtk honors each backend's advertised scale (Wayland fractional scale, `GDK_SCALE`/`Xft.dpi` on X11) so a fixed point size tracks the system. When `withPgtk = true` the base selection picks the prebuilt `*-pgtk` sibling (`emacs-unstable-pgtk` etc.) directly instead of overriding `withPgtk` on the non-pgtk base, because the two build identical content under different derivation names and the sibling is the one the cache holds (`packages.<system>.emacs-x11` is the X11 escape hatch; Darwin keeps its NS default). The [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay) that supplies the git-based variants is a flake input composed into every overlay consumer in `flake.nix`; `emacs.nix` and `overlay.nix` re-apply it from `flake.lock` when imported standalone.
+The core build expression. It selects a base package per variant — emacs-overlay's `emacs-git`/`emacs-unstable`/`emacs-igc` for the git-based variants (`unstable` is the default), nixpkgs' default `emacs` attribute for `mainline` (the cache-parity canary) — and calls `.override { ... }` with the supported build flags exposed as file-level arguments. **The build matrix is four shipped builds** on {x86_64, aarch64} × {Linux, Darwin}: pgtk/Wayland GUI or terminal-only on Linux, patched NS GUI or terminal-only on Darwin; `emacs.nix` asserts every other GUI configuration away. pgtk honors each backend's advertised scale (Wayland fractional scale) so a fixed point size tracks the system. When `withPgtk = true` (the Linux GUI default) the base selection picks the prebuilt `*-pgtk` sibling (`emacs-unstable-pgtk` etc.) directly instead of overriding `withPgtk` on the non-pgtk base, because the two build identical content under different derivation names and the sibling is the one the cache holds. The [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay) that supplies the git-based variants is a flake input composed into every overlay consumer in `flake.nix`; `emacs.nix` and `overlay.nix` re-apply it from `flake.lock` when imported standalone.
 
 Supported:
 
-- **Source variants**: `unstable` (`emacs-unstable`, the Emacs 31 release branch — currently the 31.0.90 pretest; the distribution default via `nix/mk-overlay.nix`), `mainline` (nixpkgs' default `emacs` attribute, currently the Emacs 30 release; bare `emacs.nix`'s default, exposed as `packages.<system>.emacs-mainline`), `git` (emacs-overlay's `emacs-git`, current master), `macport` (`emacs-macport` → nixpkgs `emacs30-macport`, jdtsmith/emacs-mac fork), `igc` (`emacs-igc`, the feature/igc3 Memory Pool System incremental GC branch).
-- **GUI toolkits**: GTK3, pgtk (pure GTK for Wayland), NS (Cocoa/NeXTstep on macOS), Motif, Athena, X11, or no GUI at all (`noGui = true`).
-- **Compilation**: native compilation (libgccjit AOT, default when the build platform can execute the host), compressed install, C sources for `find-function-C-source`, `srcRepo` (run autoreconf on git-based sources).
-- **Image formats**: WebP (default), Cairo (X11 default), optionally ImageMagick.
-- **Libraries**: tree-sitter, SQLite3, dbus, selinux, gpm, ALSA, ACL, mailutils, systemd, GLib networking.
-- **Darwin patches**: optional `system-appearance`, `round-undecorated-frame`, and `adjust-ns-init-colors` (master/32+ only) patches fetched from `nix-giant/nix-darwin-emacs`, applied via `overrideAttrs`.
+- **Source variants**: `unstable` (`emacs-unstable`, the Emacs 31 release branch — currently the 31.0.90 pretest; the default), `git` (emacs-overlay's `emacs-git`, current master), `igc` (`emacs-igc`, the feature/igc3 Memory Pool System incremental GC branch), `mainline` (nixpkgs' default `emacs` attribute; parity canary, not a flake output).
+- **GUIs**: pgtk (pure GTK / Wayland; the only Linux GUI), NS (Cocoa/NeXTstep; the only macOS GUI, patched by default), or no GUI at all (`noGui = true`).
+- **Compilation**: native compilation (libgccjit AOT, default when the build platform can execute the host), compressed install, C sources for `find-function-C-source`, `srcRepo` (run autoreconf on git-based sources), opt-in `useCcache`.
+- **Image formats**: WebP (default), optionally ImageMagick.
+- **Libraries**: tree-sitter, SQLite3, dbus, selinux, gpm, ALSA, ACL, mailutils, systemd, GLib networking. The overlay trims mailutils/gpm/selinux from the builds that are already off binary-cache parity (both terminal-only builds and the Darwin GUI); the Linux pgtk build keeps upstream defaults so it stays byte-identical to the cached `emacs-unstable-pgtk`.
+- **Darwin patches**: `system-appearance` and `round-undecorated-frame` (plus `adjust-ns-init-colors` on master/32+) fetched from `nix-giant/nix-darwin-emacs`, applied via `overrideAttrs` — **on by default for the NS GUI**, which makes every Darwin GUI build a from-source build.
 
 ### Cache-parity invariant
 
@@ -70,24 +70,24 @@ The non-flake entry point — a thin flake-compat wrapper, not a distribution la
 
 ### Tree-sitter grammars
 
-Grammar bundling lives in `nix/mk-overlay.nix`, not in `default.nix`: the distribution's `withPackages` set includes `epkgs.treesit-grammars.with-all-grammars` by default (~275 grammars), or a curated ~26-grammar subset when the overlay is instantiated with `curatedGrammars = true` (exposed as `packages.<system>.emacs-lite`). Discovery is nixpkgs' own `site-start.el`, which sets `treesit-extra-load-path` to the bundled grammar directory — `early-init.el` deliberately does **no** `TREE_SITTER_DIR` handling (see its comment), and `init-prog.el` propagates `treesit-extra-load-path` to async native-comp workers, which run without site files.
+Grammar bundling lives in `nix/mk-overlay.nix`, not in `default.nix`: the distribution's `withPackages` set includes `epkgs.treesit-grammars.with-all-grammars` (~275 grammars — a linkFarm over per-grammar derivations, so the full set costs closure size, never build time). Discovery is nixpkgs' own `site-start.el`, which sets `treesit-extra-load-path` to the bundled grammar directory — `early-init.el` deliberately does **no** `TREE_SITTER_DIR` handling (see its comment), and `init-prog.el` propagates `treesit-extra-load-path` to async native-comp workers, which run without site files.
 
 ## Key Build Options
 
 | Option | Default | Description |
 |---|---|---|
-| `variant` | `"mainline"` | Emacs source variant — `mainline` / `git` / `unstable` / `macport` / `igc`; `nix/mk-overlay.nix` passes `"unstable"` (the distribution default) |
+| `variant` | `"unstable"` | Emacs source variant — `unstable` / `git` / `igc` / `mainline` |
 | `noGui` | `false` | Terminal only — `--without-x --without-ns` |
-| `withPgtk` | `false` (bare `emacs.nix`); `nix/mk-overlay.nix` sets it to `stdenv.hostPlatform.isLinux` so the distribution's Linux GUI default is pgtk | Pure GTK (Wayland) — `--with-pgtk`; selects the prebuilt `*-pgtk` sibling for cache parity |
-| `withGTK3` | `withPgtk && !noGui` | GTK3 toolkit — `--with-x-toolkit=gtk3` |
+| `withPgtk` | `isLinux && !noGui` | Pure GTK (Wayland) — `--with-pgtk`; the Linux GUI. Selects the prebuilt `*-pgtk` sibling for cache parity |
+| `withNS` | `isDarwin && !noGui` | Cocoa/NeXTstep — the macOS GUI |
 | `withNativeCompilation` | auto | libgccjit AOT compilation |
 | `withTreeSitter` | `true` | Built-in tree-sitter support |
 | `withSystemd` | Linux | `--with-systemd` (journal support) |
-| `withSystemAppearancePatch` | `false` | (Darwin) add `ns-system-appearance` hooks |
-| `withRoundUndecoratedFramePatch` | `false` | (Darwin) rounded borderless frames |
-| `withFixWindowRolePatch` | `false` | (Darwin, Emacs 30 only) fix NSAccessibility role for tiling WMs |
-| `rev` / `hash` | `null` | Pin a specific commit for `git` / `unstable` / `igc` / `macport` variants |
-| `useCcache` | `false` | Build with `pkgs.ccacheStdenv`. Only useful for builds already off the cache-parity path (custom `rev`, an enabled Darwin patch, or `igc` on Darwin — see below); needs a machine-level ccache sandbox exception first |
+| `withSystemAppearancePatch` | `withNS` | (Darwin) add `ns-system-appearance` hooks — **on by default for the GUI** |
+| `withRoundUndecoratedFramePatch` | `withNS` | (Darwin) rounded borderless frames — **on by default for the GUI** |
+| `withAdjustNsInitColorsPatch` | `withNS` | (Darwin) full color palette at init; only exists on the master/32+ patch branch, silently skipped elsewhere |
+| `rev` / `hash` | `null` | Pin a specific commit for `git` / `unstable` / `igc` variants |
+| `useCcache` | `false` | Build with `pkgs.ccacheStdenv` (`CCACHE_DIR` wired via `extraConfig`; `ccacheDir` argument, default `/var/cache/ccache`). Only useful for builds already off the cache-parity path (custom `rev`, the Darwin GUI, or `igc` on Darwin); needs a machine-level `extra-sandbox-paths` exception first |
 
 See `emacs.nix` for the complete argument list and defaults.
 
