@@ -1,0 +1,254 @@
+---
+title: Notebooks with Org Babel
+description: Use Org mode as a literate notebook — run code blocks, keep a session, get plots inline, tangle to source
+---
+
+# Notebooks with Org Babel
+
+Org Babel turns an ordinary `.org` file into a notebook: prose,
+executable source blocks, and their captured output in one plain-text
+document that diffs, greps, and merges like any other file. Jotain
+configures it in `lisp/init-org.el` for that workflow specifically —
+languages preloaded, evaluation prompt made unobtrusive, plots
+redisplayed after every run.
+
+Nothing here is a separate mode. You are in `org-mode` the whole time.
+
+## The loop
+
+Write a block, put point in it, press `C-c C-c`:
+
+```org
+#+begin_src python
+print(sum(range(10)))
+#+end_src
+
+#+RESULTS:
+: 45
+```
+
+The `#+RESULTS:` block is written back into the buffer, so results are
+part of the document and survive a restart. `C-c C-c` on a block that
+already has results replaces them.
+
+Type `<py` then `TAB` to insert an empty Python block —
+[`org-tempo`](#structure-templates) has entries for the languages this
+config actually runs. `C-c '` opens the block in a real major-mode
+buffer with LSP, formatting, and everything else you get in a
+standalone file; `C-c '` again returns.
+
+### The `C-c b` prefix
+
+Cell-at-a-time is `C-c C-c`. Everything wider than one block is under
+`C-c b` in Org buffers:
+
+| Key | Command | What it does |
+| --- | --- | --- |
+| `C-c b b` | `org-babel-execute-buffer` | Run every block in the file, top to bottom |
+| `C-c b e` | `org-babel-execute-subtree` | Run every block under the current heading |
+| `C-c b r` | `jotain-org-babel-restart-session-and-execute-buffer` | Kill the session of the block at point, then run the whole buffer — "restart kernel and run all" |
+| `C-c b s` | `org-babel-switch-to-session` | Jump into the live REPL behind the block at point |
+| `C-c b k` | `org-babel-remove-result-one-or-many` | Clear results; with a prefix arg, clear the whole buffer |
+| `C-c b t` | `org-babel-tangle` | Write the blocks out to real source files |
+
+Org's own `C-c C-v` babel map is untouched and still has everything
+else (`C-c C-v v` to expand a block, `C-c C-v i` to view header args,
+and so on).
+
+## Sessions
+
+By default each block runs in a fresh process, so nothing carries over
+between them. Add `:session` to keep a live interpreter around, which is
+what makes an Org file behave like a notebook rather than a pile of
+scripts:
+
+```org
+#+begin_src python :session notebook :results output
+import pandas as pd
+df = pd.read_csv("measurements.csv")
+#+end_src
+
+#+begin_src python :session notebook :results output
+print(df.describe())
+#+end_src
+```
+
+The second block sees `df`. `C-c b s` drops you into that interpreter
+to poke at state interactively; `C-c b r` throws it away and replays the
+file from the top, which is the reliable way to check that a notebook
+still runs end-to-end after you have been editing out of order.
+
+`<jp TAB` inserts a Python block with `:session notebook :results
+output` already filled in.
+
+## Results
+
+`:results` decides what gets captured. The two that matter:
+
+- **`output`** — everything the block printed. This is Jotain's default
+  for Python, because the notebook habit is to `print` things and Org's
+  own default (`value`) shows nothing at all unless the block ends in a
+  `return`.
+- **`value`** — the value of the last expression. Set it per block when
+  you want a table or a number rather than a transcript.
+
+A block that produces a table gets a real Org table back, which the rest
+of the document can reference by name:
+
+```org
+#+name: totals
+#+begin_src python :results value
+return [["region", "n"], None, ["north", 41], ["south", 58]]
+#+end_src
+```
+
+### Plots
+
+Write the figure to `:file` and Org inserts a link to it; the image is
+redisplayed automatically after every run, so re-running a cell updates
+the picture in place rather than leaving the previous one on screen.
+
+```org
+#+begin_src python :session notebook :results file :file plot.png
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+plt.plot([1, 4, 9, 16])
+plt.savefig("plot.png")
+"plot.png"
+#+end_src
+```
+
+Images are capped at 600px wide (`org-image-actual-width`) so a large
+figure does not push the text column off-screen. `C-c C-x C-v` toggles
+inline images if you want the raw links back.
+
+## Evaluation prompts and trust
+
+Running a source block runs arbitrary code, so Org asks for confirmation
+by default — which is correct for a file someone sent you and unbearable
+for the notebook you are editing right now.
+
+Jotain replaces the blanket prompt with a trust check
+(`jotain-org-babel-confirm-evaluate`). A file is trusted when it lives
+either:
+
+- under `org-directory` — the notes tree, `~/notes` by default, shared
+  with `org-capture`, `org-roam`, and `denote`; or
+- inside the current project, as `project-current` sees it.
+
+Trusted files evaluate straight away. Everything else — a downloaded
+`.org`, a mail attachment, a gist opened from a browser — still prompts
+on every block. To go back to Org's stock behaviour:
+
+```elisp
+(setopt org-confirm-babel-evaluate t)
+```
+
+## Export
+
+Export (`C-c C-e`) uses the results already in the buffer:
+`org-babel-default-header-args` sets `:eval never-export`, so producing
+an HTML or PDF copy never re-runs your code. What you see in the buffer
+is what gets published. Pass `:eval yes` on a block to opt it back into
+running at export time.
+
+The matching default is `:exports both`, so a block and its output both
+appear in the exported document. `:exports results` hides the code;
+`:exports none` hides both.
+
+## Tangling
+
+`C-c b t` writes blocks out to real files, which is how a notebook
+graduates into a program:
+
+```org
+#+begin_src python :tangle analysis/load.py
+def load(path):
+    ...
+#+end_src
+```
+
+Indentation is preserved exactly as written (`org-src-preserve-indentation`),
+which is not Org's default and is not optional for Python — Org's
+re-indent-on-exit behaviour corrupts blocks where leading whitespace is
+syntax.
+
+## Languages
+
+`jotain-org-babel-languages` in `lisp/init-org.el` lists what is
+enabled:
+
+```
+emacs-lisp  org
+shell       eshell
+python      C     R    haskell  js  css
+sql         sqlite
+awk         sed   calc
+dot         gnuplot     latex
+```
+
+Every entry is backed by an `ob-LANG` library that ships with Org
+itself, so no source block depends on a package being installed. `C`
+covers C, C++ and D; `shell` covers bash, sh and the other shell
+dialects Org knows. A test (`test/test-org-babel.el`) `require`s each
+one, so a language that gets renamed or moved out to org-contrib during
+an Org bump fails CI rather than a `C-c C-c` months later.
+
+Enabling a language teaches Org how to run the block — it does not
+provide the interpreter. Python, R, `gnuplot`, `dot` and the rest come
+from the project's own environment, the same way LSP servers do.
+
+Add one by editing the list:
+
+```elisp
+(defconst jotain-org-babel-languages
+  '(emacs-lisp org shell eshell python C R haskell js css
+    sql sqlite awk sed calc dot gnuplot latex
+    ruby))                               ; ← ob-ruby ships with Org
+```
+
+### Python and IPython
+
+`init-lang-python.el` points the Python REPL at `ipython` when it is on
+`PATH`, which gets you IPython's completion, tracebacks and `%magic` in
+`run-python` and in `:session` blocks. When it is absent, `python3` is
+used and nothing else changes.
+
+Blocks *without* a session always use plain `python3`
+(`org-babel-python-command`), deliberately: a one-shot block handed an
+interactive `ipython -i` would wait for input instead of returning a
+result.
+
+## Structure templates
+
+`org-tempo` expands `<KEY` + `TAB`. Jotain adds:
+
+| Key | Expands to |
+| --- | --- |
+| `<py` | `#+begin_src python` |
+| `<jp` | `#+begin_src python :session notebook :results output` |
+| `<sh` | `#+begin_src bash` |
+| `<el` | `#+begin_src emacs-lisp` |
+| `<sql` | `#+begin_src sql` |
+| `<dot` | `#+begin_src dot :file diagram.png` |
+
+Org's own entries (`<s` source, `<q` quote, `<e` example, and the rest)
+still work.
+
+## What this is not
+
+This is Org Babel, not a Jupyter client. Blocks run through Org's own
+`ob-*` backends and comint, so there are no Jupyter kernels, no
+`.ipynb` files, and no rich MIME output beyond images and tables.
+
+If you need actual kernels — a remote kernel, a language with no
+`ob-` backend, or `.ipynb` interchange — the
+[`emacs-jupyter`](https://github.com/emacs-jupyter/jupyter) package
+provides `jupyter-python` blocks alongside everything above. It is not
+included here because it needs the `zmq` dynamic module and a `jupyter`
+binary at runtime, neither of which this configuration ships.
+
+Long-running blocks also execute synchronously and will block Emacs. Use
+`:session` and a REPL you can watch (`C-c b s`) rather than waiting on a
+30-minute `C-c C-c`.
