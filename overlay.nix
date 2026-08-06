@@ -4,11 +4,9 @@
 #   jotainEmacs              — bare Emacs binary (unstable variant — the
 #                              Emacs 31 pretest; see nix/mk-overlay.nix)
 #   jotainEmacsNoGui         — terminal-only (noGui) twin of jotainEmacs
-#   jylhisEmacs              — bare Emacs from github:jylhis/emacs
 #   jotainInfo               — Jotain manual (share/info/jotain.info + dir)
 #   jotainEmacsPackages      — full distribution using jotainEmacs
 #   jotainEmacsPackagesNoGui — full distribution on the noGui build
-#   jylhisEmacsPackages      — full distribution using jylhisEmacs
 #   eca                      — prebuilt ECA server binary (lisp/init-ai.el)
 #   sonarlintLs              — SonarLint language server (M-x jotain-sonarlint)
 #

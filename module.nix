@@ -23,13 +23,7 @@ let
   cfg = config.services.jotain;
   jotainOverlay = args.jotainOverlay or (import ./overlay.nix);
   pkgsWithOverlay = pkgs.extend jotainOverlay;
-  selectedPackage =
-    if cfg.package != null then
-      cfg.package
-    else if cfg.emacsBackend == "jylhis" then
-      pkgsWithOverlay.jylhisEmacsPackages
-    else
-      pkgsWithOverlay.jotainEmacsPackages;
+  selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.jotainEmacsPackages;
   inherit (pkgs.stdenv.hostPlatform) isLinux;
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
   startWithSession =
@@ -76,24 +70,24 @@ let
   # interpreting raw .el on every start. Loading .elc is also what lets
   # deferred native compilation produce .eln files into the writable
   # var/eln-cache — JIT native comp never triggers for plain .el loads.
-  # Modelled on nix/checks.nix elisp-compile: the pcre2el require is
-  # load-bearing (magit-todos pulls in pcre2el, whose defadvice
-  # byte-compiles its advice body and fails under error-on-warn; see
-  # journal/2026-04-16.md). The .el sources are kept beside the .elc so
-  # `find-function' and native compilation can still read them.
-  compiledConfig = pkgs.runCommand "jotain-config-compiled" { } ''
-    mkdir -p $out/lisp
-    cp ${./early-init.el} $out/early-init.el
-    cp ${./init.el} $out/init.el
-    cp -r ${./lisp}/. $out/lisp/
-    chmod -R u+w $out
-    cd $out
-    ${selectedPackage}/bin/emacs --batch \
-      -L lisp \
-      --eval "(require 'pcre2el)" \
-      --eval "(setq byte-compile-error-on-warn t)" \
-      -f batch-byte-compile early-init.el init.el lisp/devenv.el lisp/init-*.el
-  '';
+  #
+  # This *is* nix/checks.nix' `elisp-compile': both call the same
+  # nix/config-compiled.nix, so on the default configuration they are the
+  # same store path and `home-manager switch' substitutes CI's artifact
+  # from cachix instead of running Emacs locally. They diverge under a
+  # custom `services.jotain.package' or a different nixpkgs pin —
+  # inherent, and only costs the old behaviour of building it here.
+  #
+  # `.core' is the inner emacsWithPackages result: the outer wrapper adds
+  # a runtime PATH, INFOPATH and ASPELL_CONF, none of which a batch
+  # byte-compile reads, and depending on it would drag jotainInfo (and so
+  # every `;;; @doc' block and docs/*.mdx page) into this derivation. The
+  # `or' covers a user-supplied `services.jotain.package'.
+  compiledConfig = import ./nix/config-compiled.nix {
+    inherit pkgs;
+    emacs = selectedPackage.core or selectedPackage;
+    nativeCompile = cfg.nativeCompile.enable;
+  };
 
   # Runtime dependencies the Elisp config invokes unconditionally,
   # factored into nix/runtime-deps.nix so module-system.nix and
@@ -126,6 +120,9 @@ let
   # regardless of Emacs's user-emacs-directory discovery order.
   emacsWrapper = pkgs.writeShellScriptBin "emacs" ''
     export PATH=${runtimePath}''${PATH:+:$PATH}
+    ${lib.optionalString cfg.nativeCompile.enable ''
+      export JOTAIN_ELN_PATH=${compiledConfig}/share/emacs/native-lisp
+    ''}
     exec ${emacsBinPath}/emacs --init-directory=${lib.escapeShellArg initDirectory} "$@"
   '';
 
@@ -209,29 +206,38 @@ in
   options.services.jotain = {
     enable = lib.mkEnableOption "the Jotain Emacs daemon";
 
-    emacsBackend = lib.mkOption {
-      type = lib.types.enum [
-        "mainline"
-        "jylhis"
-        "custom"
-      ];
-      default = "mainline";
-      example = "jylhis";
-      description = ''
-        Which Emacs backend to install. `"mainline"` uses the
-        cache-friendly Emacs build from `emacs.nix`; `"jylhis"` uses
-        the pinned `github:jylhis/emacs` Meson fork; `"custom"` uses
-        `services.jotain.package`.
-      '';
-    };
-
     package = lib.mkOption {
       type = lib.types.nullOr lib.types.package;
       default = null;
       defaultText = lib.literalExpression "null";
       description = ''
         Custom Jotain Emacs package to use. Leave this unset to use
-        `services.jotain.emacsBackend`.
+        the default distribution from `emacs.nix` (pgtk/Wayland GUI on
+        Linux, patched NS GUI on Darwin).
+      '';
+    };
+
+    nativeCompile.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      example = true;
+      description = ''
+        AOT native-compile the Jotain config into the store, so the
+        daemon loads `.eln` for `init.el` and the `lisp/` modules from
+        `services.jotain`'s own derivation instead of JIT-compiling
+        into `var/eln-cache` after every deploy (every deploy that
+        touches `lisp/` moves the store path, which invalidates the
+        JIT cache). `early-init.el` is structurally excluded: its
+        `.eln` lookup happens before the load path is extended, so it
+        always runs from `.elc` — with or without this option.
+
+        The store-`.eln`-through-symlinks mechanism is sound: Emacs
+        `realpath()`s the source before hashing it into the `.eln`
+        name (src/comp.c, Bug#44701), so the HM symlinks resolve to
+        the exact path the AOT step compiled against. Off by default
+        only because enabling it adds a native-compilation pass to
+        every activation that rebuilds the config, and roughly
+        50–150 MB of `.eln` to the closure.
       '';
     };
 
@@ -349,10 +355,6 @@ in
   config = lib.mkIf cfg.enable {
     assertions = [
       {
-        assertion = cfg.emacsBackend != "custom" || cfg.package != null;
-        message = "services.jotain.emacsBackend = \"custom\" requires services.jotain.package.";
-      }
-      {
         assertion = !cfg.socketActivation.enable || isLinux;
         message = "services.jotain.socketActivation.enable is only supported on Linux/systemd.";
       }
@@ -391,10 +393,25 @@ in
     # (with the .el kept alongside); the .elc entries for early-init and
     # init are separate because repointing only "emacs/lisp" would leave
     # the entry files interpreted.
+    #
+    # The .el entry files must come from compiledConfig too, not from
+    # ./early-init.el and ./init.el: those are *different* store paths,
+    # and a native-compiled .eln is named after a hash of its source
+    # path. Serving the sources from anywhere other than where the AOT
+    # step compiled them would give a permanent .eln miss. In practice
+    # this matters for init.el; early-init.el's AOT .eln is structurally
+    # unreachable regardless — its eln lookup happens in Fload *before*
+    # early-init.el runs, i.e. before the code that adds JOTAIN_ELN_PATH
+    # to native-comp-eln-load-path has executed, so early-init always
+    # loads its .elc (a known Emacs limitation, same reason its JIT eln
+    # in var/eln-cache never loads either). Serving it from
+    # compiledConfig is still right: one source of truth, and find-file
+    # agreement with the .elc next to it. (lisp/ was already correct —
+    # it is a single symlink to ${compiledConfig}/lisp.)
     xdg.configFile = {
-      "emacs/early-init.el".source = ./early-init.el;
+      "emacs/early-init.el".source = "${compiledConfig}/early-init.el";
       "emacs/early-init.elc".source = "${compiledConfig}/early-init.elc";
-      "emacs/init.el".source = ./init.el;
+      "emacs/init.el".source = "${compiledConfig}/init.el";
       "emacs/init.elc".source = "${compiledConfig}/init.elc";
       "emacs/lisp".source = "${compiledConfig}/lisp";
       "emacs/templates".source = ./templates;

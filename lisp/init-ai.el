@@ -38,7 +38,7 @@
 ;;;; Frame screenshots for AI tooling
 ;;
 ;; `x-export-frames' is a cairo-only primitive (Linux X11/pgtk builds;
-;; absent on noGui/tty and macOS NS/macport builds).
+;; absent on noGui/tty and macOS NS builds).
 
 (declare-function x-export-frames "xfns.c" (&optional frames type))
 (declare-function jotain-var-file "init-core" (name))
@@ -48,7 +48,7 @@
 FORMAT is one of the symbols `png' (default), `svg' or `pdf'.
 FILE defaults to var/screenshots/<timestamp>.<format> under
 `jotain-var-dir'.  Signals `user-error' on tty frames and on
-builds without `x-export-frames' (noGui, macOS NS/macport).
+builds without `x-export-frames' (noGui, macOS NS).
 Interactively, echo the path and push it onto the kill ring."
   (interactive)
   (unless (display-graphic-p)

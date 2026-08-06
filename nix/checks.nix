@@ -9,6 +9,58 @@
 }:
 let
   inherit (pkgs) lib;
+  inherit (lib) fileset;
+
+  # ── Narrowed check sources ───────────────────────────────────────
+  #
+  # `src' is the flake source (string-like) and lib.fileset needs a real
+  # path, so the narrowed sources are built from ../. — the same tree,
+  # the same idiom nix/info-manual.nix uses and the same constraint
+  # flake.nix documents on `packages.site'.  Inside a flake, ../. is the
+  # store copy of the source, so .git and .gitignore'd files (stray
+  # *.elc, result symlinks) are already excluded.
+  #
+  # `src' itself stays a parameter: options-doc.nix computes
+  # `srcPrefix = toString src + "/"' to rewrite declaration paths into
+  # GitHub URLs, and handing it a fileset source would break that strip
+  # and turn every `declarations' link into an absolute store path.
+  repoRoot = ../.;
+  elIn = dir: fileset.fileFilter (f: lib.hasSuffix ".el" f.name) (repoRoot + dir);
+
+  configFiles = fileset.unions [
+    (repoRoot + "/early-init.el")
+    (repoRoot + "/init.el")
+    (elIn "/lisp")
+  ];
+  # elisp-lint and elisp-test also walk test/; elisp-compile does not.
+  elispSrc = fileset.toSource {
+    root = repoRoot;
+    fileset = fileset.union configFiles (elIn "/test");
+  };
+  nixSrc = fileset.toSource {
+    root = repoRoot;
+    fileset = fileset.union (fileset.fileFilter (f: lib.hasSuffix ".nix" f.name) repoRoot) (
+      repoRoot + "/statix.toml"
+    );
+  };
+
+  # Toolchain for the Elisp checks: the *inner* emacsWithPackages result
+  # (nix/mk-overlay.nix `passthru.core'), not the outer jotain-emacs-full
+  # wrapper.  The wrapper adds exactly three things over `core' — a
+  # runtime PATH (nix/runtime-deps.nix), INFOPATH (→ jotainInfo) and
+  # ASPELL_CONF — and none of them is read by a batch byte-compile or by
+  # the ERT suite: there is no `eval-when-compile' anywhere in the
+  # config, no `executable-find' in test/, and the two PATH-sensitive
+  # devenv tests bind `devenv-nix-lsp-servers' to nil explicitly.
+  # Depending on the wrapper instead pulled in jotainInfo →
+  # packages-doc + options-doc, so every `;;; @doc' block in lisp/, every
+  # docs/*.mdx page and every option `description' in module.nix
+  # invalidated these checks for nothing.
+  #
+  # `core' is also invariant under ordinary Elisp edits:
+  # emacsWithPackagesFromUsePackage reads lisp/ only as an eval-time
+  # *name* scan, so its store path moves only when the package set does.
+  elispEmacs = pkgs.jotainEmacsPackages.core;
 
   hmStubModule = {
     options = {
@@ -75,9 +127,6 @@ let
   graphicalModule = evalHomeModule {
     startWithUserSession = "graphical";
   };
-  jylhisModule = evalHomeModule {
-    emacsBackend = "jylhis";
-  };
 
   # Minimal stand-in for the nix-on-droid module system so the Jotain
   # nix-on-droid module evaluates here on x86_64 (eval only — the actual
@@ -121,7 +170,6 @@ in
   # ── Package builds ────────────────────────────────────────────────
   packages-default = pkgs.jotainEmacsPackages;
   packages-emacs = pkgs.jotainEmacs;
-  packages-jylhis-emacs = pkgs.jylhisEmacs;
   packages-info = pkgs.jotainInfo;
 
   # ── Option documentation ─────────────────────────────────────────
@@ -142,11 +190,11 @@ in
     in
     pkgs.runCommandLocal "check-packages-doc-in-sync"
       {
-        inherit src;
+        trackedMdx = repoRoot + "/docs/configuration/package-reference.mdx";
         generatedMdx = "${generated}/package-reference.mdx";
       }
       ''
-        if ! diff -u "$src/docs/configuration/package-reference.mdx" "$generatedMdx"; then
+        if ! diff -u "$trackedMdx" "$generatedMdx"; then
           echo "" >&2
           echo "docs/configuration/package-reference.mdx is out of sync with" >&2
           echo "the ;;; @doc markers in lisp/init-*.el." >&2
@@ -168,10 +216,11 @@ in
     in
     pkgs.runCommandLocal "check-ds-in-sync"
       {
-        inherit src dsAssets;
+        inherit dsAssets;
+        vendoredDs = repoRoot + "/website/public/ds";
       }
       ''
-        if ! diff -r "$dsAssets" "$src/website/public/ds"; then
+        if ! diff -r "$dsAssets" "$vendoredDs"; then
           echo "" >&2
           echo "website/public/ds is out of sync with the jylhis/design rev" >&2
           echo "pinned in nix/design-pin.nix." >&2
@@ -217,7 +266,6 @@ in
     pkgs.runCommandLocal "check-module-eval"
       {
         defaultEditorConfigured = if defaultModule.config.home.sessionVariables ? EDITOR then "1" else "0";
-        jylhisPackageName = (builtins.head jylhisModule.config.home.packages).name;
         graphicalTarget =
           if pkgs.stdenv.hostPlatform.isLinux then
             builtins.toJSON graphicalModule.config.systemd.user.services.jotain.Install.WantedBy
@@ -242,16 +290,6 @@ in
       ''
         test "$editorConfigured" = "1" || { echo "EDITOR not set"; exit 1; }
         test "$packageCount" -ge 1 || { echo "no packages installed"; exit 1; }
-        touch $out
-      '';
-
-  jylhis-emacs-smoke =
-    pkgs.runCommandLocal "check-jylhis-emacs-smoke"
-      {
-        nativeBuildInputs = [ pkgs.jylhisEmacs ];
-      }
-      ''
-        emacs --batch --eval '(princ emacs-version)' >/dev/null
         touch $out
       '';
 
@@ -302,7 +340,7 @@ in
     pkgs.runCommandLocal "check-statix"
       {
         nativeBuildInputs = [ pkgs.statix ];
-        inherit src;
+        src = nixSrc;
       }
       ''
         cd $src
@@ -315,7 +353,7 @@ in
     pkgs.runCommandLocal "check-deadnix"
       {
         nativeBuildInputs = [ pkgs.deadnix ];
-        inherit src;
+        src = nixSrc;
       }
       ''
         cd $src
@@ -324,19 +362,41 @@ in
       '';
 
   # ── Elisp syntax (balanced parens) ───────────────────────────────
+  #
+  # `runCommand', not `runCommandLocal', for the three Elisp checks: the
+  # usual runCommandLocal calculus (allowSubstitutes = false, because
+  # fetching a trivial output costs more than rebuilding it) inverts when
+  # rebuilding the output requires a multi-hundred-MB Emacs closure.
+  # Substituting a ~0-byte marker (lint/test) or the small
+  # compiled-config tree (compile) from jylhis.cachix.org is strictly
+  # cheaper than substituting the toolchain in order to recreate it.
+  # deploy.yml pushes these on main, so a PR that touches neither lisp/
+  # nor test/ gets them for free and never pulls Emacs at all.  The cheap
+  # checks below stay runCommandLocal.  (This also drops preferLocalBuild,
+  # so with remote builders configured they may be scheduled remotely —
+  # harmless: none reads /proc, host HOME, host PATH or the network.)
   elisp-lint =
-    pkgs.runCommandLocal "check-elisp-lint"
+    pkgs.runCommand "check-elisp-lint"
       {
         nativeBuildInputs = [ pkgs.jotainEmacs ];
-        inherit src;
+        src = elispSrc;
       }
       ''
         cd $src
         emacs -Q --batch --eval '
-          (let ((failed nil))
-            (dolist (f (append (list "early-init.el" "init.el")
+          (let ((files (append (list "early-init.el" "init.el")
                                (directory-files "lisp" t "^\\(init-.*\\|devenv\\)\\.el$")
                                (directory-files "test" t "\\.el$")))
+                (failed nil))
+            ;; The source is a narrowed lib.fileset (see the top of this
+            ;; file).  A fileset that silently loses lisp/ or test/ would
+            ;; leave this check passing over nothing, so make an
+            ;; implausibly short file list fatal rather than green.
+            (when (< (length files) 30)
+              (message "FAIL: only %d files found — narrowed source is wrong"
+                       (length files))
+              (kill-emacs 1))
+            (dolist (f files)
               (condition-case err
                   (with-temp-buffer
                     (insert-file-contents f)
@@ -351,32 +411,24 @@ in
       '';
 
   # ── Elisp byte-compilation (warnings as errors) ─────────────────
-  elisp-compile =
-    pkgs.runCommandLocal "check-elisp-compile"
-      {
-        nativeBuildInputs = [ pkgs.jotainEmacsPackages ];
-        inherit src;
-      }
-      ''
-        cp -r $src work
-        chmod -R u+w work
-        cd work
-        emacs --batch \
-          -L lisp \
-          --eval "(require 'pcre2el)" \
-          --eval "(setq byte-compile-error-on-warn t)" \
-          -f batch-byte-compile early-init.el init.el lisp/devenv.el lisp/init-*.el
-        touch $out
-      '';
+  #
+  # Shared with module.nix' `compiledConfig': on the default HM config
+  # this is literally the same store path, so `home-manager switch'
+  # substitutes CI's artifact instead of re-running Emacs.  `nix flake
+  # check' only requires each check to build; a non-empty output is fine.
+  elisp-compile = import ./config-compiled.nix {
+    inherit pkgs;
+    emacs = elispEmacs;
+  };
 
   # ── Elisp unit tests (ERT, batch) ────────────────────────────────
   # Pure-function tests only: no devenv binary, no network, no
   # subprocesses — safe inside the Nix sandbox.
   elisp-test =
-    pkgs.runCommandLocal "check-elisp-test"
+    pkgs.runCommand "check-elisp-test"
       {
-        nativeBuildInputs = [ pkgs.jotainEmacsPackages ];
-        inherit src;
+        nativeBuildInputs = [ elispEmacs ];
+        src = elispSrc;
       }
       ''
         cd $src

@@ -1,18 +1,9 @@
 {
-  jylhisEmacsSrc ? null,
   # Emacs source variant for jotainEmacs / jotainEmacsNoGui (see
   # emacs.nix). Defaults to "unstable": emacs-overlay's emacs-unstable,
   # the Emacs 31 release branch (currently the 31.0.90 pretest), cached
-  # on nix-community.cachix.org. "mainline" (nixpkgs' default Emacs 30
-  # attr, Hydra-cached) stays available — the flake exposes it as
-  # `packages.emacs-mainline`.
+  # on nix-community.cachix.org.
   variant ? "unstable",
-  # When true, bundle only the tree-sitter grammars this config actually
-  # routes (~26) instead of the full set (~275). Smaller closure / much
-  # less to build from source. Default false keeps with-all-grammars so
-  # the `jotain-emacs-full` derivation hash is unchanged and the binary
-  # cache still hits — see flake.nix `emacs-lite` for the opt-in path.
-  curatedGrammars ? false,
 }:
 final: _prev:
 let
@@ -78,51 +69,14 @@ let
           epkgs.majutsu
           epkgs.nix-ts-mode
           epkgs.tagref
-          (
-            if curatedGrammars then
-              # Only the grammars the Jotain config routes via the
-              # `jotain-prog-ts-remaps' table, init-lang-* `:mode' entries,
-              # or combobulate (lisp/init-prog.el, init-lang-*.el) — plus
-              # tree-sitter-c/-cpp, which nothing routes: C/C++ deliberately
-              # stay on cc-mode (`jotain-prog-warn-non-ts-exclude' in
-              # init-prog.el records the choice), but the grammars are kept
-              # so a manual M-x c-ts-mode / c++-ts-mode still works.
-              # Languages whose grammar is dropped fall back gracefully to
-              # their non-ts mode.
-              epkgs.treesit-grammars.with-grammars (
-                p: with p; [
-                  tree-sitter-bash
-                  tree-sitter-c
-                  tree-sitter-cmake
-                  tree-sitter-comment
-                  tree-sitter-cpp
-                  tree-sitter-css
-                  tree-sitter-dockerfile
-                  tree-sitter-elisp
-                  tree-sitter-go
-                  tree-sitter-gomod
-                  tree-sitter-gowork
-                  tree-sitter-html
-                  tree-sitter-javascript
-                  tree-sitter-jsdoc
-                  tree-sitter-json
-                  tree-sitter-make
-                  tree-sitter-markdown
-                  tree-sitter-markdown-inline
-                  tree-sitter-nix
-                  tree-sitter-python
-                  tree-sitter-regex
-                  tree-sitter-rust
-                  tree-sitter-toml
-                  tree-sitter-tsx
-                  tree-sitter-typescript
-                  tree-sitter-yaml
-                  tree-sitter-zig
-                ]
-              )
-            else
-              epkgs.treesit-grammars.with-all-grammars
-          )
+          # Full grammar set. Every grammar is its own upstream
+          # derivation and this is a linkFarm over their store paths, so
+          # the set costs closure size (~200 MB over a curated subset,
+          # measured 2026-08-01), never build time. The curated-subset
+          # variant (`emacs-lite`) was removed with the build-matrix
+          # narrowing; the full set keeps the `jotain-emacs-full` hash
+          # cache-stable.
+          epkgs.treesit-grammars.with-all-grammars
         ];
       };
     in
@@ -168,29 +122,40 @@ in
   # selects emacs-overlay's prebuilt `*-pgtk` sibling in emacs.nix, so
   # this stays a binary-cache hit. Darwin keeps its NS default (retina
   # already scales); the noGui build below never gets a GUI toolkit.
-  jotainEmacs = import ../emacs.nix {
-    pkgs = final;
-    inherit variant;
-    withPgtk = final.stdenv.hostPlatform.isLinux;
-  };
+  # FLAG-TRIM POLICY: features this config never uses (mailutils'
+  # movemail — rmail-only; gpm console mouse; SELinux attrs) are dropped
+  # ONLY on builds that are already off binary-cache parity — the two
+  # noGui builds (pure overrides, cached solely on jylhis cachix) and
+  # the Darwin GUI (patched by default, never cached anywhere). The
+  # Linux pgtk GUI keeps upstream defaults untouched: it is
+  # byte-identical to nix-community's emacs-unstable-pgtk, and that
+  # cache hit — Emacs plus every dependent ELPA package — is worth more
+  # than any closure trim.
+  jotainEmacs = import ../emacs.nix (
+    {
+      pkgs = final;
+      inherit variant;
+      withPgtk = final.stdenv.hostPlatform.isLinux;
+    }
+    // final.lib.optionalAttrs final.stdenv.hostPlatform.isDarwin {
+      # Off-parity anyway (default-on NS patches): trim what's unused.
+      # gpm/selinux are Linux-only and already off on Darwin.
+      withMailutils = false;
+    }
+  );
 
   # Terminal-only (`-nw`) build, used by the nix-on-droid module: Android
   # under proot is headless, so a GUI Emacs would only bloat the closure
-  # with unusable X/Wayland libraries.
+  # with unusable X/Wayland libraries. Off-parity by construction (noGui
+  # is an override of the non-pgtk base), so the trim policy applies.
   jotainEmacsNoGui = import ../emacs.nix {
     pkgs = final;
     inherit variant;
     noGui = true;
+    withMailutils = false;
+    withGpm = false;
+    withSelinux = false;
   };
-
-  jylhisEmacs = import ../emacs-jylhis.nix (
-    {
-      pkgs = final;
-    }
-    // final.lib.optionalAttrs (jylhisEmacsSrc != null) {
-      src = jylhisEmacsSrc;
-    }
-  );
 
   sonarlintLs = final.sonarlint-ls;
 
@@ -223,10 +188,5 @@ in
   jotainEmacsPackagesNoGui = mkJotainEmacsPackages {
     name = "jotain-emacs-full-nox";
     package = final.jotainEmacsNoGui;
-  };
-
-  jylhisEmacsPackages = mkJotainEmacsPackages {
-    name = "jylhis-emacs-full";
-    package = final.jylhisEmacs;
   };
 }

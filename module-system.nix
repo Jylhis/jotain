@@ -28,13 +28,7 @@ let
   cfg = config.services.jotain;
   jotainOverlay = args.jotainOverlay or (import ./overlay.nix);
   pkgsWithOverlay = pkgs.extend jotainOverlay;
-  selectedPackage =
-    if cfg.package != null then
-      cfg.package
-    else if cfg.emacsBackend == "jylhis" then
-      pkgsWithOverlay.jylhisEmacsPackages
-    else
-      pkgsWithOverlay.jotainEmacsPackages;
+  selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.jotainEmacsPackages;
 
   # Runtime binaries the Elisp config invokes unconditionally (shared
   # list, see nix/runtime-deps.nix).
@@ -99,29 +93,13 @@ in
   options.services.jotain = {
     enable = lib.mkEnableOption "the Jotain Emacs configuration";
 
-    emacsBackend = lib.mkOption {
-      type = lib.types.enum [
-        "mainline"
-        "jylhis"
-        "custom"
-      ];
-      default = "mainline";
-      example = "jylhis";
-      description = ''
-        Which Emacs backend to install. `"mainline"` uses the
-        cache-friendly Emacs build from `emacs.nix`; `"jylhis"` uses
-        the pinned `github:jylhis/emacs` Meson fork; `"custom"` uses
-        `services.jotain.package`.
-      '';
-    };
-
     package = lib.mkOption {
       type = lib.types.nullOr lib.types.package;
       default = null;
       defaultText = lib.literalExpression "null";
       description = ''
-        Custom Jotain Emacs package to use. Leave this unset to use
-        `services.jotain.emacsBackend`.
+        Custom Jotain Emacs package to use. Leave this unset to use the
+        cache-friendly default build from `emacs.nix`.
       '';
     };
 
@@ -138,13 +116,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions = [
-      {
-        assertion = cfg.emacsBackend != "custom" || cfg.package != null;
-        message = "services.jotain.emacsBackend = \"custom\" requires services.jotain.package.";
-      }
-    ];
-
     nixpkgs.overlays = [ jotainOverlay ];
     environment.systemPackages = [
       wrappedPackage

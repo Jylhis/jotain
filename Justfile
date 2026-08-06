@@ -116,21 +116,20 @@ compile:
 #       --eval '(byte-recompile-directory "{{config_dir}}/lisp" 0 t)' \
 #       -f batch-byte-compile early-init.el init.el
 
-# Equivalent AOT coverage belongs in the Nix/home-manager deploy of the
-# config so the daemon loads precompiled .eln instead of JIT-compiling
-# each module every session (the eln-cache otherwise holds only a
-# trampoline). This recipe is the interim, in-tree way to warm it.
 # [DISABLED] Native-compile every config module ahead of time.
+#
+# This recipe's premise — that AOT coverage "belongs in the Nix /
+# home-manager deploy of the config" — is now implemented, so there is
+# nothing interim left to warm in-tree. nix/config-compiled.nix takes a
+# `nativeCompile' flag that emits .eln into the store, and module.nix
+# exposes it as `services.jotain.nativeCompile.enable'. Read the gate
+# comment in nix/config-compiled.nix before turning it on.
 [group('check')]
 compile-native:
-    @echo "just compile-native is disabled — emacs is not in the devenv shell."
-    @echo "Try: just run-built  (builds Emacs via Nix, then launches it)"
+    @echo "just compile-native is disabled — AOT now happens in the Nix build."
+    @echo "Enable it with: services.jotain.nativeCompile.enable = true;"
+    @echo "See the gate command in nix/config-compiled.nix first."
     @exit 1
-# Original:
-#   emacs --batch --init-directory={{config_dir}} \
-#       --eval '(setq native-comp-speed 2)' \
-#       --eval '(native-compile-async (list "{{config_dir}}/early-init.el" "{{config_dir}}/init.el" "{{config_dir}}/lisp") (quote recursively))' \
-#       --eval '(while (or comp-files-queue (> (comp-async-runnings) 0)) (sleep-for 1))'
 
 # Run the ERT tests under test/ via the flake check (the dev shell has
 # no emacs; the check builds one). Direct equivalent once Emacs is back
@@ -168,58 +167,17 @@ bench-open output="":
 build:
     nix-build
 
-# Build a bare Emacs (no tree-sitter grammars).
+# Build a bare Emacs (no tree-sitter grammars): the matrix GUI for the
+# platform — pgtk/Wayland on Linux, patched NS on Darwin (the latter is
+# a from-source build by design; see emacs.nix).
 [group('build')]
 build-bare:
     nix-build --argstr system {{system}} emacs.nix
-
-# Build the full distribution with only the grammars this config uses (~26 vs ~275; smaller, lighter to build). Opt-in.
-[group('build')]
-build-lite:
-    nix build .#emacs-lite -o result-emacs-lite
-
-# Build a bare Emacs from source, trimmed (no xwidgets/mailutils) for fewer build inputs. Opt-in.
-[group('build')]
-build-bare-lite:
-    nix-build --arg withXwidgets false --arg withMailutils false \
-        --argstr system {{system}} emacs.nix
-
-# Build the bare github:jylhis/emacs Meson fork.
-[group('build')]
-build-jylhis:
-    nix build .#jylhis-emacs -o result-jylhis-emacs
-
-# Note: the full fork-backed package set (`jylhisEmacsPackages`) is no
-# longer exposed as a flake `packages` output — the Meson fork still
-# crashes byte-compiling some bundled Emacs packages. It remains
-# reachable via the Home Manager `services.jotain.emacsBackend = "jylhis"`
-# option, which consumes the overlay attribute directly.
-
-# Build with --with-pgtk for Wayland.
-[group('build')]
-build-pgtk:
-    nix-build --arg withPgtk true --argstr system {{system}} emacs.nix
-
-# Build with --with-x-toolkit=gtk3 (X11 + GTK3).
-[group('build')]
-build-gtk3:
-    nix-build --arg withGTK3 true --argstr system {{system}} emacs.nix
-
-# Build the X11/Lucid escape hatch (unstable/Emacs 31, pgtk off) — the
-# pre-switch Linux GUI backend, for when the pgtk default misbehaves.
-[group('build')]
-build-x11:
-    nix-build --arg variant '"unstable"' --arg withPgtk false --argstr system {{system}} emacs.nix
 
 # Build a terminal-only Emacs (--without-x --without-ns).
 [group('build')]
 build-nox:
     nix-build --arg noGui true --argstr system {{system}} emacs.nix
-
-# Build the macport variant (Darwin only).
-[group('build')]
-build-macport:
-    nix-build --arg variant '"macport"' --argstr system {{system}} emacs.nix
 
 # Build from git master (the revision pinned by emacs-overlay, binary-cached).
 [group('build')]
@@ -230,6 +188,16 @@ build-git:
 [group('build')]
 build-igc:
     nix-build --arg variant '"igc"' --argstr system {{system}} emacs.nix
+
+# Build IGC with ccache. On Darwin, nix-community.cachix.org has no
+# prebuilt igc, so plain build-igc is already a from-source build there
+# (plan.md §3) — ccache makes repeat local rebuilds cheaper. Needs a
+# ccache sandbox exception set up first; see the useCcache doc comment
+# in emacs.nix. No-op improvement elsewhere: everywhere else, igc is a
+# cache hit and this just adds ccache overhead for nothing.
+[group('build')]
+build-igc-ccache:
+    nix-build --arg variant '"igc"' --arg useCcache true --argstr system {{system}} emacs.nix
 
 # Build a bare aarch64-linux nox Emacs (Termux/Android) — kept for
 # cache-parity testing of emacs.nix; `run-built` uses build-nox-full.
