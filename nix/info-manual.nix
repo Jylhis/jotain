@@ -93,6 +93,10 @@ let
       out = "usage-devenv.texi";
     }
     {
+      src = "usage/notebooks.mdx";
+      out = "usage-notebooks.texi";
+    }
+    {
       src = "usage/ai-screenshot.mdx";
       out = "usage-ai-screenshot.texi";
     }
