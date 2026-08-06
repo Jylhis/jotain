@@ -3,34 +3,51 @@
 # This file builds a bare Emacs binary. For the full distribution with
 # tree-sitter grammars, use default.nix instead.
 #
+# THE BUILD MATRIX is deliberately narrow — four shipped builds, on
+# {x86_64, aarch64} × {Linux, Darwin}:
+#   * Linux GUI      — pgtk (pure GTK / Wayland). The ONLY Linux GUI;
+#                      X11/Lucid/GTK3-x11/Motif/Athena are not supported
+#                      and asserted away below.
+#   * Linux terminal — noGui build.
+#   * Darwin GUI     — NS/Cocoa with the nix-giant patches applied by
+#                      default (system-appearance, round-undecorated-
+#                      frame; adjust-ns-init-colors where the branch has
+#                      it). Always a from-source build — the patches put
+#                      it off every binary cache by design.
+#   * Darwin terminal — noGui build.
+#
 # Base packages per variant:
-#   * mainline — pkgs.emacs from nixpkgs (default Emacs attr, Hydra-cached)
+#   * mainline — pkgs.emacs from nixpkgs (default Emacs attr,
+#     Hydra-cached; kept as the cache-parity canary and escape hatch)
 #   * git/unstable/igc — pkgs.emacs-git / emacs-unstable / emacs-igc from
 #     nix-community/emacs-overlay (cached on nix-community.cachix.org)
-#   * macport — pkgs.emacs-macport, nixpkgs' alias for emacs30-macport
-#     (jdtsmith/emacs-mac fork; emacs-overlay does not ship a macport)
 # The overlay is wired up in flake.nix and devenv.nix; this file also
 # re-applies it when called standalone via `nix-build emacs.nix` (the
 # overlays attr is derived from flake.lock).
 #
 # Usage:
-#   nix-build emacs.nix                                            # Emacs 30 (nixpkgs default attr)
+#   nix-build emacs.nix                                            # unstable variant (Emacs 31 pretest);
+#                                                                  #   pgtk GUI on Linux, NS+patches on Darwin
 #   nix-build emacs.nix --arg noGui true                           # terminal-only
-#   nix-build emacs.nix --arg withPgtk true                        # pure GTK (Wayland)
-#   nix-build emacs.nix --arg withGTK3 true                        # GTK3 + X11
 #   nix-build emacs.nix --arg withNativeCompilation false          # disable native-comp
 #   nix-build emacs.nix --arg variant '"git"'                      # bleeding-edge master
-#   nix-build emacs.nix --arg variant '"unstable"'                 # Emacs 31 release branch (31.0.90 pretest;
-#                                                                  #   the distribution default via mk-overlay.nix)
-#   nix-build emacs.nix --arg variant '"macport"'                  # macOS macport fork (still Emacs 30)
+#   nix-build emacs.nix --arg variant '"mainline"'                 # nixpkgs default emacs attr
 #   nix-build emacs.nix --arg variant '"igc"'                      # incremental GC branch
-#   nix-build emacs.nix --arg withSystemAppearancePatch true       # macOS dark mode hooks
 #
-# git/unstable/igc/macport track the revision pinned by the overlay (or
-# nixpkgs for macport) and are binary-cache hits. Only when pinning a
-# custom commit via --argstr rev does the first build fail and report
-# the hash to pass back:
+# git/unstable/igc track the revision pinned by the overlay and are
+# binary-cache hits on Linux. Only when pinning a custom commit via
+# --argstr rev does the first build fail and report the hash to pass
+# back:
 #   nix-build emacs.nix --arg variant '"git"' --argstr rev "abc123..." --argstr hash "sha256-..."
+#
+# igc on Darwin has no prebuilt upstream (plan.md §3), so it is a
+# from-source build there even at the default rev. For that case, and
+# for any custom-rev/patched build above, --arg useCcache true swaps in
+# pkgs.ccacheStdenv to make repeat local rebuilds cheaper — see its doc
+# comment below for the (required, one-time, machine-level) ccache
+# setup. It is a no-op improvement, not a cache-parity path: never turn
+# it on for a plain default-rev build that would otherwise hit the
+# binary cache.
 #
 # Adapted from the `next` branch. Source for nixpkgs is the flake.lock-pinned
 # nixpkgs-unstable channel; pass --arg pkgs '<nixpkgs>' or override `pkgs`
@@ -79,67 +96,87 @@
       },
 
   # ── Source variant ────────────────────────────────────────────────
-  #   "mainline"  — nixpkgs default emacs attr (Emacs 30; the default
-  #                 for bare emacs.nix builds, Hydra-cached)
-  #   "git"       — bleeding-edge master from git.savannah.gnu.org
   #   "unstable"  — Emacs 31 release branch (currently the 31.0.90
-  #                 pretest); the distribution default — mk-overlay.nix
-  #                 passes variant = "unstable" to jotainEmacs
-  #   "macport"   — jdtsmith/emacs-mac fork (Darwin only)
+  #                 pretest); the default here and for the distribution
+  #                 (mk-overlay.nix passes variant = "unstable")
+  #   "git"       — bleeding-edge master from git.savannah.gnu.org
   #   "igc"       — feature/igc3 incremental garbage collector branch
-  variant ? "mainline",
+  #   "mainline"  — nixpkgs default emacs attr (Hydra-cached; the
+  #                 cache-parity canary, not a shipped build)
+  variant ? "unstable",
 
-  # Source overrides — pin a specific commit for git/unstable/igc/macport
-  # instead of the overlay/nixpkgs pin:
+  # Source overrides — pin a specific commit for git/unstable/igc
+  # instead of the overlay pin:
   #   --argstr rev "abc123..." --argstr hash "sha256-..."
   rev ? null,
   hash ? null,
 
+  # Build with pkgs.ccacheStdenv instead of the default stdenv. This is
+  # ONLY useful — and only meant to be turned on — for a build that is
+  # already off the cache-parity path documented below: a custom `rev`,
+  # the Darwin GUI build (patched by default, so from-source by design),
+  # or the `igc` variant on Darwin (which nix-community.cachix.org does
+  # not carry a prebuilt for, so `just build-igc` is a from-source build
+  # on that platform even at the default rev — see plan.md §3). Swapping
+  # stdenv changes the
+  # derivation hash unconditionally, so this flag must stay `false` for
+  # every default-rev, no-patch build: turning it on for e.g. plain
+  # `variant = "unstable"` on Linux would trade an existing binary-cache
+  # hit for a slower, ALSO-uncached local build, the opposite of the
+  # point.
+  #
+  # Requires one piece of machine setup before this has any effect: the
+  # cache directory must be writable inside the build sandbox, e.g. in
+  # nix.conf: `extra-sandbox-paths = /var/cache/ccache` (and the dir
+  # created writable by the build users). The CCACHE_DIR half is wired
+  # below via ccacheStdenv's `extraConfig` — a bare `pkgs.ccacheStdenv`
+  # would default to $HOME/.ccache, which is /homeless-shelter inside
+  # the sandbox and can never hit; environment variables set on the
+  # machine do not reach sandboxed builders. Without the sandbox
+  # exception the build still succeeds (from source) — ccache just
+  # misses every time.
+  useCcache ? false,
+  # Where ccache keeps its cache (must match the extra-sandbox-paths
+  # entry above). Only read when useCcache = true.
+  ccacheDir ? "/var/cache/ccache",
+
   # ── GUI toolkit ──────────────────────────────────────────────────
+  # The matrix admits exactly one GUI per platform: pgtk on Linux, NS on
+  # Darwin. The X11 toolkits (Lucid/GTK3-x11/Motif/Athena) are gone —
+  # not arguments any more, and asserted unreachable below. GTK3 the
+  # *library* is still a build input of the pgtk build (make-emacs.nix's
+  # own withGTK3 default is `withPgtk && !noGui`, which we leave to the
+  # base); what was dropped is GTK3-as-X11-toolkit.
   noGui ? false, # terminal only (--without-x --without-ns)
-  withPgtk ? false, # --with-pgtk (pure GTK for Wayland)
-  withGTK3 ? (withPgtk && !noGui), # --with-x-toolkit=gtk3
-  withMotif ? false, # --with-x-toolkit=motif
-  withAthena ? false, # --with-x-toolkit=athena
-  withNS ? (pkgs.stdenv.hostPlatform.isDarwin && variant != "macport" && !noGui),
+  withPgtk ? (pkgs.stdenv.hostPlatform.isLinux && !noGui),
+  # --with-pgtk (pure GTK / Wayland; the Linux GUI)
+  withNS ? (pkgs.stdenv.hostPlatform.isDarwin && !noGui),
   # Cocoa/NeXTstep (macOS native GUI)
-  withX ? !(pkgs.stdenv.hostPlatform.isDarwin || noGui || withPgtk),
-  # X11 (Linux default)
-  withToolkitScrollBars ? true, # --with-toolkit-scroll-bars
-  withXinput2 ? withX, # --with-xinput2 (smooth scrolling on X)
-  withXwidgets ? (
-    if variant == "git" || variant == "unstable" || variant == "igc" then
-      false
-    else
-      !noGui && (withGTK3 || withPgtk || withNS || variant == "macport")
-  ),
-  # --with-xwidgets (embedded webkit widgets). The default mirrors each
-  # base's own: emacs-overlay builds its git/unstable/igc attrs with
-  # xwidgets off (even on Darwin, where withNS would otherwise flip it
-  # on), while nixpkgs make-emacs.nix defaults it on for GUI GTK/NS
-  # builds (its extra `isDarwin || major != "30"` clause only matters
-  # for non-Darwin Emacs 30 with a GTK toolkit forced on, which no
-  # jotain default is). The flag is only forwarded when the caller
-  # diverges from this default (see overrideArgs below) — always passing
-  # it would override the overlay attrs' xwidgets-off value on Darwin
-  # and silently bust cache parity for git/unstable/igc there.
+  withXwidgets ? null,
+  # --with-xwidgets (embedded webkit widgets). `null` (the default)
+  # means "whatever the base package was built with" — xwidgets off for
+  # the overlay's git/unstable/igc attrs, i.e. off everywhere in this
+  # matrix — and forwards nothing, so cache parity cannot be disturbed.
+  # An explicit bool is forwarded and (when it differs from the base)
+  # intentionally busts the cache, like a rev pin. This replaces the old
+  # mirrored-default scheme, whose mirror expression could drift from
+  # make-emacs.nix's own version-conditional default.
 
   # ── Compilation ──────────────────────────────────────────────────
   withNativeCompilation ? (pkgs.stdenv.buildPlatform.canExecute pkgs.stdenv.hostPlatform),
   # --with-native-compilation (libgccjit AOT)
   withCompressInstall ? true, # --with-compress-install (gzip .el files)
   withCsrc ? true, # install C sources for find-function-C-source
-  # Every base is a git checkout these days: nixpkgs fetches emacs and
-  # emacs30-macport via fetchgit/fetchFromGitHub (srcRepo defaults to
-  # true in make-emacs.nix and nixpkgs does not override it), and
-  # emacs-overlay passes srcRepo = true for git/unstable/igc.
+  # Every base is a git checkout these days: nixpkgs fetches emacs via
+  # fetchgit (srcRepo defaults to true in make-emacs.nix and nixpkgs
+  # does not override it), and emacs-overlay passes srcRepo = true for
+  # git/unstable/igc.
   srcRepo ? true,
   # source is a git checkout (runs autoreconf)
 
   # ── Image formats ────────────────────────────────────────────────
   withWebP ? true, # --with-webp
   withImageMagick ? false, # --with-imagemagick (off by default since Emacs 27)
-  withCairo ? withX, # --with-cairo (2D graphics on X)
 
   # ── Libraries & features ─────────────────────────────────────────
   withTreeSitter ? true, # --with-tree-sitter
@@ -157,32 +194,52 @@
   # --with-systemd (journal support)
   withSmallJaDic ? false, # --with-small-ja-dic
   withGcMarkTrace ? false, # --with-gc-mark-trace (experimental in Emacs 30)
-  withGlibNetworking ? (withPgtk || withGTK3 || (withX && withXwidgets)),
-  # GLib networking / TLS for GIO
+  withGlibNetworking ? withPgtk,
+  # GLib networking / TLS for GIO. make-emacs.nix's own default is
+  # `withPgtk || withGTK3 || (withX && withXwidgets)`; with the X11
+  # toolkits gone and withGTK3 left to the base (whose default is
+  # `withPgtk && !noGui`), the reachable part reduces to withPgtk.
 
   # ── macOS patches (from nix-giant/nix-darwin-emacs) ──────────────
   # Originally from d12frosted/homebrew-emacs-plus. Only applied on
-  # Darwin. Fetched from the commit pinned in darwinPatchesRev below;
-  # hashes are pinned per patch branch in darwinPatchHashes. Updating
-  # means bumping the rev — a patch rewritten upstream then reports its
-  # new hash at build time.
-  withSystemAppearancePatch ? false,
+  # Darwin, and ON BY DEFAULT for the NS GUI build — the matrix's Darwin
+  # GUI is "modern macOS, patched", accepting that this puts every
+  # Darwin GUI build permanently off the binary caches (pair with
+  # useCcache for iteration). The noGui Darwin build takes none of them
+  # (withNS is false there), so it stays unpatched. Fetched from the
+  # commit pinned in darwinPatchesRev below; hashes are pinned per patch
+  # branch in darwinPatchHashes. Updating means bumping the rev — a
+  # patch rewritten upstream then reports its new hash at build time.
+  withSystemAppearancePatch ? withNS,
   # Adds ns-system-appearance variable and
   # ns-system-appearance-change-functions hook for Dark/Light mode detection
-  withRoundUndecoratedFramePatch ? false,
+  withRoundUndecoratedFramePatch ? withNS,
   # Adds `undecorated-round` frame parameter for rounded-corner
   # borderless windows using NSFullSizeContentViewWindowMask
-  withAdjustNsInitColorsPatch ? false,
+  withAdjustNsInitColorsPatch ? withNS,
   # Moves ns_init_colors() after init_lread() so data-directory is set
   # when colors load (full palette instead of the ~62 dump-time colors).
-  # Only exists in patches-unstable, i.e. for the git/igc variants.
+  # Only exists in patches-unstable — silently skipped (see
+  # darwinPatches below) unless the variant maps to that branch.
 }:
+
+# The build matrix: the only GUIs are pgtk on Linux and NS on Darwin.
+# A Linux build must be pgtk or terminal-only; a Darwin build NS or
+# terminal-only. This is what makes the removed X11/Lucid/Motif/Athena
+# escape hatches unreachable rather than merely undocumented.
+assert pkgs.stdenv.hostPlatform.isLinux -> (noGui || withPgtk);
+assert pkgs.stdenv.hostPlatform.isDarwin -> (noGui || withNS);
+assert builtins.elem variant [
+  "mainline"
+  "git"
+  "unstable"
+  "igc"
+];
 
 let
   inherit (pkgs)
     lib
     stdenv
-    fetchFromGitHub
     fetchgit
     fetchpatch
     ;
@@ -215,27 +272,22 @@ let
   #   * git/unstable/igc — emacs-overlay's prebuilt attrs (cached on
   #     nix-community.cachix.org; emacs-igc already carries
   #     --with-mps=yes and the mps buildInput)
-  #   * macport — nixpkgs emacs-macport alias → emacs30-macport
-  #     (jdtsmith/emacs-mac fork, still Emacs 30.2.50 upstream)
   #
-  # When withPgtk is requested, select the prebuilt `*-pgtk` sibling
-  # (emacs-overlay for git/unstable/igc, nixpkgs for mainline) instead of
-  # overriding withPgtk on the non-pgtk base. Both build byte-identical
-  # *content*, but the sibling carries a distinct derivation `name`
-  # (`…-pgtk-…`) that feeds the output-path hash — so a plain
-  # `emacs-unstable.override { withPgtk = true; }` lands on a *different*
-  # store path and misses the binary cache, rebuilding the same bytes
-  # from source. Starting from the sibling preserves cache parity: this
-  # file's computed pgtk args (withGTK3 = true, withX = withCairo =
-  # withXinput2 = false, withGlibNetworking = true, withXwidgets off for
-  # git-variants) exactly match how emacs-overlay built the sibling, so
-  # the `basePackage.override` below is a no-op. `or`-guarded so a
-  # downstream consumer on an older nixpkgs that lacks a given sibling
-  # falls back to overriding the non-pgtk base (correct, from source).
+  # When withPgtk is requested (the Linux GUI default), select the
+  # prebuilt `*-pgtk` sibling (emacs-overlay for git/unstable/igc,
+  # nixpkgs for mainline) instead of overriding withPgtk on the non-pgtk
+  # base. Both build byte-identical *content*, but the sibling carries a
+  # distinct derivation `name` (`…-pgtk-…`) that feeds the output-path
+  # hash — so a plain `emacs-unstable.override { withPgtk = true; }`
+  # lands on a *different* store path and misses the binary cache,
+  # rebuilding the same bytes from source. Starting from the sibling
+  # preserves cache parity: the args this file forwards match how
+  # emacs-overlay built the sibling, so the `basePackage.override` below
+  # is a no-op. `or`-guarded so a downstream consumer on an older
+  # nixpkgs that lacks a given sibling falls back to overriding the
+  # non-pgtk base (correct, from source).
   basePackage =
-    if variant == "macport" then
-      pkgs.emacs-macport
-    else if variant == "git" then
+    if variant == "git" then
       (if withPgtk then pkgs.emacs-git-pgtk or pkgs.emacs-git else pkgs.emacs-git)
     else if variant == "unstable" then
       (if withPgtk then pkgs.emacs-unstable-pgtk or pkgs.emacs-unstable else pkgs.emacs-unstable)
@@ -246,27 +298,26 @@ let
 
   # ── Forward all boolean flags to make-emacs.nix ──────────────────
   #
-  # CACHE-PARITY INVARIANT: every default in this file's argument list
-  # must match the corresponding default in upstream nixpkgs
-  # make-emacs.nix (and the explicit args emacs-overlay passes for its
-  # git/unstable/igc attrs). When that holds, calling
+  # CACHE-PARITY INVARIANT (Linux and noGui builds): every default in
+  # this file's argument list must match the corresponding default in
+  # upstream nixpkgs make-emacs.nix (and the explicit args emacs-overlay
+  # passes for its git/unstable/igc attrs). When that holds, calling
   #
-  #     import ./emacs.nix {}                  # mainline variant
-  #     import ./emacs.nix { noGui = true; }   # any standard override
+  #     import ./emacs.nix {}                  # unstable; pgtk on Linux
+  #     import ./emacs.nix { noGui = true; }   # terminal-only
   #
-  # produces the *exact* store path of `pkgs.emacs(.override { ... })`
-  # — and variant "git"/"unstable"/"igc" the store path of the matching
-  # emacs-overlay attr — so binary caches (Hydra, nix-community.cachix.org,
-  # jylhis) hit and we never rebuild Emacs from source. Only custom rev
-  # pins and the Darwin patch flags are expected to diverge — those
-  # paths run through `overrideAttrs` below and intentionally bust the
-  # cache.
+  # produces on Linux the *exact* store path of the matching prebuilt
+  # attr (emacs-unstable-pgtk for the default; pkgs.emacs-pgtk for
+  # variant "mainline") — so binary caches (Hydra,
+  # nix-community.cachix.org, jylhis) hit and Linux never rebuilds Emacs
+  # from source. Expected divergences: custom rev pins, an explicit
+  # `useCcache = true`, and — BY DESIGN — every Darwin GUI build, whose
+  # default-on patches run through `overrideAttrs` below and put it
+  # permanently off the caches. Darwin noGui stays a pure override.
   #
-  # Verify after any change to defaults (also with variant '"git"' vs
-  # pkgs.emacs-git, '"unstable"' vs pkgs.emacs-unstable, '"igc"' vs
-  # pkgs.emacs-igc, and each `withPgtk = true;` build vs the matching
-  # `*-pgtk` sibling — pkgs.emacs-pgtk / emacs-unstable-pgtk /
-  # emacs-git-pgtk / emacs-igc-pgtk):
+  # Verify after any change to defaults (on Linux; also with variant
+  # '"git"' vs pkgs.emacs-git-pgtk, '"igc"' vs pkgs.emacs-igc-pgtk, and
+  # noGui = true vs the non-pgtk base override):
   #     nix-instantiate --eval --strict -E \
   #       'let lock = builtins.fromJSON (builtins.readFile ./flake.lock);
   #            nixpkgsNode = lock.nodes.root.inputs.nixpkgs;
@@ -276,8 +327,8 @@ let
   #            overlay = fetchTarball { url = "https://github.com/${ov.owner}/${ov.repo}/archive/${ov.rev}.tar.gz"; sha256 = ov.narHash; };
   #            pkgs = import nixpkgs { overlays = [ (import overlay) ]; };
   #        in {
-  #             mainline = (import ./emacs.nix {}).outPath == pkgs.emacs.outPath;
-  #             unstable-pgtk = (import ./emacs.nix { variant = "unstable"; withPgtk = true; }).outPath == pkgs.emacs-unstable-pgtk.outPath;
+  #             default = (import ./emacs.nix {}).outPath == pkgs.emacs-unstable-pgtk.outPath;
+  #             mainline-pgtk = (import ./emacs.nix { variant = "mainline"; }).outPath == pkgs.emacs-pgtk.outPath;
   #           }'
   #
   # ── nixpkgs-version-portable override ────────────────────────────
@@ -297,29 +348,19 @@ let
   # not-yet-existing flags (noGui, srcRepo, withGcMarkTrace, …) are
   # dropped, and terminal/GUI selection still flows through the explicit
   # `with*` flags that have existed all along.
-  xwidgetsBaseDefault =
-    if isGitVariant then false else !noGui && (withGTK3 || withPgtk || withNS || variant == "macport");
-
   overrideArgs = {
     inherit
       noGui
       srcRepo
       withPgtk
-      withGTK3
-      withMotif
-      withAthena
       withNS
-      withX
       withNativeCompilation
       withCompressInstall
       withCsrc
-      withToolkitScrollBars
-      withXinput2
       withTreeSitter
       withSQLite3
       withWebP
       withImageMagick
-      withCairo
       withDbus
       withSelinux
       withGpm
@@ -332,15 +373,32 @@ let
       withGlibNetworking
       ;
   }
-  # Mirror of the `withXwidgets ?` default above. Forward the flag only
-  # when the caller diverges from it: the overlay's git/unstable/igc
-  # attrs carry xwidgets off explicitly, so unconditionally passing our
-  # value would rebuild them from source on Darwin (where withNS makes
-  # the mainline-style default true) instead of hitting
-  # nix-community.cachix.org. An explicit non-default withXwidgets still
-  # intentionally busts the cache, like the rev pins.
-  // lib.optionalAttrs (withXwidgets != xwidgetsBaseDefault) {
+  # The removed X11-era arguments (withX, withGTK3, withMotif, withAthena,
+  # withCairo, withXinput2, withToolkitScrollBars) are deliberately NOT
+  # forwarded: the base package's own defaults for them are exactly what
+  # the cached artifacts were built with, so not passing them is
+  # parity-neutral — and there is no supported configuration in this
+  # matrix that would set them to anything else.
+  #
+  # withXwidgets: null means "follow the base" and forwards nothing (see
+  # the argument's doc comment); an explicit bool is forwarded and may
+  # intentionally bust the cache.
+  // lib.optionalAttrs (withXwidgets != null) {
     inherit withXwidgets;
+  }
+  # See the `useCcache ?` doc comment above: default false forwards
+  # nothing here, so the default path is byte-for-byte what it was
+  # before this flag existed. The extraConfig override is what points
+  # ccache at the sandbox-visible cache dir — bare ccacheStdenv would
+  # write to $HOME/.ccache (= /homeless-shelter in the sandbox) and
+  # never hit.
+  // lib.optionalAttrs useCcache {
+    stdenv = pkgs.ccacheStdenv.override {
+      extraConfig = ''
+        export CCACHE_DIR=${ccacheDir}
+        export CCACHE_UMASK=007
+      '';
+    };
   };
 
   overridden = basePackage.override (
@@ -350,9 +408,9 @@ let
   # ── Darwin patches (fetched from nix-giant/nix-darwin-emacs) ─────
   # Patch directory: "unstable" for master/32+; otherwise keyed on what
   # the base package actually is, not on the variant name — "30" for
-  # Emacs 30.x (macport, and mainline while nixpkgs' default attr is
-  # 30.2), "31" for Emacs 31.x (unstable, and mainline once nixpkgs
-  # promotes 31 to pkgs.emacs).
+  # Emacs 30.x (mainline while nixpkgs' default attr is 30.x), "31" for
+  # Emacs 31.x (unstable, and mainline once nixpkgs promotes 31 to
+  # pkgs.emacs).
   patchBranch =
     if variant == "git" || variant == "igc" then
       "unstable"
@@ -409,22 +467,13 @@ let
       darwinPatch "adjust-ns-init-colors.patch"
     );
 
-  # ── Macport source override (when rev is provided) ───────────────
-  macportSrcOverride = lib.optionalAttrs (variant == "macport" && rev != null) {
-    src = fetchFromGitHub {
-      owner = "jdtsmith";
-      repo = "emacs-mac";
-      inherit rev;
-      hash = if hash != null then hash else lib.fakeHash;
-    };
-  };
-
   # ── Determine if overrideAttrs is needed ─────────────────────────
   # Skip overrideAttrs unless a custom rev is pinned or Darwin patches
-  # are requested — every default-rev variant is then a pure
-  # basePackage.override and stays a binary cache hit.
+  # apply (they do by default on the Darwin NS GUI) — every default-rev
+  # Linux/noGui variant is then a pure basePackage.override and stays a
+  # binary cache hit.
   hasCustomGitSrc = isGitVariant && rev != null;
-  needsOverride = hasCustomGitSrc || darwinPatches != [ ] || (variant == "macport" && rev != null);
+  needsOverride = hasCustomGitSrc || darwinPatches != [ ];
 
 in
 if !needsOverride then
@@ -439,8 +488,6 @@ else
     lib.optionalAttrs hasCustomGitSrc {
       src = customGitSrc;
     }
-    # Source override for macport with custom rev
-    // macportSrcOverride
     // {
       patches = (old.patches or [ ]) ++ darwinPatches;
 

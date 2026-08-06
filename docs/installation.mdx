@@ -25,27 +25,22 @@ just build
 
 This runs plain `nix-build`, which evaluates `default.nix` — a thin flake-compat wrapper around `flake.nix` — and builds `packages.<system>.default`: the full `jotainEmacsPackages` distribution (Emacs + use-package-scanned packages + tree-sitter grammars + the Info manual) assembled by `nix/mk-overlay.nix`. The distribution's Emacs is the emacs-overlay `unstable` variant (the Emacs 31 release branch); thanks to the cache-parity invariant in `emacs.nix` its store path matches [`nix-community/emacs-overlay`](https://github.com/nix-community/emacs-overlay)'s prebuilt `emacs-unstable`, so the base Emacs is a binary-cache hit from `nix-community.cachix.org` (and the `mainline` variant from Hydra) — nothing recompiles from source.
 
-### Build Variants
+### Build Matrix
 
-The `Justfile` provides shortcuts for the common flavours:
+Jotain ships exactly four builds — {x86_64, aarch64} × {Linux, Darwin}: on Linux a pgtk/Wayland GUI and a terminal-only build; on Darwin a patched NS/Cocoa GUI (nix-giant system-appearance and round-undecorated-frame patches applied by default — always built from source) and a terminal-only build. X11/Lucid/GTK3-x11/Motif/Athena and the macport fork are not supported; `emacs.nix` asserts those configurations away.
 
 ```bash
 just build           # full distribution: Emacs 31 (unstable) + every grammar (default)
-just build-lite      # full distribution with the curated ~26-grammar subset
 just build-nox-full  # full terminal-only distribution (same attr the nix-on-droid module ships)
-just build-bare      # bare Emacs from emacs.nix — no packages, no grammars
-just build-jylhis    # bare github:jylhis/emacs Meson fork
-just build-pgtk      # --with-pgtk (pure GTK, Wayland — the Linux GUI default)
-just build-gtk3      # --with-x-toolkit=gtk3 (X11 + GTK3)
-just build-x11       # X11/Lucid escape hatch (unstable variant, pgtk off)
+just build-bare      # bare Emacs from emacs.nix — the platform's matrix GUI
 just build-nox       # --without-x --without-ns (terminal only, bare)
-just build-macport   # jdtsmith/emacs-mac fork (Darwin only)
 just build-git       # bleeding-edge master from git.savannah.gnu.org
 just build-igc       # feature/igc3 MPS incremental GC branch
+just build-igc-ccache # igc via ccacheStdenv (for from-source platforms; see emacs.nix)
 just build-android   # bare aarch64-linux nox — kept for cache-parity testing
 ```
 
-Or call `nix-build` directly — `default.nix` exposes the flake packages, and the bare-Emacs variant builds target `emacs.nix` with any argument the file accepts:
+Or call `nix-build` directly — `default.nix` exposes the flake packages, and the bare-Emacs builds target `emacs.nix` with any argument the file accepts:
 
 ```bash
 nix-build                                                # full distribution
@@ -53,16 +48,15 @@ nix-build -A emacs                                       # bare Emacs only
 nix-build emacs.nix  --arg withNativeCompilation false   # no native-comp
 nix-build emacs.nix  --arg variant '"git"'               # master
 nix-build emacs.nix  --arg variant '"igc"'               # MPS GC branch
-nix-build emacs.nix  --arg variant '"macport"'           # macOS macport fork
 ```
 
 <Note>
-`git`/`unstable`/`igc` build the revision pinned by emacs-overlay and are binary-cache hits. Only when pinning a custom commit via `--argstr rev "..."` does the first build fail and report the expected hash to pass back via `--argstr hash "sha256-..."`.
+`git`/`unstable`/`igc` build the revision pinned by emacs-overlay and are binary-cache hits on Linux and for the terminal-only Darwin build. The Darwin GUI is patched by default and therefore always compiles from source. Only when pinning a custom commit via `--argstr rev "..."` does the first build fail and report the expected hash to pass back via `--argstr hash "sha256-..."`.
 </Note>
 
 ## Installing from a Consumer Flake
 
-Jotain exposes Home Manager, NixOS, and nix-darwin modules. The default backend stays on the cache-friendly `emacs.nix` build:
+Jotain exposes Home Manager, NixOS, and nix-darwin modules. They all install the cache-friendly `emacs.nix` build by default:
 
 ```nix
 {
@@ -72,7 +66,7 @@ Jotain exposes Home Manager, NixOS, and nix-darwin modules. The default backend 
 }
 ```
 
-To install the same Jotain setup on the `github:jylhis/emacs` Meson fork, select the fork backend:
+`services.jotain.package` swaps in any other Jotain-shaped distribution — for example the terminal-only build:
 
 ```nix
 {
@@ -80,23 +74,10 @@ To install the same Jotain setup on the `github:jylhis/emacs` Meson fork, select
 
   services.jotain = {
     enable = true;
-    emacsBackend = "jylhis";
+    package = inputs.jotain.packages.${system}.emacs-nox;
   };
 }
 ```
-
-Downstream flakes can override the fork source by following the `jylhis-emacs` input:
-
-```nix
-inputs.jotain.url = "github:jylhis/jotain";
-inputs.my-emacs-fork = {
-  url = "github:jylhis/emacs/my-branch-or-rev";
-  flake = false;
-};
-inputs.jotain.inputs.jylhis-emacs.follows = "my-emacs-fork";
-```
-
-The bare fork package is checked directly. The full fork-backed package set is **not** exposed as a flake `packages` output, because the Meson fork still crashes while byte-compiling some bundled Emacs packages. It remains reachable via the Home Manager `services.jotain.emacsBackend = "jylhis"` option (which consumes the `jylhisEmacsPackages` overlay attribute directly) for those who want to exercise that experimental path.
 
 ### nix-on-droid (Android)
 

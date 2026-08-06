@@ -24,13 +24,6 @@
       url = "github:nix-community/emacs-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Only the source tree is consumed (mk-overlay.nix passes it to
-    # emacs-jylhis.nix as `src`); `flake = false` keeps its transitive
-    # inputs (nixpkgs, emacs-overlay, …) out of flake.lock.
-    jylhis-emacs = {
-      url = "github:jylhis/emacs/dev";
-      flake = false;
-    };
     # Android (Termux/proot) Nix environment. Only consumed by
     # `nixOnDroidModules` / the example `nixOnDroidConfigurations`; other
     # outputs do not depend on it.
@@ -70,21 +63,6 @@
             self.overlays.default
           ];
         };
-      # Same as pkgsFor but with the overlay configured to bundle only the
-      # grammars this config uses. Kept out of the default overlay so
-      # packages.default / the system modules stay full-grammar cache hits.
-      pkgsForLite =
-        system:
-        import (nixpkgsFor system) {
-          inherit system;
-          overlays = [
-            emacs-overlay.overlays.default
-            (import ./nix/mk-overlay.nix {
-              jylhisEmacsSrc = inputs."jylhis-emacs";
-              curatedGrammars = true;
-            })
-          ];
-        };
       treefmtEval =
         system:
         treefmt-nix.lib.evalModule (pkgsFor system) {
@@ -103,9 +81,7 @@
       moduleOverlay = nixpkgs.lib.composeExtensions emacs-overlay.overlays.default self.overlays.default;
     in
     {
-      overlays.default = import ./nix/mk-overlay.nix {
-        jylhisEmacsSrc = inputs."jylhis-emacs";
-      };
+      overlays.default = import ./nix/mk-overlay.nix { };
 
       homeManagerModules.default =
         { ... }:
@@ -129,35 +105,20 @@
 
       lib = import ./nix/use-package.nix { inherit (nixpkgs) lib; };
 
+      # THE BUILD MATRIX: exactly two Emacs builds per platform —
+      # `emacs` (bare: pgtk/Wayland GUI on Linux, patched NS GUI on
+      # Darwin) inside `default` (the full distribution), and
+      # `emacs-nox` (terminal-only distribution) — on {x86_64, aarch64}
+      # × {Linux, Darwin}. The former emacs-mainline / emacs-x11 /
+      # emacs-lite escape hatches are gone; emacs.nix asserts the
+      # unsupported GUI combinations away.
       packages = forAllSystems (system: {
         default = (pkgsFor system).jotainEmacsPackages;
-        # Full distribution with a curated grammar subset (~26 vs ~275):
-        # smaller closure, far less to build from source. Opt-in.
-        emacs-lite = (pkgsForLite system).jotainEmacsPackages;
         emacs = (pkgsFor system).jotainEmacs;
-        # Bare Emacs on nixpkgs' default attr (Emacs 30, Hydra-cached) —
-        # the pre-switch default, kept as an escape hatch now that
-        # jotainEmacs defaults to the unstable (Emacs 31 pretest) variant.
-        emacs-mainline = import ./emacs.nix {
-          pkgs = pkgsFor system;
-          variant = "mainline";
-        };
-        # X11 escape hatch on the unstable (Emacs 31) variant: the
-        # pre-switch Linux GUI backend, for setups where the pgtk default
-        # misbehaves. Forcing withPgtk = false restores X11/Lucid on Linux
-        # (a binary-cache hit against pkgs.emacs-unstable); on Darwin it is
-        # simply the NS build. `emacs-mainline` is the Emacs 30 counterpart.
-        emacs-x11 = import ./emacs.nix {
-          pkgs = pkgsFor system;
-          variant = "unstable";
-          withPgtk = false;
-        };
         # Full terminal-only distribution (noGui Emacs + packages +
         # grammars) — same attribute the nix-on-droid module ships.
         # `just run-built` launches this on aarch64-linux.
         emacs-nox = (pkgsFor system).jotainEmacsPackagesNoGui;
-        emacs-jylhis = (pkgsFor system).jylhisEmacs;
-        jylhis-emacs = (pkgsFor system).jylhisEmacs;
         info = (pkgsFor system).jotainInfo;
         docs = import ./nix/options-doc.nix {
           pkgs = pkgsFor system;
