@@ -1,0 +1,2648 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.0.91.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Parsing Program Source (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Parsing Program Source (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Parsing Program Source (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Abbrevs.html#Abbrevs" rel="next" title="Abbrevs">
+<link href="Parsing-Expression-Grammars.html#Parsing-Expression-Grammars" rel="prev" title="Parsing Expression Grammars">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
+ul.mark-bullet {list-style-type: disc}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Parsing-Program-Source">
+<div class="nav-panel">
+<p>
+Next: <a href="Abbrevs.html#Abbrevs" accesskey="n" rel="next">Abbrevs and Abbrev Expansion</a>, Previous: <a href="Parsing-Expression-Grammars.html#Parsing-Expression-Grammars" accesskey="p" rel="prev">Parsing Expression Grammars</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h2 class="chapter" id="Parsing-Program-Source-1"><span>38 Parsing Program Source<a class="copiable-link" href="#Parsing-Program-Source-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-parsing-program-source"></a>
+
+<a class="index-entry-id" id="index-syntax-tree_002c-from-parsing-program-source"></a>
+<p>Emacs provides various ways to parse program source text and produce a
+<em class="dfn">syntax tree</em>.  In a syntax tree, text is no longer considered a
+one-dimensional stream of characters, but a structured tree of nodes,
+where each node represents a piece of text.  Thus, a syntax tree can
+enable interesting features like precise fontification, indentation,
+navigation, structured editing, etc.
+</p>
+<p>Emacs has a simple facility for parsing balanced expressions
+(see <a class="pxref" href="Syntax-Tables.html#Parsing-Expressions">Parsing Expressions</a>).  There is also the SMIE library for
+generic navigation and indentation (see <a class="pxref" href="Modes.html#SMIE">Simple Minded Indentation Engine</a>).
+</p>
+<p>In addition to those, Emacs also provides integration with
+<a class="uref" href="https://tree-sitter.github.io/tree-sitter">the tree-sitter
+library</a> if support for it was compiled in.  The tree-sitter library
+implements an incremental parser and has support for a wide range of
+programming languages.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002davailable_002dp"><span class="category-def">Function: </span><span><strong class="def-name">treesit-available-p</strong><a class="copiable-link" href="#index-treesit_002davailable_002dp"> &para;</a></span></dt>
+<dd><p>This function returns non-<code class="code">nil</code> if tree-sitter features are
+available for the current Emacs session.
+</p></dd></dl>
+
+<p>To be able to parse the program source using the tree-sitter library
+and access the syntax tree of the program, a Lisp program needs to
+load a language grammar library, and create a parser for that
+language and the current buffer.  After that, the Lisp program can
+query the parser about specific nodes of the syntax tree.  Then, it
+can access various kinds of information about each node, and search
+for nodes using a powerful pattern-matching syntax.  This chapter
+explains how to do all this, and also how a Lisp program can work with
+source files that mix multiple programming languages.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Language-Grammar" accesskey="1">Tree-sitter Language Grammar</a></li>
+<li><a href="#Using-Parser" accesskey="2">Using Tree-sitter Parser</a></li>
+<li><a href="#Retrieving-Nodes" accesskey="3">Retrieving Nodes</a></li>
+<li><a href="#Accessing-Node-Information" accesskey="4">Accessing Node Information</a></li>
+<li><a href="#Pattern-Matching" accesskey="5">Pattern Matching Tree-sitter Nodes</a></li>
+<li><a href="#User_002ddefined-Things" accesskey="6">User-defined &ldquo;Things&rdquo; and Navigation</a></li>
+<li><a href="#Multiple-Languages" accesskey="7">Parsing Text in Multiple Languages</a></li>
+<li><a href="#Tree_002dsitter-Major-Modes" accesskey="8">Developing major modes with tree-sitter</a></li>
+<li><a href="#Tree_002dsitter-C-API" accesskey="9">Tree-sitter C API Correspondence</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Language-Grammar">
+<div class="nav-panel">
+<p>
+Next: <a href="#Using-Parser" accesskey="n" rel="next">Using Tree-sitter Parser</a>, Up: <a href="#Parsing-Program-Source" accesskey="u" rel="up">Parsing Program Source</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Tree_002dsitter-Language-Grammar"><span>38.1 Tree-sitter Language Grammar<a class="copiable-link" href="#Tree_002dsitter-Language-Grammar"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-language-grammar_002c-for-tree_002dsitter"></a>
+
+<h3 class="heading" id="Loading-a-language-grammar"><span>Loading a language grammar<a class="copiable-link" href="#Loading-a-language-grammar"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-loading-language-grammar-for-tree_002dsitter"></a>
+
+<a class="index-entry-id" id="index-language-argument_002c-for-tree_002dsitter"></a>
+<p>Tree-sitter relies on language grammar to parse text in that
+language.  In Emacs, a language grammar is represented by a symbol.
+For example, the C language grammar is represented as the symbol
+<code class="code">c</code>, and <code class="code">c</code> can be passed to tree-sitter functions as the
+<var class="var">language</var> argument.
+</p>
+<a class="index-entry-id" id="index-treesit_002dextra_002dload_002dpath"></a>
+<a class="index-entry-id" id="index-treesit_002dload_002dlanguage_002derror"></a>
+<p>Tree-sitter language grammars are distributed as dynamic libraries.
+In order to use a language grammar in Emacs, you need to make sure
+that the dynamic library is installed on the system.  Emacs looks for
+language grammars in several places, in the following order:
+</p>
+<ul class="itemize mark-bullet">
+<li>first, in the list of directories specified by the variable
+<code class="code">treesit-extra-load-path</code>;
+</li><li>then, in the <samp class="file">tree-sitter</samp> subdirectory of the directory
+specified by <code class="code">user-emacs-directory</code> (see <a class="pxref" href="System-Interface.html#Init-File">The Init File</a>);
+</li><li>and finally, in the system&rsquo;s default locations for dynamic libraries.
+</li></ul>
+
+<p>In each of these directories, Emacs looks for a file with file-name
+extensions specified by the variable <code class="code">dynamic-library-suffixes</code>.
+</p>
+<p>If Emacs cannot find the library or has problems loading it, Emacs
+signals the <code class="code">treesit-load-language-error</code> error.  The data of
+that signal could be one of the following:
+</p>
+<dl class="table">
+<dt><code class="code">(not-found <var class="var">error-msg</var> &hellip;)</code></dt>
+<dd><p>This means that Emacs could not find the language grammar library.
+</p></dd>
+<dt><code class="code">(symbol-error <var class="var">error-msg</var>)</code></dt>
+<dd><p>This means that Emacs could not find in the library the expected function
+that every language grammar library should export.
+</p></dd>
+<dt><code class="code">(version-mismatch <var class="var">error-msg</var>)</code></dt>
+<dd><p>This means that the version of the language grammar library is
+incompatible with that of the tree-sitter library.
+</p></dd>
+</dl>
+
+<p>In all of these cases, <var class="var">error-msg</var> might provide additional
+details about the failure.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dlanguage_002davailable_002dp"><span class="category-def">Function: </span><span><strong class="def-name">treesit-language-available-p</strong> <var class="def-var-arguments">language &amp;optional detail</var><a class="copiable-link" href="#index-treesit_002dlanguage_002davailable_002dp"> &para;</a></span></dt>
+<dd><p>This function returns non-<code class="code">nil</code> if the language grammar for
+<var class="var">language</var> exists and can be loaded.
+</p>
+<p>If <var class="var">detail</var> is non-<code class="code">nil</code>, return <code class="code">(t . nil)</code> when
+<var class="var">language</var> is available, and <code class="code">(nil . <var class="var">data</var>)</code> when it&rsquo;s
+unavailable.  <var class="var">data</var> is the signal data of
+<code class="code">treesit-load-language-error</code>.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-treesit_002dload_002dname_002doverride_002dlist"></a>
+<p>By convention, the file name of the dynamic library for <var class="var">language</var> is
+<samp class="file">libtree-sitter-<var class="var">language</var>.<var class="var">ext</var></samp>, where <var class="var">ext</var> is the
+system-specific extension for dynamic libraries.  Also by convention,
+the function provided by that library is named
+<code class="code">tree_sitter_<var class="var">language</var></code>.  If a language grammar library
+doesn&rsquo;t follow this convention, you should add an entry
+</p>
+<div class="example">
+<pre class="example-preformatted">(<var class="var">language</var> <var class="var">library-base-name</var> <var class="var">function-name</var>)
+</pre></div>
+
+<p>to the list in the variable <code class="code">treesit-load-name-override-list</code>, where
+<var class="var">library-base-name</var> is the basename of the dynamic library&rsquo;s file name
+(usually, <samp class="file">libtree-sitter-<var class="var">language</var></samp>), and
+<var class="var">function-name</var> is the function provided by the library
+(usually, <code class="code">tree_sitter_<var class="var">language</var></code>).  For example,
+</p>
+<div class="example">
+<pre class="example-preformatted">(cool-lang &quot;libtree-sitter-coool&quot; &quot;tree_sitter_cooool&quot;)
+</pre></div>
+
+<p>for a language that considers itself too &ldquo;cool&rdquo; to abide by
+conventions.
+</p>
+<a class="index-entry-id" id="index-language-grammar-version_002c-compatibility"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dlibrary_002dabi_002dversion"><span class="category-def">Function: </span><span><strong class="def-name">treesit-library-abi-version</strong> <var class="def-var-arguments">&amp;optional min-compatible</var><a class="copiable-link" href="#index-treesit_002dlibrary_002dabi_002dversion"> &para;</a></span></dt>
+<dd><p>This function returns the version of the language grammar
+Application Binary Interface (<abbr class="acronym">ABI</abbr>) supported by the
+tree-sitter library.  By default, it returns the latest ABI version
+supported by the library, but if <var class="var">min-compatible</var> is
+non-<code class="code">nil</code>, it returns the oldest ABI version which the library
+still can support.  Language grammar libraries must be built for
+ABI versions between the oldest and the latest versions supported by
+the tree-sitter library, otherwise the library will be unable to load
+them.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dlanguage_002dabi_002dversion"><span class="category-def">Function: </span><span><strong class="def-name">treesit-language-abi-version</strong> <var class="def-var-arguments">language</var><a class="copiable-link" href="#index-treesit_002dlanguage_002dabi_002dversion"> &para;</a></span></dt>
+<dd><p>This function returns the <abbr class="acronym">ABI</abbr> version of the language
+grammar library loaded by Emacs for <var class="var">language</var>.  If <var class="var">language</var>
+is unavailable, this function returns <code class="code">nil</code>.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-treesit_002dlanguage_002ddisplay_002dname_002dalist"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dlanguage_002ddisplay_002dname"><span class="category-def">Function: </span><span><strong class="def-name">treesit-language-display-name</strong> <var class="def-var-arguments">language</var><a class="copiable-link" href="#index-treesit_002dlanguage_002ddisplay_002dname"> &para;</a></span></dt>
+<dd><p>This function translates <var class="var">language</var> to an appropriate display name.
+For example, it translates <code class="code">ruby</code> to &ldquo;Ruby&rdquo;, <code class="code">cpp</code> to
+&ldquo;C++&rdquo;.
+</p>
+<p>Most languages has &ldquo;regular&rdquo; names, and their display name is simply
+the symbol name with first letter capitalized.  For languages that has
+&ldquo;irregular&rdquo; names, <var class="var">treesit-language-display-name-alist</var> maps
+language symbols to their display names.
+</p>
+<p>If a major mode package uses a language with &ldquo;irregular&rdquo; name, they
+should add a mapping into <var class="var">treesit-language-display-name-alist</var> on
+load.
+</p></dd></dl>
+
+<h3 class="heading" id="Concrete-syntax-tree"><span>Concrete syntax tree<a class="copiable-link" href="#Concrete-syntax-tree"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-syntax-tree_002c-concrete"></a>
+
+<p>A syntax tree is what a parser generates.  In a syntax tree, each node
+represents a piece of text, and is connected to each other by a
+parent-child relationship.  For example, if the source text is
+</p>
+<div class="example">
+<pre class="example-preformatted">1 + 2
+</pre></div>
+
+<p>its syntax tree could be
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">                  +--------------+
+                  | root &quot;1 + 2&quot; |
+                  +--------------+
+                         |
+        +--------------------------------+
+        |       expression &quot;1 + 2&quot;       |
+        +--------------------------------+
+           |             |            |
++------------+   +--------------+   +------------+
+| number &quot;1&quot; |   | operator &quot;+&quot; |   | number &quot;2&quot; |
++------------+   +--------------+   +------------+
+</pre></div></div>
+
+<p>We can also represent it as an s-expression:
+</p>
+<div class="example">
+<pre class="example-preformatted">(root (expression (number) (operator) (number)))
+</pre></div>
+
+<h4 class="subheading" id="Node-types"><span>Node types<a class="copiable-link" href="#Node-types"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-node-types_002c-in-a-syntax-tree"></a>
+
+<a class="index-entry-id" id="index-type-of-node_002c-tree_002dsitter"></a>
+<a class="anchor" id="tree_002dsitter-node-type"></a><a class="index-entry-id" id="index-named-node_002c-tree_002dsitter"></a>
+<a class="anchor" id="tree_002dsitter-named-node"></a><a class="index-entry-id" id="index-anonymous-node_002c-tree_002dsitter"></a>
+<p>Names like <code class="code">root</code>, <code class="code">expression</code>, <code class="code">number</code>, and
+<code class="code">operator</code> specify the <em class="dfn">type</em> of the nodes.  However, not all
+nodes in a syntax tree have a type.  Nodes that don&rsquo;t have a type are
+known as <em class="dfn">anonymous nodes</em>, and nodes with a type are <em class="dfn">named
+nodes</em>.  Anonymous nodes are tokens with fixed spellings, including
+punctuation characters like bracket &lsquo;<samp class="samp">]</samp>&rsquo;, and keywords like
+<code class="code">return</code>.
+</p>
+<h4 class="subheading" id="Field-names"><span>Field names<a class="copiable-link" href="#Field-names"> &para;</a></span></h4>
+
+<a class="index-entry-id" id="index-field-name_002c-tree_002dsitter"></a>
+<a class="index-entry-id" id="index-tree_002dsitter-node-field-name"></a>
+<a class="anchor" id="tree_002dsitter-node-field-name"></a><p>To make the syntax tree easier to analyze, many language grammar
+assign <em class="dfn">field names</em> to child nodes.  For example, a
+<code class="code">function_definition</code> node could have a <code class="code">declarator</code> and a
+<code class="code">body</code>:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(function_definition
+ declarator: (declaration)
+ body: (compound_statement))
+</pre></div></div>
+
+<h3 class="heading" id="Exploring-the-syntax-tree"><span>Exploring the syntax tree<a class="copiable-link" href="#Exploring-the-syntax-tree"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-explore-tree_002dsitter-syntax-tree"></a>
+<a class="index-entry-id" id="index-inspection-of-tree_002dsitter-parse-tree-nodes"></a>
+
+<p>To aid in understanding the syntax of a language and in debugging Lisp
+programs that use the syntax tree, Emacs provides an &ldquo;explore&rdquo; mode,
+which displays the syntax tree of the source in the current buffer in
+real time.  Emacs also comes with an &ldquo;inspect mode&rdquo;, which displays
+information of the nodes at point in the mode-line.
+</p>
+<a class="index-entry-id" id="index-treesit_002dexplorer_002dswitch_002dparser"></a>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-treesit_002dexplore"><span class="category-def">Command: </span><span><strong class="def-name">treesit-explore</strong><a class="copiable-link" href="#index-treesit_002dexplore"> &para;</a></span></dt>
+<dd><p>This command pops up a window displaying the syntax tree of the source in
+the current buffer.  Selecting text in the source buffer highlights
+the corresponding nodes in the syntax tree display.  Clicking
+on nodes in the syntax tree highlights the corresponding text in the
+source buffer.
+</p>
+<p>To switch to another parser, use <code class="code">treesit-explorer-switch-parser</code>.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-treesit_002dinspect_002dmode"><span class="category-def">Command: </span><span><strong class="def-name">treesit-inspect-mode</strong><a class="copiable-link" href="#index-treesit_002dinspect_002dmode"> &para;</a></span></dt>
+<dd><p>This minor mode displays on the mode-line the node that <em class="emph">starts</em>
+at point.  For example, the mode-line can display
+</p>
+<div class="example">
+<pre class="example-preformatted"><var class="var">parent</var> <var class="var">field</var>: (<var class="var">node</var> (<var class="var">child</var> (...)))
+</pre></div>
+
+<p>where <var class="var">node</var>, <var class="var">child</var>, etc., are nodes which begin at point.
+<var class="var">parent</var> is the parent of <var class="var">node</var>.  <var class="var">node</var> is displayed in
+a bold typeface.  <var class="var">field-name</var>s are field names of <var class="var">node</var> and
+of <var class="var">child</var>, etc.
+</p>
+<p>If no node starts at point, i.e., point is in the middle of a node,
+then the mode line displays the earliest node that spans point, and
+its immediate parent.
+</p>
+<p>This minor mode doesn&rsquo;t create parsers on its own.  It uses the first
+parser in <code class="code">(treesit-parser-list)</code> (see <a class="pxref" href="#Using-Parser">Using Tree-sitter Parser</a>).
+</p></dd></dl>
+
+<h3 class="heading" id="Reading-the-grammar-definition"><span>Reading the grammar definition<a class="copiable-link" href="#Reading-the-grammar-definition"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-reading-grammar-definition_002c-tree_002dsitter"></a>
+
+<p>Authors of language grammars define the <em class="dfn">grammar</em> of a
+programming language, which determines how a parser constructs a
+concrete syntax tree out of the program text.  In order to use the
+syntax tree effectively, you need to consult the <em class="dfn">grammar file</em>.
+</p>
+<p>The grammar file is usually <samp class="file">grammar.js</samp> in a language
+grammar&rsquo;s project repository.  The link to a language grammar&rsquo;s
+home page can be found on
+<a class="uref" href="https://tree-sitter.github.io/tree-sitter">tree-sitter&rsquo;s
+homepage</a>.
+</p>
+<p>The grammar definition is written in JavaScript.  For example, the
+rule matching a <code class="code">function_definition</code> node may look like
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">function_definition: $ =&gt; seq(
+  $.declaration_specifiers,
+  field('declarator', $.declaration),
+  field('body', $.compound_statement)
+)
+</pre></div></div>
+
+<p>The rules are represented by functions that take a single argument
+<var class="var">$</var>, representing the whole grammar.  The function itself is
+constructed by other functions: the <code class="code">seq</code> function puts together
+a sequence of children; the <code class="code">field</code> function annotates a child
+with a field name.  If we write the above definition in the so-called
+<em class="dfn">Backus-Naur Form</em> (<abbr class="acronym">BNF</abbr>) syntax, it would look like
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">function_definition :=
+  &lt;declaration_specifiers&gt; &lt;declaration&gt; &lt;compound_statement&gt;
+</pre></div></div>
+
+<p>and the node returned by the parser would look like
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(function_definition
+  (declaration_specifier)
+  declarator: (declaration)
+  body: (compound_statement))
+</pre></div></div>
+
+<p>Below is a list of functions that one can see in a grammar definition.
+Each function takes other rules as arguments and returns a new rule.
+</p>
+<dl class="table">
+<dt><code class="code">seq(<var class="var">rule1</var>, <var class="var">rule2</var>, &hellip;)</code></dt>
+<dd><p>matches each rule one after another.
+</p></dd>
+<dt><code class="code">choice(<var class="var">rule1</var>, <var class="var">rule2</var>, &hellip;)</code></dt>
+<dd><p>matches one of the rules in its arguments.
+</p></dd>
+<dt><code class="code">repeat(<var class="var">rule</var>)</code></dt>
+<dd><p>matches <var class="var">rule</var> <em class="emph">zero or more</em> times.
+This is like the &lsquo;<samp class="samp">*</samp>&rsquo; operator in regular expressions.
+</p></dd>
+<dt><code class="code">repeat1(<var class="var">rule</var>)</code></dt>
+<dd><p>matches <var class="var">rule</var> <em class="emph">one or more</em> times.
+This is like the &lsquo;<samp class="samp">+</samp>&rsquo; operator in regular expressions.
+</p></dd>
+<dt><code class="code">optional(<var class="var">rule</var>)</code></dt>
+<dd><p>matches <var class="var">rule</var> <em class="emph">zero or one</em> times.
+This is like the &lsquo;<samp class="samp">?</samp>&rsquo; operator in regular expressions.
+</p></dd>
+<dt><code class="code">field(<var class="var">name</var>, <var class="var">rule</var>)</code></dt>
+<dd><p>assigns field name <var class="var">name</var> to the child node matched by <var class="var">rule</var>.
+</p></dd>
+<dt><code class="code">alias(<var class="var">rule</var>, <var class="var">alias</var>)</code></dt>
+<dd><p>makes nodes matched by <var class="var">rule</var> appear as <var class="var">alias</var> in the syntax
+tree generated by the parser.  For example,
+</p>
+<div class="example">
+<pre class="example-preformatted">alias(preprocessor_call_exp, call_expression)
+</pre></div>
+
+<p>makes any node matched by <code class="code">preprocessor_call_exp</code> appear as
+<code class="code">call_expression</code>.
+</p></dd>
+</dl>
+
+<p>Below are grammar functions of lesser importance for reading a
+language grammar.
+</p>
+<dl class="table">
+<dt><code class="code">token(<var class="var">rule</var>)</code></dt>
+<dd><p>marks <var class="var">rule</var> to produce a single leaf node.  That is, instead of
+generating a parent node with individual child nodes under it,
+everything is combined into a single leaf node.  See <a class="xref" href="#Retrieving-Nodes">Retrieving Nodes</a>.
+</p></dd>
+<dt><code class="code">token.immediate(<var class="var">rule</var>)</code></dt>
+<dd><p>Normally, grammar rules ignore preceding whitespace; this
+changes <var class="var">rule</var> to match only when there is no preceding
+whitespace.
+</p></dd>
+<dt><code class="code">prec(<var class="var">n</var>, <var class="var">rule</var>)</code></dt>
+<dd><p>gives <var class="var">rule</var> the level-<var class="var">n</var> precedence.
+</p></dd>
+<dt><code class="code">prec.left([<var class="var">n</var>,] <var class="var">rule</var>)</code></dt>
+<dd><p>marks <var class="var">rule</var> as left-associative, optionally with level <var class="var">n</var>.
+</p></dd>
+<dt><code class="code">prec.right([<var class="var">n</var>,] <var class="var">rule</var>)</code></dt>
+<dd><p>marks <var class="var">rule</var> as right-associative, optionally with level <var class="var">n</var>.
+</p></dd>
+<dt><code class="code">prec.dynamic(<var class="var">n</var>, <var class="var">rule</var>)</code></dt>
+<dd><p>this is like <code class="code">prec</code>, but the precedence is applied at runtime
+instead.
+</p></dd>
+</dl>
+
+<p>The documentation of the tree-sitter project has
+<a class="uref" href="https://tree-sitter.github.io/tree-sitter/creating-parsers">more
+about writing a grammar</a>.  Read especially &ldquo;The Grammar DSL&rdquo;
+section.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Using-Parser">
+<div class="nav-panel">
+<p>
+Next: <a href="#Retrieving-Nodes" accesskey="n" rel="next">Retrieving Nodes</a>, Previous: <a href="#Language-Grammar" accesskey="p" rel="prev">Tree-sitter Language Grammar</a>, Up: <a href="#Parsing-Program-Source" accesskey="u" rel="up">Parsing Program Source</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Using-Tree_002dsitter-Parser"><span>38.2 Using Tree-sitter Parser<a class="copiable-link" href="#Using-Tree_002dsitter-Parser"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-tree_002dsitter-parser_002c-using"></a>
+
+<p>This section describes how to create and configure a tree-sitter
+parser.  In Emacs, each tree-sitter parser is associated with a
+buffer.  As the user edits the buffer, the associated parser and
+syntax tree are automatically kept up-to-date.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-treesit_002dmax_002dbuffer_002dsize"><span class="category-def">Variable: </span><span><strong class="def-name">treesit-max-buffer-size</strong><a class="copiable-link" href="#index-treesit_002dmax_002dbuffer_002dsize"> &para;</a></span></dt>
+<dd><p>This variable contains the maximum size of buffers in which
+tree-sitter can be activated.  Major modes should check this value
+when deciding whether to enable tree-sitter features.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-treesit_002dlanguages_002drequire_002dline_002dcolumn_002dtracking"><span class="category-def">Variable: </span><span><strong class="def-name">treesit-languages-require-line-column-tracking</strong><a class="copiable-link" href="#index-treesit_002dlanguages_002drequire_002dline_002dcolumn_002dtracking"> &para;</a></span></dt>
+<dd><p>Emacs by default doesn&rsquo;t keep track of line and column numbers for
+positions in a buffer.  However, some language grammars utilize the line
+and column information for parsing.  If parsers of these languages are
+created in a buffer, Emacs will turn on line and column tracking and
+report these information to these parsers.  Once the buffer starts
+tracking line and column, it never stops doing so.  And once a parser is
+created as tracking/not-tracking line and column, it stays that way
+regardless of changes to this variable.
+</p>
+<p>This variable is a list of languages that require line and column
+tracking.  The vast majority of languages don&rsquo;t need line and column
+information.  So far, only Haskell is known to need it.
+</p>
+<a class="index-entry-id" id="index-treesit_002dtracking_002dline_002dcolumn_002dp"></a>
+<a class="index-entry-id" id="index-treesit_002dparser_002dtracking_002dline_002dcolumn_002dp"></a>
+<p>User can use <code class="code">treesit-tracking-line-column-p</code> and
+<code class="code">treesit-parser-tracking-line-column-p</code> to check if a buffer or
+parser is tracking line and column, respectively.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-creating-tree_002dsitter-parsers"></a>
+<a class="index-entry-id" id="index-tree_002dsitter-parser_002c-creating"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparser_002dcreate"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parser-create</strong> <var class="def-var-arguments">language &amp;optional buffer no-reuse tag</var><a class="copiable-link" href="#index-treesit_002dparser_002dcreate"> &para;</a></span></dt>
+<dd><p>Create a parser for the specified <var class="var">buffer</var> and <var class="var">language</var>
+(see <a class="pxref" href="#Language-Grammar">Tree-sitter Language Grammar</a>), with <var class="var">tag</var>.  If <var class="var">buffer</var> is
+omitted or <code class="code">nil</code>, it stands for the current buffer.
+</p>
+<p>By default, this function reuses a parser if one already exists for
+<var class="var">language</var> with <var class="var">tag</var> in <var class="var">buffer</var>, but if <var class="var">no-reuse</var>
+is non-<code class="code">nil</code>, this function always creates a new parser.
+</p>
+<p><var class="var">tag</var> can be any symbol except <code class="code">t</code>, and defaults to
+<code class="code">nil</code>.  Different parsers can have the same tag.
+</p></dd></dl>
+
+<p>Given a parser, we can query information about it.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparser_002dbuffer"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parser-buffer</strong> <var class="def-var-arguments">parser</var><a class="copiable-link" href="#index-treesit_002dparser_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function returns the buffer associated with <var class="var">parser</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparser_002dlanguage"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parser-language</strong> <var class="def-var-arguments">parser</var><a class="copiable-link" href="#index-treesit_002dparser_002dlanguage"> &para;</a></span></dt>
+<dd><p>This function returns the language used by <var class="var">parser</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparser_002dp"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parser-p</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-treesit_002dparser_002dp"> &para;</a></span></dt>
+<dd><p>This function checks if <var class="var">object</var> is a tree-sitter parser, and
+returns non-<code class="code">nil</code> if it is, and <code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<p>There is no need to explicitly parse a buffer, because parsing is done
+automatically and lazily.  A parser only parses when a Lisp program
+queries for a node in its syntax tree.  Therefore, when a parser is
+first created, it doesn&rsquo;t parse the buffer; it waits until the Lisp
+program queries for a node for the first time.  Similarly, when some
+change is made in the buffer, a parser doesn&rsquo;t re-parse immediately.
+</p>
+<a class="index-entry-id" id="index-treesit_002dbuffer_002dtoo_002dlarge"></a>
+<p>When a parser does parse, it checks for the size of the buffer.
+Tree-sitter can only handle buffers no larger than about 4GB.  If the
+size exceeds that, Emacs signals the <code class="code">treesit-buffer-too-large</code>
+error with signal data being the buffer size.
+</p>
+<p>Once a parser is created, Emacs automatically adds it to the
+internal parser list.  Every time a change is made to the buffer,
+Emacs updates parsers in this list so they can update their syntax
+tree incrementally.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparser_002dlist"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parser-list</strong> <var class="def-var-arguments">&amp;optional buffer language tag</var><a class="copiable-link" href="#index-treesit_002dparser_002dlist"> &para;</a></span></dt>
+<dd><p>This function returns the parser list of <var class="var">buffer</var>, filtered by
+<var class="var">language</var> and <var class="var">tag</var>.  If <var class="var">buffer</var> is <code class="code">nil</code> or
+omitted, it defaults to the current buffer.
+</p>
+<p>If <var class="var">language</var> is non-<var class="var">nil</var>, only include parsers for that
+language, and only include parsers with <var class="var">tag</var>.  <var class="var">tag</var> defaults
+to <code class="code">nil</code>.  If <var class="var">tag</var> is <code class="code">t</code>, include parsers in the
+returned list regardless of their tag.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparser_002ddelete"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parser-delete</strong> <var class="def-var-arguments">parser</var><a class="copiable-link" href="#index-treesit_002dparser_002ddelete"> &para;</a></span></dt>
+<dd><p>This function deletes <var class="var">parser</var>.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-tree_002dsitter-narrowing"></a>
+<a class="anchor" id="tree_002dsitter-narrowing"></a><p>Normally, a parser &ldquo;sees&rdquo; the whole buffer, but when the buffer is
+narrowed (see <a class="pxref" href="Positions.html#Narrowing">Narrowing</a>), the parser will only see the accessible
+portion of the buffer.  As far as the parser can tell, the hidden
+region was deleted.  When the buffer is later widened, the parser
+thinks text is inserted at the beginning and at the end.  Although
+parsers respect narrowing, modes should not use narrowing as a means
+to handle a multi-language buffer; instead, set the ranges in which the
+parser should operate.  See <a class="xref" href="#Multiple-Languages">Parsing Text in Multiple Languages</a>.
+</p>
+<p>Because a parser parses lazily, when the user or a Lisp program
+narrows the buffer, the parser is not affected immediately; as long as
+the mode doesn&rsquo;t query for a node while the buffer is narrowed, the
+parser is oblivious of the narrowing.
+</p>
+<a class="index-entry-id" id="index-tree_002dsitter-parse-string"></a>
+<a class="index-entry-id" id="index-parse-string_002c-tree_002dsitter"></a>
+<p>Besides creating a parser for a buffer, a Lisp program can also parse a
+string.  Unlike a buffer, parsing a string is a one-off operation, and
+there is no way to update the result.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparse_002dstring"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parse-string</strong> <var class="def-var-arguments">string language</var><a class="copiable-link" href="#index-treesit_002dparse_002dstring"> &para;</a></span></dt>
+<dd><p>This function parses <var class="var">string</var> using <var class="var">language</var>, and returns the
+root node of the generated syntax tree.  <em class="emph">Do not</em> use this function
+in a loop: this is a convenience function intended for one-off use, and
+it isn&rsquo;t optimized; for heavy workload, use a temporary buffer instead.
+</p></dd></dl>
+
+<h3 class="heading" id="Be-notified-by-changes-to-the-parse-tree"><span>Be notified by changes to the parse tree<a class="copiable-link" href="#Be-notified-by-changes-to-the-parse-tree"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-update-callback_002c-for-tree_002dsitter-parse_002dtree"></a>
+<a class="index-entry-id" id="index-after_002dchange-notifier_002c-for-tree_002dsitter-parse_002dtree"></a>
+<a class="index-entry-id" id="index-tree_002dsitter-parse_002dtree_002c-update-and-after_002dchange-callback"></a>
+<a class="index-entry-id" id="index-notifiers_002c-tree_002dsitter"></a>
+
+<p>A Lisp program might want to be notified of text affected by
+incremental parsing.  For example, inserting a comment-closing token
+converts text before that token into a comment.  Even
+though the text is not directly edited, it is deemed to be &ldquo;changed&rdquo;
+nevertheless.
+</p>
+<p>Emacs lets a Lisp program register callback functions (a.k.a.
+<em class="dfn">notifiers</em>) for these kinds of changes.  A notifier function
+takes two arguments: <var class="var">ranges</var> and <var class="var">parser</var>.  <var class="var">ranges</var> is a
+list of cons cells of the form <code class="code">(<var class="var">start</var>&nbsp;.&nbsp;<var class="var">end</var>)</code><!-- /@w -->,
+where <var class="var">start</var> and <var class="var">end</var> mark the start and the end positions
+of a range.  <var class="var">parser</var> is the parser issuing the notification.
+</p>
+<p>Every time a parser reparses a buffer, it compares the old and new
+parse-tree, computes the ranges in which nodes have changed, and
+passes the ranges to notifier functions.  Note that the initial parse
+is also considered a &ldquo;change&rdquo;, so notifier functions are called on
+the initial parse, with range being the whole buffer.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparser_002dadd_002dnotifier"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parser-add-notifier</strong> <var class="def-var-arguments">parser function</var><a class="copiable-link" href="#index-treesit_002dparser_002dadd_002dnotifier"> &para;</a></span></dt>
+<dd><p>This function adds <var class="var">function</var> to <var class="var">parser</var>&rsquo;s list of
+after-change notifier functions.  <var class="var">function</var> must be a function
+symbol, not a lambda function (see <a class="pxref" href="Functions.html#Anonymous-Functions">Anonymous Functions</a>).
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparser_002dremove_002dnotifier"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parser-remove-notifier</strong> <var class="def-var-arguments">parser function</var><a class="copiable-link" href="#index-treesit_002dparser_002dremove_002dnotifier"> &para;</a></span></dt>
+<dd><p>This function removes <var class="var">function</var> from the list of <var class="var">parser</var>&rsquo;s
+after-change notifier functions.  <var class="var">function</var> must be a function
+symbol, rather than a lambda function.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparser_002dnotifiers"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parser-notifiers</strong> <var class="def-var-arguments">parser</var><a class="copiable-link" href="#index-treesit_002dparser_002dnotifiers"> &para;</a></span></dt>
+<dd><p>This function returns the list of <var class="var">parser</var>&rsquo;s notifier functions.
+</p></dd></dl>
+
+<p>A lisp program can also choose to force a parser to reparse and get the
+changed regions immediately with <code class="code">treesit-parser-changed-regions</code>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparser_002dchanged_002dregions"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parser-changed-regions</strong> <var class="def-var-arguments">parser</var><a class="copiable-link" href="#index-treesit_002dparser_002dchanged_002dregions"> &para;</a></span></dt>
+<dd><p>This function forces <var class="var">parser</var> to reparse, and returns the affected
+regions: a list of <code class="code">(<var class="var">start</var>&nbsp;.&nbsp;<var class="var">end</var>)</code><!-- /@w -->.  If the parser
+has nothing new to reparse, or the affected regions are empty, this
+function returns <code class="code">nil</code>.
+</p></dd></dl>
+
+
+<h3 class="heading" id="Substitute-parser-for-another-language"><span>Substitute parser for another language<a class="copiable-link" href="#Substitute-parser-for-another-language"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-remap-language-grammar_002c-tree_002dsitter"></a>
+<a class="index-entry-id" id="index-replace-language-grammar_002c-tree_002dsitter"></a>
+<a class="index-entry-id" id="index-replace-parser-language_002c-tree_002dsitter"></a>
+<a class="index-entry-id" id="index-extended-grammar_002c-tree_002dsitter"></a>
+
+<p>Sometimes, a grammar for language B is a strict superset of the grammar
+of another language A.  Then it makes sense to reuse configurations
+(font-lock rules, indentation rules, etc.) of language A for language B.
+For that purpose, <var class="var">treesit-language-remap-alist</var> allows users to
+remap language A into language B.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-treesit_002dlanguage_002dremap_002dalist"><span class="category-def">Variable: </span><span><strong class="def-name">treesit-language-remap-alist</strong><a class="copiable-link" href="#index-treesit_002dlanguage_002dremap_002dalist"> &para;</a></span></dt>
+<dd><p>The value of this variable should be an alist of
+<code class="code">(<var class="var">language-a</var>&nbsp;.&nbsp;<var class="var">language-b</var>)</code><!-- /@w -->.  When such pair exists
+in the alist, creating a parser for <var class="var">language-a</var> actually creates a
+parser for <var class="var">language-b</var>.  By extension, anything that creates a node
+or makes a query of <var class="var">language-a</var> will be redirected to use
+<var class="var">language-b</var> instead.  This mapping is completely transparent, the
+created parser will reported to use <var class="var">language-b</var>, and the same goes for
+nodes created by this parser.
+</p>
+<p>Specifically, the parser created by <code class="code">treesit-parser-create</code> will
+report to use whatever <var class="var">language</var> was given to it.  For example,
+if language <code class="code">cpp</code> is mapped to <code class="code">cuda</code>:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq treesit-language-remap-alist '((cpp . cuda)))
+
+(treesit-parser-language (treesit-parser-create 'cpp))
+  &rArr; 'cpp
+
+(treesit-parser-language (treesit-parser-create 'cuda))
+  &rArr; 'cuda
+</pre></div></div>
+
+<p>Even though both parser are actually <code class="code">cuda</code> parser.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Retrieving-Nodes">
+<div class="nav-panel">
+<p>
+Next: <a href="#Accessing-Node-Information" accesskey="n" rel="next">Accessing Node Information</a>, Previous: <a href="#Using-Parser" accesskey="p" rel="prev">Using Tree-sitter Parser</a>, Up: <a href="#Parsing-Program-Source" accesskey="u" rel="up">Parsing Program Source</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Retrieving-Nodes-1"><span>38.3 Retrieving Nodes<a class="copiable-link" href="#Retrieving-Nodes-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-retrieve-node_002c-tree_002dsitter"></a>
+<a class="index-entry-id" id="index-tree_002dsitter_002c-find-node"></a>
+<a class="index-entry-id" id="index-get-node_002c-tree_002dsitter"></a>
+
+<a class="index-entry-id" id="index-terminology_002c-for-tree_002dsitter-functions"></a>
+<p>Here are some terms and conventions we use when documenting
+tree-sitter functions.
+</p>
+<p>A node in a syntax tree spans some portion of the program text in the
+buffer.  We say that a node is &ldquo;smaller&rdquo; or &ldquo;larger&rdquo; than another
+if it spans, respectively, a smaller or larger portion of buffer text
+than the other node.  Since nodes that are deeper (&ldquo;lower&rdquo;) in the
+tree are children of the nodes that are &ldquo;higher&rdquo; in the tree, it
+follows that a lower node will always be smaller than a node that is
+higher in the node hierarchy.  A node that is higher up in the syntax
+tree contains one or more smaller nodes as its children, and therefore
+spans a larger portion of buffer text.
+</p>
+<p>When a function cannot find a node, it returns <code class="code">nil</code>.  For
+convenience, all functions that take a node as argument and return
+a node, also accept the node argument of <code class="code">nil</code> and in that case
+just return <code class="code">nil</code>.
+</p>
+<a class="index-entry-id" id="index-treesit_002dnode_002doutdated"></a>
+<p>Nodes are not automatically updated when the associated buffer is
+modified, and there is no way to update a node once it is retrieved.
+Using an outdated node signals the <code class="code">treesit-node-outdated</code> error.
+</p>
+<a class="index-entry-id" id="index-printed-representation_002c-of-treesit-nodes"></a>
+<p>The printed representation of a tree-sitter node uses the hash notation
+described in <a class="ref" href="Lisp-Data-Types.html#Printed-Representation">Printed Representation and Read Syntax</a>.  It looks like
+&lsquo;<samp class="samp">#&lt;treesit-node&nbsp;<var class="var">type</var>&nbsp;in&nbsp;<var class="var">pos1</var>-<var class="var">pos2</var>&gt;</samp>&rsquo;<!-- /@w -->, where
+<var class="var">type</var> is the type of the node (which comes from the tree-sitter
+grammar used by the buffer), and <var class="var">pos1</var> and <var class="var">pos2</var> are buffer
+positions of the node&rsquo;s span.  Tree-sitter nodes have no read syntax.
+</p>
+<h3 class="heading" id="Retrieving-nodes-from-syntax-tree"><span>Retrieving nodes from syntax tree<a class="copiable-link" href="#Retrieving-nodes-from-syntax-tree"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-retrieving-tree_002dsitter-nodes"></a>
+<a class="index-entry-id" id="index-syntax-tree_002c-retrieving-nodes"></a>
+
+<a class="index-entry-id" id="index-leaf-node_002c-of-tree_002dsitter-parse-tree"></a>
+<a class="index-entry-id" id="index-tree_002dsitter-parse-tree_002c-leaf-node"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dat"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-at</strong> <var class="def-var-arguments">pos &amp;optional parser-or-lang named</var><a class="copiable-link" href="#index-treesit_002dnode_002dat"> &para;</a></span></dt>
+<dd><p>This function returns a <em class="dfn">leaf</em> node at buffer position <var class="var">pos</var>.
+A leaf node is a node that doesn&rsquo;t have any child nodes.
+</p>
+<p>This function tries to return a node whose span covers <var class="var">pos</var>: the
+node&rsquo;s beginning position is less than or equal to <var class="var">pos</var>, and the
+node&rsquo;s end position is greater than or equal to <var class="var">pos</var>.
+</p>
+<p>If no leaf node&rsquo;s span covers <var class="var">pos</var> (e.g., <var class="var">pos</var> is in the
+whitespace between two leaf nodes), this function returns the first
+leaf node after <var class="var">pos</var>.
+</p>
+<p>Finally, if there is no leaf node after <var class="var">pos</var>, return the first
+leaf node before <var class="var">pos</var>.
+</p>
+<p>If <var class="var">parser-or-lang</var> is a parser object, this function uses that
+parser; if <var class="var">parser-or-lang</var> is a language, this function uses the
+first parser for that language in the current buffer, or creates one
+if none exists; if <var class="var">parser-or-lang</var> is <code class="code">nil</code>, this function
+tries to guess the language at <var class="var">pos</var> by calling
+<code class="code">treesit-language-at</code> (see <a class="pxref" href="#Multiple-Languages">Parsing Text in Multiple Languages</a>).
+</p>
+<p>If this function cannot find a suitable node to return, it returns
+<code class="code">nil</code>.
+</p>
+<p>If <var class="var">named</var> is non-<code class="code">nil</code>, this function looks only for named
+nodes (see <a class="pxref" href="#tree_002dsitter-named-node">named node</a>).
+</p>
+<p>Example:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">;; Find the node at point in a C parser's syntax tree.
+(treesit-node-at (point) 'c)
+  &rArr; #&lt;treesit-node primitive_type in 23-27&gt;
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002don"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-on</strong> <var class="def-var-arguments">beg end &amp;optional parser-or-lang named</var><a class="copiable-link" href="#index-treesit_002dnode_002don"> &para;</a></span></dt>
+<dd><p>This function returns the <em class="emph">smallest</em> node that covers the region
+of buffer text between <var class="var">beg</var> and <var class="var">end</var>.  In other words, the
+start of the node is before or at <var class="var">beg</var>, and the end of the node
+is at or after <var class="var">end</var>.
+</p>
+<p><em class="emph">Beware:</em> calling this function on an empty line that is not
+inside any top-level construct (function definition, etc.) most
+probably will give you the root node, because the root node is the
+smallest node that covers that empty line.  Most of the time, you want
+to use <code class="code">treesit-node-at</code> instead.
+</p>
+<p>If <var class="var">parser-or-lang</var> is a parser object, this function uses that
+parser; if <var class="var">parser-or-lang</var> is a language, this function uses the
+first parser for that language in the current buffer, or creates one
+if none exists; if <var class="var">parser-or-lang</var> is <code class="code">nil</code>, this function
+tries to guess the language at <var class="var">beg</var> by calling
+<code class="code">treesit-language-at</code>.
+</p>
+<p>If <var class="var">named</var> is non-<code class="code">nil</code>, this function looks for a named node
+only (see <a class="pxref" href="#tree_002dsitter-named-node">named node</a>).
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparser_002droot_002dnode"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parser-root-node</strong> <var class="def-var-arguments">parser</var><a class="copiable-link" href="#index-treesit_002dparser_002droot_002dnode"> &para;</a></span></dt>
+<dd><p>This function returns the root node of the syntax tree generated by
+<var class="var">parser</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dbuffer_002droot_002dnode"><span class="category-def">Function: </span><span><strong class="def-name">treesit-buffer-root-node</strong> <var class="def-var-arguments">&amp;optional language</var><a class="copiable-link" href="#index-treesit_002dbuffer_002droot_002dnode"> &para;</a></span></dt>
+<dd><p>This function finds the first parser for <var class="var">language</var> in the current
+buffer, or creates one if none exists, and returns the root node
+generated by that parser.  If <var class="var">language</var> is omitted, it uses the
+first parser in the parser list.  If it cannot find an appropriate
+parser, it returns <code class="code">nil</code>.
+</p></dd></dl>
+
+<p>Given a node, a Lisp program can retrieve other nodes starting from
+it, or query for information about this node.
+</p>
+<h3 class="heading" id="Retrieving-nodes-from-other-nodes"><span>Retrieving nodes from other nodes<a class="copiable-link" href="#Retrieving-nodes-from-other-nodes"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-syntax-tree-nodes_002c-retrieving-from-other-nodes"></a>
+
+<h4 class="subheading" id="By-kinship"><span>By kinship<a class="copiable-link" href="#By-kinship"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-kinship_002c-syntax-tree-nodes"></a>
+<a class="index-entry-id" id="index-nodes_002c-by-kinship"></a>
+<a class="index-entry-id" id="index-syntax-tree-nodes_002c-by-kinship"></a>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dparent"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-parent</strong> <var class="def-var-arguments">node</var><a class="copiable-link" href="#index-treesit_002dnode_002dparent"> &para;</a></span></dt>
+<dd><p>This function returns the immediate parent of <var class="var">node</var>.
+</p>
+<p>If <var class="var">node</var> is more than 1000 levels deep in a parse tree, the
+return value is undefined.  Currently it returns <code class="code">nil</code>, but that
+could change in the future.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dchild"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-child</strong> <var class="def-var-arguments">node n &amp;optional named</var><a class="copiable-link" href="#index-treesit_002dnode_002dchild"> &para;</a></span></dt>
+<dd><p>This function returns the <var class="var">n</var>&rsquo;th child of <var class="var">node</var>.  If
+<var class="var">named</var> is non-<code class="code">nil</code>, it counts only named nodes
+(see <a class="pxref" href="#tree_002dsitter-named-node">named node</a>).
+</p>
+<p>For example, in a node that represents a string <code class="code">&quot;text&quot;</code>, there
+are three children nodes: the opening quote <code class="code">&quot;</code>, the string text
+<code class="code">text</code>, and the closing quote <code class="code">&quot;</code>.  Among these nodes, the
+first child is the opening quote <code class="code">&quot;</code>, and the first named child
+is the string text.
+</p>
+<p>This function returns <code class="code">nil</code> if there is no <var class="var">n</var>&rsquo;th child.
+<var class="var">n</var> could be negative, e.g., &minus;1 represents the last child.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dchildren"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-children</strong> <var class="def-var-arguments">node &amp;optional named</var><a class="copiable-link" href="#index-treesit_002dnode_002dchildren"> &para;</a></span></dt>
+<dd><p>This function returns all of <var class="var">node</var>&rsquo;s children as a list.  If
+<var class="var">named</var> is non-<code class="code">nil</code>, it retrieves only named nodes.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dnext_002dsibling"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-next-sibling</strong> <var class="def-var-arguments">node &amp;optional named</var><a class="copiable-link" href="#index-treesit_002dnode_002dnext_002dsibling"> &para;</a></span></dt>
+<dd><p>This function finds the next sibling of <var class="var">node</var>.  If <var class="var">named</var> is
+non-<code class="code">nil</code>, it finds the next named sibling.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dprev_002dsibling"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-prev-sibling</strong> <var class="def-var-arguments">node &amp;optional named</var><a class="copiable-link" href="#index-treesit_002dnode_002dprev_002dsibling"> &para;</a></span></dt>
+<dd><p>This function finds the previous sibling of <var class="var">node</var>.  If
+<var class="var">named</var> is non-<code class="code">nil</code>, it finds the previous named sibling.
+</p></dd></dl>
+
+<h4 class="subheading" id="By-field-name"><span>By field name<a class="copiable-link" href="#By-field-name"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-nodes_002c-by-field-name"></a>
+<a class="index-entry-id" id="index-syntax-tree-nodes_002c-by-field-name"></a>
+
+<p>To make the syntax tree easier to analyze, many language grammars
+assign <em class="dfn">field names</em> to child nodes (see <a class="pxref" href="#tree_002dsitter-node-field-name">field name</a>).  For example, a <code class="code">function_definition</code> node
+could have a <code class="code">declarator</code> child and a <code class="code">body</code> child.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dchild_002dby_002dfield_002dname"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-child-by-field-name</strong> <var class="def-var-arguments">node field-name</var><a class="copiable-link" href="#index-treesit_002dnode_002dchild_002dby_002dfield_002dname"> &para;</a></span></dt>
+<dd><p>This function finds the child of <var class="var">node</var> whose field name is
+<var class="var">field-name</var>, a string.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">;; Get the child that has &quot;body&quot; as its field name.
+(treesit-node-child-by-field-name node &quot;body&quot;)
+  &rArr; #&lt;treesit-node compound_statement in 45-89&gt;
+</pre></div></div>
+</dd></dl>
+
+<h4 class="subheading" id="By-position"><span>By position<a class="copiable-link" href="#By-position"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-nodes_002c-by-position"></a>
+<a class="index-entry-id" id="index-syntax-tree-nodes_002c-by-position"></a>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dfirst_002dchild_002dfor_002dpos"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-first-child-for-pos</strong> <var class="def-var-arguments">node pos &amp;optional named</var><a class="copiable-link" href="#index-treesit_002dnode_002dfirst_002dchild_002dfor_002dpos"> &para;</a></span></dt>
+<dd><p>This function finds the first child of <var class="var">node</var> that extends beyond
+buffer position <var class="var">pos</var>.  &ldquo;Extends beyond&rdquo; means the end of the
+child node is greater or equal to <var class="var">pos</var>.  This function only looks
+for immediate children of <var class="var">node</var>, and doesn&rsquo;t look in its
+grandchildren.  If <var class="var">named</var> is non-<code class="code">nil</code>, it looks for the
+first named child (see <a class="pxref" href="#tree_002dsitter-named-node">named node</a>).
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002ddescendant_002dfor_002drange"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-descendant-for-range</strong> <var class="def-var-arguments">node beg end &amp;optional named</var><a class="copiable-link" href="#index-treesit_002dnode_002ddescendant_002dfor_002drange"> &para;</a></span></dt>
+<dd><p>This function finds the <em class="emph">smallest</em> descendant node of <var class="var">node</var>
+that spans the region of text between positions <var class="var">beg</var> and
+<var class="var">end</var>.  It is similar to <code class="code">treesit-node-at</code>.  If <var class="var">named</var>
+is non-<code class="code">nil</code>, it looks for the smallest named child.
+</p></dd></dl>
+
+<h3 class="heading" id="Searching-for-node"><span>Searching for node<a class="copiable-link" href="#Searching-for-node"> &para;</a></span></h3>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dsearch_002dsubtree"><span class="category-def">Function: </span><span><strong class="def-name">treesit-search-subtree</strong> <var class="def-var-arguments">node predicate &amp;optional backward all depth</var><a class="copiable-link" href="#index-treesit_002dsearch_002dsubtree"> &para;</a></span></dt>
+<dd><p>This function traverses the subtree of <var class="var">node</var> (including <var class="var">node</var>
+itself), looking for a node for which <var class="var">predicate</var> returns
+non-<code class="code">nil</code>.  <var class="var">predicate</var> is a regexp that is matched against
+each node&rsquo;s type, or a predicate function that takes a node and returns
+non-<code class="code">nil</code> if the node matches.  <var class="var">predicate</var> can also be a thing
+symbol or thing definition (see <a class="pxref" href="#User_002ddefined-Things">User-defined &ldquo;Things&rdquo; and Navigation</a>).  Using an
+undefined thing doesn&rsquo;t raise an error, the function simply returns
+<code class="code">nil</code>.
+</p>
+<p>This function returns the first node that matches, or <code class="code">nil</code> if none
+matches <var class="var">predicate</var>.
+</p>
+<p>By default, this function only traverses named nodes, but if <var class="var">all</var>
+is non-<code class="code">nil</code>, it traverses all the nodes.  If <var class="var">backward</var> is
+non-<code class="code">nil</code>, it traverses backwards (i.e., it visits the last child
+first when traversing down the tree).  If <var class="var">depth</var> is
+non-<code class="code">nil</code>, it must be a number that limits the tree traversal to
+that many levels down the tree.  If <var class="var">depth</var> is <code class="code">nil</code>, it
+defaults to 1000.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dsearch_002dforward"><span class="category-def">Function: </span><span><strong class="def-name">treesit-search-forward</strong> <var class="def-var-arguments">start predicate &amp;optional backward all</var><a class="copiable-link" href="#index-treesit_002dsearch_002dforward"> &para;</a></span></dt>
+<dd><p>Like <code class="code">treesit-search-subtree</code>, this function also traverses the
+parse tree and matches each node with <var class="var">predicate</var> (except for
+<var class="var">start</var>), where <var class="var">predicate</var> can be a regexp or a predicate
+function.  <var class="var">predicate</var> can also be a thing symbol or thing
+definition (see <a class="pxref" href="#User_002ddefined-Things">User-defined &ldquo;Things&rdquo; and Navigation</a>).  Using an undefined thing
+doesn&rsquo;t raise an error, the function simply returns <code class="code">nil</code>.
+</p>
+<p>For a tree like the one below where <var class="var">start</var> is marked &lsquo;<samp class="samp">S</samp>&rsquo;, this
+function traverses as numbered from 1 to 12:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">              12
+              |
+     S--------3----------11
+     |        |          |
+o--o-+--o  1--+--2    6--+-----10
+|  |                  |        |
+o  o                +-+-+   +--+--+
+                    |   |   |  |  |
+                    4   5   7  8  9
+</pre></div></div>
+
+<p>Note that this function doesn&rsquo;t traverse the subtree of <var class="var">start</var>,
+and it always traverses leaf nodes first, before moving upwards.
+</p>
+<p>Like <code class="code">treesit-search-subtree</code>, this function only searches for
+named nodes by default, but if <var class="var">all</var> is non-<code class="code">nil</code>, it
+searches for all nodes.  If <var class="var">backward</var> is non-<code class="code">nil</code>, it
+searches backwards.
+</p>
+<p>While <code class="code">treesit-search-subtree</code> traverses the subtree of a node,
+this function starts with node <var class="var">start</var> and traverses every node
+that comes after it in the buffer position order, i.e., nodes with
+start positions greater than the end position of <var class="var">start</var>.
+</p>
+<p>In the tree shown above, <code class="code">treesit-search-subtree</code> traverses node
+&lsquo;<samp class="samp">S</samp>&rsquo; (<var class="var">start</var>) and nodes marked with <code class="code">o</code>, whereas this
+function traverses the nodes marked with numbers.  This function is
+useful for answering questions like &ldquo;what is the first node after
+<var class="var">start</var> in the buffer that satisfies some condition?&rdquo;
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dsearch_002dforward_002dgoto"><span class="category-def">Function: </span><span><strong class="def-name">treesit-search-forward-goto</strong> <var class="def-var-arguments">node predicate &amp;optional start backward all</var><a class="copiable-link" href="#index-treesit_002dsearch_002dforward_002dgoto"> &para;</a></span></dt>
+<dd><p>This function moves point to the start or end of the next node after
+<var class="var">node</var> in the buffer that matches <var class="var">predicate</var>.  If <var class="var">start</var>
+is non-<code class="code">nil</code>, stop at the beginning rather than the end of a node.
+</p>
+<p>This function guarantees that the matched node it returns makes
+progress in terms of buffer position: the start/end position of the
+returned node is always greater than that of <var class="var">node</var>.
+</p>
+<p>Arguments <var class="var">predicate</var>, <var class="var">backward</var>, and <var class="var">all</var> are the same
+as in <code class="code">treesit-search-forward</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dinduce_002dsparse_002dtree"><span class="category-def">Function: </span><span><strong class="def-name">treesit-induce-sparse-tree</strong> <var class="def-var-arguments">root predicate &amp;optional process-fn depth</var><a class="copiable-link" href="#index-treesit_002dinduce_002dsparse_002dtree"> &para;</a></span></dt>
+<dd><p>This function creates a sparse tree from <var class="var">root</var>&rsquo;s subtree.
+</p>
+<p>It takes the subtree under <var class="var">root</var>, and combs it so only the nodes
+that match <var class="var">predicate</var> are left.  Like previous functions, the
+<var class="var">predicate</var> can be a regexp string that matches against each node&rsquo;s
+type, or a function that takes a node and returns non-<code class="code">nil</code> if it
+matches.  <var class="var">predicate</var> can also be a thing symbol or thing definition
+(see <a class="pxref" href="#User_002ddefined-Things">User-defined &ldquo;Things&rdquo; and Navigation</a>).  Using an undefined thing doesn&rsquo;t raise
+an error, the function simply returns <code class="code">nil</code>.
+</p>
+<p>For example, given the subtree on the left that consists of both
+numbers and letters, if <var class="var">predicate</var> is &ldquo;letter only&rdquo;, the
+returned tree is the one on the right.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">    a                 a              a
+    |                 |              |
++---+---+         +---+---+      +---+---+
+|   |   |         |   |   |      |   |   |
+b   1   2         b   |   |      b   c   d
+    |   |     =&gt;      |   |  =&gt;      |
+    c   +--+          c   +          e
+    |   |  |          |   |
+ +--+   d  4       +--+   d
+ |  |              |
+ e  5              e
+</pre></div></div>
+
+<p>If <var class="var">process-fn</var> is non-<code class="code">nil</code>, instead of returning the
+matched nodes, this function passes each node to <var class="var">process-fn</var> and
+uses the returned value instead.  If non-<code class="code">nil</code>, <var class="var">depth</var>
+limits the number of levels to go down from <var class="var">root</var>.  If
+<var class="var">depth</var> is <code class="code">nil</code>, it defaults to 1000.
+</p>
+<p>Each node in the returned tree looks like
+<code class="code">(<var class="var">tree-sitter-node</var>&nbsp;.&nbsp;(<var class="var">child</var>&nbsp;&hellip;))</code><!-- /@w -->.  The
+<var class="var">tree-sitter-node</var> of the root of this tree will be <code class="code">nil</code> if
+<var class="var">root</var> doesn&rsquo;t match <var class="var">predicate</var>.  If no node matches
+<var class="var">predicate</var>, the function returns <code class="code">nil</code>.
+</p></dd></dl>
+
+<h3 class="heading" id="More-convenience-functions"><span>More convenience functions<a class="copiable-link" href="#More-convenience-functions"> &para;</a></span></h3>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dget"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-get</strong> <var class="def-var-arguments">node instructions</var><a class="copiable-link" href="#index-treesit_002dnode_002dget"> &para;</a></span></dt>
+<dd><p>This is a convenience function that chains together multiple node
+accessor functions together.  For example, to get <var class="var">node</var>&rsquo;s
+parent&rsquo;s next sibling&rsquo;s second child&rsquo;s text:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(treesit-node-get node
+   '((parent 1)
+    (sibling 1 nil)
+    (child 1 nil)
+    (text nil)))
+</pre></div></div>
+
+<p><var class="var">instruction</var> is a list of INSTRUCTIONs of the form
+<code class="code">(<var class="var">fn</var>&nbsp;<var class="var">arg</var>...)</code><!-- /@w -->.  The following <var class="var">fn</var>&rsquo;s are
+supported:
+</p>
+<dl class="table">
+<dt><code class="code">(child <var class="var">idx</var> <var class="var">named</var>)</code></dt>
+<dd><p>Get the <var class="var">idx</var>&rsquo;th child.
+</p>
+</dd>
+<dt><code class="code">(parent <var class="var">n</var>)</code></dt>
+<dd><p>Go to parent <var class="var">n</var> times.
+</p>
+</dd>
+<dt><code class="code">(field-name)</code></dt>
+<dd><p>Get the field name of the current node.
+</p>
+</dd>
+<dt><code class="code">(type)</code></dt>
+<dd><p>Get the type of the current node.
+</p>
+</dd>
+<dt><code class="code">(text <var class="var">no-property</var>)</code></dt>
+<dd><p>Get the text of the current node.
+</p>
+</dd>
+<dt><code class="code">(children <var class="var">named</var>)</code></dt>
+<dd><p>Get a list of children.
+</p>
+</dd>
+<dt><code class="code">(sibling <var class="var">step</var> <var class="var">named</var>)</code></dt>
+<dd><p>Get the nth prev/next sibling, negative <var class="var">step</var> means prev sibling,
+positive means next sibling.
+</p></dd>
+</dl>
+
+<p>Note that arguments like <var class="var">named</var> and <var class="var">no-property</var> can&rsquo;t be
+omitted, unlike in their original functions.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dfilter_002dchild"><span class="category-def">Function: </span><span><strong class="def-name">treesit-filter-child</strong> <var class="def-var-arguments">node predicate &amp;optional named</var><a class="copiable-link" href="#index-treesit_002dfilter_002dchild"> &para;</a></span></dt>
+<dd><p>This function finds immediate children of <var class="var">node</var> that satisfy
+<var class="var">predicate</var>.
+</p>
+<p>The <var class="var">predicate</var> function takes a node as argument and should
+return non-<code class="code">nil</code> to indicate that the node should be kept.  If
+<var class="var">named</var> is non-<code class="code">nil</code>, this function only examines named
+nodes.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparent_002duntil"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parent-until</strong> <var class="def-var-arguments">node predicate &amp;optional include-node</var><a class="copiable-link" href="#index-treesit_002dparent_002duntil"> &para;</a></span></dt>
+<dd><p>This function repeatedly finds the parents of <var class="var">node</var>, and returns
+the parent that satisfies <var class="var">predicate</var>.  <var class="var">predicate</var> can be
+either a function that takes a node as argument and returns <code class="code">t</code>
+or <code class="code">nil</code>, or a regexp matching node type names, or other valid
+predicates described in <code class="code">treesit-thing-settings</code>.  If no parent
+satisfies <var class="var">predicates</var>, this function returns <code class="code">nil</code>.
+</p>
+<p>Normally this function only looks at the parents of <var class="var">node</var> but not
+<var class="var">node</var> itself.  But if <var class="var">include-node</var> is non-<code class="code">nil</code>, this
+function returns <var class="var">node</var> if <var class="var">node</var> satisfies <var class="var">predicate</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparent_002dwhile"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parent-while</strong> <var class="def-var-arguments">node predicate</var><a class="copiable-link" href="#index-treesit_002dparent_002dwhile"> &para;</a></span></dt>
+<dd><p>This function goes up the tree starting from <var class="var">node</var>, and keeps
+doing so as long as the nodes satisfy <var class="var">predicate</var>, a function that
+takes a node as argument.  That is, this function returns the highest
+parent of <var class="var">node</var> that still satisfies <var class="var">predicate</var>.  Note that if
+<var class="var">node</var> satisfies <var class="var">predicate</var> but its immediate parent doesn&rsquo;t,
+<var class="var">node</var> itself is returned.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dtop_002dlevel"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-top-level</strong> <var class="def-var-arguments">node &amp;optional predicate include-node</var><a class="copiable-link" href="#index-treesit_002dnode_002dtop_002dlevel"> &para;</a></span></dt>
+<dd><p>This function returns the highest parent of <var class="var">node</var> that has the
+same type as <var class="var">node</var>.  If no such parent exists, it returns
+<code class="code">nil</code>.  Therefore this function is also useful for testing
+whether <var class="var">node</var> is top-level.
+</p>
+<p>If <var class="var">predicate</var> is <code class="code">nil</code>, this function uses <var class="var">node</var>&rsquo;s type
+to find the parent.  If <var class="var">predicate</var> is non-<code class="code">nil</code>, this
+function searches the parent that satisfies <var class="var">predicate</var>.  If
+<var class="var">include-node</var> is non-<code class="code">nil</code>, this function returns <var class="var">node</var>
+if <var class="var">node</var> satisfies <var class="var">predicate</var>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Accessing-Node-Information">
+<div class="nav-panel">
+<p>
+Next: <a href="#Pattern-Matching" accesskey="n" rel="next">Pattern Matching Tree-sitter Nodes</a>, Previous: <a href="#Retrieving-Nodes" accesskey="p" rel="prev">Retrieving Nodes</a>, Up: <a href="#Parsing-Program-Source" accesskey="u" rel="up">Parsing Program Source</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Accessing-Node-Information-1"><span>38.4 Accessing Node Information<a class="copiable-link" href="#Accessing-Node-Information-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-information-of-node_002c-syntax-trees"></a>
+<a class="index-entry-id" id="index-syntax-trees_002c-node-information"></a>
+
+<h3 class="heading" id="Basic-information-of-Node"><span>Basic information of Node<a class="copiable-link" href="#Basic-information-of-Node"> &para;</a></span></h3>
+
+<p>Every node is associated with a parser, and that parser is associated
+with a buffer.  The following functions retrieve them.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dparser"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-parser</strong> <var class="def-var-arguments">node</var><a class="copiable-link" href="#index-treesit_002dnode_002dparser"> &para;</a></span></dt>
+<dd><p>This function returns <var class="var">node</var>&rsquo;s associated parser.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dbuffer"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-buffer</strong> <var class="def-var-arguments">node</var><a class="copiable-link" href="#index-treesit_002dnode_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function returns <var class="var">node</var>&rsquo;s parser&rsquo;s associated buffer.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dlanguage"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-language</strong> <var class="def-var-arguments">node</var><a class="copiable-link" href="#index-treesit_002dnode_002dlanguage"> &para;</a></span></dt>
+<dd><p>This function returns <var class="var">node</var>&rsquo;s parser&rsquo;s associated language.
+</p></dd></dl>
+
+<p>Each node represents a portion of text in the buffer.  Functions below
+find relevant information about that text.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dstart"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-start</strong> <var class="def-var-arguments">node</var><a class="copiable-link" href="#index-treesit_002dnode_002dstart"> &para;</a></span></dt>
+<dd><p>Return the start position of <var class="var">node</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dend"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-end</strong> <var class="def-var-arguments">node</var><a class="copiable-link" href="#index-treesit_002dnode_002dend"> &para;</a></span></dt>
+<dd><p>Return the end position of <var class="var">node</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dtext"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-text</strong> <var class="def-var-arguments">node &amp;optional object</var><a class="copiable-link" href="#index-treesit_002dnode_002dtext"> &para;</a></span></dt>
+<dd><p>Return the buffer text that <var class="var">node</var> represents, as a string.  (If
+<var class="var">node</var> is retrieved from parsing a string, it will be the text
+from that string.)
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-predicates-for-syntax-tree-nodes"></a>
+<p>Here are some predicates on tree-sitter nodes:
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dp"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-p</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-treesit_002dnode_002dp"> &para;</a></span></dt>
+<dd><p>Checks if <var class="var">object</var> is a tree-sitter syntax node.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-compare-tree_002dsitter-syntax-nodes"></a>
+<a class="index-entry-id" id="index-tree_002dsitter-nodes_002c-comparing"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002deq"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-eq</strong> <var class="def-var-arguments">node1 node2</var><a class="copiable-link" href="#index-treesit_002dnode_002deq"> &para;</a></span></dt>
+<dd><p>Checks if <var class="var">node1</var> and <var class="var">node2</var> refer to the same node in a
+tree-sitter syntax tree.  This function uses the same equivalence
+metric as <code class="code">equal</code>.  You can also compare nodes using <code class="code">equal</code>
+(see <a class="pxref" href="Lisp-Data-Types.html#Equality-Predicates">Equality Predicates</a>).
+</p></dd></dl>
+
+<h3 class="heading" id="Property-information"><span>Property information<a class="copiable-link" href="#Property-information"> &para;</a></span></h3>
+
+<p>In general, nodes in a concrete syntax tree fall into two categories:
+<em class="dfn">named nodes</em> and <em class="dfn">anonymous nodes</em>.  Whether a node is named
+or anonymous is determined by the language grammar
+(see <a class="pxref" href="#tree_002dsitter-named-node">named node</a>).
+</p>
+<a class="index-entry-id" id="index-tree_002dsitter-missing-node"></a>
+<a class="index-entry-id" id="index-missing-node_002c-tree_002dsitter"></a>
+<p>Apart from being named or anonymous, a node can have other properties.
+A node can be &ldquo;missing&rdquo;: such nodes are inserted by the parser in
+order to recover from certain kinds of syntax errors, i.e., something
+should probably be there according to the grammar, but is not there.
+This can happen during editing of the program source, when the source
+is not yet in its final form.
+</p>
+<a class="index-entry-id" id="index-tree_002dsitter-extra-node"></a>
+<a class="index-entry-id" id="index-extra-node_002c-tree_002dsitter"></a>
+<p>A node can be &ldquo;extra&rdquo;: such nodes represent things like comments,
+which can appear anywhere in the text.
+</p>
+<a class="index-entry-id" id="index-tree_002dsitter-outdated-node"></a>
+<a class="index-entry-id" id="index-outdated-node_002c-tree_002dsitter"></a>
+<p>A node can be &ldquo;outdated&rdquo;, if its parser has reparsed at least once
+after the node was created.
+</p>
+<a class="index-entry-id" id="index-tree_002dsitter-node-that-has-error"></a>
+<a class="index-entry-id" id="index-has-error_002c-tree_002dsitter-node"></a>
+<p>A node &ldquo;has error&rdquo; if the text it spans contains a syntax error.  It
+can be that the node itself has an error, or one of its descendants
+has an error.
+</p>
+<a class="index-entry-id" id="index-tree_002dsitter_002c-live-parsing-node"></a>
+<a class="index-entry-id" id="index-live-node_002c-tree_002dsitter"></a>
+<p>A node is considered <em class="dfn">live</em> if its parser is not deleted, and the
+buffer to which it belongs is a live buffer (see <a class="pxref" href="Buffers.html#Killing-Buffers">Killing Buffers</a>).
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dcheck"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-check</strong> <var class="def-var-arguments">node property</var><a class="copiable-link" href="#index-treesit_002dnode_002dcheck"> &para;</a></span></dt>
+<dd><p>This function returns non-<code class="code">nil</code> if <var class="var">node</var> has the specified
+<var class="var">property</var>.  <var class="var">property</var> can be <code class="code">named</code>, <code class="code">missing</code>,
+<code class="code">extra</code>, <code class="code">outdated</code>, <code class="code">has-error</code>, or <code class="code">live</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dtype"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-type</strong> <var class="def-var-arguments">node</var><a class="copiable-link" href="#index-treesit_002dnode_002dtype"> &para;</a></span></dt>
+<dd><p>Named nodes have &ldquo;types&rdquo; (see <a class="pxref" href="#tree_002dsitter-node-type">node type</a>).
+For example, a named node can be a <code class="code">string_literal</code> node, where
+<code class="code">string_literal</code> is its type.  The type of an anonymous node is
+just the text that the node represents; e.g., the type of a &lsquo;<samp class="samp">,</samp>&rsquo;
+node is just &lsquo;<samp class="samp">,</samp>&rsquo;.
+</p>
+<p>This function returns <var class="var">node</var>&rsquo;s type as a string.
+</p></dd></dl>
+
+<h3 class="heading" id="Information-as-a-child-or-parent"><span>Information as a child or parent<a class="copiable-link" href="#Information-as-a-child-or-parent"> &para;</a></span></h3>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dindex"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-index</strong> <var class="def-var-arguments">node &amp;optional named</var><a class="copiable-link" href="#index-treesit_002dnode_002dindex"> &para;</a></span></dt>
+<dd><p>This function returns the index of <var class="var">node</var> as a child node of its
+parent.  If <var class="var">named</var> is non-<code class="code">nil</code>, it only counts named nodes
+(see <a class="pxref" href="#tree_002dsitter-named-node">named node</a>).
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dfield_002dname"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-field-name</strong> <var class="def-var-arguments">node</var><a class="copiable-link" href="#index-treesit_002dnode_002dfield_002dname"> &para;</a></span></dt>
+<dd><p>A child of a parent node could have a field name (see <a class="pxref" href="#tree_002dsitter-node-field-name">field name</a>).  This function returns the field name
+of <var class="var">node</var> as a child of its parent.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dfield_002dname_002dfor_002dchild"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-field-name-for-child</strong> <var class="def-var-arguments">node n</var><a class="copiable-link" href="#index-treesit_002dnode_002dfield_002dname_002dfor_002dchild"> &para;</a></span></dt>
+<dd><p>This function returns the field name of the <var class="var">n</var>&rsquo;th child of
+<var class="var">node</var>.  It returns <code class="code">nil</code> if there is no <var class="var">n</var>&rsquo;th child, or
+the <var class="var">n</var>&rsquo;th child doesn&rsquo;t have a field name.
+</p>
+<p>Note that <var class="var">n</var> counts both named and anonymous children, and
+<var class="var">n</var> can be negative, e.g., &minus;1 represents the last child.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dchild_002dcount"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-child-count</strong> <var class="def-var-arguments">node &amp;optional named</var><a class="copiable-link" href="#index-treesit_002dnode_002dchild_002dcount"> &para;</a></span></dt>
+<dd><p>This function returns the number of children of <var class="var">node</var>.  If
+<var class="var">named</var> is non-<code class="code">nil</code>, it only counts named children
+(see <a class="pxref" href="#tree_002dsitter-named-node">named node</a>).
+</p></dd></dl>
+
+<h3 class="heading" id="Convenience-functions"><span>Convenience functions<a class="copiable-link" href="#Convenience-functions"> &para;</a></span></h3>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002denclosed_002dp"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-enclosed-p</strong> <var class="def-var-arguments">smaller larger &amp;optional strict</var><a class="copiable-link" href="#index-treesit_002dnode_002denclosed_002dp"> &para;</a></span></dt>
+<dd><p>This function returns non-<code class="code">nil</code> if <var class="var">smaller</var> is enclosed in
+<var class="var">larger</var>.  <var class="var">smaller</var> and <var class="var">larger</var> can be either a cons
+<code class="code">(<var class="var">beg</var> . <var class="var">end</var>)</code> or a node.
+</p>
+<p>Return non-<code class="code">nil</code> if <var class="var">larger</var>&rsquo;s start &lt;= <var class="var">smaller</var>&rsquo;s start
+and <var class="var">larger</var>&rsquo;s end &lt;= <var class="var">smaller</var>&rsquo;s end.
+</p>
+<p>If <var class="var">strict</var> is <code class="code">t</code>, compare with &lt; rather than &lt;=.
+</p>
+<p>If <var class="var">strict</var> is <code class="code">partial</code>, consider <var class="var">larger</var> encloses
+<var class="var">smaller</var> when at least one side is strictly enclosing.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Pattern-Matching">
+<div class="nav-panel">
+<p>
+Next: <a href="#User_002ddefined-Things" accesskey="n" rel="next">User-defined &ldquo;Things&rdquo; and Navigation</a>, Previous: <a href="#Accessing-Node-Information" accesskey="p" rel="prev">Accessing Node Information</a>, Up: <a href="#Parsing-Program-Source" accesskey="u" rel="up">Parsing Program Source</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Pattern-Matching-Tree_002dsitter-Nodes"><span>38.5 Pattern Matching Tree-sitter Nodes<a class="copiable-link" href="#Pattern-Matching-Tree_002dsitter-Nodes"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-pattern-matching-with-tree_002dsitter-nodes"></a>
+
+<a class="index-entry-id" id="index-capturing_002c-tree_002dsitter-node"></a>
+<p>Tree-sitter lets Lisp programs match patterns using a small
+declarative language.  This pattern matching consists of two steps:
+first tree-sitter matches a <em class="dfn">pattern</em> against nodes in the syntax
+tree, then it <em class="dfn">captures</em> specific nodes that matched the pattern
+and returns the captured nodes.
+</p>
+<p>We describe first how to write the most basic query pattern and how to
+capture nodes in a pattern, then the pattern-matching function, and
+finally the more advanced pattern syntax.
+</p>
+<h3 class="heading" id="Basic-query-syntax"><span>Basic query syntax<a class="copiable-link" href="#Basic-query-syntax"> &para;</a></span></h3>
+
+<a class="index-entry-id" id="index-tree_002dsitter-query-pattern-syntax"></a>
+<a class="index-entry-id" id="index-pattern-syntax_002c-tree_002dsitter-query"></a>
+<a class="index-entry-id" id="index-query_002c-tree_002dsitter"></a>
+<p>A <em class="dfn">query</em> consists of multiple <em class="dfn">patterns</em>.  Each pattern is an
+s-expression that matches a certain node in the syntax node.  A
+pattern has the form <code class="code">(<var class="var">type</var>&nbsp;(<var class="var">child</var>&hellip;))</code><!-- /@w -->.
+</p>
+<p>For example, a pattern that matches a <code class="code">binary_expression</code> node that
+contains <code class="code">number_literal</code> child nodes would look like
+</p>
+<div class="example">
+<pre class="example-preformatted">(binary_expression (number_literal))
+</pre></div>
+
+<p>To <em class="dfn">capture</em> a node using the query pattern above, append
+<code class="code">@<var class="var">capture-name</var></code> after the node pattern you want to
+capture.  For example,
+</p>
+<div class="example">
+<pre class="example-preformatted">(binary_expression (number_literal) @number-in-exp)
+</pre></div>
+
+<p>captures <code class="code">number_literal</code> nodes that are inside a
+<code class="code">binary_expression</code> node with the capture name
+<code class="code">number-in-exp</code>.
+</p>
+<p>We can capture the <code class="code">binary_expression</code> node as well, with, for
+example, the capture name <code class="code">biexp</code>:
+</p>
+<div class="example">
+<pre class="example-preformatted">(binary_expression
+ (number_literal) @number-in-exp) @biexp
+</pre></div>
+
+<h3 class="heading" id="Query-function"><span>Query function<a class="copiable-link" href="#Query-function"> &para;</a></span></h3>
+
+<a class="index-entry-id" id="index-query-functions_002c-tree_002dsitter"></a>
+<p>Now we can introduce the <em class="dfn">query functions</em>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dquery_002dcapture"><span class="category-def">Function: </span><span><strong class="def-name">treesit-query-capture</strong> <var class="def-var-arguments">node query &amp;optional beg end node-only grouped</var><a class="copiable-link" href="#index-treesit_002dquery_002dcapture"> &para;</a></span></dt>
+<dd><p>This function matches patterns in <var class="var">query</var> within <var class="var">node</var>.  The
+argument <var class="var">query</var> can be either an s-expression, a string, or a
+compiled query object.  For now, we focus on the s-expression syntax;
+string syntax and compiled queries are described at the end of
+the section.
+</p>
+<p>The argument <var class="var">node</var> can also be a parser or a language symbol.  A
+parser means use its root node, a language symbol means find or create
+a parser for that language in the current buffer, and use the root
+node.
+</p>
+<p>The function returns all the captured nodes in an alist with elements
+of the form <code class="code">(<var class="var">capture_name</var>&nbsp;.&nbsp;<var class="var">node</var>)</code><!-- /@w -->.  If
+<var class="var">node-only</var> is non-<code class="code">nil</code>, it returns the list of <var class="var">node</var>s
+instead.  By default the entire text of <var class="var">node</var> is searched, but if
+<var class="var">beg</var> and <var class="var">end</var> are both non-<code class="code">nil</code>, they specify the
+region of buffer text where this function should match nodes.  Any
+matching node whose span overlaps with the region between <var class="var">beg</var>
+and <var class="var">end</var> is captured; it doesn&rsquo;t have to be completely contained
+in the region.
+</p>
+<p>If <var class="var">grouped</var> is non-<code class="code">nil</code>, this function returns a grouped list
+of lists of captured nodes.  The grouping is determined by <var class="var">query</var>.
+Captures in the same match of a pattern in <var class="var">query</var> are grouped
+together.
+</p>
+<a class="index-entry-id" id="index-treesit_002dquery_002derror"></a>
+<a class="index-entry-id" id="index-treesit_002dquery_002dvalidate"></a>
+<p>This function raises the <code class="code">treesit-query-error</code> error if
+<var class="var">query</var> is malformed.  The signal data contains a description of
+the specific error.  You can use <code class="code">treesit-query-validate</code> to
+validate and debug the query.
+</p></dd></dl>
+
+<p>For example, suppose <var class="var">node</var>&rsquo;s text is <code class="code">1 + 2</code>, and
+<var class="var">query</var> is
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq query
+      '((binary_expression
+         (number_literal) @number-in-exp) @biexp)
+</pre></div></div>
+
+<p>Matching that query would return
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(treesit-query-capture node query)
+    &rArr; ((biexp . <var class="var">&lt;node for &quot;1 + 2&quot;&gt;</var>)
+       (number-in-exp . <var class="var">&lt;node for &quot;1&quot;&gt;</var>)
+       (number-in-exp . <var class="var">&lt;node for &quot;2&quot;&gt;</var>))
+</pre></div></div>
+
+<p>As mentioned earlier, <var class="var">query</var> could contain multiple patterns.
+For example, it could have two top-level patterns:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq query
+      '((binary_expression) @biexp
+        (number_literal) @number)
+</pre></div></div>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dquery_002dstring"><span class="category-def">Function: </span><span><strong class="def-name">treesit-query-string</strong> <var class="def-var-arguments">string query language</var><a class="copiable-link" href="#index-treesit_002dquery_002dstring"> &para;</a></span></dt>
+<dd><p>This function parses <var class="var">string</var> as <var class="var">language</var>, matches its root
+node with <var class="var">query</var>, and returns the result.
+</p></dd></dl>
+
+<h3 class="heading" id="More-query-syntax"><span>More query syntax<a class="copiable-link" href="#More-query-syntax"> &para;</a></span></h3>
+
+<p>Besides node type and capture name, tree-sitter&rsquo;s pattern syntax can
+express anonymous node, field name, wildcard, quantification,
+grouping, alternation, anchor, and predicate.
+</p>
+<h4 class="subheading" id="Anonymous-node"><span>Anonymous node<a class="copiable-link" href="#Anonymous-node"> &para;</a></span></h4>
+
+<p>An anonymous node is written verbatim, surrounded by quotes.  A
+pattern matching (and capturing) keyword <code class="code">return</code> would be
+</p>
+<div class="example">
+<pre class="example-preformatted">&quot;return&quot; @keyword
+</pre></div>
+
+<h4 class="subheading" id="Wild-card"><span>Wild card<a class="copiable-link" href="#Wild-card"> &para;</a></span></h4>
+
+<p>In a pattern, &lsquo;<samp class="samp">(_)</samp>&rsquo; matches any named node, and &lsquo;<samp class="samp">_</samp>&rsquo; matches
+any named or anonymous node.  For example, to capture any named child
+of a <code class="code">binary_expression</code> node, the pattern would be
+</p>
+<div class="example">
+<pre class="example-preformatted">(binary_expression (_) @in-biexp)
+</pre></div>
+
+<h4 class="subheading" id="Field-name"><span>Field name<a class="copiable-link" href="#Field-name"> &para;</a></span></h4>
+
+<p>It is possible to capture child nodes that have specific field names.
+In the pattern below, <code class="code">declarator</code> and <code class="code">body</code> are field
+names, indicated by the colon following them.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(function_definition
+  declarator: (_) @func-declarator
+  body: (_) @func-body)
+</pre></div></div>
+
+<p>It is also possible to capture a node that doesn&rsquo;t have a certain
+field, say, a <code class="code">function_definition</code> without a <code class="code">body</code> field:
+</p>
+<div class="example">
+<pre class="example-preformatted">(function_definition !body) @func-no-body
+</pre></div>
+
+<h4 class="subheading" id="Quantify-node"><span>Quantify node<a class="copiable-link" href="#Quantify-node"> &para;</a></span></h4>
+
+<a class="index-entry-id" id="index-quantify-node_002c-tree_002dsitter"></a>
+<p>Tree-sitter recognizes quantification operators &lsquo;<samp class="samp">:*</samp>&rsquo;, &lsquo;<samp class="samp">:+</samp>&rsquo;,
+and &lsquo;<samp class="samp">:?</samp>&rsquo;.  Their meanings are the same as in regular expressions:
+&lsquo;<samp class="samp">:*</samp>&rsquo; matches the preceding pattern zero or more times, &lsquo;<samp class="samp">:+</samp>&rsquo;
+matches one or more times, and &lsquo;<samp class="samp">:?</samp>&rsquo; matches zero or one times.
+</p>
+<p>For example, the following pattern matches <code class="code">type_declaration</code>
+nodes that have <em class="emph">zero or more</em> <code class="code">long</code> keywords.
+</p>
+<div class="example">
+<pre class="example-preformatted">(type_declaration &quot;long&quot; :*) @long-type
+</pre></div>
+
+<p>The following pattern matches a type declaration that may or may not
+have a <code class="code">long</code> keyword:
+</p>
+<div class="example">
+<pre class="example-preformatted">(type_declaration &quot;long&quot; :?) @long-type
+</pre></div>
+
+<h4 class="subheading" id="Grouping"><span>Grouping<a class="copiable-link" href="#Grouping"> &para;</a></span></h4>
+
+<p>Similar to groups in regular expressions, we can bundle patterns into
+groups and apply quantification operators to them.  For example, to
+express a comma-separated list of identifiers, one could write
+</p>
+<div class="example">
+<pre class="example-preformatted">(identifier) (&quot;,&quot; (identifier)) :*
+</pre></div>
+
+<h4 class="subheading" id="Alternation"><span>Alternation<a class="copiable-link" href="#Alternation"> &para;</a></span></h4>
+
+<p>Again, similar to regular expressions, we can express &ldquo;match any one
+of these patterns&rdquo; in a pattern.  The syntax is a vector of patterns.
+For example, to capture some keywords in C, the pattern would be
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">[
+  &quot;return&quot;
+  &quot;break&quot;
+  &quot;if&quot;
+  &quot;else&quot;
+] @keyword
+</pre></div></div>
+
+<h4 class="subheading" id="Anchor"><span>Anchor<a class="copiable-link" href="#Anchor"> &para;</a></span></h4>
+
+<p>The anchor operator <code class="code">:anchor</code> can be used to enforce juxtaposition,
+i.e., to enforce two things to be directly next to each other.  The
+two &ldquo;things&rdquo; can be two nodes, or a child and the end of its parent.
+For example, to capture the first child, the last child, or two
+adjacent children:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">;; Anchor the child with the end of its parent.
+(compound_expression (_) @last-child :anchor)
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; Anchor the child with the beginning of its parent.
+(compound_expression :anchor (_) @first-child)
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; Anchor two adjacent children.
+(compound_expression
+ (_) @prev-child
+ :anchor
+ (_) @next-child)
+</pre></div></div>
+
+<p>Note that the enforcement of juxtaposition ignores any anonymous
+nodes.
+</p>
+<h4 class="subheading" id="Predicate"><span>Predicate<a class="copiable-link" href="#Predicate"> &para;</a></span></h4>
+
+<p>It is possible to add predicate constraints to a pattern.  For
+example, with the following pattern:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(
+ (array :anchor (_) @first (_) @last :anchor)
+ (:eq? @first @last)
+)
+</pre></div></div>
+
+<p>tree-sitter only matches arrays where the first element is equal to
+the last element.  To attach a predicate to a pattern, we need to
+group them together.  Currently there are three predicates:
+<code class="code">:eq?</code>, <code class="code">:match?</code>, and <code class="code">:pred?</code>.
+</p>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-_003aeq_003f"><span class="category-def">Predicate: </span><span><strong class="def-name">:eq?</strong> <var class="def-var-arguments">arg1 arg2</var><a class="copiable-link" href="#index-_003aeq_003f"> &para;</a></span></dt>
+<dd><p>Matches if <var class="var">arg1</var> is equal to <var class="var">arg2</var>.  Arguments can be either
+strings or capture names.  Capture names represent the text that the
+captured node spans in the buffer.  Note that this is more like
+<code class="code">equal</code> in Elisp, but <code class="code">eq?</code> is the convention used by
+tree-sitter.  Previously we supported the <code class="code">:equal</code> predicate but
+it&rsquo;s now considered deprecated.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-_003amatch_003f"><span class="category-def">Predicate: </span><span><strong class="def-name">:match?</strong> <var class="def-var-arguments">capture-name regexp</var><a class="copiable-link" href="#index-_003amatch_003f"> &para;</a></span></dt>
+<dd><p>Matches if the text that <var class="var">capture-name</var>&rsquo;s node spans in the buffer
+matches regular expression <var class="var">regexp</var>, given as a string literal.
+Matching is case-sensitive.  The ordering of the arguments doesn&rsquo;t
+matter.  Previously we supported the <code class="code">:match</code> predicate but it&rsquo;s
+now considered deprecated.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-_003apred_003f"><span class="category-def">Predicate: </span><span><strong class="def-name">:pred?</strong> <var class="def-var-arguments">fn &amp;rest nodes</var><a class="copiable-link" href="#index-_003apred_003f"> &para;</a></span></dt>
+<dd><p>Matches if function <var class="var">fn</var> returns non-<code class="code">nil</code> when passed each
+node in <var class="var">nodes</var> as arguments.  The function runs with the current
+buffer set to the buffer of node being queried.  Be very careful when
+using this predicate, since it can be expensive when used in a tight
+loop.  Previously we supported the <code class="code">:pred</code> predicate but it&rsquo;s now
+considered deprecated.
+</p></dd></dl>
+
+<p>Note that a predicate can only refer to capture names that appear in
+the same pattern.  Indeed, it makes little sense to refer to capture
+names in other patterns.
+</p>
+<h3 class="heading" id="String-patterns"><span>String patterns<a class="copiable-link" href="#String-patterns"> &para;</a></span></h3>
+
+<a class="index-entry-id" id="index-tree_002dsitter-patterns-as-strings"></a>
+<a class="index-entry-id" id="index-patterns_002c-tree_002dsitter_002c-in-string-form"></a>
+<p>Besides s-expressions, Emacs allows the tree-sitter&rsquo;s native query
+syntax to be used by writing them as strings.  It largely resembles
+the s-expression syntax.  For example, the following query
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(treesit-query-capture
+ node '((addition_expression
+         left: (_) @left
+         &quot;+&quot; @plus-sign
+         right: (_) @right) @addition
+
+         [&quot;return&quot; &quot;break&quot;] @keyword))
+</pre></div></div>
+
+<p>is equivalent to
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(treesit-query-capture
+ node &quot;(addition_expression
+        left: (_) @left
+        \&quot;+\&quot; @plus-sign
+        right: (_) @right) @addition
+
+        [\&quot;return\&quot; \&quot;break\&quot;] @keyword&quot;)
+</pre></div></div>
+
+<p>Most patterns can be written directly as s-expressions inside a string.
+Only a few of them need modification:
+</p>
+<ul class="itemize mark-bullet">
+<li>Anchor <code class="code">:anchor</code> is written as &lsquo;<samp class="samp">.</samp>&rsquo;.
+</li><li>&lsquo;<samp class="samp">:?</samp>&rsquo; is written as &lsquo;<samp class="samp">?</samp>&rsquo;.
+</li><li>&lsquo;<samp class="samp">:*</samp>&rsquo; is written as &lsquo;<samp class="samp">*</samp>&rsquo;.
+</li><li>&lsquo;<samp class="samp">:+</samp>&rsquo; is written as &lsquo;<samp class="samp">+</samp>&rsquo;.
+</li><li><code class="code">:eq?</code>, <code class="code">:match?</code> and <code class="code">:pred?</code> are written as
+<code class="code">#eq?</code>, <code class="code">#match?</code> and <code class="code">#pred?</code>, respectively.  In
+general, predicates change the &lsquo;<samp class="samp">:</samp>&rsquo; to &lsquo;<samp class="samp">#</samp>&rsquo;.
+</li></ul>
+
+<p>For example,
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">'((
+   (compound_expression :anchor (_) @first (_) :* @rest)
+   (:match? &quot;love&quot; @first)
+   ))
+</pre></div></div>
+
+<p>is written in string form as
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">&quot;(
+  (compound_expression . (_) @first (_)* @rest)
+  (#match? \&quot;love\&quot; @first)
+  )&quot;
+</pre></div></div>
+
+<h3 class="heading" id="Compiling-queries"><span>Compiling queries<a class="copiable-link" href="#Compiling-queries"> &para;</a></span></h3>
+
+<a class="index-entry-id" id="index-compiling-tree_002dsitter-queries"></a>
+<a class="index-entry-id" id="index-queries_002c-compiling"></a>
+<p>If a query is intended to be used repeatedly, especially in tight
+loops, it is important to compile that query, because a compiled query
+is much faster than an uncompiled one.  A compiled query can be used
+anywhere a query is accepted.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dquery_002dcompile"><span class="category-def">Function: </span><span><strong class="def-name">treesit-query-compile</strong> <var class="def-var-arguments">language query &amp;optional eager</var><a class="copiable-link" href="#index-treesit_002dquery_002dcompile"> &para;</a></span></dt>
+<dd><p>This function compiles <var class="var">query</var> for <var class="var">language</var> into a compiled
+query object and returns it.
+</p>
+<p>This function raises the <code class="code">treesit-query-error</code> error if
+<var class="var">query</var> is malformed.  The signal data contains a description of
+the specific error.  You can use <code class="code">treesit-query-validate</code> to
+validate and debug the query.
+</p>
+<p>By default, Emacs lazily compiles <var class="var">query</var>, meaning <var class="var">query</var> isn&rsquo;t
+actually compiled until it&rsquo;s used.  To compile <var class="var">query</var> immediately,
+pass non-<code class="code">nil</code> for <var class="var">eager</var>.
+</p>
+<a class="index-entry-id" id="index-treesit_002dquery_002deagerly_002dcompiled_002dp"></a>
+<p>To tell an actually compiled query apart from one that hasn&rsquo;t been
+compiled, use <code class="code">treesit-query-eagerly-compiled-p</code>.
+</p>
+<p>If <var class="var">query</var> is malformed or language can&rsquo;t be loaded, this function
+signals <code class="code">treesit-query-error</code>.  Obviously this will only happen
+when <var class="var">eager</var> is non-<code class="code">nil</code>, since otherwise Emacs doesn&rsquo;t
+actually compile <var class="var">query</var>.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-treesit_002dquery_002dlanguage"></a>
+<a class="index-entry-id" id="index-treesit_002dquery_002dsource"></a>
+<a class="index-entry-id" id="index-treesit_002dquery_002dexpand"></a>
+<a class="index-entry-id" id="index-treesit_002dpattern_002dexpand"></a>
+<a class="index-entry-id" id="index-treesit_002dquery_002dvalid_002dp"></a>
+<p>There are some additional functions for queries:
+<code class="code">treesit-query-language</code> returns the language of a query;
+<code class="code">treesit-query-source</code> returns the original string or sexp source
+query of a compiled query; <code class="code">treesit-query-valid-p</code> checks whether a
+query is valid; <code class="code">treesit-query-expand</code> converts a s-expression
+query into the string format; and <code class="code">treesit-pattern-expand</code> converts
+a pattern.
+</p>
+<a class="index-entry-id" id="index-treesit_002dquery_002dfirst_002dvalid"></a>
+<p>Tree-sitter grammars change overtime.  To support multiple possible
+versions of a grammar, a Lisp program can use
+<code class="code">treesit-query-first-valid</code> to pick the right query to use.  For
+example, if a grammar has a <code class="code">(defun)</code> node in one version, and
+later renamed it to <code class="code">(function_definition)</code>, a Lisp program can use
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(treesit-query-first-valid 'lang
+  '((defun) @defun)
+  '((function_definition) @defun))
+</pre></div></div>
+
+<p>to support both versions of the grammar.
+</p>
+<p>For more details, consider reading the tree-sitter project&rsquo;s
+documentation about pattern-matching.  The documentation can be found at
+<a class="uref" href="https://tree-sitter.github.io/tree-sitter/using-parsers#pattern-matching-with-queries">https://tree-sitter.github.io/tree-sitter/using-parsers#pattern-matching-with-queries</a>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="User_002ddefined-Things">
+<div class="nav-panel">
+<p>
+Next: <a href="#Multiple-Languages" accesskey="n" rel="next">Parsing Text in Multiple Languages</a>, Previous: <a href="#Pattern-Matching" accesskey="p" rel="prev">Pattern Matching Tree-sitter Nodes</a>, Up: <a href="#Parsing-Program-Source" accesskey="u" rel="up">Parsing Program Source</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="User_002ddefined-_0060_0060Things_0027_0027-and-Navigation"><span>38.6 User-defined &ldquo;Things&rdquo; and Navigation<a class="copiable-link" href="#User_002ddefined-_0060_0060Things_0027_0027-and-Navigation"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-user_002ddefined-things_002c-with-tree_002dsitter-parsing"></a>
+
+<p>It&rsquo;s often useful to be able to identify and find certain <em class="dfn">things</em> in
+a buffer, like function and class definitions, statements, code blocks,
+strings, comments, etc., in terms of node types defined by the
+tree-sitter grammar used in the buffer.  Emacs allows Lisp programs to
+define what kinds of tree-sitter nodes corresponds to each &ldquo;thing&rdquo;.
+This enables handy features like jumping to the next function, marking
+the code block at point, transposing two function arguments, etc.
+</p>
+<p>The &ldquo;things&rdquo; feature in Emacs is independent of the pattern matching
+feature of tree-sitter (see <a class="pxref" href="#Pattern-Matching">Pattern Matching Tree-sitter Nodes</a>), and comparatively
+less powerful, but more suitable for navigation and traversing the
+buffer text in terms of the tree-sitter parse tree.
+</p>
+<a class="index-entry-id" id="index-treesit_002dthing_002ddefinition"></a>
+<a class="index-entry-id" id="index-treesit_002dthing_002ddefined_002dp"></a>
+<p>You can define things with <var class="var">treesit-thing-settings</var>, retrieve the
+predicate of a defined thing with <code class="code">treesit-thing-definition</code>, and
+test if a thing is defined with <code class="code">treesit-thing-defined-p</code>.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-treesit_002dthing_002dsettings"><span class="category-def">Variable: </span><span><strong class="def-name">treesit-thing-settings</strong><a class="copiable-link" href="#index-treesit_002dthing_002dsettings"> &para;</a></span></dt>
+<dd><p>This is an alist of thing definitions for each language supported by the
+grammar used in a buffer; it should be defined by the buffer&rsquo;s major
+mode (the default value is <code class="code">nil</code>).  The key of each entry is a
+language symbol (e.g., <code class="code">c</code> for C, <code class="code">cpp</code> for C<code class="t">++</code>, etc.),
+and the value is a list of thing definitions of the form
+<code class="code">(<var class="var">thing</var>&nbsp;<var class="var">pred</var>)</code><!-- /@w -->, where <var class="var">thing</var> is a symbol
+representing the thing, and <var class="var">pred</var> specifies what kinds of
+tree-sitter nodes are considered as this <var class="var">thing</var>.
+</p>
+<a class="index-entry-id" id="index-sexp_002c-treesit_002ddefined-thing"></a>
+<a class="index-entry-id" id="index-list_002c-treesit_002ddefined-thing"></a>
+<p>The symbol used to define the <var class="var">thing</var> can be anything meaningful for
+the major mode: <code class="code">defun</code>, <code class="code">defclass</code>, <code class="code">sentence</code>,
+<code class="code">comment</code>, <code class="code">string</code>, etc.  To support tree-sitter based
+navigation commands (see <a class="pxref" href="Positions.html#List-Motion">Moving over Balanced Expressions</a>), the mode should define two
+things: <code class="code">list</code> and <code class="code">sexp</code>.
+</p>
+<p><var class="var">pred</var> can be a regexp string that matches the type of the node; it
+can be a function that takes a node as the argument and returns a
+boolean that indicates whether the node qualifies as the thing; or it can
+be a cons <code class="code">(<var class="var">regexp</var>&nbsp;.&nbsp;<var class="var">fn</var>)</code><!-- /@w -->, which is a combination
+of a regular expression <var class="var">regexp</var> and a function <var class="var">fn</var>&mdash;the node
+has to match both the <var class="var">regexp</var> and to satisfy <var class="var">fn</var> to qualify as
+the thing.
+</p>
+<p><var class="var">pred</var> can also be recursively defined.  It can be <code class="code">(or&nbsp;<var class="var">pred</var>&hellip;)</code><!-- /@w -->, meaning that satisfying any one of the <var class="var">pred</var>s
+qualifies the node as the thing.  It can be <code class="code">(and&nbsp;<var class="var">pred</var>&hellip;)</code><!-- /@w -->, meaning that satisfying all of the <var class="var">pred</var>s
+qualifies the node as the thing.  It can be <code class="code">(not&nbsp;<var class="var">pred</var>)</code><!-- /@w -->,
+meaning that not satisfying <var class="var">pred</var> qualifies the node.
+</p>
+<p>Finally, <var class="var">pred</var> can refer to other <var class="var">thing</var>s defined in this
+list.  For example, <code class="code">(or&nbsp;sexp&nbsp;sentence)</code><!-- /@w --> defines something
+that&rsquo;s either a <code class="code">sexp</code> thing or a <code class="code">sentence</code> thing, as defined
+by some other rules in the alist.
+</p>
+<a class="index-entry-id" id="index-named_002c-treesit_002ddefined-thing"></a>
+<a class="index-entry-id" id="index-anonymous_002c-treesit_002ddefined-thing"></a>
+<p>There are two pre-defined predicates: <code class="code">named</code> and <code class="code">anonymous</code>,
+which qualify, respectively, named and anonymous nodes of the
+tree-sitter grammar.  They can be combined with <code class="code">and</code> to narrow
+down the match.
+</p>
+<p>Here&rsquo;s an example <code class="code">treesit-thing-settings</code> for C and C<code class="t">++</code>:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">((c
+  (defun &quot;function_definition&quot;)
+  (sexp (not &quot;[](),[{}]&quot;))
+  (comment &quot;comment&quot;)
+  (string &quot;raw_string_literal&quot;)
+  (text (or comment string)))
+</pre></div><div class="group"><pre class="example-preformatted"> (cpp
+  (defun (&quot;function_definition&quot; . cpp-ts-mode-defun-valid-p))
+  (defclass &quot;class_specifier&quot;)
+  (comment &quot;comment&quot;)))
+</pre></div></div>
+
+<p>Note that this example is modified for didactic purposes, and isn&rsquo;t
+exactly how tree-sitter based C and C<code class="t">++</code> modes define things.
+</p></dd></dl>
+
+<p>Emacs builtin functions already make use of some thing definitions.
+Command <code class="code">treesit-forward-sexp</code> uses the <code class="code">sexp</code> definition if
+major mode defines it (see <a class="pxref" href="Positions.html#List-Motion">Moving over Balanced Expressions</a>); <code class="code">treesit-forward-list</code>,
+<code class="code">treesit-down-list</code>, <code class="code">treesit-up-list</code>,
+<code class="code">treesit-show-paren-data</code> use the <code class="code">list</code> definition (its
+symbol <code class="code">list</code> has the symbol property <code class="code">treesit-thing-symbol</code>
+to avoid ambiguity with the function that has the same name);
+<code class="code">treesit-forward-sentence</code> uses the <code class="code">sentence</code> definition.
+Defun movement functions like <code class="code">treesit-end-of-defun</code> uses the
+<code class="code">defun</code> definition (<code class="code">defun</code> definition is overridden by
+<var class="var">treesit-defun-type-regexp</var> for backward compatibility).  Major
+modes can also define <code class="code">comment</code>, <code class="code">string</code>, and <code class="code">text</code>
+things (to match comments and strings).
+</p>
+<p>The rest of this section lists a few functions that take advantage of
+the thing definitions.  Besides the functions below, some other
+functions listed elsewhere also utilize the thing feature, e.g.,
+tree-traversing functions like <code class="code">treesit-search-forward</code>,
+<code class="code">treesit-induce-sparse-tree</code>, etc.  See <a class="xref" href="#Retrieving-Nodes">Retrieving Nodes</a>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnode_002dmatch_002dp"><span class="category-def">Function: </span><span><strong class="def-name">treesit-node-match-p</strong> <var class="def-var-arguments">node thing &amp;optional ignore-missing</var><a class="copiable-link" href="#index-treesit_002dnode_002dmatch_002dp"> &para;</a></span></dt>
+<dd><p>This function checks whether <var class="var">node</var> represents a <var class="var">thing</var>.
+</p>
+<p>If <var class="var">node</var> represents <var class="var">thing</var>, return non-<code class="code">nil</code>, otherwise
+return <code class="code">nil</code>.  For convenience, if <code class="code">node</code> is <code class="code">nil</code>, this
+function just returns <code class="code">nil</code>.
+</p>
+<p>The <var class="var">thing</var> can be either a thing symbol like <code class="code">defun</code>, or
+simply a predicate that defines a thing, like
+<code class="code">&quot;function_definition&quot;</code>, or <code class="code">(or&nbsp;comment&nbsp;string)</code><!-- /@w -->.
+</p>
+<p>By default, if <var class="var">thing</var> is undefined or malformed, this function
+signals <code class="code">treesit-invalid-predicate</code> error.  If <var class="var">ignore-missing</var>
+is <code class="code">t</code>, this function doesn&rsquo;t signal the error when <var class="var">thing</var> is
+undefined and just returns <code class="code">nil</code>; but it still signals the error if
+<var class="var">thing</var> is a malformed predicate.
+</p></dd></dl>
+
+<p>Functions below are responsible for finding things and moving across
+them, and they have to deal with the fact that a buffer sometimes
+contains multiple adjacent or nested parsers.  By default, these
+functions try to be helpful and search in every relevant parser at
+point, from most specific (deepest embedded) to the least.  Lisp
+programs should be cautious and assess whether this behavior is desired
+when using these functions as building blocks of other functions; if
+not, explicitly pass a parser or language.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dthing_002dprev"><span class="category-def">Function: </span><span><strong class="def-name">treesit-thing-prev</strong> <var class="def-var-arguments">position thing &amp;optional parser</var><a class="copiable-link" href="#index-treesit_002dthing_002dprev"> &para;</a></span></dt>
+<dd><p>This function returns the first node before <var class="var">position</var> in the
+current buffer that is the specified <var class="var">thing</var>.  If no such node
+exists, it returns <code class="code">nil</code>.
+</p>
+<p>It&rsquo;s guaranteed that, if a node is returned, the node&rsquo;s end position is
+less or equal to <var class="var">position</var>.  In other words, this function never
+returns a node that encloses <var class="var">position</var>.
+</p>
+<p>Again, <var class="var">thing</var> can be either a symbol or a predicate.
+</p>
+<p>If <var class="var">parser</var> is non-<code class="code">nil</code>, only use that parser&rsquo;s parse tree.
+Otherwise try each parser covering point, from the most specific
+(deepest-embedded) to the least specific.  If there are multiple parsers with
+the same embed level at <var class="var">position</var>, which parser is tried first is
+undefined.  If <var class="var">parser</var> is a language symbol, the function limits
+the parsers it tries to the ones for that language.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dthing_002dnext"><span class="category-def">Function: </span><span><strong class="def-name">treesit-thing-next</strong> <var class="def-var-arguments">position thing &amp;optional parser</var><a class="copiable-link" href="#index-treesit_002dthing_002dnext"> &para;</a></span></dt>
+<dd><p>This function is similar to <code class="code">treesit-thing-prev</code>, only it returns
+the first node <em class="emph">after</em> <var class="var">position</var> that&rsquo;s the <var class="var">thing</var>.  It
+also guarantees that if a node is returned, the node&rsquo;s start position is
+greater or equal to <var class="var">position</var>.  The <var class="var">parser</var> parameter is the
+same as in <code class="code">treesit-thing-prev</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dnavigate_002dthing"><span class="category-def">Function: </span><span><strong class="def-name">treesit-navigate-thing</strong> <var class="def-var-arguments">position arg side thing &amp;optional tactic</var><a class="copiable-link" href="#index-treesit_002dnavigate_002dthing"> &para;</a></span></dt>
+<dd><p>This function builds upon <code class="code">treesit-thing-prev</code> and
+<code class="code">treesit-thing-next</code> and provides functionality that a navigation
+command would find useful.  It returns the position after moving across
+<var class="var">arg</var> instances of <var class="var">thing</var> from <var class="var">position</var>.  If
+there aren&rsquo;t enough things to navigate across, it returns nil.  The
+function doesn&rsquo;t move point.
+</p>
+<p>A positive <var class="var">arg</var> means moving forward that many instances of
+<var class="var">thing</var>; negative <var class="var">arg</var> means moving backward.  If <var class="var">side</var> is
+<code class="code">beg</code>, this function returns the position of the beginning of
+<var class="var">thing</var>; if it&rsquo;s <code class="code">end</code>, it returns the position at the end of
+<var class="var">thing</var>.
+</p>
+<p>Like in <code class="code">treesit-thing-prev</code>, <var class="var">thing</var> can be a thing symbol
+defined in <code class="code">treesit-thing-settings</code>, or a predicate, and
+<var class="var">parser</var> can be either <code class="code">nil</code>, a parser, or a language symbol.
+Like in that function, <var class="var">parser</var> decides which parsers or languages
+are searched.  When there are multiple parsers available, this function
+tries each until it succeeds.
+</p>
+<p><var class="var">tactic</var> determines how this function moves between things.  It can
+be <code class="code">nested</code>, <code class="code">top-level</code>, <code class="code">restricted</code>,
+<code class="code">parent-first</code>, or <code class="code">nil</code>.  <code class="code">nested</code> or <code class="code">nil</code> means
+normal nested navigation: first try to move across siblings; if there
+aren&rsquo;t any siblings left in the current level, move to the parent, then
+its siblings, and so on.  <code class="code">top-level</code> means only navigate across
+top-level things and ignore nested things.  <code class="code">restricted</code> means
+movement is restricted within the thing that encloses <var class="var">position</var>, if
+there is such a thing.  This tactic is useful for commands that want to
+stop at the current nesting level and not move up.  <var class="var">parent-first</var>
+means move to the parent if there is one; and move to siblings if
+there&rsquo;s no parent.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dthing_002dat"><span class="category-def">Function: </span><span><strong class="def-name">treesit-thing-at</strong> <var class="def-var-arguments">position thing &amp;optional strict parser</var><a class="copiable-link" href="#index-treesit_002dthing_002dat"> &para;</a></span></dt>
+<dd><p>This function returns the smallest node that&rsquo;s the <var class="var">thing</var> and
+encloses <var class="var">position</var>; if there&rsquo;s no such node, it returns <code class="code">nil</code>.
+</p>
+<p>The returned node must enclose <var class="var">position</var>, i.e., its start position is
+less or equal to <var class="var">position</var>, and it&rsquo;s end position is greater or equal to
+<var class="var">position</var>.
+</p>
+<p>If <var class="var">strict</var> is non-<code class="code">nil</code>, this function uses strict comparison,
+i.e., start position must be strictly smaller than <var class="var">position</var>, and end
+position must be strictly greater than <var class="var">position</var>.
+</p>
+<p><var class="var">thing</var> can be either a thing symbol defined in
+<code class="code">treesit-thing-settings</code>, or a predicate.
+</p>
+<p>If <var class="var">parser</var> is non-nil, only use that parser&rsquo;s parse tree.
+Otherwise try each parser covering point, from the most specific
+(deepest-embedded) to the least specific.  If there are multiple parsers
+with the same embed level at <var class="var">position</var>, which parser is tried first is
+undefined.  <var class="var">parser</var> can also be a language symbol.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-treesit_002dbeginning_002dof_002dthing"></a>
+<a class="index-entry-id" id="index-treesit_002dend_002dof_002dthing"></a>
+<a class="index-entry-id" id="index-treesit_002dthing_002dat_002dpoint"></a>
+<p>There are also some convenient wrapper functions.
+<code class="code">treesit-beginning-of-thing</code> moves point to the beginning of a
+thing, <code class="code">treesit-end-of-thing</code> moves to the end of a thing, and
+<code class="code">treesit-thing-at-point</code> returns the thing at point.
+</p>
+<p>There are also defun commands that specifically use the <code class="code">defun</code>
+definition (as a fallback of <code class="code">treesit-defun-type-regexp</code>), like
+<code class="code">treesit-beginning-of-defun</code>, <code class="code">treesit-end-of-defun</code>, and
+<code class="code">treesit-defun-at-point</code>.  In addition, these functions use
+<code class="code">treesit-defun-tactic</code> as the navigation tactic.  They are
+described in more detail in other sections (see <a class="pxref" href="#Tree_002dsitter-Major-Modes">Developing major modes with tree-sitter</a>).
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Multiple-Languages">
+<div class="nav-panel">
+<p>
+Next: <a href="#Tree_002dsitter-Major-Modes" accesskey="n" rel="next">Developing major modes with tree-sitter</a>, Previous: <a href="#User_002ddefined-Things" accesskey="p" rel="prev">User-defined &ldquo;Things&rdquo; and Navigation</a>, Up: <a href="#Parsing-Program-Source" accesskey="u" rel="up">Parsing Program Source</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Parsing-Text-in-Multiple-Languages"><span>38.7 Parsing Text in Multiple Languages<a class="copiable-link" href="#Parsing-Text-in-Multiple-Languages"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-multiple-languages_002c-parsing-with-tree_002dsitter"></a>
+<a class="index-entry-id" id="index-parsing-multiple-languages-with-tree_002dsitter"></a>
+<p>Sometimes, the source of a programming language could contain snippets
+of other languages; <abbr class="acronym">HTML</abbr> + <abbr class="acronym">CSS</abbr> + JavaScript is one
+example.  In that case, text segments written in different languages
+need to be assigned different parsers.  Traditionally, this is
+achieved by using narrowing.  While tree-sitter works with narrowing
+(see <a class="pxref" href="#tree_002dsitter-narrowing">narrowing</a>), the recommended way is
+instead to specify regions of buffer text (i.e., ranges) in which a
+parser will operate.  This section describes functions for setting and
+getting ranges for a parser.
+</p>
+<a class="index-entry-id" id="index-primary-parser"></a>
+<p>Generally when there are multiple languages at play, there is a
+&ldquo;primary&rdquo;, or &ldquo;host&rdquo; language.  The parser for this language&mdash;the
+<em class="dfn">primary parser</em>, parses the entire buffer.  Parsers for other
+languages are &ldquo;embedded&rdquo; or &ldquo;guest&rdquo; parsers, which only work on part
+of the buffer.  The parse tree of the primary parser is usually used to
+determine the ranges in which the embedded parsers operate.
+</p>
+<a class="index-entry-id" id="index-treesit_002dprimary_002dparser"></a>
+<p>Major modes should set <code class="code">treesit-primary-parser</code> to the primary
+parser before calling <code class="code">treesit-major-mode-setup</code>, so that Emacs can
+configure the primary parser correctly for font-lock and other features.
+</p>
+<p>Lisp programs should call <code class="code">treesit-update-ranges</code> to make sure the
+ranges for each parser are correct before using parsers in a buffer, and
+call <code class="code">treesit-language-at</code> to figure out the language responsible
+for the text at some position.  These two functions don&rsquo;t work by
+themselves; they need major modes to set <code class="code">treesit-range-settings</code>
+and optionally <code class="code">treesit-language-at-point-function</code>, which do the actual work.
+These functions and variables are explained in more detail towards the
+end of the section.
+</p>
+<p>In short, multi-language major modes should set
+<code class="code">treesit-primary-parser</code>, <code class="code">treesit-range-settings</code>, and optionally
+<code class="code">treesit-language-at-point-function</code> before calling
+<code class="code">treesit-major-mode-setup</code>.
+</p>
+<h3 class="heading" id="Getting-and-setting-ranges"><span>Getting and setting ranges<a class="copiable-link" href="#Getting-and-setting-ranges"> &para;</a></span></h3>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparser_002dset_002dincluded_002dranges"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parser-set-included-ranges</strong> <var class="def-var-arguments">parser ranges</var><a class="copiable-link" href="#index-treesit_002dparser_002dset_002dincluded_002dranges"> &para;</a></span></dt>
+<dd><p>This function sets up <var class="var">parser</var> to operate on <var class="var">ranges</var>.  The
+<var class="var">parser</var> will only read the text of the specified ranges.  Each
+range in <var class="var">ranges</var> is a pair of the form <code class="code">(<var class="var">beg</var>&nbsp;.&nbsp;<var class="var">end</var>)</code><!-- /@w -->.
+</p>
+<p>The ranges in <var class="var">ranges</var> must come in order and must not overlap.
+That is, in pseudo code:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(cl-loop for idx from 1 to (1- (length ranges))
+         for prev = (nth (1- idx) ranges)
+         for next = (nth idx ranges)
+         should (&lt;= (car prev) (cdr prev)
+                    (car next) (cdr next)))
+</pre></div></div>
+
+<a class="index-entry-id" id="index-treesit_002drange_002dinvalid"></a>
+<p>If <var class="var">ranges</var> violates this constraint, or something else went
+wrong, this function signals the <code class="code">treesit-range-invalid</code> error.
+The signal data contains a specific error message and the ranges we
+are trying to set.
+</p>
+<p>This function can also be used for disabling ranges.  If <var class="var">ranges</var>
+is <code class="code">nil</code>, the parser is set to parse the whole buffer.
+</p>
+<p>Example:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(treesit-parser-set-included-ranges
+ parser '((1 . 9) (16 . 24) (24 . 25)))
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparser_002dincluded_002dranges"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parser-included-ranges</strong> <var class="def-var-arguments">parser</var><a class="copiable-link" href="#index-treesit_002dparser_002dincluded_002dranges"> &para;</a></span></dt>
+<dd><p>This function returns the ranges set for <var class="var">parser</var>.  The return
+value is the same as the <var class="var">ranges</var> argument of
+<code class="code">treesit-parser-included-ranges</code>: a list of cons cells of the form
+<code class="code">(<var class="var">beg</var>&nbsp;.&nbsp;<var class="var">end</var>)</code><!-- /@w -->.  If <var class="var">parser</var> doesn&rsquo;t have any
+ranges, the return value is <code class="code">nil</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(treesit-parser-included-ranges parser)
+    &rArr; ((1 . 9) (16 . 24) (24 . 25))
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dquery_002drange"><span class="category-def">Function: </span><span><strong class="def-name">treesit-query-range</strong> <var class="def-var-arguments">source query &amp;optional beg end</var><a class="copiable-link" href="#index-treesit_002dquery_002drange"> &para;</a></span></dt>
+<dd><p>This function matches <var class="var">source</var> with <var class="var">query</var> and returns the
+ranges of captured nodes.  The return value is a list of cons cells of
+the form <code class="code">(<var class="var">beg</var>&nbsp;.&nbsp;<var class="var">end</var>)</code><!-- /@w -->, where <var class="var">beg</var> and
+<var class="var">end</var> specify the beginning and the end of a region of text.
+</p>
+<p>For convenience, <var class="var">source</var> can be a language symbol, a parser, or a
+node.  If it&rsquo;s a language symbol, this function matches in the root
+node of the first parser using that language; if a parser, this
+function matches in the root node of that parser; if a node, this
+function matches in that node.
+</p>
+<p>The argument <var class="var">query</var> is the query used to capture nodes
+(see <a class="pxref" href="#Pattern-Matching">Pattern Matching Tree-sitter Nodes</a>).  The capture names don&rsquo;t matter.  The
+arguments <var class="var">beg</var> and <var class="var">end</var>, if both non-<code class="code">nil</code>, limit the
+range in which this function queries.
+</p>
+<p>Like other query functions, this function raises the
+<code class="code">treesit-query-error</code> error if <var class="var">query</var> is malformed.
+</p></dd></dl>
+
+<h3 class="heading" id="Supporting-multiple-languages-in-Lisp-programs"><span>Supporting multiple languages in Lisp programs<a class="copiable-link" href="#Supporting-multiple-languages-in-Lisp-programs"> &para;</a></span></h3>
+
+<p>It should suffice for general Lisp programs to call the following two
+functions in order to support program sources that mix multiple
+languages.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dupdate_002dranges"><span class="category-def">Function: </span><span><strong class="def-name">treesit-update-ranges</strong> <var class="def-var-arguments">&amp;optional beg end</var><a class="copiable-link" href="#index-treesit_002dupdate_002dranges"> &para;</a></span></dt>
+<dd><p>This function updates ranges for parsers in the buffer.  It makes sure
+the parsers&rsquo; ranges are set correctly between <var class="var">beg</var> and <var class="var">end</var>,
+according to <code class="code">treesit-range-settings</code>.  If omitted, <var class="var">beg</var>
+defaults to the beginning of the buffer, and <var class="var">end</var> defaults to the
+end of the buffer.
+</p>
+<p>For example, fontification functions use this function before querying
+for nodes in a region.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dlanguage_002dat"><span class="category-def">Function: </span><span><strong class="def-name">treesit-language-at</strong> <var class="def-var-arguments">pos</var><a class="copiable-link" href="#index-treesit_002dlanguage_002dat"> &para;</a></span></dt>
+<dd><p>This function returns the language of the text at buffer position
+<var class="var">pos</var>.  Under the hood it calls
+<code class="code">treesit-language-at-point-function</code> and returns its return
+value.  If <code class="code">treesit-language-at-point-function</code> is <code class="code">nil</code>,
+this function returns the language of the deepest parser by embed level
+among parsers returned by <code class="code">treesit-parsers-at</code>.  If there is no
+parser at that buffer position, it returns <code class="code">nil</code>.
+</p></dd></dl>
+
+<h3 class="heading" id="Supporting-multiple-languages-in-major-modes"><span>Supporting multiple languages in major modes<a class="copiable-link" href="#Supporting-multiple-languages-in-major-modes"> &para;</a></span></h3>
+
+<a class="index-entry-id" id="index-host-language_002c-tree_002dsitter"></a>
+<a class="index-entry-id" id="index-tree_002dsitter-host-and-embedded-languages"></a>
+<a class="index-entry-id" id="index-embedded-language_002c-tree_002dsitter"></a>
+<p>Normally, in a set of languages that can be mixed together, there is a
+<em class="dfn">host language</em> and one or more <em class="dfn">embedded languages</em>.  A Lisp
+program usually first parses the whole document with the host
+language&rsquo;s parser, retrieves some information, sets ranges for the
+embedded languages with that information, and then parses the embedded
+languages.
+</p>
+<p>Take a buffer containing <abbr class="acronym">HTML</abbr>, <abbr class="acronym">CSS</abbr>, and JavaScript
+as an example.  A Lisp program will first parse the whole buffer with
+an <abbr class="acronym">HTML</abbr> parser, then query the parser for
+<code class="code">style_element</code> and <code class="code">script_element</code> nodes, which correspond
+to <abbr class="acronym">CSS</abbr> and JavaScript text, respectively.  Then it sets the
+range of the <abbr class="acronym">CSS</abbr> and JavaScript parsers to the range which
+their corresponding nodes span.
+</p>
+<p>Given a simple <abbr class="acronym">HTML</abbr> document:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">&lt;html&gt;
+  &lt;script&gt;1 + 2&lt;/script&gt;
+  &lt;style&gt;body { color: &quot;blue&quot;; }&lt;/style&gt;
+&lt;/html&gt;
+</pre></div></div>
+
+<p>a Lisp program will first parse with a <abbr class="acronym">HTML</abbr> parser, then set
+ranges for <abbr class="acronym">CSS</abbr> and JavaScript parsers:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">;; Create parsers.
+(setq html (treesit-parser-create 'html))
+(setq css (treesit-parser-create 'css))
+(setq js (treesit-parser-create 'javascript))
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; Set CSS ranges.
+(setq css-range
+      (treesit-query-range
+       'html
+       '((style_element (raw_text) @capture))))
+(treesit-parser-set-included-ranges css css-range)
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; Set JavaScript ranges.
+(setq js-range
+      (treesit-query-range
+       'html
+       '((script_element (raw_text) @capture))))
+(treesit-parser-set-included-ranges js js-range)
+</pre></div></div>
+
+<p>Emacs automates this process in <code class="code">treesit-update-ranges</code>.  A
+multi-language major mode should set <code class="code">treesit-range-settings</code> so
+that <code class="code">treesit-update-ranges</code> knows how to perform this process
+automatically.  Major modes should use the helper function
+<code class="code">treesit-range-rules</code> to generate a value that can be assigned to
+<code class="code">treesit-range-settings</code>.  The settings in the following example
+directly translate into operations shown above.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq treesit-range-settings
+      (treesit-range-rules
+       :embed 'javascript
+       :host 'html
+       '((script_element (raw_text) @capture))
+</pre></div><div class="group"><pre class="example-preformatted">       :embed 'css
+       :host 'html
+       '((style_element (raw_text) @capture))))
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; Major modes with multiple languages can optionally set
+;; `treesit-language-at-point-function' (which see).
+(setq treesit-language-at-point-function
+      (lambda (pos)
+        (let* ((node (treesit-node-at pos 'html))
+               (parent (treesit-node-parent node)))
+          (cond
+           ((and node parent
+                 (equal (treesit-node-type node) &quot;raw_text&quot;)
+                 (equal (treesit-node-type parent) &quot;script_element&quot;))
+            'javascript)
+           ((and node parent
+                 (equal (treesit-node-type node) &quot;raw_text&quot;)
+                 (equal (treesit-node-type parent) &quot;style_element&quot;))
+            'css)
+           (t 'html)))))
+</pre></div></div>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002drange_002drules"><span class="category-def">Function: </span><span><strong class="def-name">treesit-range-rules</strong> <var class="def-var-arguments">&amp;rest query-specs</var><a class="copiable-link" href="#index-treesit_002drange_002drules"> &para;</a></span></dt>
+<dd><p>This function is used to set <code class="code">treesit-range-settings</code>.  It takes
+care of compiling queries and other post-processing, and outputs a
+value that <code class="code">treesit-range-settings</code> can have.
+</p>
+<p>It takes a series of <var class="var">query-spec</var>s, where each <var class="var">query-spec</var> is
+a <var class="var">query</var> preceded by zero or more <var class="var">keyword</var>/<var class="var">value</var>
+pairs.  Each <var class="var">query</var> is a tree-sitter query in either the string,
+s-expression, or compiled form, or a function.
+</p>
+<p>If <var class="var">query</var> is a tree-sitter query, it should be preceded by two
+<var class="var">keyword</var>/<var class="var">value</var> pairs, where the <code class="code">:embed</code> keyword
+specifies the embedded language, and the <code class="code">:host</code> keyword
+specifies the host language.
+</p>
+<a class="index-entry-id" id="index-local-parser"></a>
+<p>If the query is given the <code class="code">:local</code> keyword whose value is
+<code class="code">t</code>, the range set by this query has a dedicated local parser;
+otherwise the range shares a parser with other ranges for the same
+language.
+</p>
+<p>By default, a parser sees its ranges as a continuum, rather than
+treating them as separate independent segments.  Therefore, if the
+embedded ranges are semantically independent segments, they should be
+processed by local parsers, described below.
+</p>
+<p>Local parser set to a range can be retrieved by
+<code class="code">treesit-local-parsers-at</code> and <code class="code">treesit-local-parsers-on</code>.
+</p>
+<p><code class="code">treesit-update-ranges</code> uses <var class="var">query</var> to figure out how to set
+the ranges for parsers for the embedded language.  It queries
+<var class="var">query</var> in a host language parser, computes the ranges which the
+captured nodes span, and applies these ranges to embedded language
+parsers.
+</p>
+<p>If <var class="var">query</var> is a function, it doesn&rsquo;t need any <var class="var">keyword</var> and
+<var class="var">value</var> pair.  It should be a function that takes 2 arguments,
+<var class="var">start</var> and <var class="var">end</var>, and sets the ranges for parsers in the
+current buffer in the region between <var class="var">start</var> and <var class="var">end</var>.  It is
+fine for this function to set ranges in a larger region that
+encompasses the region between <var class="var">start</var> and <var class="var">end</var>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-treesit_002drange_002dsettings"><span class="category-def">Variable: </span><span><strong class="def-name">treesit-range-settings</strong><a class="copiable-link" href="#index-treesit_002drange_002dsettings"> &para;</a></span></dt>
+<dd><p>This variable helps <code class="code">treesit-update-ranges</code> in updating the
+ranges for parsers in the buffer.  It is a list of <var class="var">setting</var>s
+where the exact format of a <var class="var">setting</var> is considered internal.  You
+should use <code class="code">treesit-range-rules</code> to generate a value that this
+variable can have.
+</p>
+</dd></dl>
+
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-treesit_002dlanguage_002dat_002dpoint_002dfunction"><span class="category-def">Variable: </span><span><strong class="def-name">treesit-language-at-point-function</strong><a class="copiable-link" href="#index-treesit_002dlanguage_002dat_002dpoint_002dfunction"> &para;</a></span></dt>
+<dd><p>This variable&rsquo;s value should be a function that takes a single
+argument, <var class="var">pos</var>, which is a buffer position, and returns the
+language of the buffer text at <var class="var">pos</var>.  This variable is used by
+<code class="code">treesit-language-at</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dparsers_002dat"><span class="category-def">Function: </span><span><strong class="def-name">treesit-parsers-at</strong> <var class="def-var-arguments">&amp;optional pos language with-host only</var><a class="copiable-link" href="#index-treesit_002dparsers_002dat"> &para;</a></span></dt>
+<dd><p>This function returns all parsers at <var class="var">pos</var> in the current buffer.
+<var class="var">pos</var> defaults to point.  The returned parsers are sorted by the
+decreasing embed level.
+</p>
+<p>If <var class="var">language</var> is non-<code class="code">nil</code>, return parsers only for that
+language.
+</p>
+<p>If <var class="var">with-host</var> is non-<code class="code">nil</code>, return a list of
+<code class="code">(<var class="var">parser</var>&nbsp;.&nbsp;<var class="var">host-parser</var>)</code><!-- /@w --> where <var class="var">host-parser</var>
+is the host parser which created the <var class="var">parser</var>.
+</p>
+<p>If <var class="var">only</var> is non-<code class="code">nil</code>, return all parsers including the
+primary parser.
+</p>
+<p>The argument <var class="var">only</var> can be a list of symbols that specify what
+parsers to include in the return value.
+</p>
+<p>If <var class="var">only</var> contains the symbol <code class="code">local</code>, include local parsers.
+Local parsers are those which only parse a limited region marked by an
+overlay with a non-<code class="code">nil</code> <code class="code">treesit-parser-local-p</code> property.
+</p>
+<p>If <var class="var">only</var> contains the symbol <code class="code">global</code>, include non-local parsers
+excluding the primary parser.
+</p>
+<p>If <var class="var">only</var> contains the symbol &lsquo;primary&rsquo;, include the primary parser.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dlocal_002dparsers_002dat"><span class="category-def">Function: </span><span><strong class="def-name">treesit-local-parsers-at</strong> <var class="def-var-arguments">&amp;optional pos language with-host</var><a class="copiable-link" href="#index-treesit_002dlocal_002dparsers_002dat"> &para;</a></span></dt>
+<dd><p>This function returns all the local parsers at <var class="var">pos</var> in the
+current buffer.  <var class="var">pos</var> defaults to point.
+</p>
+<p>Local parsers are those which only parse a limited region marked by an
+overlay with a non-<code class="code">nil</code> <code class="code">treesit-parser-local-p</code> property.
+If <var class="var">language</var> is non-<code class="code">nil</code>, only return parsers for that
+language.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dlocal_002dparsers_002don"><span class="category-def">Function: </span><span><strong class="def-name">treesit-local-parsers-on</strong> <var class="def-var-arguments">&amp;optional beg end language with-host</var><a class="copiable-link" href="#index-treesit_002dlocal_002dparsers_002don"> &para;</a></span></dt>
+<dd><p>This function is the same as <code class="code">treesit-local-parsers-at</code>, but it
+returns the local parsers in the range between <var class="var">beg</var> and <var class="var">end</var>
+instead of at point.
+</p>
+<p><var class="var">beg</var> and <var class="var">end</var> default to the entire accessible portion of
+the buffer.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Tree_002dsitter-Major-Modes">
+<div class="nav-panel">
+<p>
+Next: <a href="#Tree_002dsitter-C-API" accesskey="n" rel="next">Tree-sitter C API Correspondence</a>, Previous: <a href="#Multiple-Languages" accesskey="p" rel="prev">Parsing Text in Multiple Languages</a>, Up: <a href="#Parsing-Program-Source" accesskey="u" rel="up">Parsing Program Source</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Developing-major-modes-with-tree_002dsitter"><span>38.8 Developing major modes with tree-sitter<a class="copiable-link" href="#Developing-major-modes-with-tree_002dsitter"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-major-mode_002c-developing-with-tree_002dsitter"></a>
+
+<p>This section covers some general guidelines on developing tree-sitter
+integration for a major mode.
+</p>
+<p>A major mode supporting tree-sitter features should roughly follow
+this pattern:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(define-derived-mode woomy-mode prog-mode &quot;Woomy&quot;
+  &quot;A mode for Woomy programming language.&quot;
+  (when (treesit-ready-p 'woomy)
+    (setq-local treesit-variables ...)
+    ...
+    (treesit-major-mode-setup)))
+</pre></div></div>
+
+<p><code class="code">treesit-ready-p</code> automatically emits a warning if conditions for
+enabling tree-sitter aren&rsquo;t met.
+</p>
+<p>If a tree-sitter major mode shares setup with its &ldquo;native&rdquo;
+counterpart, one can create a &ldquo;base mode&rdquo; that contains the common
+setup, like this:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(define-derived-mode woomy--base-mode prog-mode &quot;Woomy&quot;
+  &quot;An internal mode for Woomy programming language.&quot;
+  (common-setup)
+  ...)
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(define-derived-mode woomy-mode woomy--base-mode &quot;Woomy&quot;
+  &quot;A mode for Woomy programming language.&quot;
+  (native-setup)
+  ...)
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(define-derived-mode woomy-ts-mode woomy--base-mode &quot;Woomy&quot;
+  &quot;A mode for Woomy programming language.&quot;
+  (when (treesit-ready-p 'woomy)
+    (setq-local treesit-variables ...)
+    ...
+    (treesit-major-mode-setup)))
+</pre></div></div>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dready_002dp"><span class="category-def">Function: </span><span><strong class="def-name">treesit-ready-p</strong> <var class="def-var-arguments">language &amp;optional quiet</var><a class="copiable-link" href="#index-treesit_002dready_002dp"> &para;</a></span></dt>
+<dd><p>This function checks for conditions for activating tree-sitter.  It
+checks whether Emacs was built with tree-sitter, whether the buffer&rsquo;s
+size is not too large for tree-sitter to handle, and whether the
+grammar for <var class="var">language</var> is available on the system (see <a class="pxref" href="#Language-Grammar">Tree-sitter Language Grammar</a>).
+</p>
+<p>This function emits a warning if tree-sitter cannot be activated.  If
+<var class="var">quiet</var> is <code class="code">message</code>, the warning is turned into a message;
+if <var class="var">quiet</var> is <code class="code">t</code>, no warning or message is displayed.
+</p>
+<p>If all the necessary conditions are met, this function returns
+non-<code class="code">nil</code>; otherwise it returns <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002dmajor_002dmode_002dsetup"><span class="category-def">Function: </span><span><strong class="def-name">treesit-major-mode-setup</strong><a class="copiable-link" href="#index-treesit_002dmajor_002dmode_002dsetup"> &para;</a></span></dt>
+<dd><p>This function activates some tree-sitter features for a major mode.
+</p>
+<p>Currently, it sets up the following features:
+</p><ul class="itemize mark-bullet">
+<li>If <code class="code">treesit-font-lock-settings</code> (see <a class="pxref" href="Modes.html#Parser_002dbased-Font-Lock">Parser-based Font Lock</a>)
+is non-<code class="code">nil</code>, it sets up fontification.
+
+</li><li>If either <code class="code">treesit-simple-indent-rules</code> or
+<code class="code">treesit-indent-function</code> (see <a class="pxref" href="Modes.html#Parser_002dbased-Indentation">Parser-based Indentation</a>) is
+non-<code class="code">nil</code>, it sets up indentation.
+
+</li><li>If <code class="code">treesit-defun-type-regexp</code> is non-<code class="code">nil</code>, it sets up
+navigation functions for <code class="code">beginning-of-defun</code> and
+<code class="code">end-of-defun</code>.  See <a class="xref" href="Positions.html#List-Motion">Moving over Balanced Expressions</a>.
+
+</li><li>If <code class="code">treesit-defun-name-function</code> is non-<code class="code">nil</code>, it sets up
+add-log functions used by <code class="code">add-log-current-defun</code>.
+
+</li><li>If <code class="code">treesit-simple-imenu-settings</code> (see <a class="pxref" href="Modes.html#Imenu">Imenu</a>) is
+non-<code class="code">nil</code>, it sets up Imenu.
+
+</li><li>If <code class="code">treesit-outline-predicate</code> (see <a class="pxref" href="Modes.html#Outline-Minor-Mode">Outline Minor Mode</a>) is
+non-<code class="code">nil</code>, it sets up Outline minor mode.
+
+</li><li>If <code class="code">sexp</code> and/or <code class="code">sentence</code> are defined in
+<code class="code">treesit-thing-settings</code> (see <a class="pxref" href="#User_002ddefined-Things">User-defined &ldquo;Things&rdquo; and Navigation</a>), it enables
+navigation commands that move, respectively, by sexps and sentences by
+defining variables such as <code class="code">forward-sexp-function</code> and
+<code class="code">forward-sentence-function</code>.
+</li></ul>
+</dd></dl>
+
+<p>For more information on these built-in tree-sitter features,
+see <a class="pxref" href="Modes.html#Parser_002dbased-Font-Lock">Parser-based Font Lock</a>, see <a class="pxref" href="Modes.html#Parser_002dbased-Indentation">Parser-based Indentation</a>, and
+see <a class="pxref" href="Positions.html#List-Motion">Moving over Balanced Expressions</a>.
+</p>
+<p>For supporting mixing of multiple languages in a major mode,
+see <a class="pxref" href="#Multiple-Languages">Parsing Text in Multiple Languages</a>.
+</p>
+<p>Besides <code class="code">beginning-of-defun</code> and <code class="code">end-of-defun</code>, Emacs
+provides some additional functions for working with defuns:
+<code class="code">treesit-defun-at-point</code> returns the defun node at point, and
+<code class="code">treesit-defun-name</code> returns the name of a defun node.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002ddefun_002dat_002dpoint"><span class="category-def">Function: </span><span><strong class="def-name">treesit-defun-at-point</strong><a class="copiable-link" href="#index-treesit_002ddefun_002dat_002dpoint"> &para;</a></span></dt>
+<dd><p>This function returns the defun node at point, or <code class="code">nil</code> if none
+is found.  It respects <code class="code">treesit-defun-tactic</code>: if its value is
+<code class="code">top-level</code>, this function returns the top-level defun, and if
+its value is <code class="code">nested</code>, it returns the immediate enclosing defun.
+</p>
+<p>This function requires <code class="code">treesit-defun-type-regexp</code> to work.  If
+it is <code class="code">nil</code>, this function simply returns <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-treesit_002ddefun_002dname"><span class="category-def">Function: </span><span><strong class="def-name">treesit-defun-name</strong> <var class="def-var-arguments">node</var><a class="copiable-link" href="#index-treesit_002ddefun_002dname"> &para;</a></span></dt>
+<dd><p>This function returns the defun name of <var class="var">node</var>.  It returns
+<code class="code">nil</code> if there is no defun name for <var class="var">node</var>, or if <var class="var">node</var>
+is not a defun node, or if <var class="var">node</var> is <code class="code">nil</code>.
+</p>
+<p>Depending on the language and major mode, the defun names are names
+like function name, class name, struct name, etc.
+</p>
+<p>If <code class="code">treesit-defun-name-function</code> is <code class="code">nil</code>, this function
+always returns <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-treesit_002ddefun_002dname_002dfunction"><span class="category-def">Variable: </span><span><strong class="def-name">treesit-defun-name-function</strong><a class="copiable-link" href="#index-treesit_002ddefun_002dname_002dfunction"> &para;</a></span></dt>
+<dd><p>If non-<code class="code">nil</code>, this variable&rsquo;s value should be a function that is
+called with a node as its argument, and returns the defun name of the
+node.  The function should have the same semantics as
+<code class="code">treesit-defun-name</code>: if the node is not a defun node, or the
+node is a defun node but doesn&rsquo;t have a name, or the node is
+<code class="code">nil</code>, it should return <code class="code">nil</code>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Tree_002dsitter-C-API">
+<div class="nav-panel">
+<p>
+Previous: <a href="#Tree_002dsitter-Major-Modes" accesskey="p" rel="prev">Developing major modes with tree-sitter</a>, Up: <a href="#Parsing-Program-Source" accesskey="u" rel="up">Parsing Program Source</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Tree_002dsitter-C-API-Correspondence"><span>38.9 Tree-sitter C API Correspondence<a class="copiable-link" href="#Tree_002dsitter-C-API-Correspondence"> &para;</a></span></h3>
+
+<p>Emacs&rsquo;s tree-sitter integration doesn&rsquo;t expose every feature
+provided by tree-sitter&rsquo;s C API.  Missing features include:
+</p>
+<ul class="itemize mark-bullet">
+<li>Creating a tree cursor and navigating the syntax tree with it.
+</li><li>Setting timeout and cancellation flag for a parser.
+</li><li>Setting the logger for a parser.
+</li><li>Printing a <abbr class="acronym">DOT</abbr> graph of the syntax tree to a file.
+</li><li>Copying and modifying a syntax tree.  (Emacs doesn&rsquo;t expose a tree
+object.)
+</li><li>Using (row, column) coordinates as position.
+</li><li>Updating a node with changes.  (In Emacs, retrieve a new node instead
+of updating the existing one.)
+</li><li>Querying statics of a language grammar.
+</li></ul>
+
+<p>In addition, Emacs makes some changes to the C API to make the API more
+convenient and idiomatic:
+</p>
+<ul class="itemize mark-bullet">
+<li>Instead of using byte positions, the Emacs Lisp API uses character
+positions.
+</li><li>Null nodes are converted to <code class="code">nil</code>.
+</li></ul>
+
+<p>Below is the correspondence between all C API functions and their
+Lisp counterparts.  Sometimes one Lisp function corresponds to
+multiple C functions, and many C functions don&rsquo;t have a Lisp
+counterpart.
+</p>
+<div class="example">
+<pre class="example-preformatted">ts_parser_new                           treesit-parser-create
+ts_parser_delete
+ts_parser_set_language
+ts_parser_language                      treesit-parser-language
+ts_parser_set_included_ranges           treesit-parser-set-included-ranges
+ts_parser_included_ranges               treesit-parser-included-ranges
+ts_parser_parse
+ts_parser_parse_string                  treesit-parse-string
+ts_parser_parse_string_encoding
+ts_parser_reset
+ts_parser_set_timeout_micros
+ts_parser_timeout_micros
+ts_parser_set_cancellation_flag
+ts_parser_cancellation_flag
+ts_parser_set_logger
+ts_parser_logger
+ts_parser_print_dot_graphs
+ts_tree_copy
+ts_tree_delete
+ts_tree_root_node
+ts_tree_language
+ts_tree_edit
+ts_tree_get_changed_ranges
+ts_tree_print_dot_graph
+ts_node_type                            treesit-node-type
+ts_node_symbol
+ts_node_start_byte                      treesit-node-start
+ts_node_start_point
+ts_node_end_byte                        treesit-node-end
+ts_node_end_point
+ts_node_string                          treesit-node-string
+ts_node_is_null
+ts_node_is_named                        treesit-node-check
+ts_node_is_missing                      treesit-node-check
+ts_node_is_extra                        treesit-node-check
+ts_node_has_changes
+ts_node_has_error                       treesit-node-check
+ts_node_parent                          treesit-node-parent
+ts_node_child                           treesit-node-child
+ts_node_field_name_for_child            treesit-node-field-name-for-child
+ts_node_child_count                     treesit-node-child-count
+ts_node_named_child                     treesit-node-child
+ts_node_named_child_count               treesit-node-child-count
+ts_node_child_by_field_name             treesit-node-child-by-field-name
+ts_node_child_by_field_id
+ts_node_next_sibling                    treesit-node-next-sibling
+ts_node_prev_sibling                    treesit-node-prev-sibling
+ts_node_next_named_sibling              treesit-node-next-sibling
+ts_node_prev_named_sibling              treesit-node-prev-sibling
+ts_node_first_child_for_byte            treesit-node-first-child-for-pos
+ts_node_first_named_child_for_byte      treesit-node-first-child-for-pos
+ts_node_descendant_for_byte_range       treesit-node-descendant-for-range
+ts_node_descendant_for_point_range
+ts_node_named_descendant_for_byte_range treesit-node-descendant-for-range
+ts_node_named_descendant_for_point_range
+ts_node_edit
+ts_node_eq                              treesit-node-eq
+ts_tree_cursor_new
+ts_tree_cursor_delete
+ts_tree_cursor_reset
+ts_tree_cursor_current_node
+ts_tree_cursor_current_field_name
+ts_tree_cursor_current_field_id
+ts_tree_cursor_goto_parent
+ts_tree_cursor_goto_next_sibling
+ts_tree_cursor_goto_first_child
+ts_tree_cursor_goto_first_child_for_byte
+ts_tree_cursor_goto_first_child_for_point
+ts_tree_cursor_copy
+ts_query_new
+ts_query_delete
+ts_query_pattern_count
+ts_query_capture_count
+ts_query_string_count
+ts_query_start_byte_for_pattern
+ts_query_predicates_for_pattern
+ts_query_step_is_definite
+ts_query_capture_name_for_id
+ts_query_string_value_for_id
+ts_query_disable_capture
+ts_query_disable_pattern
+ts_query_cursor_new
+ts_query_cursor_delete
+ts_query_cursor_exec                    treesit-query-capture
+ts_query_cursor_did_exceed_match_limit
+ts_query_cursor_match_limit
+ts_query_cursor_set_match_limit
+ts_query_cursor_set_byte_range
+ts_query_cursor_set_point_range
+ts_query_cursor_next_match
+ts_query_cursor_remove_match
+ts_query_cursor_next_capture
+ts_language_symbol_count
+ts_language_symbol_name
+ts_language_symbol_for_name
+ts_language_field_count
+ts_language_field_name_for_id
+ts_language_field_id_for_name
+ts_language_symbol_type
+ts_language_version
+</pre></div>
+</div>
+</div>
+<hr>
+<div class="nav-panel">
+<p>
+Next: <a href="Abbrevs.html#Abbrevs" accesskey="n" rel="next">Abbrevs and Abbrev Expansion</a>, Previous: <a href="Parsing-Expression-Grammars.html#Parsing-Expression-Grammars" accesskey="p" rel="prev">Parsing Expression Grammars</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

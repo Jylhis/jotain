@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.0.91.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Threads (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Threads (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Threads (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Processes.html#Processes" rel="next" title="Processes">
+<link href="Abbrevs.html#Abbrevs" rel="prev" title="Abbrevs">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+kbd.kbd {font-style: oblique}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Threads">
+<div class="nav-panel">
+<p>
+Next: <a href="Processes.html#Processes" accesskey="n" rel="next">Processes</a>, Previous: <a href="Abbrevs.html#Abbrevs" accesskey="p" rel="prev">Abbrevs and Abbrev Expansion</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h2 class="chapter" id="Threads-1"><span>40 Threads<a class="copiable-link" href="#Threads-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-threads"></a>
+<a class="index-entry-id" id="index-concurrency"></a>
+
+<p>Emacs Lisp provides a limited form of concurrency, called
+<em class="dfn">threads</em>.  All the threads in a given instance of Emacs share the
+same memory.  Concurrency in Emacs Lisp is &ldquo;mostly cooperative&rdquo;,
+meaning that Emacs will only switch execution between threads at
+well-defined times.  However, the Emacs thread support has been
+designed in a way to later allow more fine-grained concurrency, and
+correct programs should not rely on cooperative threading.
+</p>
+<p>Currently, thread switching will occur upon explicit request via
+<code class="code">thread-yield</code>, when waiting for keyboard input or for process
+output from asynchronous processes (e.g., during
+<code class="code">accept-process-output</code>), or during blocking operations relating
+to threads, such as mutex locking or <code class="code">thread-join</code>.
+</p>
+<p>Emacs Lisp provides primitives to create and control threads, and
+also to create and control mutexes and condition variables, useful for
+thread synchronization.
+</p>
+<p>While global variables are shared among all Emacs Lisp threads,
+local variables are not&mdash;a dynamic <code class="code">let</code> binding is local.  Each
+thread also has its own current buffer (see <a class="pxref" href="Buffers.html#Current-Buffer">The Current Buffer</a>) and
+its own match data (see <a class="pxref" href="Searching-and-Matching.html#Match-Data">The Match Data</a>).
+</p>
+<p>Note that <code class="code">let</code> bindings are treated specially by the Emacs
+Lisp implementation.  There is no way to duplicate this unwinding and
+rewinding behavior other than by using <code class="code">let</code>.  For example, a
+manual implementation of <code class="code">let</code> written using
+<code class="code">unwind-protect</code> cannot arrange for variable values to be
+thread-specific.
+</p>
+<p>In the case of lexical bindings (see <a class="pxref" href="Variables.html#Variable-Scoping">Scoping Rules for Variable Bindings</a>), a
+closure is an object like any other in Emacs Lisp, and bindings in a
+closure are shared by any threads invoking the closure.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Basic-Thread-Functions" accesskey="1">Basic Thread Functions</a></li>
+<li><a href="#Mutexes" accesskey="2">Mutexes</a></li>
+<li><a href="#Condition-Variables" accesskey="3">Condition Variables</a></li>
+<li><a href="#The-Thread-List" accesskey="4">The Thread List</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Basic-Thread-Functions">
+<div class="nav-panel">
+<p>
+Next: <a href="#Mutexes" accesskey="n" rel="next">Mutexes</a>, Up: <a href="#Threads" accesskey="u" rel="up">Threads</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Basic-Thread-Functions-1"><span>40.1 Basic Thread Functions<a class="copiable-link" href="#Basic-Thread-Functions-1"> &para;</a></span></h3>
+
+<p>Threads can be created and waited for.  A thread cannot be exited
+directly, but the current thread can be exited implicitly, and other
+threads can be signaled.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dthread"><span class="category-def">Function: </span><span><strong class="def-name">make-thread</strong> <var class="def-var-arguments">function &amp;optional name buffer-disposition</var><a class="copiable-link" href="#index-make_002dthread"> &para;</a></span></dt>
+<dd><p>Create a new thread of execution which invokes <var class="var">function</var>.  When
+<var class="var">function</var> returns, the thread exits.
+</p>
+<p>The new thread is created with no local variable bindings in effect.
+The new thread&rsquo;s current buffer is inherited from the current thread.
+</p>
+<p><var class="var">name</var> can be supplied to give a name to the thread.  The name is
+used for debugging and informational purposes only; it has no meaning
+to Emacs.  If <var class="var">name</var> is provided, it must be a string.
+</p>
+<p><var class="var">buffer-disposition</var> indicates what happens if the thread&rsquo;s current
+buffer is about to be killed.  If the value is <code class="code">t</code>, killing the
+buffer is not allowed.  Any other value, including <code class="code">nil</code> (which is
+the default), means that the buffer is killed and the thread is assigned
+another current buffer, and it&rsquo;s signaled the error
+<code class="code">thread-buffer-killed</code>.  But if the value is the symbol
+<code class="code">silently</code>, the error is not signaled.
+</p>
+<p>This function returns the new thread.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-thread_002dbuffer_002ddisposition"></a>
+<a class="index-entry-id" id="index-thread_002dset_002dbuffer_002ddisposition"></a>
+<p>After a thread had been created, you can inspect or change its
+buffer-disposition using functions <code class="code">thread-buffer-disposition</code> and
+<code class="code">thread-set-buffer-disposition</code>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-threadp"><span class="category-def">Function: </span><span><strong class="def-name">threadp</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-threadp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> represents an Emacs
+thread, <code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-thread_002djoin"><span class="category-def">Function: </span><span><strong class="def-name">thread-join</strong> <var class="def-var-arguments">thread</var><a class="copiable-link" href="#index-thread_002djoin"> &para;</a></span></dt>
+<dd><p>Block until <var class="var">thread</var> exits, or until the current thread is
+signaled.  It returns the result of the <var class="var">thread</var> function.  If
+<var class="var">thread</var> has already exited, this returns immediately.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-thread_002dsignal"><span class="category-def">Function: </span><span><strong class="def-name">thread-signal</strong> <var class="def-var-arguments">thread error-symbol data</var><a class="copiable-link" href="#index-thread_002dsignal"> &para;</a></span></dt>
+<dd><p>Like <code class="code">signal</code> (see <a class="pxref" href="Control-Structures.html#Signaling-Errors">How to Signal an Error</a>), but the signal is
+delivered in the thread <var class="var">thread</var>.  If <var class="var">thread</var> is the current
+thread, then this just calls <code class="code">signal</code> immediately.  Otherwise,
+<var class="var">thread</var> will receive the signal as soon as it becomes current.
+If <var class="var">thread</var> was blocked by a call to <code class="code">mutex-lock</code>,
+<code class="code">condition-wait</code>, or <code class="code">thread-join</code>; <code class="code">thread-signal</code>
+will unblock it.
+</p>
+<p>If <var class="var">thread</var> is the main thread, the signal is not propagated
+there.  Instead, it is shown as message in the main thread.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-thread_002dyield"><span class="category-def">Function: </span><span><strong class="def-name">thread-yield</strong><a class="copiable-link" href="#index-thread_002dyield"> &para;</a></span></dt>
+<dd><p>Yield execution to the next runnable thread.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-thread_002dname"><span class="category-def">Function: </span><span><strong class="def-name">thread-name</strong> <var class="def-var-arguments">thread</var><a class="copiable-link" href="#index-thread_002dname"> &para;</a></span></dt>
+<dd><p>Return the name of <var class="var">thread</var>, as specified to <code class="code">make-thread</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-thread_002dlive_002dp"><span class="category-def">Function: </span><span><strong class="def-name">thread-live-p</strong> <var class="def-var-arguments">thread</var><a class="copiable-link" href="#index-thread_002dlive_002dp"> &para;</a></span></dt>
+<dd><p>Return <code class="code">t</code> if <var class="var">thread</var> is alive, or <code class="code">nil</code> if it is not.
+A thread is alive as long as its function is still executing.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-thread_002d_002dblocker"><span class="category-def">Function: </span><span><strong class="def-name">thread--blocker</strong> <var class="def-var-arguments">thread</var><a class="copiable-link" href="#index-thread_002d_002dblocker"> &para;</a></span></dt>
+<dd><p>Return the object that <var class="var">thread</var> is waiting on.  This function is
+primarily intended for debugging, and is given a &ldquo;double hyphen&rdquo;
+name to indicate that.
+</p>
+<p>If <var class="var">thread</var> is blocked in <code class="code">thread-join</code>, this returns the
+thread for which it is waiting.
+</p>
+<p>If <var class="var">thread</var> is blocked in <code class="code">mutex-lock</code>, this returns the mutex.
+</p>
+<p>If <var class="var">thread</var> is blocked in <code class="code">condition-wait</code>, this returns the
+condition variable.
+</p>
+<p>Otherwise, this returns <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-current_002dthread"><span class="category-def">Function: </span><span><strong class="def-name">current-thread</strong><a class="copiable-link" href="#index-current_002dthread"> &para;</a></span></dt>
+<dd><p>Return the current thread.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-all_002dthreads"><span class="category-def">Function: </span><span><strong class="def-name">all-threads</strong><a class="copiable-link" href="#index-all_002dthreads"> &para;</a></span></dt>
+<dd><p>Return a list of all the live thread objects.  A new list is returned
+by each invocation.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-main_002dthread"><span class="category-def">Variable: </span><span><strong class="def-name">main-thread</strong><a class="copiable-link" href="#index-main_002dthread"> &para;</a></span></dt>
+<dd><p>This variable keeps the main thread Emacs is running, or <code class="code">nil</code> if
+Emacs is compiled without thread support.
+</p></dd></dl>
+
+<p>When code run by a thread signals an error that is unhandled, the
+thread exits.  Other threads can access the error form which caused
+the thread to exit using the following function.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-thread_002dlast_002derror"><span class="category-def">Function: </span><span><strong class="def-name">thread-last-error</strong> <var class="def-var-arguments">&amp;optional cleanup</var><a class="copiable-link" href="#index-thread_002dlast_002derror"> &para;</a></span></dt>
+<dd><p>This function returns the last error form recorded when a thread
+exited due to an error.  Each thread that exits abnormally overwrites
+the form stored by the previous thread&rsquo;s error with a new value, so
+only the last one can be accessed.  If <var class="var">cleanup</var> is
+non-<code class="code">nil</code>, the stored form is reset to <code class="code">nil</code>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Mutexes">
+<div class="nav-panel">
+<p>
+Next: <a href="#Condition-Variables" accesskey="n" rel="next">Condition Variables</a>, Previous: <a href="#Basic-Thread-Functions" accesskey="p" rel="prev">Basic Thread Functions</a>, Up: <a href="#Threads" accesskey="u" rel="up">Threads</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Mutexes-1"><span>40.2 Mutexes<a class="copiable-link" href="#Mutexes-1"> &para;</a></span></h3>
+
+<p>A <em class="dfn">mutex</em> is an exclusive lock.  At any moment, zero or one
+threads may own a mutex.  If a thread attempts to acquire a mutex, and
+the mutex is already owned by some other thread, then the acquiring
+thread will block until the mutex becomes available.
+</p>
+<p>Emacs Lisp mutexes are of a type called <em class="dfn">recursive</em>, which means
+that a thread can re-acquire a mutex it owns any number of times.  A
+mutex keeps a count of how many times it has been acquired, and each
+acquisition of a mutex must be paired with a release.  The last
+release by a thread of a mutex reverts it to the unowned state,
+potentially allowing another thread to acquire the mutex.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-mutexp"><span class="category-def">Function: </span><span><strong class="def-name">mutexp</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-mutexp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> represents an Emacs
+mutex, <code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dmutex"><span class="category-def">Function: </span><span><strong class="def-name">make-mutex</strong> <var class="def-var-arguments">&amp;optional name</var><a class="copiable-link" href="#index-make_002dmutex"> &para;</a></span></dt>
+<dd><p>Create a new mutex and return it.  If <var class="var">name</var> is specified, it is a
+name given to the mutex.  It must be a string.  The name is for
+debugging purposes only; it has no meaning to Emacs.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-mutex_002dname"><span class="category-def">Function: </span><span><strong class="def-name">mutex-name</strong> <var class="def-var-arguments">mutex</var><a class="copiable-link" href="#index-mutex_002dname"> &para;</a></span></dt>
+<dd><p>Return the name of <var class="var">mutex</var>, as specified to <code class="code">make-mutex</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-mutex_002dlock"><span class="category-def">Function: </span><span><strong class="def-name">mutex-lock</strong> <var class="def-var-arguments">mutex</var><a class="copiable-link" href="#index-mutex_002dlock"> &para;</a></span></dt>
+<dd><p>This will block until this thread acquires <var class="var">mutex</var>, or until this
+thread is signaled using <code class="code">thread-signal</code>.  If <var class="var">mutex</var> is
+already owned by this thread, this simply returns.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-mutex_002dunlock"><span class="category-def">Function: </span><span><strong class="def-name">mutex-unlock</strong> <var class="def-var-arguments">mutex</var><a class="copiable-link" href="#index-mutex_002dunlock"> &para;</a></span></dt>
+<dd><p>Release <var class="var">mutex</var>.  If <var class="var">mutex</var> is not owned by this thread, this
+will signal an error.
+</p></dd></dl>
+
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-with_002dmutex"><span class="category-def">Macro: </span><span><strong class="def-name">with-mutex</strong> <var class="def-var-arguments">mutex body&hellip;</var><a class="copiable-link" href="#index-with_002dmutex"> &para;</a></span></dt>
+<dd><p>This macro is the simplest and safest way to evaluate forms while
+holding a mutex.  It acquires <var class="var">mutex</var>, invokes <var class="var">body</var>, and
+then releases <var class="var">mutex</var>.  It returns the result of <var class="var">body</var>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Condition-Variables">
+<div class="nav-panel">
+<p>
+Next: <a href="#The-Thread-List" accesskey="n" rel="next">The Thread List</a>, Previous: <a href="#Mutexes" accesskey="p" rel="prev">Mutexes</a>, Up: <a href="#Threads" accesskey="u" rel="up">Threads</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Condition-Variables-1"><span>40.3 Condition Variables<a class="copiable-link" href="#Condition-Variables-1"> &para;</a></span></h3>
+
+<p>A <em class="dfn">condition variable</em> is a way for a thread to block until some
+event occurs.  A thread can wait on a condition variable, to be woken
+up when some other thread notifies the condition.
+</p>
+<p>A condition variable is associated with a mutex and, conceptually,
+with some condition.  For proper operation, the mutex must be
+acquired, and then a waiting thread must loop, testing the condition
+and waiting on the condition variable.  For example:
+</p>
+<div class="example">
+<pre class="example-preformatted">(with-mutex mutex
+  (while (not global-variable)
+    (condition-wait cond-var)))
+</pre></div>
+
+<p>The mutex ensures atomicity, and the loop is for robustness&mdash;there
+may be spurious notifications.
+</p>
+<p>Similarly, the mutex must be held before notifying the condition.
+The typical, and best, approach is to acquire the mutex, make the
+changes associated with this condition, and then notify it:
+</p>
+<div class="example">
+<pre class="example-preformatted">(with-mutex mutex
+  (setq global-variable (some-computation))
+  (condition-notify cond-var))
+</pre></div>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dcondition_002dvariable"><span class="category-def">Function: </span><span><strong class="def-name">make-condition-variable</strong> <var class="def-var-arguments">mutex &amp;optional name</var><a class="copiable-link" href="#index-make_002dcondition_002dvariable"> &para;</a></span></dt>
+<dd><p>Make a new condition variable associated with <var class="var">mutex</var>.  If
+<var class="var">name</var> is specified, it is a name given to the condition variable.
+It must be a string.  The name is for debugging purposes only; it has
+no meaning to Emacs.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-condition_002dvariable_002dp"><span class="category-def">Function: </span><span><strong class="def-name">condition-variable-p</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-condition_002dvariable_002dp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> represents a condition
+variable, <code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-condition_002dwait"><span class="category-def">Function: </span><span><strong class="def-name">condition-wait</strong> <var class="def-var-arguments">cond</var><a class="copiable-link" href="#index-condition_002dwait"> &para;</a></span></dt>
+<dd><p>Wait for another thread to notify <var class="var">cond</var>, a condition variable.
+This function will block until the condition is notified, or until a
+signal is delivered to this thread using <code class="code">thread-signal</code>.
+</p>
+<p>It is an error to call <code class="code">condition-wait</code> without holding the
+condition&rsquo;s associated mutex.
+</p>
+<p><code class="code">condition-wait</code> releases the associated mutex while waiting.
+This allows other threads to acquire the mutex in order to notify the
+condition.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-condition_002dnotify"><span class="category-def">Function: </span><span><strong class="def-name">condition-notify</strong> <var class="def-var-arguments">cond &amp;optional all</var><a class="copiable-link" href="#index-condition_002dnotify"> &para;</a></span></dt>
+<dd><p>Notify <var class="var">cond</var>.  The mutex with <var class="var">cond</var> must be held before
+calling this.  Ordinarily a single waiting thread is woken by
+<code class="code">condition-notify</code>; but if <var class="var">all</var> is not <code class="code">nil</code>, then all
+threads waiting on <var class="var">cond</var> are notified.
+</p>
+<p><code class="code">condition-notify</code> releases the associated mutex.
+This allows other threads to acquire the mutex in order to wait on the
+condition.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-condition_002dname"><span class="category-def">Function: </span><span><strong class="def-name">condition-name</strong> <var class="def-var-arguments">cond</var><a class="copiable-link" href="#index-condition_002dname"> &para;</a></span></dt>
+<dd><p>Return the name of <var class="var">cond</var>, as passed to
+<code class="code">make-condition-variable</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-condition_002dmutex"><span class="category-def">Function: </span><span><strong class="def-name">condition-mutex</strong> <var class="def-var-arguments">cond</var><a class="copiable-link" href="#index-condition_002dmutex"> &para;</a></span></dt>
+<dd><p>Return the mutex associated with <var class="var">cond</var>.  Note that the associated
+mutex cannot be changed.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="The-Thread-List">
+<div class="nav-panel">
+<p>
+Previous: <a href="#Condition-Variables" accesskey="p" rel="prev">Condition Variables</a>, Up: <a href="#Threads" accesskey="u" rel="up">Threads</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="The-Thread-List-1"><span>40.4 The Thread List<a class="copiable-link" href="#The-Thread-List-1"> &para;</a></span></h3>
+
+<a class="index-entry-id" id="index-thread-list"></a>
+<a class="index-entry-id" id="index-list-of-threads"></a>
+<a class="index-entry-id" id="index-list_002dthreads"></a>
+<p>The <code class="code">list-threads</code> command lists all the currently alive threads.
+In the resulting buffer, each thread is identified either by the name
+passed to <code class="code">make-thread</code> (see <a class="pxref" href="#Basic-Thread-Functions">Basic Thread Functions</a>), or by
+its unique internal identifier if it was not created with a name.  The
+status of each thread at the time of the creation or last update of
+the buffer is shown, in addition to the object the thread was blocked
+on at the time, if it was blocked.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-thread_002dlist_002drefresh_002dseconds"><span class="category-def">Variable: </span><span><strong class="def-name">thread-list-refresh-seconds</strong><a class="copiable-link" href="#index-thread_002dlist_002drefresh_002dseconds"> &para;</a></span></dt>
+<dd><p>The <samp class="file">*Threads*</samp> buffer will automatically update twice per
+second.  You can make the refresh rate faster or slower by customizing
+this variable.
+</p></dd></dl>
+
+<p>Here are the commands available in the thread list buffer:
+</p>
+<dl class="table">
+<dt><a class="index-entry-id" id="index-thread-backtrace"></a>
+<a id="index-backtrace-of-thread"></a><span><kbd class="kbd">b</kbd><a class="copiable-link" href="#index-backtrace-of-thread"> &para;</a></span></dt>
+<dd><p>Show a backtrace of the thread at point.  This will show where in its
+code the thread had yielded or was blocked at the moment you pressed
+<kbd class="kbd">b</kbd>.  Be aware that the backtrace is a snapshot; the thread could
+have meanwhile resumed execution, and be in a different state, or
+could have exited.
+</p>
+<p>You may use <kbd class="kbd">g</kbd> in the thread&rsquo;s backtrace buffer to get an updated
+backtrace, as backtrace buffers do not automatically update.
+See <a class="xref" href="Debugging.html#Backtraces">Backtraces</a>, for a description of backtraces and the other
+commands which work on them.
+</p>
+</dd>
+<dt><kbd class="kbd">s</kbd></dt>
+<dd><p>Signal the thread at point.  After <kbd class="kbd">s</kbd>, type <kbd class="kbd">q</kbd> to send a
+quit signal or <kbd class="kbd">e</kbd> to send an error signal.  Threads may implement
+handling of signals, but the default behavior is to exit on any
+signal.  Therefore you should only use this command if you understand
+how to restart the target thread, because your Emacs session may
+behave incorrectly if necessary threads are killed.
+</p>
+</dd>
+<dt><kbd class="kbd">g</kbd></dt>
+<dd><p>Update the list of threads and their statuses.
+</p></dd>
+</dl>
+</div>
+</div>
+<hr>
+<div class="nav-panel">
+<p>
+Next: <a href="Processes.html#Processes" accesskey="n" rel="next">Processes</a>, Previous: <a href="Abbrevs.html#Abbrevs" accesskey="p" rel="prev">Abbrevs and Abbrev Expansion</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

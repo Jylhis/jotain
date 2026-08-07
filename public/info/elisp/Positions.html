@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.0.91.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Positions (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Positions (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Positions (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Markers.html#Markers" rel="next" title="Markers">
+<link href="Frames.html#Frames" rel="prev" title="Frames">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
+ul.mark-bullet {list-style-type: disc}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Positions">
+<div class="nav-panel">
+<p>
+Next: <a href="Markers.html#Markers" accesskey="n" rel="next">Markers</a>, Previous: <a href="Frames.html#Frames" accesskey="p" rel="prev">Frames</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h2 class="chapter" id="Positions-1"><span>31 Positions<a class="copiable-link" href="#Positions-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-position-_0028in-buffer_0029"></a>
+<a class="index-entry-id" id="index-buffer-position"></a>
+
+<p>A <em class="dfn">position</em> is the index of a character in the text of a buffer.
+More precisely, a position identifies the place between two characters
+(or before the first character, or after the last character), so we can
+speak of the character before or after a given position.  However, we
+often speak of the character &ldquo;at&rdquo; a position, meaning the character
+after that position.
+</p>
+<p>Positions are usually represented as integers starting from 1, but
+can also be represented as <em class="dfn">markers</em>&mdash;special objects that
+relocate automatically when text is inserted or deleted so they stay
+with the surrounding characters.  Functions that expect an argument to
+be a position (an integer), but accept a marker as a substitute,
+normally ignore which buffer the marker points into; they convert the
+marker to an integer, and use that integer, exactly as if you had
+passed the integer as the argument, even if the marker points to the
+wrong buffer.  A marker that points nowhere cannot convert to an
+integer; using it instead of an integer causes an error.
+See <a class="xref" href="Markers.html#Markers">Markers</a>.
+</p>
+<p>See also the field feature (see <a class="pxref" href="Text.html#Fields">Defining and Using Fields</a>), which provides
+functions that are used by many cursor-motion commands.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Point" accesskey="1">Point</a></li>
+<li><a href="#Motion" accesskey="2">Motion</a></li>
+<li><a href="#Excursions" accesskey="3">Excursions</a></li>
+<li><a href="#Narrowing" accesskey="4">Narrowing</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Point">
+<div class="nav-panel">
+<p>
+Next: <a href="#Motion" accesskey="n" rel="next">Motion</a>, Up: <a href="#Positions" accesskey="u" rel="up">Positions</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Point-1"><span>31.1 Point<a class="copiable-link" href="#Point-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-point"></a>
+
+<p><em class="dfn">Point</em> is a special buffer position used by many editing
+commands, including the self-inserting typed characters and text
+insertion functions.  Other commands move point through the text
+to allow editing and insertion at different places.
+</p>
+<p>Like other positions, point designates a place between two characters
+(or before the first character, or after the last character), rather
+than a particular character.  Usually terminals display the cursor over
+the character that immediately follows point; point is actually before
+the character on which the cursor sits.
+</p>
+<a class="index-entry-id" id="index-point-with-narrowing"></a>
+<p>The value of point is a number no less than 1, and no greater than the
+buffer size plus 1.  If narrowing is in effect (see <a class="pxref" href="#Narrowing">Narrowing</a>), then
+point is constrained to fall within the accessible portion of the buffer
+(possibly at one end of it).
+</p>
+<a class="index-entry-id" id="index-buffer-point"></a>
+<p>Each buffer has its own value of point, which is independent of the
+value of point in other buffers.  Each window also has a value of point,
+which is independent of the value of point in other windows showing the
+same buffer.  This is why the cursor may appear at different positions
+in various windows that display the same buffer.  Wherever necessary, we
+use the terms <em class="dfn">buffer point</em> for the unique position of point of a
+specific buffer and the term <em class="dfn">window point</em> for the position of
+point in a specific window showing that buffer.  When a buffer appears
+in only one window, its buffer&rsquo;s point and that window&rsquo;s point normally
+have the same value, so the distinction is rarely important.
+See <a class="xref" href="Windows.html#Window-Point">Windows and Point</a>, for more details.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-point-1"><span class="category-def">Function: </span><span><strong class="def-name">point</strong><a class="copiable-link" href="#index-point-1"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-current-buffer-position"></a>
+<p>This function returns the value of point in the current buffer,
+as an integer.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(point)
+     &rArr; 175
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-point_002dmin"><span class="category-def">Function: </span><span><strong class="def-name">point-min</strong><a class="copiable-link" href="#index-point_002dmin"> &para;</a></span></dt>
+<dd><p>This function returns the minimum accessible value of point in the
+current buffer.  This is normally 1, but if narrowing is in effect, it
+is the position of the start of the region that you narrowed to.
+(See <a class="xref" href="#Narrowing">Narrowing</a>.)
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-point_002dmax"><span class="category-def">Function: </span><span><strong class="def-name">point-max</strong><a class="copiable-link" href="#index-point_002dmax"> &para;</a></span></dt>
+<dd><p>This function returns the maximum accessible value of point in the
+current buffer.  This is <code class="code">(1+ (buffer-size))</code>, unless narrowing is
+in effect, in which case it is the position of the end of the region
+that you narrowed to.  (See <a class="xref" href="#Narrowing">Narrowing</a>.)
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-buffer_002dend"><span class="category-def">Function: </span><span><strong class="def-name">buffer-end</strong> <var class="def-var-arguments">flag</var><a class="copiable-link" href="#index-buffer_002dend"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">(point-max)</code> if <var class="var">flag</var> is greater than
+0, <code class="code">(point-min)</code> otherwise.  The argument <var class="var">flag</var> must be a
+number.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-buffer_002dsize"><span class="category-def">Function: </span><span><strong class="def-name">buffer-size</strong> <var class="def-var-arguments">&amp;optional buffer</var><a class="copiable-link" href="#index-buffer_002dsize"> &para;</a></span></dt>
+<dd><p>This function returns the total number of characters in the current
+buffer.  In the absence of any narrowing (see <a class="pxref" href="#Narrowing">Narrowing</a>),
+<code class="code">point-max</code> returns a value one larger than this.
+</p>
+<p>If you specify a buffer, <var class="var">buffer</var>, then the value is the
+size of <var class="var">buffer</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(buffer-size)
+     &rArr; 35
+</pre></div><div class="group"><pre class="example-preformatted">(point-max)
+     &rArr; 36
+</pre></div></div>
+</dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Motion">
+<div class="nav-panel">
+<p>
+Next: <a href="#Excursions" accesskey="n" rel="next">Excursions</a>, Previous: <a href="#Point" accesskey="p" rel="prev">Point</a>, Up: <a href="#Positions" accesskey="u" rel="up">Positions</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Motion-1"><span>31.2 Motion<a class="copiable-link" href="#Motion-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-motion-by-chars_002c-words_002c-lines_002c-lists"></a>
+
+<p>Motion functions change the value of point, either relative to the
+current value of point, relative to the beginning or end of the buffer,
+or relative to the edges of the selected window.  See <a class="xref" href="#Point">Point</a>.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Character-Motion" accesskey="1">Motion by Characters</a></li>
+<li><a href="#Word-Motion" accesskey="2">Motion by Words</a></li>
+<li><a href="#Buffer-End-Motion" accesskey="3">Motion to an End of the Buffer</a></li>
+<li><a href="#Text-Lines" accesskey="4">Motion by Text Lines</a></li>
+<li><a href="#Screen-Lines" accesskey="5">Motion by Screen Lines</a></li>
+<li><a href="#List-Motion" accesskey="6">Moving over Balanced Expressions</a></li>
+<li><a href="#Skipping-Characters" accesskey="7">Skipping Characters</a></li>
+</ul>
+<hr>
+<div class="subsection-level-extent" id="Character-Motion">
+<div class="nav-panel">
+<p>
+Next: <a href="#Word-Motion" accesskey="n" rel="next">Motion by Words</a>, Up: <a href="#Motion" accesskey="u" rel="up">Motion</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Motion-by-Characters"><span>31.2.1 Motion by Characters<a class="copiable-link" href="#Motion-by-Characters"> &para;</a></span></h4>
+
+<p>These functions move point based on a count of characters.
+<code class="code">goto-char</code> is the fundamental primitive; the other functions use
+that.
+</p>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-goto_002dchar"><span class="category-def">Command: </span><span><strong class="def-name">goto-char</strong> <var class="def-var-arguments">position</var><a class="copiable-link" href="#index-goto_002dchar"> &para;</a></span></dt>
+<dd><p>This function sets point in the current buffer to the value
+<var class="var">position</var>.
+</p>
+<p>If narrowing is in effect, <var class="var">position</var> still counts from the
+beginning of the buffer, but point cannot go outside the accessible
+portion.  If <var class="var">position</var> is out of range, <code class="code">goto-char</code> moves
+point to the beginning or the end of the accessible portion.
+</p>
+<p>When this function is called interactively, <var class="var">position</var> is the
+numeric prefix argument, if provided; otherwise it is read from the
+minibuffer.
+</p>
+<p><code class="code">goto-char</code> returns <var class="var">position</var>.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-forward_002dchar"><span class="category-def">Command: </span><span><strong class="def-name">forward-char</strong> <var class="def-var-arguments">&amp;optional count</var><a class="copiable-link" href="#index-forward_002dchar"> &para;</a></span></dt>
+<dd><p>This function moves point <var class="var">count</var> characters forward, towards the
+end of the buffer (or backward, towards the beginning of the buffer, if
+<var class="var">count</var> is negative).  If <var class="var">count</var> is <code class="code">nil</code>, the default
+is 1.
+</p>
+<p>If this attempts to move past the beginning or end of the buffer (or
+the limits of the accessible portion, when narrowing is in effect), it
+signals an error with error symbol <code class="code">beginning-of-buffer</code> or
+<code class="code">end-of-buffer</code>.
+</p>
+<p>In an interactive call, <var class="var">count</var> is the numeric prefix argument.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-backward_002dchar"><span class="category-def">Command: </span><span><strong class="def-name">backward-char</strong> <var class="def-var-arguments">&amp;optional count</var><a class="copiable-link" href="#index-backward_002dchar"> &para;</a></span></dt>
+<dd><p>This is just like <code class="code">forward-char</code> except that it moves
+in the opposite direction.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Word-Motion">
+<div class="nav-panel">
+<p>
+Next: <a href="#Buffer-End-Motion" accesskey="n" rel="next">Motion to an End of the Buffer</a>, Previous: <a href="#Character-Motion" accesskey="p" rel="prev">Motion by Characters</a>, Up: <a href="#Motion" accesskey="u" rel="up">Motion</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Motion-by-Words"><span>31.2.2 Motion by Words<a class="copiable-link" href="#Motion-by-Words"> &para;</a></span></h4>
+
+<p>The functions for parsing words described below use the syntax table
+and <code class="code">char-script-table</code> to decide whether a given character is
+part of a word.  See <a class="xref" href="Syntax-Tables.html#Syntax-Tables">Syntax Tables</a>, and see <a class="ref" href="Non_002dASCII-Characters.html#Character-Properties">Character Properties</a>.
+</p>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-forward_002dword"><span class="category-def">Command: </span><span><strong class="def-name">forward-word</strong> <var class="def-var-arguments">&amp;optional count</var><a class="copiable-link" href="#index-forward_002dword"> &para;</a></span></dt>
+<dd><p>This function moves point forward <var class="var">count</var> words (or backward if
+<var class="var">count</var> is negative).  If <var class="var">count</var> is omitted or <code class="code">nil</code>, it
+defaults to 1.  In an interactive call, <var class="var">count</var> is specified by
+the numeric prefix argument.
+</p>
+<p>&ldquo;Moving one word&rdquo; means moving until point crosses a
+word-constituent character, which indicates the beginning of a word,
+and then continue moving until the word ends.  By default, characters
+that begin and end words, known as <em class="dfn">word boundaries</em>, are defined
+by the current buffer&rsquo;s syntax table (see <a class="pxref" href="Syntax-Tables.html#Syntax-Class-Table">Table of Syntax Classes</a>), but
+modes can override that by setting up a suitable
+<code class="code">find-word-boundary-function-table</code>, described below.  Characters
+that belong to different scripts (as defined by
+<code class="code">char-script-table</code>), also define a word boundary
+(see <a class="pxref" href="Non_002dASCII-Characters.html#Character-Properties">Character Properties</a>).  In any case, this function cannot
+move point past the boundary of the accessible portion of the buffer,
+or across a field boundary (see <a class="pxref" href="Text.html#Fields">Defining and Using Fields</a>).  The most common case of
+a field boundary is the end of the prompt in the minibuffer.
+</p>
+<p>If it is possible to move <var class="var">count</var> words, without being stopped
+prematurely by the buffer boundary or a field boundary, the value is
+<code class="code">t</code>.  Otherwise, the return value is <code class="code">nil</code> and point stops at
+the buffer boundary or field boundary.
+</p>
+<p>If <code class="code">inhibit-field-text-motion</code> is non-<code class="code">nil</code>,
+this function ignores field boundaries.
+</p>
+</dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-backward_002dword"><span class="category-def">Command: </span><span><strong class="def-name">backward-word</strong> <var class="def-var-arguments">&amp;optional count</var><a class="copiable-link" href="#index-backward_002dword"> &para;</a></span></dt>
+<dd><p>This function is just like <code class="code">forward-word</code>, except that it moves
+backward until encountering the front of a word, rather than forward.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-words_002dinclude_002descapes"><span class="category-def">User Option: </span><span><strong class="def-name">words-include-escapes</strong><a class="copiable-link" href="#index-words_002dinclude_002descapes"> &para;</a></span></dt>
+<dd><p>This variable affects the behavior of <code class="code">forward-word</code> and
+<code class="code">backward-word</code>, and everything that uses them.  If it is
+non-<code class="code">nil</code>, then characters in the escape and character-quote
+syntax classes count as part of words.  Otherwise, they do not.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-inhibit_002dfield_002dtext_002dmotion"><span class="category-def">Variable: </span><span><strong class="def-name">inhibit-field-text-motion</strong><a class="copiable-link" href="#index-inhibit_002dfield_002dtext_002dmotion"> &para;</a></span></dt>
+<dd><p>If this variable is non-<code class="code">nil</code>, certain motion functions including
+<code class="code">forward-word</code>, <code class="code">forward-sentence</code>, and
+<code class="code">forward-paragraph</code> ignore field boundaries.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-find_002dword_002dboundary_002dfunction_002dtable"><span class="category-def">Variable: </span><span><strong class="def-name">find-word-boundary-function-table</strong><a class="copiable-link" href="#index-find_002dword_002dboundary_002dfunction_002dtable"> &para;</a></span></dt>
+<dd><p>This variable affects the behavior of <code class="code">forward-word</code> and
+<code class="code">backward-word</code>, and everything that uses them.  Its value is a
+char-table (see <a class="pxref" href="Sequences-Arrays-Vectors.html#Char_002dTables">Char-Tables</a>) of functions to search for word
+boundaries.  If a character has a non-<code class="code">nil</code> entry in this table,
+then when a word starts or ends with that character, the corresponding
+function will be called with 2 arguments: <var class="var">pos</var> and <var class="var">limit</var>.
+The function should return the position of the other word boundary.
+Specifically, if <var class="var">pos</var> is smaller than <var class="var">limit</var>, then <var class="var">pos</var>
+is at the beginning of a word, and the function should return the
+position after the last character of the word; otherwise, <var class="var">pos</var> is
+at the last character of a word, and the function should return the
+position of that word&rsquo;s first character.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-forward_002dword_002dstrictly"><span class="category-def">Function: </span><span><strong class="def-name">forward-word-strictly</strong> <var class="def-var-arguments">&amp;optional count</var><a class="copiable-link" href="#index-forward_002dword_002dstrictly"> &para;</a></span></dt>
+<dd><p>This function is like <code class="code">forward-word</code>, but it is not affected by
+<code class="code">find-word-boundary-function-table</code>.  Lisp programs that should
+not change behavior when word movement is modified by modes which set
+that table, such as <code class="code">subword-mode</code>, should use this function
+instead of <code class="code">forward-word</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-backward_002dword_002dstrictly"><span class="category-def">Function: </span><span><strong class="def-name">backward-word-strictly</strong> <var class="def-var-arguments">&amp;optional count</var><a class="copiable-link" href="#index-backward_002dword_002dstrictly"> &para;</a></span></dt>
+<dd><p>This function is like <code class="code">backward-word</code>, but it is not affected by
+<code class="code">find-word-boundary-function-table</code>.  Like with
+<code class="code">forward-word-strictly</code>, use this function instead of
+<code class="code">backward-word</code> when movement by words should only consider
+syntax tables.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Buffer-End-Motion">
+<div class="nav-panel">
+<p>
+Next: <a href="#Text-Lines" accesskey="n" rel="next">Motion by Text Lines</a>, Previous: <a href="#Word-Motion" accesskey="p" rel="prev">Motion by Words</a>, Up: <a href="#Motion" accesskey="u" rel="up">Motion</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Motion-to-an-End-of-the-Buffer"><span>31.2.3 Motion to an End of the Buffer<a class="copiable-link" href="#Motion-to-an-End-of-the-Buffer"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-move-to-beginning-or-end-of-buffer"></a>
+
+<p>To move point to the beginning of the buffer, write:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(goto-char (point-min))
+</pre></div></div>
+
+<p>Likewise, to move to the end of the buffer, use:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(goto-char (point-max))
+</pre></div></div>
+
+<p>Here are two commands that users use to do these things.  They are
+documented here to warn you not to use them in Lisp programs, because
+they set the mark and display messages in the echo area.
+</p>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-beginning_002dof_002dbuffer"><span class="category-def">Command: </span><span><strong class="def-name">beginning-of-buffer</strong> <var class="def-var-arguments">&amp;optional n</var><a class="copiable-link" href="#index-beginning_002dof_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function moves point to the beginning of the buffer (or the limits
+of the accessible portion, when narrowing is in effect), setting the
+mark at the previous position (except in Transient Mark mode, if
+the mark is already active, it does not set the mark.)
+</p>
+<p>If <var class="var">n</var> is non-<code class="code">nil</code>, then it puts point <var class="var">n</var> tenths of the
+way from the beginning of the accessible portion of the buffer.  In an
+interactive call, <var class="var">n</var> is the numeric prefix argument, if provided;
+otherwise <var class="var">n</var> defaults to <code class="code">nil</code>.
+</p>
+<p><strong class="strong">Warning:</strong> Don&rsquo;t use this function in Lisp programs!
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-end_002dof_002dbuffer"><span class="category-def">Command: </span><span><strong class="def-name">end-of-buffer</strong> <var class="def-var-arguments">&amp;optional n</var><a class="copiable-link" href="#index-end_002dof_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function moves point to the end of the buffer (or the limits of
+the accessible portion, when narrowing is in effect), setting the mark
+at the previous position (except in Transient Mark mode when the mark
+is already active).  If <var class="var">n</var> is non-<code class="code">nil</code>, then it puts point
+<var class="var">n</var> tenths of the way from the end of the accessible portion of
+the buffer.
+</p>
+<p>In an interactive call, <var class="var">n</var> is the numeric prefix argument,
+if provided; otherwise <var class="var">n</var> defaults to <code class="code">nil</code>.
+</p>
+<p><strong class="strong">Warning:</strong> Don&rsquo;t use this function in Lisp programs!
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Text-Lines">
+<div class="nav-panel">
+<p>
+Next: <a href="#Screen-Lines" accesskey="n" rel="next">Motion by Screen Lines</a>, Previous: <a href="#Buffer-End-Motion" accesskey="p" rel="prev">Motion to an End of the Buffer</a>, Up: <a href="#Motion" accesskey="u" rel="up">Motion</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Motion-by-Text-Lines"><span>31.2.4 Motion by Text Lines<a class="copiable-link" href="#Motion-by-Text-Lines"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-lines"></a>
+<a class="index-entry-id" id="index-logical-lines_002c-moving-by"></a>
+<a class="index-entry-id" id="index-physical-lines_002c-moving-by"></a>
+
+<p>Text lines are portions of the buffer delimited by newline characters,
+which are regarded as part of the previous line.  The first text line
+begins at the beginning of the buffer, and the last text line ends at
+the end of the buffer whether or not the last character is a newline.
+The division of the buffer into text lines is not affected by the width
+of the window, by line continuation in display, or by how tabs and
+control characters are displayed.
+</p>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-beginning_002dof_002dline"><span class="category-def">Command: </span><span><strong class="def-name">beginning-of-line</strong> <var class="def-var-arguments">&amp;optional count</var><a class="copiable-link" href="#index-beginning_002dof_002dline"> &para;</a></span></dt>
+<dd><p>This function moves point to the beginning of the current line.  With an
+argument <var class="var">count</var> not <code class="code">nil</code> or 1, it moves forward
+<var class="var">count</var>&minus;1 lines and then to the beginning of the line.
+</p>
+<p>This function does not move point across a field boundary
+(see <a class="pxref" href="Text.html#Fields">Defining and Using Fields</a>) unless doing so would move beyond there to a
+different line; therefore, if <var class="var">count</var> is <code class="code">nil</code> or 1, and
+point starts at a field boundary, point does not move.  To ignore
+field boundaries, either bind <code class="code">inhibit-field-text-motion</code> to
+<code class="code">t</code>, or use the <code class="code">forward-line</code> function instead.  For
+instance, <code class="code">(forward-line 0)</code> does the same thing as
+<code class="code">(beginning-of-line)</code>, except that it ignores field boundaries.
+</p>
+<p>If this function reaches the end of the buffer (or of the accessible
+portion, if narrowing is in effect), it positions point there.  No error
+is signaled.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-line_002dbeginning_002dposition"><span class="category-def">Function: </span><span><strong class="def-name">line-beginning-position</strong> <var class="def-var-arguments">&amp;optional count</var><a class="copiable-link" href="#index-line_002dbeginning_002dposition"> &para;</a></span></dt>
+<dd><p>Return the position that <code class="code">(beginning-of-line <var class="var">count</var>)</code>
+would move to.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-end_002dof_002dline"><span class="category-def">Command: </span><span><strong class="def-name">end-of-line</strong> <var class="def-var-arguments">&amp;optional count</var><a class="copiable-link" href="#index-end_002dof_002dline"> &para;</a></span></dt>
+<dd><p>This function moves point to the end of the current line.  With an
+argument <var class="var">count</var> not <code class="code">nil</code> or 1, it moves forward
+<var class="var">count</var>&minus;1 lines and then to the end of the line.
+</p>
+<p>This function does not move point across a field boundary
+(see <a class="pxref" href="Text.html#Fields">Defining and Using Fields</a>) unless doing so would move beyond there to a
+different line; therefore, if <var class="var">count</var> is <code class="code">nil</code> or 1, and
+point starts at a field boundary, point does not move.  To ignore
+field boundaries, bind <code class="code">inhibit-field-text-motion</code> to <code class="code">t</code>.
+</p>
+<p>If this function reaches the end of the buffer (or of the accessible
+portion, if narrowing is in effect), it positions point there.  No error
+is signaled.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-line_002dend_002dposition"><span class="category-def">Function: </span><span><strong class="def-name">line-end-position</strong> <var class="def-var-arguments">&amp;optional count</var><a class="copiable-link" href="#index-line_002dend_002dposition"> &para;</a></span></dt>
+<dd><p>Return the position that <code class="code">(end-of-line <var class="var">count</var>)</code>
+would move to.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-pos_002dbol"><span class="category-def">Function: </span><span><strong class="def-name">pos-bol</strong> <var class="def-var-arguments">&amp;optional count</var><a class="copiable-link" href="#index-pos_002dbol"> &para;</a></span></dt>
+<dd><p>Like <code class="code">line-beginning-position</code>, but ignores fields (and is more
+efficient).
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-pos_002deol"><span class="category-def">Function: </span><span><strong class="def-name">pos-eol</strong> <var class="def-var-arguments">&amp;optional count</var><a class="copiable-link" href="#index-pos_002deol"> &para;</a></span></dt>
+<dd><p>Like <code class="code">line-end-position</code>, but ignores fields (and is more
+efficient).
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-forward_002dline"><span class="category-def">Command: </span><span><strong class="def-name">forward-line</strong> <var class="def-var-arguments">&amp;optional count</var><a class="copiable-link" href="#index-forward_002dline"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-beginning-of-line"></a>
+<p>This function moves point forward <var class="var">count</var> lines, to the beginning of
+the line following that.  If <var class="var">count</var> is negative, it moves point
+&minus;<var class="var">count</var> lines backward, to the beginning of a line
+preceding that.  If <var class="var">count</var> is zero, it moves point to the
+beginning of the current line.  If <var class="var">count</var> is <code class="code">nil</code>, that
+means 1.
+</p>
+<p>If <code class="code">forward-line</code> encounters the beginning or end of the buffer (or
+of the accessible portion) before finding that many lines, it sets point
+there.  No error is signaled.
+</p>
+<p><code class="code">forward-line</code> returns the difference between <var class="var">count</var> and the
+number of lines actually moved.  If you attempt to move down five lines
+from the beginning of a buffer that has only three lines, point stops at
+the end of the last line, and the value will be 2.  As an explicit
+exception, if the last accessible line is non-empty, but has no
+newline (e.g., if the buffer ends without a newline), the function
+sets point to the end of that line, and the value returned by the
+function counts that line as one line successfully moved.
+</p>
+<p>In an interactive call, <var class="var">count</var> is the numeric prefix argument.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-count_002dlines"><span class="category-def">Function: </span><span><strong class="def-name">count-lines</strong> <var class="def-var-arguments">start end &amp;optional ignore-invisible-lines</var><a class="copiable-link" href="#index-count_002dlines"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-lines-in-region"></a>
+<a class="anchor" id="Definition-of-count_002dlines"></a><p>This function returns the number of lines between the positions
+<var class="var">start</var> and <var class="var">end</var> in the current buffer.  If <var class="var">start</var> and
+<var class="var">end</var> are equal, then it returns 0.  Otherwise it returns at least
+1, even if <var class="var">start</var> and <var class="var">end</var> are on the same line.  This is
+because the text between them, considered in isolation, must contain at
+least one line unless it is empty.
+</p>
+<p>If the optional <var class="var">ignore-invisible-lines</var> is non-<code class="code">nil</code>,
+invisible lines will not be included in the count.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-count_002dwords"><span class="category-def">Command: </span><span><strong class="def-name">count-words</strong> <var class="def-var-arguments">start end</var><a class="copiable-link" href="#index-count_002dwords"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-words-in-region"></a>
+<p>This function returns the number of words between the positions
+<var class="var">start</var> and <var class="var">end</var> in the current buffer.
+</p>
+<p>This function can also be called interactively.  In that case, it
+prints a message reporting the number of lines, words, and characters
+in the buffer, or in the region if the region is active.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-line_002dnumber_002dat_002dpos"><span class="category-def">Function: </span><span><strong class="def-name">line-number-at-pos</strong> <var class="def-var-arguments">&amp;optional pos absolute</var><a class="copiable-link" href="#index-line_002dnumber_002dat_002dpos"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-line-number"></a>
+<p>This function returns the line number in the current buffer
+corresponding to the buffer position <var class="var">pos</var>.  If <var class="var">pos</var> is
+<code class="code">nil</code> or omitted, the current buffer position is used.  If
+<var class="var">absolute</var> is <code class="code">nil</code>, the default, counting starts at
+<code class="code">(point-min)</code>, so the value refers to the contents of the
+accessible portion of the (potentially narrowed) buffer.  If
+<var class="var">absolute</var> is non-<code class="code">nil</code>, ignore any narrowing and return
+the absolute line number.
+</p></dd></dl>
+
+
+<p>Also see the functions <code class="code">bolp</code> and <code class="code">eolp</code> in <a class="ref" href="Text.html#Near-Point">Examining Text Near Point</a>.
+These functions do not move point, but test whether it is already at the
+beginning or end of a line.
+</p>
+<hr>
+</div>
+<div class="subsection-level-extent" id="Screen-Lines">
+<div class="nav-panel">
+<p>
+Next: <a href="#List-Motion" accesskey="n" rel="next">Moving over Balanced Expressions</a>, Previous: <a href="#Text-Lines" accesskey="p" rel="prev">Motion by Text Lines</a>, Up: <a href="#Motion" accesskey="u" rel="up">Motion</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Motion-by-Screen-Lines"><span>31.2.5 Motion by Screen Lines<a class="copiable-link" href="#Motion-by-Screen-Lines"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-screen-lines_002c-moving-by"></a>
+<a class="index-entry-id" id="index-visual-lines_002c-moving-by"></a>
+
+<p>The line functions in the previous section count text lines, delimited
+only by newline characters.  By contrast, these functions count screen
+lines, which are defined by the way the text appears on the screen.  A
+text line is a single screen line if it is short enough to fit the width
+of the selected window, but otherwise it may occupy several screen
+lines.
+</p>
+<p>In some cases, text lines are truncated on the screen rather than
+continued onto additional screen lines.  In these cases,
+<code class="code">vertical-motion</code> moves point much like <code class="code">forward-line</code>.
+See <a class="xref" href="Display.html#Truncation">Truncation</a>.
+</p>
+<p>Because the width of a given string depends on the flags that control
+the appearance of certain characters, <code class="code">vertical-motion</code> behaves
+differently, for a given piece of text, depending on the buffer it is
+in, and even on the selected window (because the width, the truncation
+flag, and display table may vary between windows).  See <a class="xref" href="Display.html#Usual-Display">Usual Display Conventions</a>.
+</p>
+<p>These functions scan text to determine where screen lines break, and
+thus take time proportional to the distance scanned.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-vertical_002dmotion"><span class="category-def">Function: </span><span><strong class="def-name">vertical-motion</strong> <var class="def-var-arguments">count &amp;optional window cur-col</var><a class="copiable-link" href="#index-vertical_002dmotion"> &para;</a></span></dt>
+<dd><p>This function moves point to the start of the screen line <var class="var">count</var>
+screen lines down from the screen line containing point.  If <var class="var">count</var>
+is negative, it moves up instead.  If <var class="var">count</var> is zero, point moves
+to the visual start of the current screen line.
+</p>
+<p>The <var class="var">count</var> argument can be a cons cell, <code class="code">(<var class="var">cols</var>&nbsp;.&nbsp;<var class="var">lines</var>)</code><!-- /@w -->, instead of an integer.  Then the function moves by
+<var class="var">lines</var> screen lines, as described for <var class="var">count</var> above, and puts
+point <var class="var">cols</var> columns from the visual start of that screen line.
+The value of <var class="var">cols</var> can be a float, and is interpreted in units of
+the frame&rsquo;s canonical character width (see <a class="pxref" href="Frames.html#Frame-Font">Frame Font</a>); this
+allows specifying accurate horizontal position of point when the
+target screen line uses variable fonts.  Note that <var class="var">cols</var> are
+counted from the <em class="emph">visual</em> start of the line; if the window is
+scrolled horizontally (see <a class="pxref" href="Windows.html#Horizontal-Scrolling">Horizontal Scrolling</a>), the column where
+point will end is in addition to the number of columns by which the
+text is scrolled, and if the target line is a continuation line, its
+leftmost column is considered column zero (unlike column-oriented
+functions, see <a class="pxref" href="Text.html#Columns">Counting Columns</a>).
+</p>
+<p>The return value is the number of screen lines over which point was
+moved.  The value may be less in absolute value than <var class="var">count</var> if
+the beginning or end of the buffer was reached.
+</p>
+<p>The window <var class="var">window</var> is used for obtaining parameters such as the
+width, the horizontal scrolling, and the display table.  But
+<code class="code">vertical-motion</code> always operates on the current buffer, even if
+<var class="var">window</var> currently displays some other buffer.
+</p>
+<p>The optional argument <var class="var">cur-col</var> specifies the current column when
+the function is called.  This is the window-relative horizontal
+coordinate of point, measured in units of font width of the frame&rsquo;s
+default face.  Providing it speeds up the function, especially in very
+long lines, because the function doesn&rsquo;t have to go back in the buffer
+in order to determine the current column.  Note that <var class="var">cur-col</var> is
+also counted from the visual start of the line.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-count_002dscreen_002dlines"><span class="category-def">Function: </span><span><strong class="def-name">count-screen-lines</strong> <var class="def-var-arguments">&amp;optional beg end count-final-newline window</var><a class="copiable-link" href="#index-count_002dscreen_002dlines"> &para;</a></span></dt>
+<dd><p>This function returns the number of screen lines in the text from
+<var class="var">beg</var> to <var class="var">end</var>.  The number of screen lines may be different
+from the number of actual lines, due to line continuation, the display
+table, etc.  If <var class="var">beg</var> and <var class="var">end</var> are <code class="code">nil</code> or omitted,
+they default to the beginning and end of the accessible portion of the
+buffer.
+</p>
+<p>If the region ends with a newline, that is ignored unless the optional
+third argument <var class="var">count-final-newline</var> is non-<code class="code">nil</code>.
+</p>
+<p>The optional fourth argument <var class="var">window</var> specifies the window for
+obtaining parameters such as width, horizontal scrolling, and so on.
+The default is to use the selected window&rsquo;s parameters.
+</p>
+<p>Like <code class="code">vertical-motion</code>, <code class="code">count-screen-lines</code> always uses the
+current buffer, regardless of which buffer is displayed in
+<var class="var">window</var>.  This makes possible to use <code class="code">count-screen-lines</code> in
+any buffer, whether or not it is currently displayed in some window.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-move_002dto_002dwindow_002dline"><span class="category-def">Command: </span><span><strong class="def-name">move-to-window-line</strong> <var class="def-var-arguments">count</var><a class="copiable-link" href="#index-move_002dto_002dwindow_002dline"> &para;</a></span></dt>
+<dd><p>This function moves point with respect to the text currently displayed
+in the selected window.  It moves point to the beginning of the screen
+line <var class="var">count</var> screen lines from the top of the window; zero means
+the topmost line.  If <var class="var">count</var> is negative, that specifies a
+position &minus;<var class="var">count</var><!-- /@w --> lines from the bottom (or the last
+line of the buffer, if the buffer ends above the specified screen
+position); thus, <var class="var">count</var> of &minus;1 specifies the last fully visible
+screen line of the window.
+</p>
+<p>If <var class="var">count</var> is <code class="code">nil</code>, then point moves to the beginning of the
+line in the middle of the window.  If the absolute value of <var class="var">count</var>
+is greater than the size of the window, then point moves to the place
+that would appear on that screen line if the window were tall enough.
+This will probably cause the next redisplay to scroll to bring that
+location onto the screen.
+</p>
+<p>In an interactive call, <var class="var">count</var> is the numeric prefix argument.
+</p>
+<p>The value returned is the screen line number point has moved to,
+relative to the top line of the window.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-move_002dto_002dwindow_002dgroup_002dline_002dfunction"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-move_002dto_002dwindow_002dgroup_002dline"><span class="category-def">Function: </span><span><strong class="def-name">move-to-window-group-line</strong> <var class="def-var-arguments">count</var><a class="copiable-link" href="#index-move_002dto_002dwindow_002dgroup_002dline"> &para;</a></span></dt>
+<dd><p>This function is like <code class="code">move-to-window-line</code>, except that when the
+selected window is a part of a group of windows (see <a class="pxref" href="Windows.html#Window-Group">Window Group</a>), <code class="code">move-to-window-group-line</code> will move to a position with
+respect to the entire group, not just the single window.  This
+condition holds when the buffer local variable
+<code class="code">move-to-window-group-line-function</code> is set to a function.  In
+this case, <code class="code">move-to-window-group-line</code> calls the function with
+the argument <var class="var">count</var>, then returns its result.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-compute_002dmotion"><span class="category-def">Function: </span><span><strong class="def-name">compute-motion</strong> <var class="def-var-arguments">from frompos to topos width offsets window</var><a class="copiable-link" href="#index-compute_002dmotion"> &para;</a></span></dt>
+<dd><p>This function scans the current buffer, calculating screen positions.
+It scans the buffer forward from position <var class="var">from</var>, assuming that is
+at screen coordinates <var class="var">frompos</var>, to position <var class="var">to</var> or coordinates
+<var class="var">topos</var>, whichever comes first.  It returns the ending buffer
+position and screen coordinates.
+</p>
+<p>The coordinate arguments <var class="var">frompos</var> and <var class="var">topos</var> are cons cells of
+the form <code class="code">(<var class="var">hpos</var> . <var class="var">vpos</var>)</code>.
+</p>
+<p>The argument <var class="var">width</var> is the number of columns available to display
+text; this affects handling of continuation lines.  <code class="code">nil</code> means
+the actual number of usable text columns in the window, which is
+equivalent to the value returned by <code class="code">(window-width window)</code>.
+</p>
+<p>The argument <var class="var">offsets</var> is either <code class="code">nil</code> or a cons cell of the
+form <code class="code">(<var class="var">hscroll</var> . <var class="var">tab-offset</var>)</code>.  Here <var class="var">hscroll</var> is
+the number of columns not being displayed at the left margin; most
+callers get this by calling <code class="code">window-hscroll</code>.  Meanwhile,
+<var class="var">tab-offset</var> is the offset between column numbers on the screen and
+column numbers in the buffer.  This can be nonzero in a continuation
+line, when the previous screen lines&rsquo; widths do not add up to a multiple
+of <code class="code">tab-width</code>.  It is always zero in a non-continuation line.
+</p>
+<p>The window <var class="var">window</var> serves only to specify which display table to
+use.  <code class="code">compute-motion</code> always operates on the current buffer,
+regardless of what buffer is displayed in <var class="var">window</var>.
+</p>
+<p>The return value is a list of five elements:
+</p>
+<div class="example">
+<pre class="example-preformatted">(<var class="var">pos</var> <var class="var">hpos</var> <var class="var">vpos</var> <var class="var">prevhpos</var> <var class="var">contin</var>)
+</pre></div>
+
+<p>Here <var class="var">pos</var> is the buffer position where the scan stopped, <var class="var">vpos</var>
+is the vertical screen position, and <var class="var">hpos</var> is the horizontal screen
+position.
+</p>
+<p>The result <var class="var">prevhpos</var> is the horizontal position one character back
+from <var class="var">pos</var>.  The result <var class="var">contin</var> is <code class="code">t</code> if the last line
+was continued after (or within) the previous character.
+</p>
+<p>For example, to find the buffer position of column <var class="var">col</var> of screen line
+<var class="var">line</var> of a certain window, pass the window&rsquo;s display start location
+as <var class="var">from</var> and the window&rsquo;s upper-left coordinates as <var class="var">frompos</var>.
+Pass the buffer&rsquo;s <code class="code">(point-max)</code> as <var class="var">to</var>, to limit the scan to
+the end of the accessible portion of the buffer, and pass <var class="var">line</var> and
+<var class="var">col</var> as <var class="var">topos</var>.  Here&rsquo;s a function that does this:
+</p>
+<div class="example">
+<pre class="example-preformatted">(defun coordinates-of-position (col line)
+  (car (compute-motion (window-start)
+                       '(0 . 0)
+                       (point-max)
+                       (cons col line)
+                       (window-width)
+                       (cons (window-hscroll) 0)
+                       (selected-window))))
+</pre></div>
+
+<p>When you use <code class="code">compute-motion</code> for the minibuffer, you need to use
+<code class="code">minibuffer-prompt-width</code> to get the horizontal position of the
+beginning of the first screen line.  See <a class="xref" href="Minibuffers.html#Minibuffer-Contents">Minibuffer Contents</a>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="List-Motion">
+<div class="nav-panel">
+<p>
+Next: <a href="#Skipping-Characters" accesskey="n" rel="next">Skipping Characters</a>, Previous: <a href="#Screen-Lines" accesskey="p" rel="prev">Motion by Screen Lines</a>, Up: <a href="#Motion" accesskey="u" rel="up">Motion</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Moving-over-Balanced-Expressions"><span>31.2.6 Moving over Balanced Expressions<a class="copiable-link" href="#Moving-over-Balanced-Expressions"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-sexp-motion"></a>
+<a class="index-entry-id" id="index-Lisp-expression-motion"></a>
+<a class="index-entry-id" id="index-list-motion"></a>
+<a class="index-entry-id" id="index-balanced-parenthesis-motion"></a>
+
+<p>Here are several functions concerned with balanced-parenthesis
+expressions (also called <em class="dfn">sexps</em> in connection with moving across
+them in Emacs).  The syntax table controls how these functions interpret
+various characters; see <a class="ref" href="Syntax-Tables.html#Syntax-Tables">Syntax Tables</a>.  See <a class="xref" href="Syntax-Tables.html#Parsing-Expressions">Parsing Expressions</a>, for lower-level primitives for scanning sexps or parts of
+sexps.  For user-level commands, see <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Parentheses.html#Parentheses">Commands for
+Editing with Parentheses</a> in <cite class="cite">The GNU Emacs Manual</cite>.
+</p>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-forward_002dlist"><span class="category-def">Command: </span><span><strong class="def-name">forward-list</strong> <var class="def-var-arguments">&amp;optional arg</var><a class="copiable-link" href="#index-forward_002dlist"> &para;</a></span></dt>
+<dd><p>This function moves forward across <var class="var">arg</var> (default 1) balanced groups of
+parentheses.  (Other syntactic entities such as words or paired string
+quotes are ignored.)
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-backward_002dlist"><span class="category-def">Command: </span><span><strong class="def-name">backward-list</strong> <var class="def-var-arguments">&amp;optional arg</var><a class="copiable-link" href="#index-backward_002dlist"> &para;</a></span></dt>
+<dd><p>This function moves backward across <var class="var">arg</var> (default 1) balanced groups of
+parentheses.  (Other syntactic entities such as words or paired string
+quotes are ignored.)
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-up_002dlist"><span class="category-def">Command: </span><span><strong class="def-name">up-list</strong> <var class="def-var-arguments">&amp;optional arg escape-strings no-syntax-crossing</var><a class="copiable-link" href="#index-up_002dlist"> &para;</a></span></dt>
+<dd><p>This function moves forward out of <var class="var">arg</var> (default 1) levels of
+parentheses.  A negative argument means move backward but still to a
+less deep spot.  If <var class="var">escape-strings</var> is non-<code class="code">nil</code> (as it is
+interactively), move out of enclosing strings as well.  If
+<var class="var">no-syntax-crossing</var> is non-<code class="code">nil</code> (as it is interactively), prefer
+to break out of any enclosing string instead of moving to the start of
+a list broken across multiple strings.  On error, location of point is
+unspecified.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-backward_002dup_002dlist"><span class="category-def">Command: </span><span><strong class="def-name">backward-up-list</strong> <var class="def-var-arguments">&amp;optional arg escape-strings no-syntax-crossing</var><a class="copiable-link" href="#index-backward_002dup_002dlist"> &para;</a></span></dt>
+<dd><p>This function is just like <code class="code">up-list</code>, but with a negated argument.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-down_002dlist"><span class="category-def">Command: </span><span><strong class="def-name">down-list</strong> <var class="def-var-arguments">&amp;optional arg</var><a class="copiable-link" href="#index-down_002dlist"> &para;</a></span></dt>
+<dd><p>This function moves forward into <var class="var">arg</var> (default 1) levels of
+parentheses.  A negative argument means move backward but still go
+deeper in parentheses (&minus;<var class="var">arg</var> levels).
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-forward_002dsexp"><span class="category-def">Command: </span><span><strong class="def-name">forward-sexp</strong> <var class="def-var-arguments">&amp;optional arg</var><a class="copiable-link" href="#index-forward_002dsexp"> &para;</a></span></dt>
+<dd><p>This function moves forward across <var class="var">arg</var> (default 1) balanced expressions.
+Balanced expressions include both those delimited by parentheses and
+other kinds, such as words and string constants.
+See <a class="xref" href="Syntax-Tables.html#Parsing-Expressions">Parsing Expressions</a>.  For example,
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">---------- Buffer: foo ----------
+(concat&lowast; &quot;foo &quot; (car x) y z)
+---------- Buffer: foo ----------
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(forward-sexp 3)
+     &rArr; nil
+
+---------- Buffer: foo ----------
+(concat &quot;foo &quot; (car x) y&lowast; z)
+---------- Buffer: foo ----------
+</pre></div></div>
+
+<a class="index-entry-id" id="index-forward_002dsexp_002dfunction"></a>
+<p><code class="code">forward-sexp</code> calls the function that is the value of the variable
+<code class="code">forward-sexp-function</code>, if that is non-<code class="code">nil</code>, to do the
+actual work, passing it the same arguments as those with which the
+command was called.  Major modes can define their own functions for
+moving over balanced expressions as appropriate for the mode, and set
+this variable to that function.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-backward_002dsexp"><span class="category-def">Command: </span><span><strong class="def-name">backward-sexp</strong> <var class="def-var-arguments">&amp;optional arg</var><a class="copiable-link" href="#index-backward_002dsexp"> &para;</a></span></dt>
+<dd><p>This function moves backward across <var class="var">arg</var> (default 1) balanced expressions.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-beginning_002dof_002ddefun"><span class="category-def">Command: </span><span><strong class="def-name">beginning-of-defun</strong> <var class="def-var-arguments">&amp;optional arg</var><a class="copiable-link" href="#index-beginning_002dof_002ddefun"> &para;</a></span></dt>
+<dd><p>This function moves back to the <var class="var">arg</var>th beginning of a defun.  If
+<var class="var">arg</var> is negative, this actually moves forward, but it still moves
+to the beginning of a defun, not to the end of one.  <var class="var">arg</var> defaults
+to 1.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-end_002dof_002ddefun"><span class="category-def">Command: </span><span><strong class="def-name">end-of-defun</strong> <var class="def-var-arguments">&amp;optional arg</var><a class="copiable-link" href="#index-end_002dof_002ddefun"> &para;</a></span></dt>
+<dd><p>This function moves forward to the <var class="var">arg</var>th end of a defun.  If
+<var class="var">arg</var> is negative, this actually moves backward, but it still moves
+to the end of a defun, not to the beginning of one.  <var class="var">arg</var> defaults
+to 1.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-defun_002dprompt_002dregexp"><span class="category-def">User Option: </span><span><strong class="def-name">defun-prompt-regexp</strong><a class="copiable-link" href="#index-defun_002dprompt_002dregexp"> &para;</a></span></dt>
+<dd><p>If non-<code class="code">nil</code>, this buffer-local variable holds a regular
+expression that specifies what text can appear before the
+open-parenthesis that starts a defun.  That is to say, a defun begins
+on a line that starts with a match for this regular expression,
+followed by a character with open-parenthesis syntax.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-_005c_0028-in-strings"></a>
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-open_002dparen_002din_002dcolumn_002d0_002dis_002ddefun_002dstart"><span class="category-def">User Option: </span><span><strong class="def-name">open-paren-in-column-0-is-defun-start</strong><a class="copiable-link" href="#index-open_002dparen_002din_002dcolumn_002d0_002dis_002ddefun_002dstart"> &para;</a></span></dt>
+<dd><p>If this variable&rsquo;s value is non-<code class="code">nil</code>, an open parenthesis in
+column 0 is considered to be the start of a defun.  If it is
+<code class="code">nil</code>, an open parenthesis in column 0 has no special meaning.
+The default is <code class="code">t</code>.  If a string literal happens to have a
+parenthesis in column 0, escape it with a backslash to avoid a false
+positive.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-beginning_002dof_002ddefun_002dfunction"><span class="category-def">Variable: </span><span><strong class="def-name">beginning-of-defun-function</strong><a class="copiable-link" href="#index-beginning_002dof_002ddefun_002dfunction"> &para;</a></span></dt>
+<dd><p>If non-<code class="code">nil</code>, this variable holds a function for finding the
+beginning of a defun.  The function <code class="code">beginning-of-defun</code>
+calls this function instead of using its normal method, passing it its
+optional argument.  If the argument is non-<code class="code">nil</code>, the function
+should move back by that many functions, like
+<code class="code">beginning-of-defun</code> does.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-end_002dof_002ddefun_002dfunction"><span class="category-def">Variable: </span><span><strong class="def-name">end-of-defun-function</strong><a class="copiable-link" href="#index-end_002dof_002ddefun_002dfunction"> &para;</a></span></dt>
+<dd><p>If non-<code class="code">nil</code>, this variable holds a function for finding the end of
+a defun.  The function <code class="code">end-of-defun</code> calls this function instead
+of using its normal method.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-motion-using-tree_002dsitter"></a>
+<a class="index-entry-id" id="index-navigation-by-defun_002c-using-tree_002dsitter"></a>
+<a class="index-entry-id" id="index-treesit_002dbeginning_002dof_002ddefun"></a>
+<a class="index-entry-id" id="index-treesit_002dend_002dof_002ddefun"></a>
+<p>If Emacs is compiled with tree-sitter, it can use the tree-sitter
+parser information to move across syntax constructs.  Since what
+exactly is considered a defun varies between languages, a major mode
+should set <code class="code">treesit-defun-type-regexp</code> to determine that.  Then
+the mode can get navigation-by-defun functionality for free, by using
+<code class="code">treesit-beginning-of-defun</code> and <code class="code">treesit-end-of-defun</code>.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-treesit_002ddefun_002dtype_002dregexp"><span class="category-def">Variable: </span><span><strong class="def-name">treesit-defun-type-regexp</strong><a class="copiable-link" href="#index-treesit_002ddefun_002dtype_002dregexp"> &para;</a></span></dt>
+<dd><p>This variable determines which nodes are considered defuns by Emacs.
+It can be a regexp that matches the type of defun nodes.  (For
+&ldquo;node&rdquo; and &ldquo;node type&rdquo;, see <a class="pxref" href="Parsing-Program-Source.html#Parsing-Program-Source">Parsing Program Source</a>.)
+</p>
+<p>For example, <code class="code">python-mode</code> sets this variable to a regexp that
+matches either &lsquo;<samp class="samp">function_definition</samp>&rsquo; or &lsquo;<samp class="samp">class_definition</samp>&rsquo;.
+</p>
+<p>Sometimes not all nodes matched by the regexp are valid defuns.
+Therefore, this variable can also be a cons cell of the form
+(<var class="var">regexp</var>&nbsp;.&nbsp;<var class="var">pred</var>)<!-- /@w -->, where <var class="var">pred</var> should be a function
+that takes a node as its argument, and returns non-<code class="code">nil</code> if the
+node is a valid defun, or <code class="code">nil</code> if it is not valid.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-treesit_002ddefun_002dtactic"><span class="category-def">Variable: </span><span><strong class="def-name">treesit-defun-tactic</strong><a class="copiable-link" href="#index-treesit_002ddefun_002dtactic"> &para;</a></span></dt>
+<dd><p>This variable determines how Emacs treats nested defuns.  If the value
+is <code class="code">top-level</code>, navigation functions only move across top-level
+defuns.  If the value is <code class="code">nested</code>, navigation functions recognize
+nested defuns.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-treesit_002dforward_002dsentence"></a>
+<a class="index-entry-id" id="index-forward_002dsentence"></a>
+<a class="index-entry-id" id="index-backward_002dsentence"></a>
+<a class="index-entry-id" id="index-forward_002dsentence_002dfunction"></a>
+<a class="index-entry-id" id="index-sentence_002c-in-program-source-files"></a>
+<a class="index-entry-id" id="index-navigation-by-sentence_002c-using-tree_002dsitter"></a>
+<p>The function that is the value of the variable
+<code class="code">forward-sentence-function</code> determines how to move across syntax
+constructs known as <em class="dfn">sentences</em>.  Major modes can assign their own
+functions to this variable to customize the behavior of
+<code class="code">forward-sentence</code> command.  If Emacs is compiled with tree-sitter,
+it can use the tree-sitter parser information to move across syntax
+constructs.  Since what exactly is considered a sentence varies between
+languages, a major mode should set <code class="code">treesit-thing-settings</code> to
+determine that.  Then <code class="code">forward-sentence-function</code> will be set to
+<code class="code">treesit-forward-sentence</code>, and the mode will get
+navigation-by-sentence functionality for free, by using
+<code class="code">forward-sentence</code> and <code class="code">backward-sentence</code>(see <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Moving-by-Sentences.html#Moving-by-Sentences">Moving by
+Sentences</a> in <cite class="cite">The extensible self-documenting text editor</cite>).
+</p>
+<a class="index-entry-id" id="index-treesit_002dforward_002dsexp"></a>
+<a class="index-entry-id" id="index-forward_002dsexp_002c-and-tree_002dsitter"></a>
+<a class="index-entry-id" id="index-backward_002dsexp_002c-and-tree_002dsitter"></a>
+<p>If Emacs is compiled with tree-sitter, it can use the tree-sitter
+parser information to move across syntax constructs.  Since what
+exactly is considered a sexp varies between languages, a major mode
+should set <code class="code">treesit-thing-settings</code> to determine that.  Then
+<code class="code">forward-sexp-function</code> will be set to <code class="code">treesit-forward-sexp</code>,
+and the mode can get navigation-by-sexp functionality for free, by using
+<code class="code">forward-sexp</code> and <code class="code">backward-sexp</code>(see <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Expressions.html#Expressions">Expressions</a> in <cite class="cite">The extensible self-documenting text editor</cite>).
+</p>
+<hr>
+</div>
+<div class="subsection-level-extent" id="Skipping-Characters">
+<div class="nav-panel">
+<p>
+Previous: <a href="#List-Motion" accesskey="p" rel="prev">Moving over Balanced Expressions</a>, Up: <a href="#Motion" accesskey="u" rel="up">Motion</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Skipping-Characters-1"><span>31.2.7 Skipping Characters<a class="copiable-link" href="#Skipping-Characters-1"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-skipping-characters"></a>
+
+<p>The following two functions move point over a specified set of
+characters.  For example, they are often used to skip whitespace.  For
+related functions, see <a class="ref" href="Syntax-Tables.html#Motion-and-Syntax">Motion and Syntax</a>.
+</p>
+<p>These functions convert the set string to multibyte if the buffer is
+multibyte, and they convert it to unibyte if the buffer is unibyte, as
+the search functions do (see <a class="pxref" href="Searching-and-Matching.html#Searching-and-Matching">Searching and Matching</a>).
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-skip_002dchars_002dforward"><span class="category-def">Function: </span><span><strong class="def-name">skip-chars-forward</strong> <var class="def-var-arguments">character-set &amp;optional limit</var><a class="copiable-link" href="#index-skip_002dchars_002dforward"> &para;</a></span></dt>
+<dd><p>This function moves point in the current buffer forward, skipping over a
+given set of characters.  It examines the character following point,
+then advances point if the character matches <var class="var">character-set</var>.  This
+continues until it reaches a character that does not match.  The
+function returns the number of characters moved over.
+</p>
+<p>The argument <var class="var">character-set</var> is a string, like the inside of a
+&lsquo;<samp class="samp">[&hellip;]</samp>&rsquo; in a regular expression except that &lsquo;<samp class="samp">]</samp>&rsquo; does not
+terminate it, and &lsquo;<samp class="samp">\</samp>&rsquo; quotes &lsquo;<samp class="samp">^</samp>&rsquo;, &lsquo;<samp class="samp">-</samp>&rsquo; or &lsquo;<samp class="samp">\</samp>&rsquo;.
+Thus, <code class="code">&quot;a-zA-Z&quot;</code> skips over all letters, stopping before the
+first nonletter, and <code class="code">&quot;^a-zA-Z&quot;</code> skips nonletters stopping before
+the first letter (see <a class="pxref" href="Searching-and-Matching.html#Regular-Expressions">Regular Expressions</a>).  Character classes
+can also be used, e.g., <code class="code">&quot;[:alnum:]&quot;</code> (see <a class="pxref" href="Searching-and-Matching.html#Char-Classes">Character Classes</a>).
+</p>
+<p>If <var class="var">limit</var> is supplied (it must be a number or a marker), it
+specifies the maximum position in the buffer that point can be skipped
+to.  Point will stop at or before <var class="var">limit</var>.
+</p>
+<p>In the following example, point is initially located directly before the
+&lsquo;<samp class="samp">T</samp>&rsquo;.  After the form is evaluated, point is located at the end of
+that line (between the &lsquo;<samp class="samp">t</samp>&rsquo; of &lsquo;<samp class="samp">hat</samp>&rsquo; and the newline).  The
+function skips all letters and spaces, but not newlines.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">---------- Buffer: foo ----------
+I read &quot;&lowast;The cat in the hat
+comes back&quot; twice.
+---------- Buffer: foo ----------
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(skip-chars-forward &quot;a-zA-Z &quot;)
+     &rArr; 18
+
+---------- Buffer: foo ----------
+I read &quot;The cat in the hat&lowast;
+comes back&quot; twice.
+---------- Buffer: foo ----------
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-skip_002dchars_002dbackward"><span class="category-def">Function: </span><span><strong class="def-name">skip-chars-backward</strong> <var class="def-var-arguments">character-set &amp;optional limit</var><a class="copiable-link" href="#index-skip_002dchars_002dbackward"> &para;</a></span></dt>
+<dd><p>This function moves point backward, skipping characters that match
+<var class="var">character-set</var>, until <var class="var">limit</var>.  It is just like
+<code class="code">skip-chars-forward</code> except for the direction of motion.
+</p>
+<p>The return value indicates the distance traveled.  It is an integer that
+is zero or less.
+</p></dd></dl>
+
+<hr>
+</div>
+</div>
+<div class="section-level-extent" id="Excursions">
+<div class="nav-panel">
+<p>
+Next: <a href="#Narrowing" accesskey="n" rel="next">Narrowing</a>, Previous: <a href="#Motion" accesskey="p" rel="prev">Motion</a>, Up: <a href="#Positions" accesskey="u" rel="up">Positions</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Excursions-1"><span>31.3 Excursions<a class="copiable-link" href="#Excursions-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-excursion"></a>
+
+<p>It is often useful to move point temporarily within a localized
+portion of the program.  This is called an <em class="dfn">excursion</em>, and it is
+done with the <code class="code">save-excursion</code> special form.  This construct
+remembers the initial identity of the current buffer, and its value
+of point, and restores them after the excursion
+completes.  It is the standard way to move point within one part of a
+program and avoid affecting the rest of the program, and is used
+thousands of times in the Lisp sources of Emacs.
+</p>
+<p>If you only need to save and restore the identity of the current
+buffer, use <code class="code">save-current-buffer</code> or <code class="code">with-current-buffer</code>
+instead (see <a class="pxref" href="Buffers.html#Current-Buffer">The Current Buffer</a>).  If you need to save or restore
+window configurations, see the forms described in <a class="ref" href="Windows.html#Window-Configurations">Window Configurations</a> and in <a class="ref" href="Frames.html#Frame-Configurations">Frame Configurations</a>. </p>
+<dl class="first-deffn first-defspec-alias-first-deffn def-block">
+<dt class="deffn defspec-alias-deffn def-line" id="index-save_002dexcursion"><span class="category-def">Special Form: </span><span><strong class="def-name">save-excursion</strong> <var class="def-var-arguments">body&hellip;</var><a class="copiable-link" href="#index-save_002dexcursion"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-point-excursion"></a>
+<p>This special form saves the identity of the current buffer and the
+value of point in it, evaluates <var class="var">body</var>, and finally
+restores the buffer and its saved value of point.  Both saved values are
+restored even in case of an abnormal exit via
+<code class="code">throw</code> or error (see <a class="pxref" href="Control-Structures.html#Nonlocal-Exits">Nonlocal Exits</a>).
+</p>
+<p>The value returned by <code class="code">save-excursion</code> is the result of the last
+form in <var class="var">body</var>, or <code class="code">nil</code> if no body forms were given.
+</p></dd></dl>
+
+<p>Because <code class="code">save-excursion</code> only saves point for the
+buffer that was current at the start of the excursion, any changes
+made to point in other buffers, during the excursion, will
+remain in effect afterward.  This frequently leads to unintended
+consequences, so the byte compiler warns if you call <code class="code">set-buffer</code>
+during an excursion:
+</p>
+<div class="example">
+<pre class="example-preformatted">Warning: Use ‘with-current-buffer’ rather than
+         save-excursion+set-buffer
+</pre></div>
+
+<p>To avoid such problems, you should call <code class="code">save-excursion</code> only
+after setting the desired current buffer, as in the following example:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(defun append-string-to-buffer (string buffer)
+  &quot;Append STRING to the end of BUFFER.&quot;
+  (with-current-buffer buffer
+    (save-excursion
+      (goto-char (point-max))
+      (insert string))))
+</pre></div></div>
+
+<a class="index-entry-id" id="index-window-excursions"></a>
+<p>Likewise, <code class="code">save-excursion</code> does not restore window-buffer
+correspondences altered by functions such as <code class="code">switch-to-buffer</code>.
+</p>
+<p><strong class="strong">Warning:</strong> Ordinary insertion of text adjacent to the saved
+point value relocates the saved value, just as it relocates all
+markers.  More precisely, the saved value is a marker with insertion
+type <code class="code">nil</code>.  See <a class="xref" href="Markers.html#Marker-Insertion-Types">Marker Insertion Types</a>.  Therefore, when the
+saved point value is restored, it normally comes before the inserted
+text.
+</p>
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-save_002dmark_002dand_002dexcursion"><span class="category-def">Macro: </span><span><strong class="def-name">save-mark-and-excursion</strong> <var class="def-var-arguments">body&hellip;</var><a class="copiable-link" href="#index-save_002dmark_002dand_002dexcursion"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-mark-excursion"></a>
+<a class="index-entry-id" id="index-point-excursion-1"></a>
+<p>This macro is like <code class="code">save-excursion</code>, but also saves and restores
+the mark location and <code class="code">mark-active</code>.  This macro does what
+<code class="code">save-excursion</code> did before Emacs 25.1.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Narrowing">
+<div class="nav-panel">
+<p>
+Previous: <a href="#Excursions" accesskey="p" rel="prev">Excursions</a>, Up: <a href="#Positions" accesskey="u" rel="up">Positions</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Narrowing-1"><span>31.4 Narrowing<a class="copiable-link" href="#Narrowing-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-narrowing"></a>
+<a class="index-entry-id" id="index-restriction-_0028in-a-buffer_0029"></a>
+<a class="index-entry-id" id="index-accessible-portion-_0028of-a-buffer_0029"></a>
+
+<p><em class="dfn">Narrowing</em> means limiting the text addressable by Emacs editing
+commands to a limited range of characters in a buffer.  The text that
+remains addressable is called the <em class="dfn">accessible portion</em> of the
+buffer.
+</p>
+<p>Narrowing is specified with two buffer positions, which become the
+beginning and end of the accessible portion.  For most editing
+commands and primitives, these positions replace the values of the
+beginning and end of the buffer.  While narrowing is in effect, no
+text outside the accessible portion is displayed, and point cannot
+move outside the accessible portion.  Note that narrowing does not
+alter actual buffer positions (see <a class="pxref" href="#Point">Point</a>); it only determines
+which positions are considered the accessible portion of the buffer.
+Most functions refuse to operate on text that is outside the
+accessible portion.
+</p>
+<p>Commands for saving buffers are unaffected by narrowing; they save
+the entire buffer regardless of any narrowing.
+</p>
+<p>If you need to display in a single buffer several very different
+types of text, consider using an alternative facility described in
+<a class="ref" href="Buffers.html#Swapping-Text">Swapping Text Between Two Buffers</a>.
+</p>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-narrow_002dto_002dregion"><span class="category-def">Command: </span><span><strong class="def-name">narrow-to-region</strong> <var class="def-var-arguments">start end</var><a class="copiable-link" href="#index-narrow_002dto_002dregion"> &para;</a></span></dt>
+<dd><p>This function sets the accessible portion of the current buffer to start
+at <var class="var">start</var> and end at <var class="var">end</var>.  Both arguments should be character
+positions.
+</p>
+<p>In an interactive call, <var class="var">start</var> and <var class="var">end</var> are set to the bounds
+of the current region (point and the mark, with the smallest first).
+</p>
+<p>However, when the narrowing has been set by <code class="code">with-restriction</code> with
+a label argument (see below), <code class="code">narrow-to-region</code> can be used only
+within the limits of that narrowing.  If <var class="var">start</var> or <var class="var">end</var> are
+outside these limits, the corresponding limit set by
+<code class="code">with-restriction</code> is used instead.  To gain access to other
+portions of the buffer, use <code class="code">without-restriction</code> with the same
+label.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-narrow_002dto_002dpage"><span class="category-def">Command: </span><span><strong class="def-name">narrow-to-page</strong> <var class="def-var-arguments">&amp;optional move-count</var><a class="copiable-link" href="#index-narrow_002dto_002dpage"> &para;</a></span></dt>
+<dd><p>This function sets the accessible portion of the current buffer to
+include just the current page.  An optional first argument
+<var class="var">move-count</var> non-<code class="code">nil</code> means to move forward or backward by
+<var class="var">move-count</var> pages and then narrow to one page.  The variable
+<code class="code">page-delimiter</code> specifies where pages start and end
+(see <a class="pxref" href="Searching-and-Matching.html#Standard-Regexps">Standard Regular Expressions Used in Editing</a>).
+</p>
+<p>In an interactive call, <var class="var">move-count</var> is set to the numeric prefix
+argument.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-widen"><span class="category-def">Command: </span><span><strong class="def-name">widen</strong><a class="copiable-link" href="#index-widen"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-widening"></a>
+<p>This function cancels any narrowing in the current buffer, so that the
+entire contents are accessible.  This is called <em class="dfn">widening</em>.
+It is equivalent to the following expression:
+</p>
+<div class="example">
+<pre class="example-preformatted">(narrow-to-region 1 (1+ (buffer-size)))
+</pre></div>
+
+<p>However, when a narrowing has been set by <code class="code">with-restriction</code> with a
+label argument (see below), the limits set by <code class="code">with-restriction</code>
+are restored, instead of canceling the narrowing.  To gain access to
+other portions of the buffer, use <code class="code">without-restriction</code> with the
+same label.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-buffer_002dnarrowed_002dp"><span class="category-def">Function: </span><span><strong class="def-name">buffer-narrowed-p</strong><a class="copiable-link" href="#index-buffer_002dnarrowed_002dp"> &para;</a></span></dt>
+<dd><p>This function returns non-<code class="code">nil</code> if the buffer is narrowed, and
+<code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<dl class="first-deffn first-defspec-alias-first-deffn def-block">
+<dt class="deffn defspec-alias-deffn def-line" id="index-save_002drestriction"><span class="category-def">Special Form: </span><span><strong class="def-name">save-restriction</strong> <var class="def-var-arguments">body&hellip;</var><a class="copiable-link" href="#index-save_002drestriction"> &para;</a></span></dt>
+<dd><p>This special form saves the current bounds of the accessible portion,
+evaluates the <var class="var">body</var> forms, and finally restores the saved bounds,
+thus restoring the same state of narrowing (or absence thereof) formerly
+in effect.  The state of narrowing is restored even in the event of an
+abnormal exit via <code class="code">throw</code> or error (see <a class="pxref" href="Control-Structures.html#Nonlocal-Exits">Nonlocal Exits</a>).
+Therefore, this construct is a clean way to narrow a buffer temporarily.
+</p>
+<p>This construct also saves and restores the narrowings that were set by
+<code class="code">with-restriction</code> with a label argument (see below).
+</p>
+<p>The value returned by <code class="code">save-restriction</code> is that returned by the
+last form in <var class="var">body</var>, or <code class="code">nil</code> if no body forms were given.
+</p>
+<p><strong class="strong">Caution:</strong> it is easy to make a mistake when using the
+<code class="code">save-restriction</code> construct.  Read the entire description here
+before you try it.
+</p>
+<p>If <var class="var">body</var> changes the current buffer, <code class="code">save-restriction</code> still
+restores the restrictions on the original buffer (the buffer whose
+restrictions it saved from), but it does not restore the identity of the
+current buffer.
+</p>
+<p><code class="code">save-restriction</code> does <em class="emph">not</em> restore point; use
+<code class="code">save-excursion</code> for that.  If you use both <code class="code">save-restriction</code>
+and <code class="code">save-excursion</code> together, <code class="code">save-excursion</code> should come
+first (on the outside).  Otherwise, the old point value would be
+restored with temporary narrowing still in effect.  If the old point
+value were outside the limits of the temporary narrowing, this would
+fail to restore it accurately.
+</p>
+<p>Here is a simple example of correct use of <code class="code">save-restriction</code>:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">---------- Buffer: foo ----------
+This is the contents of foo
+This is the contents of foo
+This is the contents of foo&lowast;
+---------- Buffer: foo ----------
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(save-excursion
+  (save-restriction
+    (goto-char 1)
+    (forward-line 2)
+    (narrow-to-region 1 (point))
+    (goto-char (point-min))
+    (replace-string &quot;foo&quot; &quot;bar&quot;)))
+
+---------- Buffer: foo ----------
+This is the contents of bar
+This is the contents of bar
+This is the contents of foo&lowast;
+---------- Buffer: foo ----------
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defspec-alias-first-deffn def-block">
+<dt class="deffn defspec-alias-deffn def-line" id="index-with_002drestriction"><span class="category-def">Special Form: </span><span><strong class="def-name">with-restriction</strong> <var class="def-var-arguments">start end [:label label] body</var><a class="copiable-link" href="#index-with_002drestriction"> &para;</a></span></dt>
+<dd><p>This special form saves the current bounds of the accessible portion
+of the buffer, sets the accessible portion to start at <var class="var">start</var> and
+end at <var class="var">end</var>, evaluates the <var class="var">body</var> forms, and restores the
+saved bounds.  In that case it is equivalent to
+</p>
+<div class="example">
+<pre class="example-preformatted">(save-restriction
+  (narrow-to-region start end)
+  body)
+</pre></div>
+
+<a class="index-entry-id" id="index-labeled-narrowing"></a>
+<a class="index-entry-id" id="index-labeled-restriction"></a>
+<p>When the optional argument <var class="var">label</var>, which is evaluated to get the
+label to use and must yield a non-<code class="code">nil</code> value, is present, the
+narrowing is <em class="dfn">labeled</em>.  A labeled narrowing differs from a
+non-labeled one in several ways:
+</p>
+<ul class="itemize mark-bullet">
+<li>During the evaluation of the <var class="var">body</var> form, <code class="code">narrow-to-region</code>
+and <code class="code">widen</code> can be used only within the <var class="var">start</var> and <var class="var">end</var>
+limits.
+
+</li><li>To lift the restriction introduced by <code class="code">with-restriction</code> and gain
+access to other portions of the buffer, use <code class="code">without-restriction</code>
+with the same <var class="var">label</var> argument.  (Another way to gain access to
+other portions of the buffer is to use an indirect buffer
+(see <a class="pxref" href="Buffers.html#Indirect-Buffers">Indirect Buffers</a>).)
+
+</li><li>Labeled narrowings can be nested.
+
+</li><li>Labeled narrowings can only be used in Lisp programs: they are never
+visible on display, and never interfere with narrowings set by the
+user.
+</li></ul>
+
+<p>If you use <code class="code">with-restriction</code> with the optional <var class="var">label</var>
+argument, we recommend documenting the <var class="var">label</var> in the doc strings
+of the functions which use it, so that other Lisp programs your code
+calls could lift the labeled narrowing if and when it needs.
+</p></dd></dl>
+
+<dl class="first-deffn first-defspec-alias-first-deffn def-block">
+<dt class="deffn defspec-alias-deffn def-line" id="index-without_002drestriction"><span class="category-def">Special Form: </span><span><strong class="def-name">without-restriction</strong> <var class="def-var-arguments">[:label label] body</var><a class="copiable-link" href="#index-without_002drestriction"> &para;</a></span></dt>
+<dd><p>This special form saves the current bounds of the accessible portion
+of the buffer, widens the buffer, evaluates the <var class="var">body</var> forms, and
+restores the saved bounds.  In that case it is equivalent to
+</p>
+<div class="example">
+<pre class="example-preformatted">(save-restriction
+  (widen)
+  body)
+</pre></div>
+
+<p>When the optional argument <var class="var">label</var> is present, the narrowing set
+by <code class="code">with-restriction</code> with the same <var class="var">label</var> argument is
+lifted.
+</p></dd></dl>
+</div>
+</div>
+<hr>
+<div class="nav-panel">
+<p>
+Next: <a href="Markers.html#Markers" accesskey="n" rel="next">Markers</a>, Previous: <a href="Frames.html#Frames" accesskey="p" rel="prev">Frames</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

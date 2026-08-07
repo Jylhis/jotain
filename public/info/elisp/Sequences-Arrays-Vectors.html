@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.0.91.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Sequences Arrays Vectors (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Sequences Arrays Vectors (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Sequences Arrays Vectors (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Records.html#Records" rel="next" title="Records">
+<link href="Lists.html#Lists" rel="prev" title="Lists">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+span.r {font-family: initial; font-weight: normal; font-style: normal}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
+ul.mark-bullet {list-style-type: disc}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Sequences-Arrays-Vectors">
+<div class="nav-panel">
+<p>
+Next: <a href="Records.html#Records" accesskey="n" rel="next">Records</a>, Previous: <a href="Lists.html#Lists" accesskey="p" rel="prev">Lists</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h2 class="chapter" id="Sequences_002c-Arrays_002c-and-Vectors"><span>6 Sequences, Arrays, and Vectors<a class="copiable-link" href="#Sequences_002c-Arrays_002c-and-Vectors"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-sequence"></a>
+
+<p>The <em class="dfn">sequence</em> type is the union of two other Lisp types: lists
+and arrays.  In other words, any list is a sequence, and any array is
+a sequence.  The common property that all sequences have is that each
+is an ordered collection of elements.
+</p>
+<p>An <em class="dfn">array</em> is a fixed-length object with a slot for each of its
+elements.  All the elements are accessible in constant time.  The four
+types of arrays are strings, vectors, char-tables and bool-vectors.
+</p>
+<p>A list is a sequence of elements, but it is not a single primitive
+object; it is made of cons cells, one cell per element.  Finding the
+<var class="var">n</var>th element requires looking through <var class="var">n</var> cons cells, so
+elements farther from the beginning of the list take longer to access.
+But it is possible to add elements to the list, or remove elements.
+</p>
+<p>The following diagram shows the relationship between these types:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">          _____________________________________________
+         |                                             |
+         |          Sequence                           |
+         |  ______   ________________________________  |
+         | |      | |                                | |
+         | | List | |             Array              | |
+         | |      | |    ________       ________     | |
+         | |______| |   |        |     |        |    | |
+         |          |   | Vector |     | String |    | |
+         |          |   |________|     |________|    | |
+         |          |  ____________   _____________  | |
+         |          | |            | |             | | |
+         |          | | Char-table | | Bool-vector | | |
+         |          | |____________| |_____________| | |
+         |          |________________________________| |
+         |_____________________________________________|
+</pre></div></div>
+
+
+<ul class="mini-toc">
+<li><a href="#Sequence-Functions" accesskey="1">Sequences</a></li>
+<li><a href="#Arrays" accesskey="2">Arrays</a></li>
+<li><a href="#Array-Functions" accesskey="3">Functions that Operate on Arrays</a></li>
+<li><a href="#Vectors" accesskey="4">Vectors</a></li>
+<li><a href="#Vector-Functions" accesskey="5">Functions for Vectors</a></li>
+<li><a href="#Char_002dTables" accesskey="6">Char-Tables</a></li>
+<li><a href="#Bool_002dVectors" accesskey="7">Bool-vectors</a></li>
+<li><a href="#Rings" accesskey="8">Managing a Fixed-Size Ring of Objects</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Sequence-Functions">
+<div class="nav-panel">
+<p>
+Next: <a href="#Arrays" accesskey="n" rel="next">Arrays</a>, Up: <a href="#Sequences-Arrays-Vectors" accesskey="u" rel="up">Sequences, Arrays, and Vectors</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Sequences"><span>6.1 Sequences<a class="copiable-link" href="#Sequences"> &para;</a></span></h3>
+
+<p>This section describes functions that accept any kind of sequence.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-sequencep"><span class="category-def">Function: </span><span><strong class="def-name">sequencep</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-sequencep"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is a list, vector,
+string, bool-vector, or char-table, <code class="code">nil</code> otherwise.  See also
+<code class="code">seqp</code> below.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-length"><span class="category-def">Function: </span><span><strong class="def-name">length</strong> <var class="def-var-arguments">sequence</var><a class="copiable-link" href="#index-length"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-string-length"></a>
+<a class="index-entry-id" id="index-list-length"></a>
+<a class="index-entry-id" id="index-vector-length"></a>
+<a class="index-entry-id" id="index-sequence-length"></a>
+<a class="index-entry-id" id="index-bool_002dvector-length"></a>
+<a class="index-entry-id" id="index-char_002dtable-length"></a>
+<a class="anchor" id="Definition-of-length"></a><p>This function returns the number of elements in <var class="var">sequence</var>.  The
+function signals the <code class="code">wrong-type-argument</code> error if the argument
+is not a sequence or is a dotted list; it signals the
+<code class="code">circular-list</code> error if the argument is a circular list.  For a
+char-table, the value returned is always one more than the maximum
+Emacs character code.
+</p>
+<p>See <a class="xref" href="Lists.html#Definition-of-safe_002dlength">Definition of safe-length</a>, for the related function <code class="code">safe-length</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(length '(1 2 3))
+    &rArr; 3
+</pre></div><div class="group"><pre class="example-preformatted">(length ())
+    &rArr; 0
+</pre></div><div class="group"><pre class="example-preformatted">(length &quot;foobar&quot;)
+    &rArr; 6
+</pre></div><div class="group"><pre class="example-preformatted">(length [1 2 3])
+    &rArr; 3
+</pre></div><div class="group"><pre class="example-preformatted">(length (make-bool-vector 5 nil))
+    &rArr; 5
+</pre></div></div>
+</dd></dl>
+
+<p>See also <code class="code">string-bytes</code>, in <a class="ref" href="Non_002dASCII-Characters.html#Text-Representations">Text Representations</a>.
+</p>
+<p>If you need to compute the width of a string on display, you should use
+<code class="code">string-width</code> (see <a class="pxref" href="Display.html#Size-of-Displayed-Text">Size of Displayed Text</a>), not <code class="code">length</code>,
+since <code class="code">length</code> only counts the number of characters, but does not
+account for the display width of each character.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-length_003c"><span class="category-def">Function: </span><span><strong class="def-name">length&lt;</strong> <var class="def-var-arguments">sequence length</var><a class="copiable-link" href="#index-length_003c"> &para;</a></span></dt>
+<dd><p>Return non-<code class="code">nil</code> if <var class="var">sequence</var> is shorter than <var class="var">length</var>.
+This may be more efficient than computing the length of <var class="var">sequence</var>
+if <var class="var">sequence</var> is a long list.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-length_003e"><span class="category-def">Function: </span><span><strong class="def-name">length&gt;</strong> <var class="def-var-arguments">sequence length</var><a class="copiable-link" href="#index-length_003e"> &para;</a></span></dt>
+<dd><p>Return non-<code class="code">nil</code> if <var class="var">sequence</var> is longer than <var class="var">length</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-length_003d"><span class="category-def">Function: </span><span><strong class="def-name">length=</strong> <var class="def-var-arguments">sequence length</var><a class="copiable-link" href="#index-length_003d"> &para;</a></span></dt>
+<dd><p>Return non-<code class="code">nil</code> if the length of <var class="var">sequence</var> is equal to
+<var class="var">length</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-elt"><span class="category-def">Function: </span><span><strong class="def-name">elt</strong> <var class="def-var-arguments">sequence index</var><a class="copiable-link" href="#index-elt"> &para;</a></span></dt>
+<dd><a class="anchor" id="Definition-of-elt"></a><a class="index-entry-id" id="index-elements-of-sequences"></a>
+<p>This function returns the element of <var class="var">sequence</var> indexed by
+<var class="var">index</var>.  Legitimate values of <var class="var">index</var> are integers ranging
+from 0 up to one less than the length of <var class="var">sequence</var>.  If
+<var class="var">sequence</var> is a list, out-of-range values behave as for
+<code class="code">nth</code>.  See <a class="xref" href="Lists.html#Definition-of-nth">Definition of nth</a>.  Otherwise, out-of-range values
+trigger an <code class="code">args-out-of-range</code> error.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(elt [1 2 3 4] 2)
+     &rArr; 3
+</pre></div><div class="group"><pre class="example-preformatted">(elt '(1 2 3 4) 2)
+     &rArr; 3
+</pre></div><div class="group"><pre class="example-preformatted">;; <span class="r">We use <code class="code">string</code> to show clearly which character <code class="code">elt</code> returns.</span>
+(string (elt &quot;1234&quot; 2))
+     &rArr; &quot;3&quot;
+</pre></div><div class="group"><pre class="example-preformatted">(elt [1 2 3 4] 4)
+     error&rarr; Args out of range: [1 2 3 4], 4
+</pre></div><div class="group"><pre class="example-preformatted">(elt [1 2 3 4] -1)
+     error&rarr; Args out of range: [1 2 3 4], -1
+</pre></div></div>
+
+<p>This function generalizes <code class="code">aref</code> (see <a class="pxref" href="#Array-Functions">Functions that Operate on Arrays</a>) and
+<code class="code">nth</code> (see <a class="pxref" href="Lists.html#Definition-of-nth">Definition of nth</a>).
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-copy_002dsequence"><span class="category-def">Function: </span><span><strong class="def-name">copy-sequence</strong> <var class="def-var-arguments">seqr</var><a class="copiable-link" href="#index-copy_002dsequence"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-copying-sequences"></a>
+<p>This function returns a copy of <var class="var">seqr</var>, which should be either a
+sequence or a record.  The copy is the same type of object as the
+original, and it has the same elements in the same order.  However, if
+<var class="var">seqr</var> is empty, like a string or a vector of zero length, the
+value returned by this function might not be a copy, but an empty
+object of the same type and identical to <var class="var">seqr</var>.
+</p>
+<p>Storing a new element into the copy does not affect the original
+<var class="var">seqr</var>, and vice versa.  However, the elements of the copy
+are not copies; they are identical (<code class="code">eq</code>) to the elements
+of the original.  Therefore, changes made within these elements, as
+found via the copy, are also visible in the original.
+</p>
+<p>If the argument is a string with text properties, the property list in
+the copy is itself a copy, not shared with the original&rsquo;s property
+list.  However, the actual values of the properties are shared.
+See <a class="xref" href="Text.html#Text-Properties">Text Properties</a>.
+</p>
+<p>This function does not work for dotted lists.  Trying to copy a
+circular list may cause an infinite loop.
+</p>
+<p>See also <code class="code">append</code> in <a class="ref" href="Lists.html#Building-Lists">Building Cons Cells and Lists</a>, <code class="code">concat</code> in
+<a class="ref" href="Strings-and-Characters.html#Creating-Strings">Creating Strings</a>, and <code class="code">vconcat</code> in <a class="ref" href="#Vector-Functions">Functions for Vectors</a>,
+for other ways to copy sequences.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq bar (list 1 2))
+     &rArr; (1 2)
+</pre></div><div class="group"><pre class="example-preformatted">(setq x (vector 'foo bar))
+     &rArr; [foo (1 2)]
+</pre></div><div class="group"><pre class="example-preformatted">(setq y (copy-sequence x))
+     &rArr; [foo (1 2)]
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(eq x y)
+     &rArr; nil
+</pre></div><div class="group"><pre class="example-preformatted">(equal x y)
+     &rArr; t
+</pre></div><div class="group"><pre class="example-preformatted">(eq (elt x 1) (elt y 1))
+     &rArr; t
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; <span class="r">Replacing an element of one sequence.</span>
+(aset x 0 'quux)
+x &rArr; [quux (1 2)]
+y &rArr; [foo (1 2)]
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; <span class="r">Modifying the inside of a shared element.</span>
+(setcar (aref x 1) 69)
+x &rArr; [quux (69 2)]
+y &rArr; [foo (69 2)]
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-reverse"><span class="category-def">Function: </span><span><strong class="def-name">reverse</strong> <var class="def-var-arguments">sequence</var><a class="copiable-link" href="#index-reverse"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-string-reverse"></a>
+<a class="index-entry-id" id="index-list-reverse"></a>
+<a class="index-entry-id" id="index-vector-reverse"></a>
+<a class="index-entry-id" id="index-sequence-reverse"></a>
+<p>This function creates a new sequence whose elements are the elements
+of <var class="var">sequence</var>, but in reverse order.  The original argument <var class="var">sequence</var>
+is <em class="emph">not</em> altered.  Note that char-tables cannot be reversed.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq x '(1 2 3 4))
+     &rArr; (1 2 3 4)
+</pre></div><div class="group"><pre class="example-preformatted">(reverse x)
+     &rArr; (4 3 2 1)
+x
+     &rArr; (1 2 3 4)
+</pre></div><div class="group"><pre class="example-preformatted">(setq x [1 2 3 4])
+     &rArr; [1 2 3 4]
+</pre></div><div class="group"><pre class="example-preformatted">(reverse x)
+     &rArr; [4 3 2 1]
+x
+     &rArr; [1 2 3 4]
+</pre></div><div class="group"><pre class="example-preformatted">(setq x &quot;xyzzy&quot;)
+     &rArr; &quot;xyzzy&quot;
+</pre></div><div class="group"><pre class="example-preformatted">(reverse x)
+     &rArr; &quot;yzzyx&quot;
+x
+     &rArr; &quot;xyzzy&quot;
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-nreverse"><span class="category-def">Function: </span><span><strong class="def-name">nreverse</strong> <var class="def-var-arguments">sequence</var><a class="copiable-link" href="#index-nreverse"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-reversing-a-string"></a>
+<a class="index-entry-id" id="index-reversing-a-list"></a>
+<a class="index-entry-id" id="index-reversing-a-vector"></a>
+<p>This function reverses the order of the elements of <var class="var">sequence</var>.
+Unlike <code class="code">reverse</code> the original <var class="var">sequence</var> may be modified.
+</p>
+<p>For example:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq x (list 'a 'b 'c))
+     &rArr; (a b c)
+</pre></div><div class="group"><pre class="example-preformatted">x
+     &rArr; (a b c)
+(nreverse x)
+     &rArr; (c b a)
+</pre></div><div class="group"><pre class="example-preformatted">;; <span class="r">The cons cell that was first is now last.</span>
+x
+     &rArr; (a)
+</pre></div></div>
+
+<p>To avoid confusion, we usually store the result of <code class="code">nreverse</code>
+back in the same variable which held the original list:
+</p>
+<div class="example">
+<pre class="example-preformatted">(setq x (nreverse x))
+</pre></div>
+
+<p>Here is the <code class="code">nreverse</code> of our favorite example, <code class="code">(a b c)</code>,
+presented graphically:
+</p>
+<div class="example smallexample">
+<div class="group"><pre class="example-preformatted"><span class="r">Original list head:</span>                       <span class="r">Reversed list:</span>
+ -------------        -------------        ------------
+| car  | cdr  |      | car  | cdr  |      | car | cdr  |
+|   a  |  nil |&lt;--   |   b  |   o  |&lt;--   |   c |   o  |
+|      |      |   |  |      |   |  |   |  |     |   |  |
+ -------------    |   --------- | -    |   -------- | -
+                  |             |      |            |
+                   -------------        ------------
+</pre></div></div>
+
+<p>For the vector, it is even simpler because you don&rsquo;t need setq:
+</p>
+<div class="example">
+<pre class="example-preformatted">(setq x (copy-sequence [1 2 3 4]))
+     &rArr; [1 2 3 4]
+(nreverse x)
+     &rArr; [4 3 2 1]
+x
+     &rArr; [4 3 2 1]
+</pre></div>
+
+<p>Note that unlike <code class="code">reverse</code>, this function doesn&rsquo;t work with strings.
+Although you can alter string data by using <code class="code">aset</code>, it is strongly
+encouraged to treat strings as immutable even when they are mutable.
+See <a class="xref" href="Lisp-Data-Types.html#Mutability">Mutability</a>.
+</p>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-sort"><span class="category-def">Function: </span><span><strong class="def-name">sort</strong> <var class="def-var-arguments">sequence &amp;rest keyword-args</var><a class="copiable-link" href="#index-sort"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-stable-sort"></a>
+<a class="index-entry-id" id="index-sorting-lists"></a>
+<a class="index-entry-id" id="index-sorting-vectors"></a>
+<p>This function sorts <var class="var">sequence</var>, which must be a list or vector, and
+returns a sorted sequence of the same type.
+The sort is stable, which means that elements with equal sort keys maintain
+their relative order.  It takes the following optional keyword arguments:
+</p>
+<dl class="table">
+<dt><code class="code">:key <var class="var">keyfunc</var></code></dt>
+<dd><p>Use <var class="var">keyfunc</var>, a function that takes a single element from
+<var class="var">sequence</var> and returns its key value, to generate the keys used in
+comparison.  If this argument is absent or if <var class="var">keyfunc</var> is
+<code class="code">nil</code> then <code class="code">identity</code> is assumed; that is, the elements
+themselves are used as sorting keys.
+</p>
+</dd>
+<dt><code class="code">:lessp <var class="var">predicate</var></code></dt>
+<dd><p>Use <var class="var">predicate</var> to order the keys.  <var class="var">predicate</var> is a function
+that takes two sort keys as arguments and returns non-<code class="code">nil</code> if the
+first should come before the second.  If this argument is absent or
+<var class="var">predicate</var> is <code class="code">nil</code>, then <code class="code">value&lt;</code> is used, which
+is applicable to many different Lisp types and generally sorts in
+ascending order (see <a class="pxref" href="#definition-of-value_003c">definition of value&lt;</a>, below).
+</p>
+<p>For consistency, any predicate must obey the following rules:
+</p><ul class="itemize mark-bullet">
+<li>It must be <em class="dfn">antisymmetric</em>: it cannot both order <var class="var">a</var> before
+<var class="var">b</var> and <var class="var">b</var> before <var class="var">a</var>.
+</li><li>It must be <em class="dfn">transitive</em>: if it orders <var class="var">a</var> before <var class="var">b</var> and
+<var class="var">b</var> before <var class="var">c</var>, then it must also order <var class="var">a</var> before <var class="var">c</var>.
+</li></ul>
+
+</dd>
+<dt><code class="code">:reverse <var class="var">flag</var></code></dt>
+<dd><p>If <var class="var">flag</var> is non-<code class="code">nil</code>, the sorting order is reversed.  With
+the default <code class="code">:lessp</code> predicate this means sorting in descending order.
+</p>
+</dd>
+<dt><code class="code">:in-place <var class="var">flag</var></code></dt>
+<dd><p>If <var class="var">flag</var> is non-<code class="code">nil</code>, then <var class="var">sequence</var> is sorted in-place
+(destructively) and returned.  If <code class="code">nil</code>, or if this argument is not
+given, a sorted copy of the input is returned and <var class="var">sequence</var> itself
+remains unmodified.  In-place sorting is slightly faster, but the
+original sequence is lost.
+</p></dd>
+</dl>
+
+<p>If the default behavior is not suitable for your needs, it is usually
+easier and faster to supply a new <code class="code">:key</code> function than a different
+<code class="code">:lessp</code> predicate.  For example, consider sorting these strings:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq numbers '(&quot;one&quot; &quot;two&quot; &quot;three&quot; &quot;four&quot; &quot;five&quot; &quot;six&quot;))
+(sort numbers)
+     &rArr; (&quot;five&quot; &quot;four&quot; &quot;one&quot; &quot;six&quot; &quot;three&quot; &quot;two&quot;)
+</pre></div></div>
+
+<p>You can sort the strings by length instead by supplying a different key
+function:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(sort numbers :key #'length)
+     &rArr; (&quot;one&quot; &quot;two&quot; &quot;six&quot; &quot;four&quot; &quot;five&quot; &quot;three&quot;)
+</pre></div></div>
+
+<p>Note how strings of the same length keep their original order, thanks to
+the sorting stability.  Now suppose you want to sort by length, but use
+the string contents to break ties.  The easiest way is to specify a key
+function that transforms an element to a value that is sorted this way.
+Since <code class="code">value&lt;</code> orders compound objects (conses, lists,
+vectors and records) lexicographically, you could do:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(sort numbers :key (lambda (x) (cons (length x) x)))
+     &rArr; (&quot;one&quot; &quot;six&quot; &quot;two&quot; &quot;five&quot; &quot;four&quot; &quot;three&quot;)
+</pre></div></div>
+
+<p>because <code class="code">(3 . &quot;six&quot;)</code> is ordered before <code class="code">(3 . &quot;two&quot;)</code> and so on.
+</p>
+<p>For compatibility with previous versions of Emacs, the <code class="code">sort</code>
+function can also be called using the fixed two-argument form:
+</p>
+<div class="example">
+<pre class="example-preformatted">(<code class="code">sort</code> <var class="var">sequence</var> <var class="var">predicate</var>)
+</pre></div>
+
+<p>where <var class="var">predicate</var> is the <code class="code">:lessp</code> argument.  When using this
+form, sorting is always done in-place.
+</p></dd></dl>
+
+<p>See <a class="xref" href="Text.html#Sorting">Sorting Text</a>, for more functions that perform sorting.  See
+<code class="code">documentation</code> in <a class="ref" href="Documentation.html#Accessing-Documentation">Access to Documentation Strings</a>, for a useful
+example of <code class="code">sort</code>.
+</p>
+<a class="index-entry-id" id="index-comparing-values"></a>
+<a class="index-entry-id" id="index-standard-sorting-order"></a>
+<a class="anchor" id="definition-of-value_003c"></a><dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-value_003c"><span class="category-def">Function: </span><span><strong class="def-name">value&lt;</strong> <var class="def-var-arguments">a b</var><a class="copiable-link" href="#index-value_003c"> &para;</a></span></dt>
+<dd><p>This function returns non-<code class="code">nil</code> if <var class="var">a</var> comes before <var class="var">b</var> in
+the standard sorting order; this means that it returns <code class="code">nil</code> when
+<var class="var">b</var> comes before <var class="var">a</var>, or if they are equal or unordered.
+</p>
+<p>The arguments <var class="var">a</var> and <var class="var">b</var> must have the same type.
+Specifically:
+</p>
+<ul class="itemize mark-bullet">
+<li>Numbers are compared using <code class="code">&lt;</code> (see <a class="pxref" href="Numbers.html#definition-of-_003c">definition of &lt;</a>).
+</li><li>Strings are compared using <code class="code">string-lessp</code> (see <a class="pxref" href="Strings-and-Characters.html#definition-of-string_002dlessp">definition of string-lessp</a>) and symbols are compared by comparing their names as
+strings.
+</li><li>Conses, lists, vectors and records are compared lexicographically.  This
+means that the two sequences are compared element-wise from left to
+right until they differ, and the result is then that of <code class="code">value&lt;</code> on
+the first pair of differing elements.  If one sequence runs out of
+elements before the other, the shorter sequence comes before the longer.
+</li><li>Markers are compared first by buffer, then by position.
+</li><li>Buffers and processes are compared by comparing their names as strings.
+Dead buffers (whose name is <code class="code">nil</code>) will compare before any live
+buffer.
+</li><li>Other types are considered unordered and the return value will be
+<code class="code">nil</code>.
+</li></ul>
+
+<p>Examples:
+</p><div class="example">
+<pre class="example-preformatted">(value&lt; -4 3.5) &rArr; t
+(value&lt; &quot;dog&quot; &quot;cat&quot;) &rArr; nil
+(value&lt; 'yip 'yip) &rArr; nil
+(value&lt; '(3 2) '(3 2 0)) &rArr; t
+(value&lt; [3 2 &quot;a&quot;] [3 2 &quot;b&quot;]) &rArr; t
+</pre></div>
+
+<p>Note that <code class="code">nil</code> is treated as either a symbol or an empty list,
+depending on what it is compared against:
+</p>
+<div class="example">
+<pre class="example-preformatted">(value&lt; nil '(0)) &rArr; t
+(value&lt; 'nib nil) &rArr; t
+</pre></div>
+
+<p>There is no limit to the length of sequences (lists, vectors and so on)
+that can be compared, but <code class="code">value&lt;</code> may fail with an error if used
+to compare circular or deeply nested data structures.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-sequence-functions-in-seq"></a>
+<a class="index-entry-id" id="index-seq-library"></a>
+<a class="index-entry-id" id="index-sequences_002c-generalized"></a>
+<p>The <samp class="file">seq.el</samp> library provides the following additional sequence
+manipulation macros and functions, prefixed with <code class="code">seq-</code>.
+</p>
+<p>All functions defined in this library are free of side-effects;
+i.e., they do not modify any sequence (list, vector, or string) that
+you pass as an argument.  Unless otherwise stated, the result is a
+sequence of the same type as the input.  For those functions that take
+a predicate, this should be a function of one argument.
+</p>
+<p>The <samp class="file">seq.el</samp> library can be extended to work with additional
+types of sequential data-structures.  For that purpose, all functions
+are defined using <code class="code">cl-defgeneric</code>.  See <a class="xref" href="Functions.html#Generic-Functions">Generic Functions</a>, for
+more details about using <code class="code">cl-defgeneric</code> for adding extensions.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002delt"><span class="category-def">Function: </span><span><strong class="def-name">seq-elt</strong> <var class="def-var-arguments">sequence index</var><a class="copiable-link" href="#index-seq_002delt"> &para;</a></span></dt>
+<dd><p>This function returns the element of <var class="var">sequence</var> at the specified
+<var class="var">index</var>, which is an integer whose valid value range is zero to
+one less than the length of <var class="var">sequence</var>.  For out-of-range values
+on built-in sequence types, <code class="code">seq-elt</code> behaves like <code class="code">elt</code>.
+For the details, see <a class="ref" href="#Definition-of-elt">Definition of elt</a>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-elt [1 2 3 4] 2)
+&rArr; 3
+</pre></div></div>
+
+<p><code class="code">seq-elt</code> returns places settable using <code class="code">setf</code>
+(see <a class="pxref" href="Variables.html#Setting-Generalized-Variables">The <code class="code">setf</code> Macro</a>).
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq vec [1 2 3 4])
+(setf (seq-elt vec 2) 5)
+vec
+&rArr; [1 2 5 4]
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dlength"><span class="category-def">Function: </span><span><strong class="def-name">seq-length</strong> <var class="def-var-arguments">sequence</var><a class="copiable-link" href="#index-seq_002dlength"> &para;</a></span></dt>
+<dd><p>This function returns the number of elements in <var class="var">sequence</var>.  For
+built-in sequence types, <code class="code">seq-length</code> behaves like <code class="code">length</code>.
+See <a class="xref" href="#Definition-of-length">Definition of length</a>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seqp"><span class="category-def">Function: </span><span><strong class="def-name">seqp</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-seqp"> &para;</a></span></dt>
+<dd><p>This function returns non-<code class="code">nil</code> if <var class="var">object</var> is a sequence
+(a list or array), or any additional type of sequence defined via
+<samp class="file">seq.el</samp> generic functions.  This is an extensible variant of
+<code class="code">sequencep</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seqp [1 2])
+&rArr; t
+</pre></div><div class="group"><pre class="example-preformatted">(seqp 2)
+&rArr; nil
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002ddrop"><span class="category-def">Function: </span><span><strong class="def-name">seq-drop</strong> <var class="def-var-arguments">sequence n</var><a class="copiable-link" href="#index-seq_002ddrop"> &para;</a></span></dt>
+<dd><p>This function returns all but the first <var class="var">n</var> (an integer)
+elements of <var class="var">sequence</var>.  If <var class="var">n</var> is negative or zero,
+the result is <var class="var">sequence</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-drop [1 2 3 4 5 6] 3)
+&rArr; [4 5 6]
+</pre></div><div class="group"><pre class="example-preformatted">(seq-drop &quot;hello world&quot; -4)
+&rArr; &quot;hello world&quot;
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dtake"><span class="category-def">Function: </span><span><strong class="def-name">seq-take</strong> <var class="def-var-arguments">sequence n</var><a class="copiable-link" href="#index-seq_002dtake"> &para;</a></span></dt>
+<dd><p>This function returns the first <var class="var">n</var> (an integer) elements of
+<var class="var">sequence</var>.  If <var class="var">n</var> is negative or zero, the result
+is <code class="code">nil</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-take '(1 2 3 4) 3)
+&rArr; (1 2 3)
+</pre></div><div class="group"><pre class="example-preformatted">(seq-take [1 2 3 4] 0)
+&rArr; []
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dtake_002dwhile"><span class="category-def">Function: </span><span><strong class="def-name">seq-take-while</strong> <var class="def-var-arguments">predicate sequence</var><a class="copiable-link" href="#index-seq_002dtake_002dwhile"> &para;</a></span></dt>
+<dd><p>This function returns the members of <var class="var">sequence</var> in order,
+stopping before the first one for which <var class="var">predicate</var> returns <code class="code">nil</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-take-while (lambda (elt) (&gt; elt 0)) '(1 2 3 -1 -2))
+&rArr; (1 2 3)
+</pre></div><div class="group"><pre class="example-preformatted">(seq-take-while (lambda (elt) (&gt; elt 0)) [-1 4 6])
+&rArr; []
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002ddrop_002dwhile"><span class="category-def">Function: </span><span><strong class="def-name">seq-drop-while</strong> <var class="def-var-arguments">predicate sequence</var><a class="copiable-link" href="#index-seq_002ddrop_002dwhile"> &para;</a></span></dt>
+<dd><p>This function returns the members of <var class="var">sequence</var> in order,
+starting from the first one for which <var class="var">predicate</var> returns <code class="code">nil</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-drop-while (lambda (elt) (&gt; elt 0)) '(1 2 3 -1 -2))
+&rArr; (-1 -2)
+</pre></div><div class="group"><pre class="example-preformatted">(seq-drop-while (lambda (elt) (&lt; elt 0)) [1 4 6])
+&rArr; [1 4 6]
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dsplit"><span class="category-def">Function: </span><span><strong class="def-name">seq-split</strong> <var class="def-var-arguments">sequence length</var><a class="copiable-link" href="#index-seq_002dsplit"> &para;</a></span></dt>
+<dd><p>This function returns a list consisting of sub-sequences of
+<var class="var">sequence</var> of (at most) length <var class="var">length</var>.  (The final element
+may be shorter than <var class="var">length</var> if the length of <var class="var">sequence</var> isn&rsquo;t
+a multiple of <var class="var">length</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-split [0 1 2 3 4] 2)
+&rArr; ([0 1] [2 3] [4])
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002ddo"><span class="category-def">Function: </span><span><strong class="def-name">seq-do</strong> <var class="def-var-arguments">function sequence</var><a class="copiable-link" href="#index-seq_002ddo"> &para;</a></span></dt>
+<dd><p>This function applies <var class="var">function</var> to each element of
+<var class="var">sequence</var> in turn (presumably for side effects), and returns
+<var class="var">sequence</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dmap"><span class="category-def">Function: </span><span><strong class="def-name">seq-map</strong> <var class="def-var-arguments">function sequence</var><a class="copiable-link" href="#index-seq_002dmap"> &para;</a></span></dt>
+<dd><p>This function returns the result of applying <var class="var">function</var> to each
+element of <var class="var">sequence</var>.  The returned value is a list.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-map #'1+ '(2 4 6))
+&rArr; (3 5 7)
+</pre></div><div class="group"><pre class="example-preformatted">(seq-map #'symbol-name [foo bar])
+&rArr; (&quot;foo&quot; &quot;bar&quot;)
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dmap_002dindexed"><span class="category-def">Function: </span><span><strong class="def-name">seq-map-indexed</strong> <var class="def-var-arguments">function sequence</var><a class="copiable-link" href="#index-seq_002dmap_002dindexed"> &para;</a></span></dt>
+<dd><p>This function returns the result of applying <var class="var">function</var> to each
+element of <var class="var">sequence</var> and its index within <var class="var">seq</var>.  The
+returned value is a list.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-map-indexed (lambda (elt idx)
+                   (list idx elt))
+                 '(a b c))
+&rArr; ((0 a) (1 b) (2 c))
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dmapn"><span class="category-def">Function: </span><span><strong class="def-name">seq-mapn</strong> <var class="def-var-arguments">function &amp;rest sequences</var><a class="copiable-link" href="#index-seq_002dmapn"> &para;</a></span></dt>
+<dd><p>This function returns the result of applying <var class="var">function</var> to each
+element of <var class="var">sequences</var>.  The arity (see <a class="pxref" href="Functions.html#What-Is-a-Function">subr-arity</a>) of <var class="var">function</var> must match the number of sequences.
+Mapping stops at the end of the shortest sequence, and the returned
+value is a list.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-mapn #'+ '(2 4 6) '(20 40 60))
+&rArr; (22 44 66)
+</pre></div><div class="group"><pre class="example-preformatted">(seq-mapn #'concat '(&quot;moskito&quot; &quot;bite&quot;) [&quot;bee&quot; &quot;sting&quot;])
+&rArr; (&quot;moskitobee&quot; &quot;bitesting&quot;)
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dfilter"><span class="category-def">Function: </span><span><strong class="def-name">seq-filter</strong> <var class="def-var-arguments">predicate sequence</var><a class="copiable-link" href="#index-seq_002dfilter"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-filtering-sequences"></a>
+<p>This function returns a list of all the elements in <var class="var">sequence</var>
+for which <var class="var">predicate</var> returns non-<code class="code">nil</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-filter (lambda (elt) (&gt; elt 0)) [1 -1 3 -3 5])
+&rArr; (1 3 5)
+</pre></div><div class="group"><pre class="example-preformatted">(seq-filter (lambda (elt) (&gt; elt 0)) '(-1 -3 -5))
+&rArr; nil
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dremove"><span class="category-def">Function: </span><span><strong class="def-name">seq-remove</strong> <var class="def-var-arguments">predicate sequence</var><a class="copiable-link" href="#index-seq_002dremove"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-removing-from-sequences"></a>
+<p>This function returns a list of all the elements in <var class="var">sequence</var>
+for which <var class="var">predicate</var> returns <code class="code">nil</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-remove (lambda (elt) (&gt; elt 0)) [1 -1 3 -3 5])
+&rArr; (-1 -3)
+</pre></div><div class="group"><pre class="example-preformatted">(seq-remove (lambda (elt) (&lt; elt 0)) '(-1 -3 -5))
+&rArr; nil
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dremove_002dat_002dposition"><span class="category-def">Function: </span><span><strong class="def-name">seq-remove-at-position</strong> <var class="def-var-arguments">sequence n</var><a class="copiable-link" href="#index-seq_002dremove_002dat_002dposition"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-removing-from-sequences-1"></a>
+<p>This function returns a copy of <var class="var">sequence</var> where the element at
+(zero-based) index <var class="var">n</var> got removed.  The result is a sequence of
+the same type as <var class="var">sequence</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-remove-at-position [1 -1 3 -3 5] 0)
+&rArr; [-1 3 -3 5]
+</pre></div><div class="group"><pre class="example-preformatted">(seq-remove-at-position [1 -1 3 -3 5] 3)
+&rArr; [1 -1 3 5]
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dkeep"><span class="category-def">Function: </span><span><strong class="def-name">seq-keep</strong> <var class="def-var-arguments">function sequence</var><a class="copiable-link" href="#index-seq_002dkeep"> &para;</a></span></dt>
+<dd><p>This function returns a list of all non-<code class="code">nil</code> results from
+calling <var class="var">function</var> on the elements in <var class="var">sequence</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-keep #'cl-digit-char-p '(?6 ?a ?7))
+&rArr; (6 7)
+</pre></div></div>
+
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dreduce"><span class="category-def">Function: </span><span><strong class="def-name">seq-reduce</strong> <var class="def-var-arguments">function sequence initial-value</var><a class="copiable-link" href="#index-seq_002dreduce"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-reducing-sequences"></a>
+<p>This function returns the result of calling <var class="var">function</var> with
+<var class="var">initial-value</var> and the first element of <var class="var">sequence</var>, then calling
+<var class="var">function</var> with that result and the second element of <var class="var">sequence</var>,
+then with that result and the third element of <var class="var">sequence</var>, etc.
+<var class="var">function</var> should be a function of two arguments.
+</p>
+<p><var class="var">function</var> is called with two arguments.  <var class="var">initial-value</var>
+(and then the accumulated value) is used as the first argument, and
+the elements in <var class="var">sequence</var> are used for the second argument.
+</p>
+<p>If <var class="var">sequence</var> is empty, this returns <var class="var">initial-value</var> without
+calling <var class="var">function</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-reduce #'+ [1 2 3 4] 0)
+&rArr; 10
+</pre></div><div class="group"><pre class="example-preformatted">(seq-reduce #'+ '(1 2 3 4) 5)
+&rArr; 15
+</pre></div><div class="group"><pre class="example-preformatted">(seq-reduce #'+ '() 3)
+&rArr; 3
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dsome"><span class="category-def">Function: </span><span><strong class="def-name">seq-some</strong> <var class="def-var-arguments">predicate sequence</var><a class="copiable-link" href="#index-seq_002dsome"> &para;</a></span></dt>
+<dd><p>This function returns the first non-<code class="code">nil</code> value returned by
+applying <var class="var">predicate</var> to each element of <var class="var">sequence</var> in turn.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-some #'numberp [&quot;abc&quot; 1 nil])
+&rArr; t
+</pre></div><div class="group"><pre class="example-preformatted">(seq-some #'numberp [&quot;abc&quot; &quot;def&quot;])
+&rArr; nil
+</pre></div><div class="group"><pre class="example-preformatted">(seq-some #'null [&quot;abc&quot; 1 nil])
+&rArr; t
+</pre></div><div class="group"><pre class="example-preformatted">(seq-some #'1+ [2 4 6])
+&rArr; 3
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dfind"><span class="category-def">Function: </span><span><strong class="def-name">seq-find</strong> <var class="def-var-arguments">predicate sequence &amp;optional default</var><a class="copiable-link" href="#index-seq_002dfind"> &para;</a></span></dt>
+<dd><p>This function returns the first element in <var class="var">sequence</var> for which
+<var class="var">predicate</var> returns non-<code class="code">nil</code>.  If no element matches
+<var class="var">predicate</var>, the function returns <var class="var">default</var>.
+</p>
+<p>Note that this function has an ambiguity if the found element is
+identical to <var class="var">default</var>, as in that case it cannot be known whether
+an element was found or not.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-find #'numberp [&quot;abc&quot; 1 nil])
+&rArr; 1
+</pre></div><div class="group"><pre class="example-preformatted">(seq-find #'numberp [&quot;abc&quot; &quot;def&quot;])
+&rArr; nil
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002devery_002dp"><span class="category-def">Function: </span><span><strong class="def-name">seq-every-p</strong> <var class="def-var-arguments">predicate sequence</var><a class="copiable-link" href="#index-seq_002devery_002dp"> &para;</a></span></dt>
+<dd><p>This function returns non-<code class="code">nil</code> if applying <var class="var">predicate</var>
+to every element of <var class="var">sequence</var> returns non-<code class="code">nil</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-every-p #'numberp [2 4 6])
+&rArr; t
+</pre></div><div class="group"><pre class="example-preformatted">(seq-every-p #'numberp [2 4 &quot;6&quot;])
+&rArr; nil
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dempty_002dp"><span class="category-def">Function: </span><span><strong class="def-name">seq-empty-p</strong> <var class="def-var-arguments">sequence</var><a class="copiable-link" href="#index-seq_002dempty_002dp"> &para;</a></span></dt>
+<dd><p>This function returns non-<code class="code">nil</code> if <var class="var">sequence</var> is empty.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-empty-p &quot;not empty&quot;)
+&rArr; nil
+</pre></div><div class="group"><pre class="example-preformatted">(seq-empty-p &quot;&quot;)
+&rArr; t
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dcount"><span class="category-def">Function: </span><span><strong class="def-name">seq-count</strong> <var class="def-var-arguments">predicate sequence</var><a class="copiable-link" href="#index-seq_002dcount"> &para;</a></span></dt>
+<dd><p>This function returns the number of elements in <var class="var">sequence</var> for which
+<var class="var">predicate</var> returns non-<code class="code">nil</code>.
+</p>
+<div class="example">
+<pre class="example-preformatted">(seq-count (lambda (elt) (&gt; elt 0)) [-1 2 0 3 -2])
+&rArr; 2
+</pre></div>
+</dd></dl>
+
+<a class="index-entry-id" id="index-sorting-sequences"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dsort"><span class="category-def">Function: </span><span><strong class="def-name">seq-sort</strong> <var class="def-var-arguments">function sequence</var><a class="copiable-link" href="#index-seq_002dsort"> &para;</a></span></dt>
+<dd><p>This function returns a copy of <var class="var">sequence</var> that is sorted
+according to <var class="var">function</var>, a function of two arguments that returns
+non-<code class="code">nil</code> if the first argument should sort before the second.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dsort_002dby"><span class="category-def">Function: </span><span><strong class="def-name">seq-sort-by</strong> <var class="def-var-arguments">function predicate sequence</var><a class="copiable-link" href="#index-seq_002dsort_002dby"> &para;</a></span></dt>
+<dd><p>This function is similar to <code class="code">seq-sort</code>, but the elements of
+<var class="var">sequence</var> are transformed by applying <var class="var">function</var> on them
+before being sorted.  <var class="var">function</var> is a function of one argument.
+</p>
+<div class="example">
+<pre class="example-preformatted">(seq-sort-by #'seq-length #'&gt; [&quot;a&quot; &quot;ab&quot; &quot;abc&quot;])
+&rArr; [&quot;abc&quot; &quot;ab&quot; &quot;a&quot;]
+</pre></div>
+</dd></dl>
+
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dcontains_002dp"><span class="category-def">Function: </span><span><strong class="def-name">seq-contains-p</strong> <var class="def-var-arguments">sequence elt &amp;optional function</var><a class="copiable-link" href="#index-seq_002dcontains_002dp"> &para;</a></span></dt>
+<dd><p>This function returns non-<code class="code">nil</code> if at least one element in
+<var class="var">sequence</var> is equal to <var class="var">elt</var>.  If the optional argument
+<var class="var">function</var> is non-<code class="code">nil</code>, it is a function of two arguments to
+use instead of the default <code class="code">equal</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-contains-p '(symbol1 symbol2) 'symbol1)
+&rArr; t
+</pre></div><div class="group"><pre class="example-preformatted">(seq-contains-p '(symbol1 symbol2) 'symbol3)
+&rArr; nil
+</pre></div></div>
+
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dset_002dequal_002dp"><span class="category-def">Function: </span><span><strong class="def-name">seq-set-equal-p</strong> <var class="def-var-arguments">sequence1 sequence2 &amp;optional testfn</var><a class="copiable-link" href="#index-seq_002dset_002dequal_002dp"> &para;</a></span></dt>
+<dd><p>This function checks whether <var class="var">sequence1</var> and <var class="var">sequence2</var>
+contain the same elements, regardless of the order.  If the optional
+argument <var class="var">testfn</var> is non-<code class="code">nil</code>, it is a function of two
+arguments to use instead of the default <code class="code">equal</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-set-equal-p '(a b c) '(c b a))
+&rArr; t
+</pre></div><div class="group"><pre class="example-preformatted">(seq-set-equal-p '(a b c) '(c b))
+&rArr; nil
+</pre></div><div class="group"><pre class="example-preformatted">(seq-set-equal-p '(&quot;a&quot; &quot;b&quot; &quot;c&quot;) '(&quot;c&quot; &quot;b&quot; &quot;a&quot;))
+&rArr; t
+</pre></div><div class="group"><pre class="example-preformatted">(seq-set-equal-p '(&quot;a&quot; &quot;b&quot; &quot;c&quot;) '(&quot;c&quot; &quot;b&quot; &quot;a&quot;) #'eq)
+&rArr; nil
+</pre></div></div>
+
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dposition"><span class="category-def">Function: </span><span><strong class="def-name">seq-position</strong> <var class="def-var-arguments">sequence elt &amp;optional function</var><a class="copiable-link" href="#index-seq_002dposition"> &para;</a></span></dt>
+<dd><p>This function returns the (zero-based) index of the first element in
+<var class="var">sequence</var> that is equal to <var class="var">elt</var>.  If the optional argument
+<var class="var">function</var> is non-<code class="code">nil</code>, it is a function of two arguments to
+use instead of the default <code class="code">equal</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-position '(a b c) 'b)
+&rArr; 1
+</pre></div><div class="group"><pre class="example-preformatted">(seq-position '(a b c) 'd)
+&rArr; nil
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dpositions"><span class="category-def">Function: </span><span><strong class="def-name">seq-positions</strong> <var class="def-var-arguments">sequence elt &amp;optional testfn</var><a class="copiable-link" href="#index-seq_002dpositions"> &para;</a></span></dt>
+<dd><p>This function returns a list of the (zero-based) indices of the
+elements in <var class="var">sequence</var> for which <var class="var">testfn</var> returns
+non-<code class="code">nil</code> when passed the element and <var class="var">elt</var> as
+arguments. <var class="var">testfn</var> defaults to <code class="code">equal</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-positions '(a b c a d) 'a)
+&rArr; (0 3)
+</pre></div><div class="group"><pre class="example-preformatted">(seq-positions '(a b c a d) 'z)
+&rArr; nil
+</pre></div><div class="group"><pre class="example-preformatted">(seq-positions '(11 5 7 12 9 15) 10 #'&gt;=)
+&rArr; (0 3 5)
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002duniq"><span class="category-def">Function: </span><span><strong class="def-name">seq-uniq</strong> <var class="def-var-arguments">sequence &amp;optional function</var><a class="copiable-link" href="#index-seq_002duniq"> &para;</a></span></dt>
+<dd><p>This function returns a list of the elements of <var class="var">sequence</var> with
+duplicates removed.  If the optional argument <var class="var">function</var> is non-<code class="code">nil</code>,
+it is a function of two arguments to use instead of the default <code class="code">equal</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-uniq '(1 2 2 1 3))
+&rArr; (1 2 3)
+</pre></div><div class="group"><pre class="example-preformatted">(seq-uniq '(1 2 2.0 1.0) #'=)
+&rArr; (1 2)
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dsubseq"><span class="category-def">Function: </span><span><strong class="def-name">seq-subseq</strong> <var class="def-var-arguments">sequence start &amp;optional end</var><a class="copiable-link" href="#index-seq_002dsubseq"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-sub_002dsequence"></a>
+<p>This function returns a subset of <var class="var">sequence</var> from <var class="var">start</var>
+to <var class="var">end</var>, both integers (<var class="var">end</var> defaults to the last element).
+If <var class="var">start</var> or <var class="var">end</var> is negative, it counts from the end of
+<var class="var">sequence</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-subseq '(1 2 3 4 5) 1)
+&rArr; (2 3 4 5)
+</pre></div><div class="group"><pre class="example-preformatted">(seq-subseq '[1 2 3 4 5] 1 3)
+&rArr; [2 3]
+</pre></div><div class="group"><pre class="example-preformatted">(seq-subseq '[1 2 3 4 5] -3 -1)
+&rArr; [3 4]
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dconcatenate"><span class="category-def">Function: </span><span><strong class="def-name">seq-concatenate</strong> <var class="def-var-arguments">type &amp;rest sequences</var><a class="copiable-link" href="#index-seq_002dconcatenate"> &para;</a></span></dt>
+<dd><p>This function returns a sequence of type <var class="var">type</var> made of the
+concatenation of <var class="var">sequences</var>.  <var class="var">type</var> may be: <code class="code">vector</code>,
+<code class="code">list</code> or <code class="code">string</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-concatenate 'list '(1 2) '(3 4) [5 6])
+&rArr; (1 2 3 4 5 6)
+</pre></div><div class="group"><pre class="example-preformatted">(seq-concatenate 'string &quot;Hello &quot; &quot;world&quot;)
+&rArr; &quot;Hello world&quot;
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dmapcat"><span class="category-def">Function: </span><span><strong class="def-name">seq-mapcat</strong> <var class="def-var-arguments">function sequence &amp;optional type</var><a class="copiable-link" href="#index-seq_002dmapcat"> &para;</a></span></dt>
+<dd><p>This function returns the result of applying <code class="code">seq-concatenate</code>
+to the result of applying <var class="var">function</var> to each element of
+<var class="var">sequence</var>.  The result is a sequence of type <var class="var">type</var>, or a
+list if <var class="var">type</var> is <code class="code">nil</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-mapcat #'seq-reverse '((3 2 1) (6 5 4)))
+&rArr; (1 2 3 4 5 6)
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dpartition"><span class="category-def">Function: </span><span><strong class="def-name">seq-partition</strong> <var class="def-var-arguments">sequence n</var><a class="copiable-link" href="#index-seq_002dpartition"> &para;</a></span></dt>
+<dd><p>This function returns a list of the elements of <var class="var">sequence</var>
+grouped into sub-sequences of length <var class="var">n</var>.  The last sequence may
+contain less elements than <var class="var">n</var>.  <var class="var">n</var> must be an integer.  If
+<var class="var">n</var> is a negative integer or 0, the return value is <code class="code">nil</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-partition '(0 1 2 3 4 5 6 7) 3)
+&rArr; ((0 1 2) (3 4 5) (6 7))
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dunion"><span class="category-def">Function: </span><span><strong class="def-name">seq-union</strong> <var class="def-var-arguments">sequence1 sequence2 &amp;optional function</var><a class="copiable-link" href="#index-seq_002dunion"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-sequences_002c-union-of"></a>
+<a class="index-entry-id" id="index-union-of-sequences"></a>
+<p>This function returns a list of the elements that appear either in
+<var class="var">sequence1</var> or <var class="var">sequence2</var>.  The elements of the returned list
+are all unique, in the sense that no two elements there will compare
+equal.  If the optional argument <var class="var">function</var> is non-<code class="code">nil</code>, it
+should be a function of two arguments to use to compare elements,
+instead of the default <code class="code">equal</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-union [1 2 3] [3 5])
+&rArr; (1 2 3 5)
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dintersection"><span class="category-def">Function: </span><span><strong class="def-name">seq-intersection</strong> <var class="def-var-arguments">sequence1 sequence2 &amp;optional function</var><a class="copiable-link" href="#index-seq_002dintersection"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-sequences_002c-intersection-of"></a>
+<a class="index-entry-id" id="index-intersection-of-sequences"></a>
+<p>This function returns a copy of <var class="var">sequence1</var> from which the
+elements that do not appear in <var class="var">sequence2</var> were removed.  If the
+optional argument <var class="var">function</var> is non-<code class="code">nil</code>, it is a function of
+two arguments to use to compare elements instead of the default
+<code class="code">equal</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-intersection [2 3 4 5] [1 3 5 6 7])
+&rArr; (3 5)
+</pre></div></div>
+</dd></dl>
+
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002ddifference"><span class="category-def">Function: </span><span><strong class="def-name">seq-difference</strong> <var class="def-var-arguments">sequence1 sequence2 &amp;optional function</var><a class="copiable-link" href="#index-seq_002ddifference"> &para;</a></span></dt>
+<dd><p>This function returns a copy of <var class="var">sequence1</var> from which the
+elements that appear in <var class="var">sequence2</var> were removed.  If the optional
+argument <var class="var">function</var> is non-<code class="code">nil</code>, it is a function of two
+arguments to use to compare elements instead of the default
+<code class="code">equal</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-difference '(2 3 4 5) [1 3 5 6 7])
+&rArr; (2 4)
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dgroup_002dby"><span class="category-def">Function: </span><span><strong class="def-name">seq-group-by</strong> <var class="def-var-arguments">function sequence</var><a class="copiable-link" href="#index-seq_002dgroup_002dby"> &para;</a></span></dt>
+<dd><p>This function separates the elements of <var class="var">sequence</var> into an alist
+whose keys are the result of applying <var class="var">function</var> to each element
+of <var class="var">sequence</var>.  Keys are compared using <code class="code">equal</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-group-by #'integerp '(1 2.1 3 2 3.2))
+&rArr; ((t 1 3 2) (nil 2.1 3.2))
+</pre></div><div class="group"><pre class="example-preformatted">(seq-group-by #'car '((a 1) (b 2) (a 3) (c 4)))
+&rArr; ((b (b 2)) (a (a 1) (a 3)) (c (c 4)))
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dinto"><span class="category-def">Function: </span><span><strong class="def-name">seq-into</strong> <var class="def-var-arguments">sequence type</var><a class="copiable-link" href="#index-seq_002dinto"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-convert-sequence-to-another-type"></a>
+<a class="index-entry-id" id="index-list-to-vector"></a>
+<a class="index-entry-id" id="index-vector-to-list"></a>
+<a class="index-entry-id" id="index-string-to-vector"></a>
+<p>This function converts the sequence <var class="var">sequence</var> into a sequence
+of type <var class="var">type</var>.  <var class="var">type</var> can be one of the following symbols:
+<code class="code">vector</code>, <code class="code">string</code> or <code class="code">list</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-into [1 2 3] 'list)
+&rArr; (1 2 3)
+</pre></div><div class="group"><pre class="example-preformatted">(seq-into nil 'vector)
+&rArr; []
+</pre></div><div class="group"><pre class="example-preformatted">(seq-into &quot;hello&quot; 'vector)
+&rArr; [104 101 108 108 111]
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dmin"><span class="category-def">Function: </span><span><strong class="def-name">seq-min</strong> <var class="def-var-arguments">sequence</var><a class="copiable-link" href="#index-seq_002dmin"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-minimum-value-of-sequence"></a>
+<a class="index-entry-id" id="index-sequence-minimum"></a>
+<p>This function returns the smallest element of <var class="var">sequence</var>.  The
+elements of <var class="var">sequence</var> must be numbers or markers
+(see <a class="pxref" href="Markers.html#Markers">Markers</a>).
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-min [3 1 2])
+&rArr; 1
+</pre></div><div class="group"><pre class="example-preformatted">(seq-min &quot;Hello&quot;)
+&rArr; 72
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002dmax"><span class="category-def">Function: </span><span><strong class="def-name">seq-max</strong> <var class="def-var-arguments">sequence</var><a class="copiable-link" href="#index-seq_002dmax"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-maximum-value-of-sequence"></a>
+<a class="index-entry-id" id="index-sequence-maximum"></a>
+<p>This function returns the largest element of <var class="var">sequence</var>.  The
+elements of <var class="var">sequence</var> must be numbers or markers.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-max [1 3 2])
+&rArr; 3
+</pre></div><div class="group"><pre class="example-preformatted">(seq-max &quot;Hello&quot;)
+&rArr; 111
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-seq_002ddoseq"><span class="category-def">Macro: </span><span><strong class="def-name">seq-doseq</strong> <var class="def-var-arguments">(var sequence) body&hellip;</var><a class="copiable-link" href="#index-seq_002ddoseq"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-sequence-iteration"></a>
+<a class="index-entry-id" id="index-iteration-over-vector-or-string"></a>
+<p>This macro is like <code class="code">dolist</code> (see <a class="pxref" href="Control-Structures.html#Iteration">dolist</a>), except
+that <var class="var">sequence</var> can be a list, vector or string.  This is
+primarily useful for side-effects.
+</p></dd></dl>
+
+<a class="anchor" id="seq_002dlet"></a><dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-seq_002dlet"><span class="category-def">Macro: </span><span><strong class="def-name">seq-let</strong> <var class="def-var-arguments">var-sequence val-sequence body&hellip;</var><a class="copiable-link" href="#index-seq_002dlet"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-sequence-destructuring"></a>
+<p>This macro binds the variables defined in <var class="var">var-sequence</var> to the
+values that are the corresponding elements of <var class="var">val-sequence</var>.
+This is known as <em class="dfn">destructuring binding</em>.  The elements of
+<var class="var">var-sequence</var> can themselves include sequences, allowing for
+nested destructuring.
+</p>
+<p>The <var class="var">var-sequence</var> sequence can also include the <code class="code">&amp;rest</code>
+marker followed by a variable name to be bound to the rest of
+<var class="var">val-sequence</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-let [first second] [1 2 3 4]
+  (list first second))
+&rArr; (1 2)
+</pre></div><div class="group"><pre class="example-preformatted">(seq-let (_ a _ b) '(1 2 3 4)
+  (list a b))
+&rArr; (2 4)
+</pre></div><div class="group"><pre class="example-preformatted">(seq-let [a [b [c]]] [1 [2 [3]]]
+  (list a b c))
+&rArr; (1 2 3)
+</pre></div><div class="group"><pre class="example-preformatted">(seq-let [a b &amp;rest others] [1 2 3 4]
+  others)
+</pre></div><pre class="example-preformatted">&rArr; [3 4]
+</pre></div>
+
+<p>The <code class="code">pcase</code> patterns provide an alternative facility for
+destructuring binding, see <a class="ref" href="Control-Structures.html#Destructuring-with-pcase-Patterns">Destructuring with <code class="code">pcase</code> Patterns</a>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-seq_002dsetq"><span class="category-def">Macro: </span><span><strong class="def-name">seq-setq</strong> <var class="def-var-arguments">var-sequence val-sequence</var><a class="copiable-link" href="#index-seq_002dsetq"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-sequence-destructuring-1"></a>
+<p>This macro works similarly to <code class="code">seq-let</code>, except that values are
+assigned to variables as if by <code class="code">setq</code> instead of as in a
+<code class="code">let</code> binding.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(let ((a nil)
+      (b nil))
+  (seq-setq (_ a _ b) '(1 2 3 4))
+  (list a b))
+&rArr; (2 4)
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-seq_002drandom_002delt"><span class="category-def">Function: </span><span><strong class="def-name">seq-random-elt</strong> <var class="def-var-arguments">sequence</var><a class="copiable-link" href="#index-seq_002drandom_002delt"> &para;</a></span></dt>
+<dd><p>This function returns an element of <var class="var">sequence</var> taken at random.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(seq-random-elt [1 2 3 4])
+&rArr; 3
+(seq-random-elt [1 2 3 4])
+&rArr; 2
+(seq-random-elt [1 2 3 4])
+&rArr; 4
+(seq-random-elt [1 2 3 4])
+&rArr; 2
+(seq-random-elt [1 2 3 4])
+&rArr; 1
+</pre></div></div>
+
+<p>If <var class="var">sequence</var> is empty, this function signals an error.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Arrays">
+<div class="nav-panel">
+<p>
+Next: <a href="#Array-Functions" accesskey="n" rel="next">Functions that Operate on Arrays</a>, Previous: <a href="#Sequence-Functions" accesskey="p" rel="prev">Sequences</a>, Up: <a href="#Sequences-Arrays-Vectors" accesskey="u" rel="up">Sequences, Arrays, and Vectors</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Arrays-1"><span>6.2 Arrays<a class="copiable-link" href="#Arrays-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-array"></a>
+
+<p>An <em class="dfn">array</em> object has slots that hold a number of other Lisp
+objects, called the elements of the array.  Any element of an array
+may be accessed in constant time.  In contrast, the time to access an
+element of a list is proportional to the position of that element in
+the list.
+</p>
+<p>Emacs defines four types of array, all one-dimensional:
+<em class="dfn">strings</em> (see <a class="pxref" href="Lisp-Data-Types.html#String-Type">String Type</a>), <em class="dfn">vectors</em> (see <a class="pxref" href="Lisp-Data-Types.html#Vector-Type">Vector Type</a>), <em class="dfn">bool-vectors</em> (see <a class="pxref" href="Lisp-Data-Types.html#Bool_002dVector-Type">Bool-Vector Type</a>), and
+<em class="dfn">char-tables</em> (see <a class="pxref" href="Lisp-Data-Types.html#Char_002dTable-Type">Char-Table Type</a>).  Vectors and char-tables
+can hold elements of any type, but strings can only hold characters,
+and bool-vectors can only hold <code class="code">t</code> and <code class="code">nil</code>.
+</p>
+<p>All four kinds of array share these characteristics:
+</p>
+<ul class="itemize mark-bullet">
+<li>The first element of an array has index zero, the second element has
+index 1, and so on.  This is called <em class="dfn">zero-origin</em> indexing.  For
+example, an array of four elements has indices 0, 1, 2, and&nbsp;3<!-- /@w -->.
+
+</li><li>The length of the array is fixed once you create it; you cannot
+change the length of an existing array.
+
+</li><li>For purposes of evaluation, the array is a constant&mdash;i.e.,
+it evaluates to itself.
+
+</li><li>The elements of an array may be referenced or changed with the functions
+<code class="code">aref</code> and <code class="code">aset</code>, respectively (see <a class="pxref" href="#Array-Functions">Functions that Operate on Arrays</a>).
+</li></ul>
+
+<p>When you create an array, other than a char-table, you must specify
+its length.  You cannot specify the length of a char-table, because that
+is determined by the range of character codes.
+</p>
+<p>In principle, if you want an array of text characters, you could use
+either a string or a vector.  In practice, we always choose strings for
+such applications, for four reasons:
+</p>
+<ul class="itemize mark-bullet">
+<li>They occupy one-fourth the space of a vector of the same elements.
+
+</li><li>Strings are printed in a way that shows the contents more clearly
+as text.
+
+</li><li>Strings can hold text properties.  See <a class="xref" href="Text.html#Text-Properties">Text Properties</a>.
+
+</li><li>Many of the specialized editing and I/O facilities of Emacs accept only
+strings.  For example, you cannot insert a vector of characters into a
+buffer the way you can insert a string.  See <a class="xref" href="Strings-and-Characters.html#Strings-and-Characters">Strings and Characters</a>.
+</li></ul>
+
+<p>By contrast, for an array of keyboard input characters (such as a key
+sequence), a vector may be necessary, because many keyboard input
+characters are outside the range that will fit in a string.  See <a class="xref" href="Command-Loop.html#Key-Sequence-Input">Key Sequence Input</a>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Array-Functions">
+<div class="nav-panel">
+<p>
+Next: <a href="#Vectors" accesskey="n" rel="next">Vectors</a>, Previous: <a href="#Arrays" accesskey="p" rel="prev">Arrays</a>, Up: <a href="#Sequences-Arrays-Vectors" accesskey="u" rel="up">Sequences, Arrays, and Vectors</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Functions-that-Operate-on-Arrays"><span>6.3 Functions that Operate on Arrays<a class="copiable-link" href="#Functions-that-Operate-on-Arrays"> &para;</a></span></h3>
+
+<p>In this section, we describe the functions that accept all types of
+arrays.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-arrayp"><span class="category-def">Function: </span><span><strong class="def-name">arrayp</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-arrayp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is an array (i.e., a
+vector, a string, a bool-vector or a char-table).
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(arrayp [a])
+     &rArr; t
+(arrayp &quot;asdf&quot;)
+     &rArr; t
+(arrayp (syntax-table))    ;; <span class="r">A char-table.</span>
+     &rArr; t
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-aref"><span class="category-def">Function: </span><span><strong class="def-name">aref</strong> <var class="def-var-arguments">arr index</var><a class="copiable-link" href="#index-aref"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-array-elements"></a>
+<p>This function returns the <var class="var">index</var>th element of the array or record
+<var class="var">arr</var>.  The first element is at index zero.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq primes [2 3 5 7 11 13])
+     &rArr; [2 3 5 7 11 13]
+(aref primes 4)
+     &rArr; 11
+</pre></div><div class="group"><pre class="example-preformatted">(aref &quot;abcdefg&quot; 1)
+     &rArr; 98           ; <span class="r">&lsquo;<samp class="samp">b</samp>&rsquo; is <abbr class="acronym">ASCII</abbr> code 98.</span>
+</pre></div></div>
+
+<p>See also the function <code class="code">elt</code>, in <a class="ref" href="#Sequence-Functions">Sequences</a>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-aset"><span class="category-def">Function: </span><span><strong class="def-name">aset</strong> <var class="def-var-arguments">array index object</var><a class="copiable-link" href="#index-aset"> &para;</a></span></dt>
+<dd><p>This function sets the <var class="var">index</var>th element of <var class="var">array</var> to be
+<var class="var">object</var>.  It returns <var class="var">object</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq w (vector 'foo 'bar 'baz))
+     &rArr; [foo bar baz]
+(aset w 0 'fu)
+     &rArr; fu
+w
+     &rArr; [fu bar baz]
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; <span class="r"><code class="code">copy-sequence</code> copies the string to be modified later.</span>
+(setq x (copy-sequence &quot;asdfasfd&quot;))
+     &rArr; &quot;asdfasfd&quot;
+(aset x 3 ?Z)
+     &rArr; 90
+x
+     &rArr; &quot;asdZasfd&quot;
+</pre></div></div>
+
+<p>The <var class="var">array</var> should be mutable.  See <a class="xref" href="Lisp-Data-Types.html#Mutability">Mutability</a>.
+</p>
+<p>If <var class="var">array</var> is a string and <var class="var">object</var> is not a character, a
+<code class="code">wrong-type-argument</code> error results.  For more information about
+string mutation, see <a class="pxref" href="Strings-and-Characters.html#Modifying-Strings">Modifying Strings</a>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-fillarray"><span class="category-def">Function: </span><span><strong class="def-name">fillarray</strong> <var class="def-var-arguments">array object</var><a class="copiable-link" href="#index-fillarray"> &para;</a></span></dt>
+<dd><p>This function fills the array <var class="var">array</var> with <var class="var">object</var>, so that
+each element of <var class="var">array</var> is <var class="var">object</var>.  It returns <var class="var">array</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq a (copy-sequence [a b c d e f g]))
+     &rArr; [a b c d e f g]
+(fillarray a 0)
+     &rArr; [0 0 0 0 0 0 0]
+a
+     &rArr; [0 0 0 0 0 0 0]
+</pre></div><div class="group"><pre class="example-preformatted">(setq s (copy-sequence &quot;When in the course&quot;))
+     &rArr; &quot;When in the course&quot;
+(fillarray s ?-)
+     &rArr; &quot;------------------&quot;
+</pre></div></div>
+
+<p>If <var class="var">array</var> is a string and <var class="var">object</var> is not a character, a
+<code class="code">wrong-type-argument</code> error results.
+</p></dd></dl>
+
+<p>The general sequence functions <code class="code">copy-sequence</code> and <code class="code">length</code>
+are often useful for objects known to be arrays.  See <a class="xref" href="#Sequence-Functions">Sequences</a>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Vectors">
+<div class="nav-panel">
+<p>
+Next: <a href="#Vector-Functions" accesskey="n" rel="next">Functions for Vectors</a>, Previous: <a href="#Array-Functions" accesskey="p" rel="prev">Functions that Operate on Arrays</a>, Up: <a href="#Sequences-Arrays-Vectors" accesskey="u" rel="up">Sequences, Arrays, and Vectors</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Vectors-1"><span>6.4 Vectors<a class="copiable-link" href="#Vectors-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-vector-_0028type_0029"></a>
+
+<p>A <em class="dfn">vector</em> is a general-purpose array whose elements can be any
+Lisp objects.  (By contrast, the elements of a string can only be
+characters.  See <a class="xref" href="Strings-and-Characters.html#Strings-and-Characters">Strings and Characters</a>.)  Vectors are used in
+Emacs for many purposes: as key sequences (see <a class="pxref" href="Keymaps.html#Key-Sequences">Key Sequences</a>), as
+symbol-lookup tables (see <a class="pxref" href="Symbols.html#Creating-Symbols">Creating and Interning Symbols</a>), as part of the
+representation of a byte-compiled function (see <a class="pxref" href="Byte-Compilation.html#Byte-Compilation">Byte Compilation</a>),
+and more.
+</p>
+<p>Like other arrays, vectors use zero-origin indexing: the first
+element has index 0.
+</p>
+<p>Vectors are printed with square brackets surrounding the elements.
+Thus, a vector whose elements are the symbols <code class="code">a</code>, <code class="code">b</code> and
+<code class="code">a</code> is printed as <code class="code">[a b a]</code>.  You can write vectors in the
+same way in Lisp input.
+</p>
+<p>A vector, like a string or a number, is considered a constant for
+evaluation: the result of evaluating it is the same vector.  This does
+not evaluate or even examine the elements of the vector.
+See <a class="xref" href="Evaluation.html#Self_002dEvaluating-Forms">Self-Evaluating Forms</a>.  Vectors written with square brackets
+should not be modified via <code class="code">aset</code> or other destructive
+operations.  See <a class="xref" href="Lisp-Data-Types.html#Mutability">Mutability</a>.
+</p>
+<p>Here are examples illustrating these principles:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq avector [1 two '(three) &quot;four&quot; [five]])
+     &rArr; [1 two '(three) &quot;four&quot; [five]]
+(eval avector)
+     &rArr; [1 two '(three) &quot;four&quot; [five]]
+(eq avector (eval avector))
+     &rArr; t
+</pre></div></div>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Vector-Functions">
+<div class="nav-panel">
+<p>
+Next: <a href="#Char_002dTables" accesskey="n" rel="next">Char-Tables</a>, Previous: <a href="#Vectors" accesskey="p" rel="prev">Vectors</a>, Up: <a href="#Sequences-Arrays-Vectors" accesskey="u" rel="up">Sequences, Arrays, and Vectors</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Functions-for-Vectors"><span>6.5 Functions for Vectors<a class="copiable-link" href="#Functions-for-Vectors"> &para;</a></span></h3>
+
+<p>Here are some functions that relate to vectors:
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-vectorp"><span class="category-def">Function: </span><span><strong class="def-name">vectorp</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-vectorp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is a vector.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(vectorp [a])
+     &rArr; t
+(vectorp &quot;asdf&quot;)
+     &rArr; nil
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-vector"><span class="category-def">Function: </span><span><strong class="def-name">vector</strong> <var class="def-var-arguments">&amp;rest objects</var><a class="copiable-link" href="#index-vector"> &para;</a></span></dt>
+<dd><p>This function creates and returns a vector whose elements are the
+arguments, <var class="var">objects</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(vector 'foo 23 [bar baz] &quot;rats&quot;)
+     &rArr; [foo 23 [bar baz] &quot;rats&quot;]
+(vector)
+     &rArr; []
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dvector"><span class="category-def">Function: </span><span><strong class="def-name">make-vector</strong> <var class="def-var-arguments">length object</var><a class="copiable-link" href="#index-make_002dvector"> &para;</a></span></dt>
+<dd><p>This function returns a new vector consisting of <var class="var">length</var> elements,
+each initialized to <var class="var">object</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq sleepy (make-vector 9 'Z))
+     &rArr; [Z Z Z Z Z Z Z Z Z]
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-vconcat"><span class="category-def">Function: </span><span><strong class="def-name">vconcat</strong> <var class="def-var-arguments">&amp;rest sequences</var><a class="copiable-link" href="#index-vconcat"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-copying-vectors"></a>
+<p>This function returns a new vector containing all the elements of
+<var class="var">sequences</var>.  The arguments <var class="var">sequences</var> may be proper lists,
+vectors, strings or bool-vectors.  If no <var class="var">sequences</var> are given,
+the empty vector is returned.
+</p>
+<p>The value is either the empty vector, or is a newly constructed
+nonempty vector that is not <code class="code">eq</code> to any existing vector.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq a (vconcat '(A B C) '(D E F)))
+     &rArr; [A B C D E F]
+(eq a (vconcat a))
+     &rArr; nil
+</pre></div><div class="group"><pre class="example-preformatted">(vconcat)
+     &rArr; []
+(vconcat [A B C] &quot;aa&quot; '(foo (6 7)))
+     &rArr; [A B C 97 97 foo (6 7)]
+</pre></div></div>
+
+<p>The <code class="code">vconcat</code> function also allows byte-code function objects as
+arguments.  This is a special feature to make it easy to access the entire
+contents of a byte-code function object.  See <a class="xref" href="Byte-Compilation.html#Closure-Objects">Closure Function Objects</a>.
+</p>
+<p>For other concatenation functions, see <code class="code">mapconcat</code> in <a class="ref" href="Functions.html#Mapping-Functions">Mapping Functions</a>, <code class="code">concat</code> in <a class="ref" href="Strings-and-Characters.html#Creating-Strings">Creating Strings</a>, and <code class="code">append</code>
+in <a class="ref" href="Lists.html#Building-Lists">Building Cons Cells and Lists</a>.
+</p></dd></dl>
+
+<p>The <code class="code">append</code> function also provides a way to convert a vector into a
+list with the same elements:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq avector [1 two (quote (three)) &quot;four&quot; [five]])
+     &rArr; [1 two '(three) &quot;four&quot; [five]]
+(append avector nil)
+     &rArr; (1 two '(three) &quot;four&quot; [five])
+</pre></div></div>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Char_002dTables">
+<div class="nav-panel">
+<p>
+Next: <a href="#Bool_002dVectors" accesskey="n" rel="next">Bool-vectors</a>, Previous: <a href="#Vector-Functions" accesskey="p" rel="prev">Functions for Vectors</a>, Up: <a href="#Sequences-Arrays-Vectors" accesskey="u" rel="up">Sequences, Arrays, and Vectors</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Char_002dTables-1"><span>6.6 Char-Tables<a class="copiable-link" href="#Char_002dTables-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-char_002dtables"></a>
+<a class="index-entry-id" id="index-extra-slots-of-char_002dtable"></a>
+
+<p>A char-table is much like a vector, except that it is indexed by
+character codes.  Any valid character code, without modifiers, can be
+used as an index in a char-table.  You can access a char-table&rsquo;s
+elements with <code class="code">aref</code> and <code class="code">aset</code>, as with any array.  In
+addition, a char-table can have <em class="dfn">extra slots</em> to hold additional
+data not associated with particular character codes.  Like vectors,
+char-tables are constants when evaluated, and can hold elements of any
+type.
+</p>
+<a class="index-entry-id" id="index-subtype-of-char_002dtable"></a>
+<p>Each char-table has a <em class="dfn">subtype</em>, a symbol, which serves two
+purposes:
+</p>
+<ul class="itemize mark-bullet">
+<li>The subtype provides an easy way to tell what the char-table is for.
+For instance, display tables are char-tables with <code class="code">display-table</code>
+as the subtype, and syntax tables are char-tables with
+<code class="code">syntax-table</code> as the subtype.  The subtype can be queried using
+the function <code class="code">char-table-subtype</code>, described below.
+
+</li><li><a class="index-entry-id" id="index-char_002dtable_002dextra_002dslots-_0028symbol-property_0029"></a>
+The subtype controls the number of <em class="dfn">extra slots</em> in the
+char-table.  This number is specified by the subtype&rsquo;s
+<code class="code">char-table-extra-slots</code> symbol property (see <a class="pxref" href="Symbols.html#Symbol-Properties">Symbol Properties</a>), whose value should be an integer between 0 and 10.  If
+the subtype has no such symbol property, the char-table has no extra
+slots.
+</li></ul>
+
+<a class="index-entry-id" id="index-parent-of-char_002dtable"></a>
+<p>A char-table can have a <em class="dfn">parent</em>, which is another char-table.  If
+it does, then whenever the char-table specifies <code class="code">nil</code> for a
+particular character <var class="var">c</var>, it inherits the value specified in the
+parent.  In other words, <code class="code">(aref <var class="var">char-table</var> <var class="var">c</var>)</code> returns
+the value from the parent of <var class="var">char-table</var> if <var class="var">char-table</var> itself
+specifies <code class="code">nil</code>.
+</p>
+<a class="index-entry-id" id="index-default-value-of-char_002dtable"></a>
+<p>A char-table can also have a <em class="dfn">default value</em>.  If so, then
+<code class="code">(aref <var class="var">char-table</var> <var class="var">c</var>)</code> returns the default value
+whenever the char-table does not specify any other non-<code class="code">nil</code> value.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dchar_002dtable"><span class="category-def">Function: </span><span><strong class="def-name">make-char-table</strong> <var class="def-var-arguments">subtype &amp;optional init</var><a class="copiable-link" href="#index-make_002dchar_002dtable"> &para;</a></span></dt>
+<dd><p>Return a newly-created char-table, with subtype <var class="var">subtype</var> (a
+symbol).  Each element is initialized to <var class="var">init</var>, which defaults to
+<code class="code">nil</code>.  You cannot alter the subtype of a char-table after the
+char-table is created.
+</p>
+<p>There is no argument to specify the length of the char-table, because
+all char-tables have room for any valid character code as an index.
+</p>
+<p>If <var class="var">subtype</var> has the <code class="code">char-table-extra-slots</code> symbol
+property, that specifies the number of extra slots in the char-table.
+This should be an integer between 0 and 10; otherwise,
+<code class="code">make-char-table</code> raises an error.  If <var class="var">subtype</var> has no
+<code class="code">char-table-extra-slots</code> symbol property (see <a class="pxref" href="Lists.html#Property-Lists">Property Lists</a>), the char-table has no extra slots.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-char_002dtable_002dp"><span class="category-def">Function: </span><span><strong class="def-name">char-table-p</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-char_002dtable_002dp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is a char-table, and
+<code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-char_002dtable_002dsubtype"><span class="category-def">Function: </span><span><strong class="def-name">char-table-subtype</strong> <var class="def-var-arguments">char-table</var><a class="copiable-link" href="#index-char_002dtable_002dsubtype"> &para;</a></span></dt>
+<dd><p>This function returns the subtype symbol of <var class="var">char-table</var>.
+</p></dd></dl>
+
+<p>There is no special function to access default values in a char-table.
+To do that, use <code class="code">char-table-range</code> (see below).
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-char_002dtable_002dparent"><span class="category-def">Function: </span><span><strong class="def-name">char-table-parent</strong> <var class="def-var-arguments">char-table</var><a class="copiable-link" href="#index-char_002dtable_002dparent"> &para;</a></span></dt>
+<dd><p>This function returns the parent of <var class="var">char-table</var>.  The parent is
+always either <code class="code">nil</code> or another char-table.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dchar_002dtable_002dparent"><span class="category-def">Function: </span><span><strong class="def-name">set-char-table-parent</strong> <var class="def-var-arguments">char-table new-parent</var><a class="copiable-link" href="#index-set_002dchar_002dtable_002dparent"> &para;</a></span></dt>
+<dd><p>This function sets the parent of <var class="var">char-table</var> to <var class="var">new-parent</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-char_002dtable_002dextra_002dslot"><span class="category-def">Function: </span><span><strong class="def-name">char-table-extra-slot</strong> <var class="def-var-arguments">char-table n</var><a class="copiable-link" href="#index-char_002dtable_002dextra_002dslot"> &para;</a></span></dt>
+<dd><p>This function returns the contents of extra slot <var class="var">n</var> (zero based)
+of <var class="var">char-table</var>.  The number of extra slots in a char-table is
+determined by its subtype.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dchar_002dtable_002dextra_002dslot"><span class="category-def">Function: </span><span><strong class="def-name">set-char-table-extra-slot</strong> <var class="def-var-arguments">char-table n value</var><a class="copiable-link" href="#index-set_002dchar_002dtable_002dextra_002dslot"> &para;</a></span></dt>
+<dd><p>This function stores <var class="var">value</var> in extra slot <var class="var">n</var> (zero based) of
+<var class="var">char-table</var>.
+</p></dd></dl>
+
+<p>A char-table can specify an element value for a single character code;
+it can also specify a value for an entire character set.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-char_002dtable_002drange"><span class="category-def">Function: </span><span><strong class="def-name">char-table-range</strong> <var class="def-var-arguments">char-table range</var><a class="copiable-link" href="#index-char_002dtable_002drange"> &para;</a></span></dt>
+<dd><p>This returns the value specified in <var class="var">char-table</var> for a range of
+characters <var class="var">range</var>.  Here are the possibilities for <var class="var">range</var>:
+</p>
+<dl class="table">
+<dt><code class="code">nil</code></dt>
+<dd><p>Refers to the default value.
+</p>
+</dd>
+<dt><var class="var">char</var></dt>
+<dd><p>Refers to the element for character <var class="var">char</var>
+(supposing <var class="var">char</var> is a valid character code).
+</p>
+</dd>
+<dt><code class="code">(<var class="var">from</var> . <var class="var">to</var>)</code></dt>
+<dd><p>A cons cell refers to all the characters in the inclusive range
+&lsquo;<samp class="samp">[<var class="var">from</var>..<var class="var">to</var>]</samp>&rsquo;.  In this case, the function returns the
+value for the character specified by <var class="var">from</var>.
+</p></dd>
+</dl>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dchar_002dtable_002drange"><span class="category-def">Function: </span><span><strong class="def-name">set-char-table-range</strong> <var class="def-var-arguments">char-table range value</var><a class="copiable-link" href="#index-set_002dchar_002dtable_002drange"> &para;</a></span></dt>
+<dd><p>This function sets the value in <var class="var">char-table</var> for a range of
+characters <var class="var">range</var>.  Here are the possibilities for <var class="var">range</var>:
+</p>
+<dl class="table">
+<dt><code class="code">nil</code></dt>
+<dd><p>Refers to the default value.
+</p>
+</dd>
+<dt><code class="code">t</code></dt>
+<dd><p>Refers to the whole range of character codes.
+</p>
+</dd>
+<dt><var class="var">char</var></dt>
+<dd><p>Refers to the element for character <var class="var">char</var>
+(supposing <var class="var">char</var> is a valid character code).
+</p>
+</dd>
+<dt><code class="code">(<var class="var">from</var> . <var class="var">to</var>)</code></dt>
+<dd><p>A cons cell refers to all the characters in the inclusive range
+&lsquo;<samp class="samp">[<var class="var">from</var>..<var class="var">to</var>]</samp>&rsquo;.
+</p></dd>
+</dl>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-map_002dchar_002dtable"><span class="category-def">Function: </span><span><strong class="def-name">map-char-table</strong> <var class="def-var-arguments">function char-table</var><a class="copiable-link" href="#index-map_002dchar_002dtable"> &para;</a></span></dt>
+<dd><p>This function calls its argument <var class="var">function</var> for each element of
+<var class="var">char-table</var> that has a non-<code class="code">nil</code> value.  The call to
+<var class="var">function</var> is with two arguments, a key and a value.  The key
+is a possible <var class="var">range</var> argument for <code class="code">char-table-range</code>&mdash;either
+a valid character or a cons cell <code class="code">(<var class="var">from</var> . <var class="var">to</var>)</code>,
+specifying a range of characters that share the same value.  The value is
+what <code class="code">(char-table-range <var class="var">char-table</var> <var class="var">key</var>)</code> returns.
+</p>
+<p>Overall, the key-value pairs passed to <var class="var">function</var> describe all the
+values stored in <var class="var">char-table</var>.
+</p>
+<p>The return value is always <code class="code">nil</code>; to make calls to
+<code class="code">map-char-table</code> useful, <var class="var">function</var> should have side effects.
+For example, here is how to examine the elements of the syntax table:
+</p>
+<div class="example">
+<pre class="example-preformatted">(let (accumulator)
+   (map-char-table
+    (lambda (key value)
+      (setq accumulator
+            (cons (list
+                   (if (consp key)
+                       (list (car key) (cdr key))
+                     key)
+                   value)
+                  accumulator)))
+    (syntax-table))
+   accumulator)
+&rArr;
+(((2597602 4194303) (2)) ((2597523 2597601) (3))
+ ... (65379 (5 . 65378)) (65378 (4 . 65379)) (65377 (1))
+ ... (12 (0)) (11 (3)) (10 (12)) (9 (0)) ((0 8) (3)))
+</pre></div>
+</dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Bool_002dVectors">
+<div class="nav-panel">
+<p>
+Next: <a href="#Rings" accesskey="n" rel="next">Managing a Fixed-Size Ring of Objects</a>, Previous: <a href="#Char_002dTables" accesskey="p" rel="prev">Char-Tables</a>, Up: <a href="#Sequences-Arrays-Vectors" accesskey="u" rel="up">Sequences, Arrays, and Vectors</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Bool_002dvectors"><span>6.7 Bool-vectors<a class="copiable-link" href="#Bool_002dvectors"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-Bool_002dvectors"></a>
+
+<p>A bool-vector is much like a vector, except that it stores only the
+values <code class="code">t</code> and <code class="code">nil</code>.  If you try to store any non-<code class="code">nil</code>
+value into an element of the bool-vector, the effect is to store
+<code class="code">t</code> there.  As with all arrays, bool-vector indices start from 0,
+and the length cannot be changed once the bool-vector is created.
+Bool-vectors are constants when evaluated.
+</p>
+<p>Several functions work specifically with bool-vectors; aside
+from that, you manipulate them with same functions used for other kinds
+of arrays.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dbool_002dvector"><span class="category-def">Function: </span><span><strong class="def-name">make-bool-vector</strong> <var class="def-var-arguments">length initial</var><a class="copiable-link" href="#index-make_002dbool_002dvector"> &para;</a></span></dt>
+<dd><p>Return a new bool-vector of <var class="var">length</var> elements,
+each one initialized to <var class="var">initial</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-bool_002dvector"><span class="category-def">Function: </span><span><strong class="def-name">bool-vector</strong> <var class="def-var-arguments">&amp;rest objects</var><a class="copiable-link" href="#index-bool_002dvector"> &para;</a></span></dt>
+<dd><p>This function creates and returns a bool-vector whose elements are the
+arguments, <var class="var">objects</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-bool_002dvector_002dp"><span class="category-def">Function: </span><span><strong class="def-name">bool-vector-p</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-bool_002dvector_002dp"> &para;</a></span></dt>
+<dd><p>This returns <code class="code">t</code> if <var class="var">object</var> is a bool-vector,
+and <code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<p>There are also some bool-vector set operation functions, described below:
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-bool_002dvector_002dexclusive_002dor"><span class="category-def">Function: </span><span><strong class="def-name">bool-vector-exclusive-or</strong> <var class="def-var-arguments">a b &amp;optional c</var><a class="copiable-link" href="#index-bool_002dvector_002dexclusive_002dor"> &para;</a></span></dt>
+<dd><p>Return <em class="dfn">bitwise exclusive or</em> of bool vectors <var class="var">a</var> and <var class="var">b</var>.
+If optional argument <var class="var">c</var> is given, the result of this operation is
+stored into <var class="var">c</var>.  All arguments should be bool vectors of the same length.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-bool_002dvector_002dunion"><span class="category-def">Function: </span><span><strong class="def-name">bool-vector-union</strong> <var class="def-var-arguments">a b &amp;optional c</var><a class="copiable-link" href="#index-bool_002dvector_002dunion"> &para;</a></span></dt>
+<dd><p>Return <em class="dfn">bitwise or</em> of bool vectors <var class="var">a</var> and <var class="var">b</var>.  If
+optional argument <var class="var">c</var> is given, the result of this operation is
+stored into <var class="var">c</var>.  All arguments should be bool vectors of the same length.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-bool_002dvector_002dintersection"><span class="category-def">Function: </span><span><strong class="def-name">bool-vector-intersection</strong> <var class="def-var-arguments">a b &amp;optional c</var><a class="copiable-link" href="#index-bool_002dvector_002dintersection"> &para;</a></span></dt>
+<dd><p>Return <em class="dfn">bitwise and</em> of bool vectors <var class="var">a</var> and <var class="var">b</var>.  If
+optional argument <var class="var">c</var> is given, the result of this operation is
+stored into <var class="var">c</var>.  All arguments should be bool vectors of the same length.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-bool_002dvector_002dset_002ddifference"><span class="category-def">Function: </span><span><strong class="def-name">bool-vector-set-difference</strong> <var class="def-var-arguments">a b &amp;optional c</var><a class="copiable-link" href="#index-bool_002dvector_002dset_002ddifference"> &para;</a></span></dt>
+<dd><p>Return <em class="dfn">set difference</em> of bool vectors <var class="var">a</var> and <var class="var">b</var>.  If
+optional argument <var class="var">c</var> is given, the result of this operation is
+stored into <var class="var">c</var>.  All arguments should be bool vectors of the same length.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-bool_002dvector_002dnot"><span class="category-def">Function: </span><span><strong class="def-name">bool-vector-not</strong> <var class="def-var-arguments">a &amp;optional b</var><a class="copiable-link" href="#index-bool_002dvector_002dnot"> &para;</a></span></dt>
+<dd><p>Return <em class="dfn">set complement</em> of bool vector <var class="var">a</var>.  If optional
+argument <var class="var">b</var> is given, the result of this operation is stored into
+<var class="var">b</var>.  All arguments should be bool vectors of the same length.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-bool_002dvector_002dsubsetp"><span class="category-def">Function: </span><span><strong class="def-name">bool-vector-subsetp</strong> <var class="def-var-arguments">a b</var><a class="copiable-link" href="#index-bool_002dvector_002dsubsetp"> &para;</a></span></dt>
+<dd><p>Return <code class="code">t</code> if every <code class="code">t</code> value in <var class="var">a</var> is also <code class="code">t</code> in
+<var class="var">b</var>, <code class="code">nil</code> otherwise.  All arguments should be bool vectors of the
+same length.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-bool_002dvector_002dcount_002dconsecutive"><span class="category-def">Function: </span><span><strong class="def-name">bool-vector-count-consecutive</strong> <var class="def-var-arguments">a b i</var><a class="copiable-link" href="#index-bool_002dvector_002dcount_002dconsecutive"> &para;</a></span></dt>
+<dd><p>Return the number of consecutive elements in <var class="var">a</var> equal <var class="var">b</var>
+starting at <var class="var">i</var>.  <code class="code">a</code> is a bool vector, <var class="var">b</var> is <code class="code">t</code>
+or <code class="code">nil</code>, and <var class="var">i</var> is an index into <code class="code">a</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-bool_002dvector_002dcount_002dpopulation"><span class="category-def">Function: </span><span><strong class="def-name">bool-vector-count-population</strong> <var class="def-var-arguments">a</var><a class="copiable-link" href="#index-bool_002dvector_002dcount_002dpopulation"> &para;</a></span></dt>
+<dd><p>Return the number of elements that are <code class="code">t</code> in bool vector <var class="var">a</var>.
+</p></dd></dl>
+
+<p>The printed form represents up to 8 boolean values as a single
+character:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(bool-vector t nil t nil)
+     &rArr; #&amp;4&quot;^E&quot;
+(bool-vector)
+     &rArr; #&amp;0&quot;&quot;
+</pre></div></div>
+
+<p>You can use <code class="code">vconcat</code> to print a bool-vector like other vectors:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(vconcat (bool-vector nil t nil t))
+     &rArr; [nil t nil t]
+</pre></div></div>
+
+<p>Here is another example of creating, examining, and updating a
+bool-vector:
+</p>
+<div class="example">
+<pre class="example-preformatted">(setq bv (make-bool-vector 5 t))
+     &rArr; #&amp;5&quot;^_&quot;
+(aref bv 1)
+     &rArr; t
+(aset bv 3 nil)
+     &rArr; nil
+bv
+     &rArr; #&amp;5&quot;^W&quot;
+</pre></div>
+
+<p>These results make sense because the binary codes for control-_ and
+control-W are 11111 and 10111, respectively.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Rings">
+<div class="nav-panel">
+<p>
+Previous: <a href="#Bool_002dVectors" accesskey="p" rel="prev">Bool-vectors</a>, Up: <a href="#Sequences-Arrays-Vectors" accesskey="u" rel="up">Sequences, Arrays, and Vectors</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Managing-a-Fixed_002dSize-Ring-of-Objects"><span>6.8 Managing a Fixed-Size Ring of Objects<a class="copiable-link" href="#Managing-a-Fixed_002dSize-Ring-of-Objects"> &para;</a></span></h3>
+
+<a class="index-entry-id" id="index-ring-data-structure"></a>
+<p>A <em class="dfn">ring</em> is a fixed-size data structure that supports insertion,
+deletion, rotation, and modulo-indexed reference and traversal.  An
+efficient ring data structure is implemented by the <code class="code">ring</code>
+package.  It provides the functions listed in this section.
+</p>
+<p>Note that several rings in Emacs, like the kill ring and the
+mark ring, are actually implemented as simple lists, <em class="emph">not</em> using
+the <code class="code">ring</code> package; thus the following functions won&rsquo;t work on
+them.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dring"><span class="category-def">Function: </span><span><strong class="def-name">make-ring</strong> <var class="def-var-arguments">size</var><a class="copiable-link" href="#index-make_002dring"> &para;</a></span></dt>
+<dd><p>This returns a new ring capable of holding <var class="var">size</var> objects.
+<var class="var">size</var> should be an integer.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-ring_002dp"><span class="category-def">Function: </span><span><strong class="def-name">ring-p</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-ring_002dp"> &para;</a></span></dt>
+<dd><p>This returns <code class="code">t</code> if <var class="var">object</var> is a ring, <code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-ring_002dsize"><span class="category-def">Function: </span><span><strong class="def-name">ring-size</strong> <var class="def-var-arguments">ring</var><a class="copiable-link" href="#index-ring_002dsize"> &para;</a></span></dt>
+<dd><p>This returns the maximum capacity of the <var class="var">ring</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-ring_002dlength"><span class="category-def">Function: </span><span><strong class="def-name">ring-length</strong> <var class="def-var-arguments">ring</var><a class="copiable-link" href="#index-ring_002dlength"> &para;</a></span></dt>
+<dd><p>This returns the number of objects that <var class="var">ring</var> currently contains.
+The value will never exceed that returned by <code class="code">ring-size</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-ring_002delements"><span class="category-def">Function: </span><span><strong class="def-name">ring-elements</strong> <var class="def-var-arguments">ring</var><a class="copiable-link" href="#index-ring_002delements"> &para;</a></span></dt>
+<dd><p>This returns a list of the objects in <var class="var">ring</var>, in order, newest first.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-ring_002dcopy"><span class="category-def">Function: </span><span><strong class="def-name">ring-copy</strong> <var class="def-var-arguments">ring</var><a class="copiable-link" href="#index-ring_002dcopy"> &para;</a></span></dt>
+<dd><p>This returns a new ring which is a copy of <var class="var">ring</var>.
+The new ring contains the same (<code class="code">eq</code>) objects as <var class="var">ring</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-ring_002dempty_002dp"><span class="category-def">Function: </span><span><strong class="def-name">ring-empty-p</strong> <var class="def-var-arguments">ring</var><a class="copiable-link" href="#index-ring_002dempty_002dp"> &para;</a></span></dt>
+<dd><p>This returns <code class="code">t</code> if <var class="var">ring</var> is empty, <code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<p>The newest element in the ring always has index 0.  Higher indices
+correspond to older elements.  Indices are computed modulo the ring
+length.  Index &minus;1 corresponds to the oldest element, &minus;2
+to the next-oldest, and so forth.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-ring_002dref"><span class="category-def">Function: </span><span><strong class="def-name">ring-ref</strong> <var class="def-var-arguments">ring index</var><a class="copiable-link" href="#index-ring_002dref"> &para;</a></span></dt>
+<dd><p>This returns the object in <var class="var">ring</var> found at index <var class="var">index</var>.
+<var class="var">index</var> may be negative or greater than the ring length.  If
+<var class="var">ring</var> is empty, <code class="code">ring-ref</code> signals an error.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-ring_002dinsert"><span class="category-def">Function: </span><span><strong class="def-name">ring-insert</strong> <var class="def-var-arguments">ring object</var><a class="copiable-link" href="#index-ring_002dinsert"> &para;</a></span></dt>
+<dd><p>This inserts <var class="var">object</var> into <var class="var">ring</var>, making it the newest
+element, and returns <var class="var">object</var>.
+</p>
+<p>If the ring is full, insertion removes the oldest element to
+make room for the new element.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-ring_002dremove"><span class="category-def">Function: </span><span><strong class="def-name">ring-remove</strong> <var class="def-var-arguments">ring &amp;optional index</var><a class="copiable-link" href="#index-ring_002dremove"> &para;</a></span></dt>
+<dd><p>Remove an object from <var class="var">ring</var>, and return that object.  The
+argument <var class="var">index</var> specifies which item to remove; if it is
+<code class="code">nil</code>, that means to remove the oldest item.  If <var class="var">ring</var> is
+empty, <code class="code">ring-remove</code> signals an error.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-ring_002dinsert_002dat_002dbeginning"><span class="category-def">Function: </span><span><strong class="def-name">ring-insert-at-beginning</strong> <var class="def-var-arguments">ring object</var><a class="copiable-link" href="#index-ring_002dinsert_002dat_002dbeginning"> &para;</a></span></dt>
+<dd><p>This inserts <var class="var">object</var> into <var class="var">ring</var>, treating it as the oldest
+element.  The return value is not significant.
+</p>
+<p>If the ring is full, this function removes the newest element to make
+room for the inserted element.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-ring_002dresize"><span class="category-def">Function: </span><span><strong class="def-name">ring-resize</strong> <var class="def-var-arguments">ring size</var><a class="copiable-link" href="#index-ring_002dresize"> &para;</a></span></dt>
+<dd><p>Set the size of <var class="var">ring</var> to <var class="var">size</var>.  If the new size is smaller,
+then the oldest items in the ring are discarded.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-fifo-data-structure"></a>
+<p>If you are careful not to exceed the ring size, you can
+use the ring as a first-in-first-out queue.  For example:
+</p>
+<div class="example lisp">
+<pre class="lisp-preformatted">(let ((fifo (make-ring 5)))
+  (mapc (lambda (obj) (ring-insert fifo obj))
+        '(0 one &quot;two&quot;))
+  (list (ring-remove fifo) t
+        (ring-remove fifo) t
+        (ring-remove fifo)))
+     &rArr; (0 t one t &quot;two&quot;)
+</pre></div>
+</div>
+</div>
+<hr>
+<div class="nav-panel">
+<p>
+Next: <a href="Records.html#Records" accesskey="n" rel="next">Records</a>, Previous: <a href="Lists.html#Lists" accesskey="p" rel="prev">Lists</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

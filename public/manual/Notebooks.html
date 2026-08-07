@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- Jotain - a GNU Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer.
+
+Copyright © Markus Jylhänkangas. -->
+<title>Notebooks (Jotain Emacs Configuration)</title>
+
+<meta name="description" content="Notebooks (Jotain Emacs Configuration)">
+<meta name="keywords" content="Notebooks (Jotain Emacs Configuration)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="AI-Screenshots.html" rel="next" title="AI Screenshots">
+<link href="Devenv-Integration.html" rel="prev" title="Devenv Integration">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+span:hover a.copiable-link {visibility: visible}
+ul.mark-bullet {list-style-type: disc}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Notebooks">
+<div class="nav-panel">
+<p>
+Next: <a href="AI-Screenshots.html" accesskey="n" rel="next">AI Screenshots</a>, Previous: <a href="Devenv-Integration.html" accesskey="p" rel="prev">Devenv Integration</a>, Up: <a href="index.html" accesskey="u" rel="up">Jotain</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
+</div>
+<h2 class="chapter" id="Notebooks-1"><span>13 Notebooks<a class="copiable-link" href="#Notebooks-1"> &para;</a></span></h2>
+
+<p>Org Babel turns an ordinary <code class="code">.org</code> file into a notebook: prose, executable source blocks, and their captured output in one plain-text document that diffs, greps, and merges like any other file. Jotain configures it in <code class="code">lisp/init-org.el</code> for that workflow specifically &mdash; languages preloaded, evaluation prompt made unobtrusive, plots redisplayed after every run.
+</p>
+<p>Nothing here is a separate mode. You are in <code class="code">org-mode</code> the whole time.
+</p>
+<ul class="mini-toc">
+<li><a href="#The-loop" accesskey="1">The loop</a></li>
+<li><a href="#Sessions" accesskey="2">Sessions</a></li>
+<li><a href="#Results" accesskey="3">Results</a></li>
+<li><a href="#Evaluation-prompts-and-trust" accesskey="4">Evaluation prompts and trust</a></li>
+<li><a href="#Export" accesskey="5">Export</a></li>
+<li><a href="#Tangling" accesskey="6">Tangling</a></li>
+<li><a href="#Languages" accesskey="7">Languages</a></li>
+<li><a href="#Structure-templates" accesskey="8">Structure templates</a></li>
+<li><a href="#What-this-is-not" accesskey="9">What this is not</a></li>
+</ul>
+<div class="section-level-extent" id="The-loop">
+<h3 class="section"><span>13.1 The loop<a class="copiable-link" href="#The-loop"> &para;</a></span></h3>
+<p>Write a block, put point in it, press <code class="code">C-c C-c</code>:
+</p>
+<pre class="verbatim">#+begin_src python
+print(sum(range(10)))
+#+end_src
+
+#+RESULTS:
+: 45
+</pre>
+<p>The <code class="code">#+RESULTS:</code> block is written back into the buffer, so results are part of the document and survive a restart. <code class="code">C-c C-c</code> on a block that already has results replaces them.
+</p>
+<p>Type <code class="code">&lt;py</code> then <code class="code">TAB</code> to insert an empty Python block &mdash; <code class="code">org-tempo</code> has entries for the languages this config actually runs. <code class="code">C-c '</code> opens the block in a real major-mode buffer with LSP, formatting, and everything else you get in a standalone file; <code class="code">C-c '</code> again returns.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#The-C_002dc-b-prefix" accesskey="1">The <code class="code">C-c b</code> prefix</a></li>
+</ul>
+<div class="subsection-level-extent" id="The-C_002dc-b-prefix">
+<h4 class="subsection"><span>13.1.1 The <code class="code">C-c b</code> prefix<a class="copiable-link" href="#The-C_002dc-b-prefix"> &para;</a></span></h4>
+<p>Cell-at-a-time is <code class="code">C-c C-c</code>. Everything wider than one block is under <code class="code">C-c b</code> in Org buffers:
+</p>
+<table class="multitable">
+<thead><tr><th>Key</th><th>Command</th><th>What it does</th></tr></thead>
+<tbody><tr><td><code class="code">C-c b b</code></td><td><code class="code">org-babel-execute-buffer</code></td><td>Run every block in the file, top to bottom</td></tr>
+<tr><td><code class="code">C-c b e</code></td><td><code class="code">org-babel-execute-subtree</code></td><td>Run every block under the current heading</td></tr>
+<tr><td><code class="code">C-c b r</code></td><td><code class="code">jotain-org-babel-restart-session-and-execute-buffer</code></td><td>Kill the session of the block at point, then run the whole buffer &mdash; &quot;restart kernel and run all&quot;</td></tr>
+<tr><td><code class="code">C-c b s</code></td><td><code class="code">org-babel-switch-to-session</code></td><td>Jump into the live REPL behind the block at point</td></tr>
+<tr><td><code class="code">C-c b k</code></td><td><code class="code">org-babel-remove-result-one-or-many</code></td><td>Clear results; with a prefix arg, clear the whole buffer</td></tr>
+<tr><td><code class="code">C-c b t</code></td><td><code class="code">org-babel-tangle</code></td><td>Write the blocks out to real source files</td></tr>
+</tbody>
+</table>
+
+<p>Org&rsquo;s own <code class="code">C-c C-v</code> babel map is untouched and still has everything else (<code class="code">C-c C-v v</code> to expand a block, <code class="code">C-c C-v i</code> to view header args, and so on).
+</p>
+</div>
+</div>
+<div class="section-level-extent" id="Sessions">
+<h3 class="section"><span>13.2 Sessions<a class="copiable-link" href="#Sessions"> &para;</a></span></h3>
+<p>By default each block runs in a fresh process, so nothing carries over between them. Add <code class="code">:session</code> to keep a live interpreter around, which is what makes an Org file behave like a notebook rather than a pile of scripts:
+</p>
+<pre class="verbatim">#+begin_src python :session notebook :results output
+import pandas as pd
+df = pd.read_csv(&quot;measurements.csv&quot;)
+#+end_src
+
+#+begin_src python :session notebook :results output
+print(df.describe())
+#+end_src
+</pre>
+<p>The second block sees <code class="code">df</code>. <code class="code">C-c b s</code> drops you into that interpreter to poke at state interactively; <code class="code">C-c b r</code> throws it away and replays the file from the top, which is the reliable way to check that a notebook still runs end-to-end after you have been editing out of order.
+</p>
+<p><code class="code">&lt;jp TAB</code> inserts a Python block with <code class="code">:session notebook :results output</code> already filled in.
+</p>
+</div>
+<div class="section-level-extent" id="Results">
+<h3 class="section"><span>13.3 Results<a class="copiable-link" href="#Results"> &para;</a></span></h3>
+<p><code class="code">:results</code> decides what gets captured. The two that matter:
+</p>
+<ul class="itemize mark-bullet">
+<li><strong class="strong"><code class="code">output</code></strong> &mdash; everything the block printed. This is Jotain&rsquo;s default for Python, because the notebook habit is to <code class="code">print</code> things and Org&rsquo;s own default (<code class="code">value</code>) shows nothing at all unless the block ends in a <code class="code">return</code>.
+</li><li><strong class="strong"><code class="code">value</code></strong> &mdash; the value of the last expression. Set it per block when you want a table or a number rather than a transcript.
+</li></ul>
+
+<p>A block that produces a table gets a real Org table back, which the rest of the document can reference by name:
+</p>
+<pre class="verbatim">#+name: totals
+#+begin_src python :results value
+return [[&quot;region&quot;, &quot;n&quot;], None, [&quot;north&quot;, 41], [&quot;south&quot;, 58]]
+#+end_src
+</pre>
+
+<ul class="mini-toc">
+<li><a href="#Plots" accesskey="1">Plots</a></li>
+</ul>
+<div class="subsection-level-extent" id="Plots">
+<h4 class="subsection"><span>13.3.1 Plots<a class="copiable-link" href="#Plots"> &para;</a></span></h4>
+<p>Write the figure to <code class="code">:file</code> and Org inserts a link to it; the image is redisplayed automatically after every run, so re-running a cell updates the picture in place rather than leaving the previous one on screen.
+</p>
+<pre class="verbatim">#+begin_src python :session notebook :results file :file plot.png
+import matplotlib
+matplotlib.use(&quot;Agg&quot;)
+import matplotlib.pyplot as plt
+plt.plot([1, 4, 9, 16])
+plt.savefig(&quot;plot.png&quot;)
+&quot;plot.png&quot;
+#+end_src
+</pre>
+<p>Images are capped at 600px wide (<code class="code">org-image-actual-width</code>) so a large figure does not push the text column off-screen. <code class="code">C-c C-x C-v</code> toggles inline images if you want the raw links back.
+</p>
+</div>
+</div>
+<div class="section-level-extent" id="Evaluation-prompts-and-trust">
+<h3 class="section"><span>13.4 Evaluation prompts and trust<a class="copiable-link" href="#Evaluation-prompts-and-trust"> &para;</a></span></h3>
+<p>Running a source block runs arbitrary code, so Org asks for confirmation by default &mdash; which is correct for a file someone sent you and unbearable for the notebook you are editing right now.
+</p>
+<p>Jotain replaces the blanket prompt with a trust check (<code class="code">jotain-org-babel-confirm-evaluate</code>). A file is trusted when it lives either:
+</p>
+<ul class="itemize mark-bullet">
+<li>under <code class="code">org-directory</code> &mdash; the notes tree, <code class="code">~/notes</code> by default, shared with <code class="code">org-capture</code>, <code class="code">org-roam</code>, and <code class="code">denote</code>; or
+</li><li>inside the current project, as <code class="code">project-current</code> sees it.
+</li></ul>
+
+<p>Trusted files evaluate straight away. Everything else &mdash; a downloaded <code class="code">.org</code>, a mail attachment, a gist opened from a browser &mdash; still prompts on every block. To go back to Org&rsquo;s stock behaviour:
+</p>
+<pre class="verbatim">(setopt org-confirm-babel-evaluate t)
+</pre>
+</div>
+<div class="section-level-extent" id="Export">
+<h3 class="section"><span>13.5 Export<a class="copiable-link" href="#Export"> &para;</a></span></h3>
+<p>Export (<code class="code">C-c C-e</code>) uses the results already in the buffer: <code class="code">org-babel-default-header-args</code> sets <code class="code">:eval never-export</code>, so producing an HTML or PDF copy never re-runs your code. What you see in the buffer is what gets published. Pass <code class="code">:eval yes</code> on a block to opt it back into running at export time.
+</p>
+<p>The matching default is <code class="code">:exports both</code>, so a block and its output both appear in the exported document. <code class="code">:exports results</code> hides the code; <code class="code">:exports none</code> hides both.
+</p>
+</div>
+<div class="section-level-extent" id="Tangling">
+<h3 class="section"><span>13.6 Tangling<a class="copiable-link" href="#Tangling"> &para;</a></span></h3>
+<p><code class="code">C-c b t</code> writes blocks out to real files, which is how a notebook graduates into a program:
+</p>
+<pre class="verbatim">#+begin_src python :tangle analysis/load.py
+def load(path):
+    ...
+#+end_src
+</pre>
+<p>Indentation is preserved exactly as written (<code class="code">org-src-preserve-indentation</code>), which is not Org&rsquo;s default and is not optional for Python &mdash; Org&rsquo;s re-indent-on-exit behaviour corrupts blocks where leading whitespace is syntax.
+</p>
+</div>
+<div class="section-level-extent" id="Languages">
+<h3 class="section"><span>13.7 Languages<a class="copiable-link" href="#Languages"> &para;</a></span></h3>
+<p><code class="code">jotain-org-babel-languages</code> in <code class="code">lisp/init-org.el</code> lists what is enabled:
+</p>
+<pre class="verbatim">emacs-lisp  org
+shell       eshell
+python      C     R    haskell  js  css
+sql         sqlite
+awk         sed   calc
+dot         gnuplot     latex
+</pre>
+<p>Every entry is backed by an <code class="code">ob-LANG</code> library that ships with Org itself, so no source block depends on a package being installed. <code class="code">C</code> covers C, C++ and D; <code class="code">shell</code> covers bash, sh and the other shell dialects Org knows. A test (<code class="code">test/test-org-babel.el</code>) <code class="code">require</code>s each one, so a language that gets renamed or moved out to org-contrib during an Org bump fails CI rather than a <code class="code">C-c C-c</code> months later.
+</p>
+<p>Enabling a language teaches Org how to run the block &mdash; it does not provide the interpreter. Python, R, <code class="code">gnuplot</code>, <code class="code">dot</code> and the rest come from the project&rsquo;s own environment, the same way LSP servers do.
+</p>
+<p>Add one by editing the list:
+</p>
+<pre class="verbatim">(defconst jotain-org-babel-languages
+  '(emacs-lisp org shell eshell python C R haskell js css
+    sql sqlite awk sed calc dot gnuplot latex
+    ruby))                               ; ← ob-ruby ships with Org
+</pre>
+
+<ul class="mini-toc">
+<li><a href="#Python-and-IPython" accesskey="1">Python and IPython</a></li>
+</ul>
+<div class="subsection-level-extent" id="Python-and-IPython">
+<h4 class="subsection"><span>13.7.1 Python and IPython<a class="copiable-link" href="#Python-and-IPython"> &para;</a></span></h4>
+<p><code class="code">init-lang-python.el</code> points the Python REPL at <code class="code">ipython</code> when it is on <code class="code">PATH</code>, which gets you IPython&rsquo;s completion, tracebacks and <code class="code">%magic</code> in <code class="code">run-python</code> and in <code class="code">:session</code> blocks. When it is absent, <code class="code">python3</code> is used and nothing else changes.
+</p>
+<p>Blocks <em class="emph">without</em> a session always use plain <code class="code">python3</code> (<code class="code">org-babel-python-command</code>), deliberately: a one-shot block handed an interactive <code class="code">ipython -i</code> would wait for input instead of returning a result.
+</p>
+</div>
+</div>
+<div class="section-level-extent" id="Structure-templates">
+<h3 class="section"><span>13.8 Structure templates<a class="copiable-link" href="#Structure-templates"> &para;</a></span></h3>
+<p><code class="code">org-tempo</code> expands <code class="code">&lt;KEY</code> + <code class="code">TAB</code>. Jotain adds:
+</p>
+<table class="multitable">
+<thead><tr><th>Key</th><th>Expands to</th></tr></thead>
+<tbody><tr><td><code class="code">&lt;py</code></td><td><code class="code">#+begin_src python</code></td></tr>
+<tr><td><code class="code">&lt;jp</code></td><td><code class="code">#+begin_src python :session notebook :results output</code></td></tr>
+<tr><td><code class="code">&lt;sh</code></td><td><code class="code">#+begin_src bash</code></td></tr>
+<tr><td><code class="code">&lt;el</code></td><td><code class="code">#+begin_src emacs-lisp</code></td></tr>
+<tr><td><code class="code">&lt;sql</code></td><td><code class="code">#+begin_src sql</code></td></tr>
+<tr><td><code class="code">&lt;dot</code></td><td><code class="code">#+begin_src dot :file diagram.png</code></td></tr>
+</tbody>
+</table>
+
+<p>Org&rsquo;s own entries (<code class="code">&lt;s</code> source, <code class="code">&lt;q</code> quote, <code class="code">&lt;e</code> example, and the rest) still work.
+</p>
+</div>
+<div class="section-level-extent" id="What-this-is-not">
+<h3 class="section"><span>13.9 What this is not<a class="copiable-link" href="#What-this-is-not"> &para;</a></span></h3>
+<p>This is Org Babel, not a Jupyter client. Blocks run through Org&rsquo;s own <code class="code">ob-*</code> backends and comint, so there are no Jupyter kernels, no <code class="code">.ipynb</code> files, and no rich MIME output beyond images and tables.
+</p>
+<p>If you need actual kernels &mdash; a remote kernel, a language with no <code class="code">ob-</code> backend, or <code class="code">.ipynb</code> interchange &mdash; the <a class="uref" href="https://github.com/emacs-jupyter/jupyter"><code class="code">emacs-jupyter</code></a> package provides <code class="code">jupyter-python</code> blocks alongside everything above. It is not included here because it needs the <code class="code">zmq</code> dynamic module and a <code class="code">jupyter</code> binary at runtime, neither of which this configuration ships.
+</p>
+<p>Long-running blocks also execute synchronously and will block Emacs. Use <code class="code">:session</code> and a REPL you can watch (<code class="code">C-c b s</code>) rather than waiting on a 30-minute <code class="code">C-c C-c</code>.
+</p>
+</div>
+</div>
+<hr>
+<div class="nav-panel">
+<p>
+Next: <a href="AI-Screenshots.html" accesskey="n" rel="next">AI Screenshots</a>, Previous: <a href="Devenv-Integration.html" accesskey="p" rel="prev">Devenv Integration</a>, Up: <a href="index.html" accesskey="u" rel="up">Jotain</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
+</div>
+
+
+
+</body>
+</html>

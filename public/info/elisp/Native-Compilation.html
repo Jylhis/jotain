@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.0.91.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Native Compilation (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Native Compilation (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Native Compilation (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Debugging.html#Debugging" rel="next" title="Debugging">
+<link href="Byte-Compilation.html#Byte-Compilation" rel="prev" title="Byte Compilation">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Native-Compilation">
+<div class="nav-panel">
+<p>
+Next: <a href="Debugging.html#Debugging" accesskey="n" rel="next">Debugging Lisp Programs</a>, Previous: <a href="Byte-Compilation.html#Byte-Compilation" accesskey="p" rel="prev">Byte Compilation</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h2 class="chapter" id="Compilation-of-Lisp-to-Native-Code"><span>18 Compilation of Lisp to Native Code<a class="copiable-link" href="#Compilation-of-Lisp-to-Native-Code"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-native-compilation"></a>
+<a class="index-entry-id" id="index-compilation-to-native-code-_0028Emacs-Lisp_0029"></a>
+
+<a class="index-entry-id" id="index-native-code"></a>
+<p>In addition to the byte-compilation, described in <a class="ref" href="Byte-Compilation.html#Byte-Compilation">the previous chapter</a>, Emacs can also optionally compile
+Lisp function definitions into a true compiled code, known as
+<em class="dfn">native code</em>.  This feature uses the <samp class="file">libgccjit</samp> library,
+which is part of the GCC distribution, and requires that Emacs be
+built with support for using that library.  It also requires GCC and
+Binutils (the assembler and linker) to be available on your system for
+you to be able to native-compile Lisp code.
+</p>
+<a class="index-entry-id" id="index-native_002dcompile_002c-a-Lisp-feature"></a>
+<p>To determine whether the current Emacs process can produce and load
+natively compiled Lisp code, call
+<code class="code">native-comp-available-p</code> (see <a class="pxref" href="#Native_002dCompilation-Functions">Native-Compilation Functions</a>).
+</p>
+<p>Unlike byte-compiled code, native-compiled Lisp code is executed
+directly by the machine&rsquo;s hardware, and therefore runs at full speed
+that the host CPU can provide.  The resulting speedup generally
+depends on what the Lisp code does, but is usually 2.5 to 5 times
+faster than the corresponding byte-compiled code.
+</p>
+<p>Since native code is generally incompatible between different
+systems, the native-compiled code is <em class="emph">not</em> transportable from
+one machine to another, it can only be used on the same machine where
+it was produced or on very similar ones (having the same CPU and
+run-time libraries).  The transportability of native-compiled code
+is the same as that of shared libraries (<samp class="file">.so</samp> or <samp class="file">.dll</samp>
+files).
+</p>
+<p>Libraries of native-compiled code include crucial dependencies on
+Emacs Lisp primitives (see <a class="pxref" href="Functions.html#What-Is-a-Function">What Is a Function?</a>) and their calling
+conventions, and thus Emacs usually won&rsquo;t load native-compiled code
+produced by earlier or later Emacs versions; native compilation of the
+same Lisp code by a different Emacs version will usually produce a
+natively compiled library under a unique file name that only that
+version of Emacs will be able to load.  However, the use of unique
+file names enables several versions of the same Lisp library
+natively compiled by several different versions of Emacs to be placed
+within the same directory.
+</p>
+<a class="index-entry-id" id="index-no_002dnative_002dcompile"></a>
+<p>A non-<code class="code">nil</code> file-local variable binding of
+<code class="code">no-byte-compile</code> (see <a class="pxref" href="Byte-Compilation.html#Byte-Compilation">Byte Compilation</a>) also disables the
+native compilation of that file.  In addition, a similar variable
+<code class="code">no-native-compile</code> disables just the native compilation of the
+file.  If both <code class="code">no-byte-compile</code> and <code class="code">no-native-compile</code> are
+specified, the former takes precedence.
+</p>
+<a class="index-entry-id" id="index-native-compilation_002c-prevent-writing-_002a_002eeln-files"></a>
+<p>Sometimes there could be a need to prevent the native compilation
+from writing its results, the <samp class="file">*.eln</samp> files, into a subdirectory
+of <code class="code">user-emacs-directory</code> (see <a class="pxref" href="System-Interface.html#Init-File">The Init File</a>).  You can do that
+by either changing the value of <code class="code">native-comp-eln-load-path</code>
+(see <a class="pxref" href="#Native_002dCompilation-Variables">Native-Compilation Variables</a>) or by temporarily pointing the
+<code class="env">HOME</code> environment variable to a non-existing directory.  Note
+that the latter technique might still produce a small number of
+<samp class="file">*.eln</samp> files if Emacs needs to generate <em class="dfn">trampolines</em>, which
+are used if Lisp primitives are advised or redefined in your Lisp code
+that is being natively compiled.  See <a class="xref" href="#Native_002dCompilation-Variables">trampolines</a>.  Alternatively, you can specify that the <samp class="file">*.eln</samp>
+files are written to a non-default directory using the
+<code class="code">startup-redirect-eln-cache</code> function; see <a class="pxref" href="#Native_002dCompilation-Functions">Native-Compilation Functions</a>.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Native_002dCompilation-Functions" accesskey="1">Native-Compilation Functions</a></li>
+<li><a href="#Native_002dCompilation-Variables" accesskey="2">Native-Compilation Variables</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Native_002dCompilation-Functions">
+<div class="nav-panel">
+<p>
+Next: <a href="#Native_002dCompilation-Variables" accesskey="n" rel="next">Native-Compilation Variables</a>, Up: <a href="#Native-Compilation" accesskey="u" rel="up">Compilation of Lisp to Native Code</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Native_002dCompilation-Functions-1"><span>18.1 Native-Compilation Functions<a class="copiable-link" href="#Native_002dCompilation-Functions-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-native_002dcompilation-functions"></a>
+
+<p>Native-Compilation is implemented as a side effect of
+byte-compilation (see <a class="pxref" href="Byte-Compilation.html#Byte-Compilation">Byte Compilation</a>).  Thus, compiling Lisp
+code natively always produces its byte code as well, and therefore all
+the rules and caveats of preparing Lisp code for byte compilation
+(see <a class="pxref" href="Byte-Compilation.html#Compilation-Functions">Byte-Compilation Functions</a>) are valid for native-compilation as
+well.
+</p>
+<p>You can natively-compile either a single function or macro
+definition, or a whole file of Lisp code, with the
+<code class="code">native-compile</code> function.  Natively-compiling a file will
+produce the <samp class="file">.eln</samp> file with native code.
+</p>
+<a class="index-entry-id" id="index-native_002dcomp_002dlimple_002dmode"></a>
+<a class="index-entry-id" id="index-native_002dcomp_002dverbose"></a>
+<p>Native compilation might produce warning or error messages; these
+are normally recorded in the buffer called
+<samp class="file">*Native-compile-Log*</samp>.  In interactive sessions, it uses the
+special LIMPLE mode (<code class="code">native-comp-limple-mode</code>), which sets up
+<code class="code">font-lock</code> as appropriate for this log, and is otherwise the
+same as Fundamental mode.  Logging of messages resulting from
+native-compilation can be controlled by the <code class="code">native-comp-verbose</code>
+variable (see <a class="pxref" href="#Native_002dCompilation-Variables">Native-Compilation Variables</a>).
+</p>
+<p>When Emacs is run non-interactively, messages produced by
+native-compilation are reported by calling <code class="code">message</code>
+(see <a class="pxref" href="Display.html#Displaying-Messages">Displaying Messages in the Echo Area</a>), and are usually displayed on the
+standard error stream of the terminal from which Emacs was invoked.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-native_002dcompile"><span class="category-def">Function: </span><span><strong class="def-name">native-compile</strong> <var class="def-var-arguments">function-or-file &amp;optional output</var><a class="copiable-link" href="#index-native_002dcompile"> &para;</a></span></dt>
+<dd><p>This function compiles <var class="var">function-or-file</var> into native code.  The
+argument <var class="var">function-or-file</var> can be a function symbol, a Lisp form,
+or a name (a string) of the file which contains the Emacs Lisp source
+code to compile.  If the optional argument <var class="var">output</var> is provided,
+it must be a string specifying the name of the file to write the
+compiled code into.  Otherwise, if <var class="var">function-or-file</var> is a
+function or a Lisp form, this function returns the compiled object,
+and if <var class="var">function-or-file</var> is a file name, the function returns the
+full absolute name of the file it created for the compiled code.  The
+output file is by default given the <samp class="file">.eln</samp> extension.
+</p>
+<p>This function runs the final phase of the native compilation, which
+invokes GCC via <samp class="file">libgccjit</samp>, in a separate subprocess, which
+invokes the same Emacs executable as the process that called this
+function.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-batch_002dnative_002dcompile"><span class="category-def">Function: </span><span><strong class="def-name">batch-native-compile</strong> <var class="def-var-arguments">&amp;optional for-tarball</var><a class="copiable-link" href="#index-batch_002dnative_002dcompile"> &para;</a></span></dt>
+<dd><p>This function runs native-compilation on files specified on the Emacs
+command line in batch mode.  It must be used only in a batch execution
+of Emacs, as it kills Emacs upon completion of the compilation.  If
+one or more of the files fail to compile, the Emacs process will
+attempt to compile all the other files, and will terminate with a
+non-zero status code.  The optional argument <var class="var">for-tarball</var>, if
+non-<code class="code">nil</code>, tells the function to place the resulting <samp class="file">.eln</samp>
+files in the last directory mentioned in
+<code class="code">native-comp-eln-load-path</code> (see <a class="pxref" href="Loading.html#Library-Search">Library Search</a>); this is
+meant to be used as part of building an Emacs source tarball for the
+first time, when the native-compiled files, which are absent from
+the source tarball, should be generated in the build tree instead of
+the user&rsquo;s cache directory.
+</p></dd></dl>
+
+<p>Native compilation can be run entirely asynchronously, in a subprocess
+of the main Emacs process.  This leaves the main Emacs process free to
+use while the compilation runs in the background.  This is the method
+used by Emacs to natively-compile any Lisp file or byte-compiled Lisp
+file that is loaded into Emacs, when no native-compiled file for it
+is available.  Note that because of this use of a subprocess, native
+compilation may produce warning and errors which byte-compilation does
+not, and Lisp code may thus need to be modified to work correctly.  See
+<code class="code">native-comp-async-report-warnings-errors</code> in see <a class="pxref" href="#Native_002dCompilation-Variables">Native-Compilation Variables</a> for more details.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-native_002dcompile_002dasync"><span class="category-def">Function: </span><span><strong class="def-name">native-compile-async</strong> <var class="def-var-arguments">files &amp;optional recursively load selector</var><a class="copiable-link" href="#index-native_002dcompile_002dasync"> &para;</a></span></dt>
+<dd><p>This function compiles the named <var class="var">files</var> asynchronously.  The
+argument <var class="var">files</var> should be a single file name (a string) or a list
+of one or more file and/or directory names.  If directories are
+present in the list, the optional argument <var class="var">recursively</var> should be
+non-<code class="code">nil</code> to cause the compilation to recurse into those
+directories.  If <var class="var">load</var> is non-<code class="code">nil</code>, Emacs will load each
+file that it succeeded to compile.  The optional argument
+<var class="var">selector</var> allows control of which of <var class="var">files</var> will be
+compiled; it can have one of the following values:
+</p>
+<dl class="table">
+<dt><code class="code">nil</code> or omitted</dt>
+<dd><p>Select all the files and directories in <var class="var">files</var>.
+</p></dd>
+<dt>a regular expression string</dt>
+<dd><p>Select the files and directories whose names match the regexp.
+</p></dd>
+<dt>a function</dt>
+<dd><p>A predicate function, which will be called with each file and
+directory in <var class="var">files</var>, and should return non-<code class="code">nil</code> if the file
+or the directory should be selected for compilation.
+</p></dd>
+</dl>
+
+<p>On systems with multiple CPU execution units, when <var class="var">files</var> names
+more than one file, this function will normally start several
+compilation subprocesses in parallel, under the control of
+<code class="code">native-comp-async-jobs-number</code> (see <a class="pxref" href="#Native_002dCompilation-Variables">Native-Compilation Variables</a>).
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-native_002dcompile_002ddirectory"><span class="category-def">Function: </span><span><strong class="def-name">native-compile-directory</strong> <var class="def-var-arguments">directory</var><a class="copiable-link" href="#index-native_002dcompile_002ddirectory"> &para;</a></span></dt>
+<dd><p>This function compiles into native code all the <samp class="file">*.el</samp> files in the
+specified <var class="var">directory</var> and, recursively, in all of its
+subdirectories, if a corresponding <samp class="file">.eln</samp> file could not be found
+in any of the directories mentioned in the
+<code class="code">native-comp-eln-load-path</code> list (see <a class="pxref" href="Loading.html#Library-Search">Library Search</a>).
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-emacs_002dlisp_002dnative_002dcompile"><span class="category-def">Command: </span><span><strong class="def-name">emacs-lisp-native-compile</strong><a class="copiable-link" href="#index-emacs_002dlisp_002dnative_002dcompile"> &para;</a></span></dt>
+<dd><p>This command compiles the file visited by the current buffer into
+native code, if the file was changed since the last time it was
+natively compiled.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-emacs_002dlisp_002dnative_002dcompile_002dand_002dload"><span class="category-def">Command: </span><span><strong class="def-name">emacs-lisp-native-compile-and-load</strong><a class="copiable-link" href="#index-emacs_002dlisp_002dnative_002dcompile_002dand_002dload"> &para;</a></span></dt>
+<dd><p>This command compiles the file visited by the current buffer into
+native code, like <code class="code">emacs-lisp-native-compile</code>, but it also loads
+the native code when the compilation finishes.
+</p></dd></dl>
+
+<p>The following function allows Lisp programs to test whether
+native-compilation is available at runtime.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-native_002dcomp_002davailable_002dp"><span class="category-def">Function: </span><span><strong class="def-name">native-comp-available-p</strong><a class="copiable-link" href="#index-native_002dcomp_002davailable_002dp"> &para;</a></span></dt>
+<dd><p>This function returns non-<code class="code">nil</code> if the running Emacs process has
+the native-compilation support compiled into it.  On systems that load
+<samp class="file">libgccjit</samp> dynamically, it also makes sure that library is
+available and can be loaded.  Lisp programs that need to know up front
+whether native-compilation is available should use this predicate.
+</p></dd></dl>
+
+<p>By default, asynchronous native compilation writes the <samp class="file">*.eln</samp>
+files it produces to a subdirectory of the first writable directory
+specified by the <code class="code">native-comp-eln-load-path</code> variable
+(see <a class="pxref" href="#Native_002dCompilation-Variables">Native-Compilation Variables</a>).  You can change this by using
+the following function in your startup files:
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-startup_002dredirect_002deln_002dcache"><span class="category-def">Function: </span><span><strong class="def-name">startup-redirect-eln-cache</strong> <var class="def-var-arguments">cache-directory</var><a class="copiable-link" href="#index-startup_002dredirect_002deln_002dcache"> &para;</a></span></dt>
+<dd><p>This function arranges for the asynchronous native compilation to
+write the produced <samp class="file">*.eln</samp> files to <var class="var">cache-directory</var>, which
+must be a single directory, a string.  It also destructively modifies
+<code class="code">native-comp-eln-load-path</code> such that its first element is
+<var class="var">cache-directory</var>.  If <var class="var">cache-directory</var> is not an absolute
+file name, it is interpreted relative to <code class="code">user-emacs-directory</code>
+(see <a class="pxref" href="System-Interface.html#Init-File">The Init File</a>).
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Native_002dCompilation-Variables">
+<div class="nav-panel">
+<p>
+Previous: <a href="#Native_002dCompilation-Functions" accesskey="p" rel="prev">Native-Compilation Functions</a>, Up: <a href="#Native-Compilation" accesskey="u" rel="up">Compilation of Lisp to Native Code</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Native_002dCompilation-Variables-1"><span>18.2 Native-Compilation Variables<a class="copiable-link" href="#Native_002dCompilation-Variables-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-native_002dcompilation-variables"></a>
+
+<p>This section documents the variables that control
+native-compilation.
+</p>
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-native_002dcomp_002dspeed"><span class="category-def">User Option: </span><span><strong class="def-name">native-comp-speed</strong><a class="copiable-link" href="#index-native_002dcomp_002dspeed"> &para;</a></span></dt>
+<dd><p>This variable specifies the optimization level for native compilation.
+Its value should be a number between &minus;1 and 3.  Values between
+0 and 3 specify the optimization levels equivalent to the
+corresponding compiler <samp class="option">-O0</samp>, <samp class="option">-O1</samp>, etc. command-line
+options of the compiler.  The value &minus;1 means disable
+native-compilation: functions and files will be only byte-compiled;
+however, the <samp class="file">*.eln</samp> files will still be produced, they will just
+contain the compiled code in bytecode form.  (This can be achieved at
+function granularity by using the <code class="code">(declare&nbsp;(speed&nbsp;-1))</code><!-- /@w -->
+form, see <a class="pxref" href="Functions.html#Declare-Form">The <code class="code">declare</code> Form</a>.)
+The default value is 2.
+</p></dd></dl>
+
+<a class="anchor" id="compilation_002dsafety"></a><dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-compilation_002dsafety"><span class="category-def">User Option: </span><span><strong class="def-name">compilation-safety</strong><a class="copiable-link" href="#index-compilation_002dsafety"> &para;</a></span></dt>
+<dd><p>This variable specifies the safety level to be used for the emitted
+native code.  The value should be a number, either 0 or 1 with the
+following meanings:
+</p>
+<dl class="table">
+<dt>0</dt>
+<dd><p>Emitted code can misbehave (up to even crashing Emacs) if a function&rsquo;s
+declaration does not describe correctly what the function does or how it
+is called, and the function is natively compiled.
+</p></dd>
+<dt>1</dt>
+<dd><p>Emitted code must be generated in a safe manner even if functions are
+mis-declared.
+</p></dd>
+</dl>
+
+<p>This can also be controlled at a function granularity, by using the
+<code class="code">safety</code> <code class="code">declare</code> form, see <a class="pxref" href="Functions.html#Declare-Form">The <code class="code">declare</code> Form</a>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-native_002dcomp_002ddebug"><span class="category-def">User Option: </span><span><strong class="def-name">native-comp-debug</strong><a class="copiable-link" href="#index-native_002dcomp_002ddebug"> &para;</a></span></dt>
+<dd><p>This variable specifies the level of debugging information produced by
+native-compilation.  Its value should be a number between zero and 3,
+with the following meaning:
+</p>
+<dl class="table">
+<dt>0</dt>
+<dd><p>No debugging output.  This is the default.
+</p></dd>
+<dt>1</dt>
+<dd><p>Emit debugging symbols with the native code.  This allows easier
+debugging of the native code with debuggers such as <code class="command">gdb</code>.
+</p></dd>
+<dt>2</dt>
+<dd><p>Like 1, and in addition dump pseudo-C code.
+</p></dd>
+<dt>3</dt>
+<dd><p>Like 2, and in addition dump the GCC intermediate passes and
+<samp class="file">libgccjit</samp> log file.
+</p></dd>
+</dl>
+
+<p>When generated, the pseudo-C code is deposited in the same directory
+as the corresponding <samp class="file">.eln</samp> file.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-native_002dcomp_002dverbose-1"><span class="category-def">User Option: </span><span><strong class="def-name">native-comp-verbose</strong><a class="copiable-link" href="#index-native_002dcomp_002dverbose-1"> &para;</a></span></dt>
+<dd><p>This variable controls the verbosity of native-compilation by
+suppressing some or all of the log messages emitted by it.  If its
+value is zero, the default, all of the log messages are suppressed.
+Setting it to a value between 1 and 3 will allow logging of the
+messages whose level is above the value.  The values have the
+following interpretations:
+</p>
+<dl class="table">
+<dt>0</dt>
+<dd><p>No logging.  This is the default.
+</p></dd>
+<dt>1</dt>
+<dd><p>Log the final <abbr class="acronym">LIMPLE</abbr> representation of the code.
+</p></dd>
+<dt>2</dt>
+<dd><p>Log the <abbr class="acronym">LAP</abbr>, the final <abbr class="acronym">LIMPLE</abbr>, and some additional
+pass info.
+</p></dd>
+<dt>3</dt>
+<dd><p>Maximum verbosity: log everything.
+</p></dd>
+</dl>
+</dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-native_002dcomp_002dasync_002djobs_002dnumber"><span class="category-def">User Option: </span><span><strong class="def-name">native-comp-async-jobs-number</strong><a class="copiable-link" href="#index-native_002dcomp_002dasync_002djobs_002dnumber"> &para;</a></span></dt>
+<dd><p>This variable determines the maximum number of native-compilation
+subprocesses that will be started simultaneously.  It should be a
+non-negative number.  The default value is zero, which means use half
+the number of the CPU execution units, or 1 if the CPU has only one
+execution unit.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-native_002dcomp_002dasync_002dreport_002dwarnings_002derrors"><span class="category-def">User Option: </span><span><strong class="def-name">native-comp-async-report-warnings-errors</strong><a class="copiable-link" href="#index-native_002dcomp_002dasync_002dreport_002dwarnings_002derrors"> &para;</a></span></dt>
+<dd><p>If this variable&rsquo;s value is non-<code class="code">nil</code>, warnings and errors from
+asynchronous native-compilation subprocesses are reported in the main
+Emacs session in a buffer named <samp class="file">*Warnings*</samp>.  The default value
+<code class="code">t</code> means display the resulting buffer.  To log warnings without
+popping up the <samp class="file">*Warnings*</samp> buffer, set this variable to
+<code class="code">silent</code>.
+</p>
+<p>A common cause for asynchronous native-compilation to produce
+warnings is compiling a file that is missing some <code class="code">require</code> of a
+necessary feature.  The feature may be loaded into the main emacs, but
+because native compilation always starts from a subprocess with a
+pristine environment, that may not be true for the subprocess.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-native_002dcomp_002dasync_002dquery_002don_002dexit"><span class="category-def">User Option: </span><span><strong class="def-name">native-comp-async-query-on-exit</strong><a class="copiable-link" href="#index-native_002dcomp_002dasync_002dquery_002don_002dexit"> &para;</a></span></dt>
+<dd><p>If this variable&rsquo;s value is non-<code class="code">nil</code>, Emacs will query upon exiting
+whether to exit and kill any asynchronous native-compilation
+subprocesses that are still running, thus preventing the corresponding
+<samp class="file">.eln</samp> files from being written.  If the value is <code class="code">nil</code>, the
+default, Emacs will kill these subprocesses without querying.
+</p></dd></dl>
+
+<p>The variable <code class="code">native-comp-eln-load-path</code> holds the list of
+directories where Emacs looks for the <samp class="file">*.eln</samp> files
+(see <a class="pxref" href="Loading.html#Library-Search">Library Search</a>); in that role it is the equivalent of
+<code class="code">load-path</code> used to look for <samp class="file">*.el</samp> and <samp class="file">*.elc</samp> files.
+The directories in this list are also used for writing the
+<samp class="file">*.eln</samp> files produced by asynchronous native-compilation;
+specifically, Emacs will write these files into the first writable
+directory in the list.  Thus, you can control where native-compilation
+stores the results by changing the value of this variable.
+</p>
+<a class="index-entry-id" id="index-disable-asynchronous-native-compilation"></a>
+<a class="index-entry-id" id="index-inhibit-asynchronous-native-compilation"></a>
+<a class="index-entry-id" id="index-asynchronous-native-compilation_002c-disable"></a>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-native_002dcomp_002djit_002dcompilation"><span class="category-def">Variable: </span><span><strong class="def-name">native-comp-jit-compilation</strong><a class="copiable-link" href="#index-native_002dcomp_002djit_002dcompilation"> &para;</a></span></dt>
+<dd><p>This variable, if non-<code class="code">nil</code>, enables asynchronous (a.k.a.
+<em class="dfn">just-in-time</em>, or <abbr class="acronym">JIT</abbr>) native compilation of the
+<samp class="file">*.elc</samp> files loaded by Emacs for which the corresponding
+<samp class="file">*.eln</samp> files do not already exist.  This JIT compilation uses
+separate Emacs sub-processes running in batch mode, according to the
+value of <code class="code">native-comp-async-jobs-number</code>.  When the JIT
+compilation of a Lisp file finishes successfully, the resulting
+<samp class="file">.eln</samp> file is loaded and its code replaces the definition of
+functions provided by the <samp class="file">.elc</samp> file.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-trampolines_002c-in-native-compilation"></a>
+<p>Setting the value of <code class="code">native-comp-jit-compilation</code> to <code class="code">nil</code>
+disables JIT native compilation.  However, even when JIT native
+compilation is disabled, Emacs might still need to start asynchronous
+native compilation subprocesses to produce <em class="dfn">trampolines</em>.  To
+control this, use a separate variable, described below.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-native_002dcomp_002denable_002dsubr_002dtrampolines"><span class="category-def">Variable: </span><span><strong class="def-name">native-comp-enable-subr-trampolines</strong><a class="copiable-link" href="#index-native_002dcomp_002denable_002dsubr_002dtrampolines"> &para;</a></span></dt>
+<dd><p>This variable controls generation of trampolines.  A trampoline is a
+small piece of native code required to allow calling Lisp primitives,
+which were advised or redefined, from Lisp code that was
+natively compiled with <code class="code">native-comp-speed</code> set to 2 or greater.
+Emacs stores the generated trampolines on separate <samp class="file">*.eln</samp> files.
+By default, this variable&rsquo;s value is <code class="code">t</code>, which enables the
+generation of trampoline files; setting it to <code class="code">nil</code> disables the
+generation of trampolines.  Note that if a trampoline needed for
+advising or redefining a primitive is not available and cannot be
+generated, calls to that primitive from native-compiled Lisp will
+ignore redefinitions and advices, and will behave as if the primitive
+was called directly from C.  Therefore, we don&rsquo;t recommend disabling
+the trampoline generation, unless you know that all the trampolines
+needed by your Lisp programs are already compiled and accessible to
+Emacs.
+</p>
+<p>The value of this variable can also be a string, in which case it
+specifies the name of a directory in which to store the generated
+trampoline <samp class="file">*.eln</samp> files, overriding the directories in
+<code class="code">native-comp-eln-load-path</code>.  This is useful if you want the
+trampolines to be generated as needed, but don&rsquo;t want to store them
+under the user&rsquo;s <code class="env">HOME</code> directory or in the other public
+directories where <samp class="file">*.eln</samp> files are kept.  However, unlike with
+directories in <code class="code">native-comp-eln-load-path</code>, the trampolines will
+be stored in the directory given by the value of this variable, not in
+its version-specific subdirectory.  If the name of this directory is
+not absolute, it is interpreted relative to
+<code class="code">invocation-directory</code> (see <a class="pxref" href="System-Interface.html#System-Environment">Operating System Environment</a>)
+</p>
+<p>If this variable is non-<code class="code">nil</code>, and Emacs needs to produce a
+trampoline, but it cannot find any writable directory to store the
+trampoline, it will store it inside <code class="code">temporary-file-directory</code>
+(see <a class="pxref" href="Files.html#Unique-File-Names">Generating Unique File Names</a>).
+</p>
+<p>Trampolines produced when no writable directory is found to store
+them, or when this variable is a string, will only be available for
+the duration of the current Emacs session, because Emacs doesn&rsquo;t look
+for trampolines in either of these places.
+</p></dd></dl>
+
+</div>
+</div>
+<hr>
+<div class="nav-panel">
+<p>
+Next: <a href="Debugging.html#Debugging" accesskey="n" rel="next">Debugging Lisp Programs</a>, Previous: <a href="Byte-Compilation.html#Byte-Compilation" accesskey="p" rel="prev">Byte Compilation</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

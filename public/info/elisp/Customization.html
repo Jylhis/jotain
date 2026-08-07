@@ -1,0 +1,1735 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.0.91.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Customization (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Customization (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Customization (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Loading.html#Loading" rel="next" title="Loading">
+<link href="Macros.html#Macros" rel="prev" title="Macros">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+kbd.kbd {font-style: oblique}
+kbd.key {font-style: normal}
+span.r {font-family: initial; font-weight: normal; font-style: normal}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
+ul.mark-bullet {list-style-type: disc}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Customization">
+<div class="nav-panel">
+<p>
+Next: <a href="Loading.html#Loading" accesskey="n" rel="next">Loading</a>, Previous: <a href="Macros.html#Macros" accesskey="p" rel="prev">Macros</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h2 class="chapter" id="Customization-Settings"><span>15 Customization Settings<a class="copiable-link" href="#Customization-Settings"> &para;</a></span></h2>
+
+<a class="index-entry-id" id="index-customization-item"></a>
+<p>Users of Emacs can customize variables and faces without writing
+Lisp code, by using the Customize interface.  See <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Easy-Customization.html#Easy-Customization">Easy
+Customization</a> in <cite class="cite">The GNU Emacs Manual</cite>.  This chapter describes
+how to define <em class="dfn">customization items</em> that users can interact with
+through the Customize interface.
+</p>
+<p>Customization items include customizable variables, which are
+defined with the
+<code class="code">defcustom</code> macro;
+customizable faces, which are defined with <code class="code">defface</code> (described
+separately in <a class="ref" href="Display.html#Defining-Faces">Defining Faces</a>); and <em class="dfn">customization groups</em>,
+defined with
+<code class="code">defgroup</code>,
+which act as containers for groups of related customization items.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Common-Keywords" accesskey="1">Common Item Keywords</a></li>
+<li><a href="#Group-Definitions" accesskey="2">Defining Customization Groups</a></li>
+<li><a href="#Variable-Definitions" accesskey="3">Defining Customization Variables</a></li>
+<li><a href="#Customization-Types" accesskey="4">Customization Types</a></li>
+<li><a href="#Applying-Customizations" accesskey="5">Applying Customizations</a></li>
+<li><a href="#Custom-Themes" accesskey="6">Custom Themes</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Common-Keywords">
+<div class="nav-panel">
+<p>
+Next: <a href="#Group-Definitions" accesskey="n" rel="next">Defining Customization Groups</a>, Up: <a href="#Customization" accesskey="u" rel="up">Customization Settings</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Common-Item-Keywords"><span>15.1 Common Item Keywords<a class="copiable-link" href="#Common-Item-Keywords"> &para;</a></span></h3>
+
+<a class="index-entry-id" id="index-customization-keywords"></a>
+<p>The customization declarations that we will describe in the next few
+sections&mdash;<code class="code">defcustom</code>, <code class="code">defgroup</code>, etc.&mdash;all accept
+keyword arguments (see <a class="pxref" href="Variables.html#Constant-Variables">Variables that Never Change</a>) for specifying various
+information.  This section describes keywords that apply to all types
+of customization declarations.
+</p>
+<p>All of these keywords, except <code class="code">:tag</code>, can be used more than once
+in a given item.  Each use of the keyword has an independent effect.
+The keyword <code class="code">:tag</code> is an exception because any given item can only
+display one name.
+</p>
+<dl class="table">
+<dt><a id="index-tag_002c-customization-keyword"></a><span><code class="code">:tag <var class="var">label</var></code><a class="copiable-link" href="#index-tag_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>Use <var class="var">label</var>, a string, instead of the item&rsquo;s name, to label the
+item in customization menus and buffers.  <strong class="strong">Don&rsquo;t use a tag
+which is substantially different from the item&rsquo;s real name; that would
+cause confusion.</strong>
+</p>
+</dd>
+<dt><a id="index-group_002c-customization-keyword"></a><span><code class="code">:group <var class="var">group</var></code><a class="copiable-link" href="#index-group_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>Put this customization item in group <var class="var">group</var>.  If this keyword is
+missing from a customization item, it&rsquo;ll be placed in the same group
+that was last defined (in the current file).
+</p>
+<p>When you use <code class="code">:group</code> in a <code class="code">defgroup</code>, it makes the new
+group a subgroup of <var class="var">group</var>.
+</p>
+<p>If you use this keyword more than once, you can put a single item into
+more than one group.  Displaying any of those groups will show this
+item.  Please don&rsquo;t overdo this, since the result would be annoying.
+</p>
+</dd>
+<dt><a id="index-link_002c-customization-keyword"></a><span><code class="code">:link <var class="var">link-data</var></code><a class="copiable-link" href="#index-link_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>Include an external link after the documentation string for this item.
+This is a sentence containing a button that references some
+other documentation.
+</p>
+<p>There are several alternatives you can use for <var class="var">link-data</var>:
+</p>
+<dl class="table">
+<dt><code class="code">(custom-manual <var class="var">info-node</var>)</code></dt>
+<dd><p>Link to an Info node; <var class="var">info-node</var> is a string which specifies the
+node name, as in <code class="code">&quot;(emacs)Top&quot;</code>.  The link appears as
+&lsquo;<samp class="samp">[Manual]</samp>&rsquo; in the customization buffer and enters the built-in
+Info reader on <var class="var">info-node</var>.
+</p>
+</dd>
+<dt><code class="code">(info-link <var class="var">info-node</var>)</code></dt>
+<dd><p>Like <code class="code">custom-manual</code> except that the link appears
+in the customization buffer with the Info node name.
+</p>
+</dd>
+<dt><code class="code">(url-link <var class="var">url</var>)</code></dt>
+<dd><p>Link to a web page; <var class="var">url</var> is a string which specifies the
+<abbr class="acronym">URL</abbr>.  The link appears in the customization buffer as
+<var class="var">url</var> and invokes the WWW browser specified by
+<code class="code">browse-url-browser-function</code>.
+</p>
+</dd>
+<dt><code class="code">(emacs-commentary-link <var class="var">library</var>)</code></dt>
+<dd><p>Link to the commentary section of a library; <var class="var">library</var> is a string
+which specifies the library name.  See <a class="xref" href="Tips.html#Library-Headers">Conventional Headers for Emacs Libraries</a>.
+</p>
+</dd>
+<dt><code class="code">(emacs-library-link <var class="var">library</var>)</code></dt>
+<dd><p>Link to an Emacs Lisp library file; <var class="var">library</var> is a string which
+specifies the library name.
+</p>
+</dd>
+<dt><code class="code">(file-link <var class="var">file</var>)</code></dt>
+<dd><p>Link to a file; <var class="var">file</var> is a string which specifies the name of the
+file to visit with <code class="code">find-file</code> when the user invokes this link.
+</p>
+</dd>
+<dt><code class="code">(function-link <var class="var">function</var>)</code></dt>
+<dd><p>Link to the documentation of a function; <var class="var">function</var> is a string
+which specifies the name of the function to describe with
+<code class="code">describe-function</code> when the user invokes this link.
+</p>
+</dd>
+<dt><code class="code">(variable-link <var class="var">variable</var>)</code></dt>
+<dd><p>Link to the documentation of a variable; <var class="var">variable</var> is a string
+which specifies the name of the variable to describe with
+<code class="code">describe-variable</code> when the user invokes this link.
+</p>
+</dd>
+<dt><code class="code">(face-link <var class="var">face</var>)</code></dt>
+<dd><p>Link to the documentation of a face; <var class="var">face</var> is a string which
+specifies the name of the face to describe with <code class="code">describe-face</code>
+when the user invokes this link.
+</p>
+</dd>
+<dt><code class="code">(custom-group-link <var class="var">group</var>)</code></dt>
+<dd><p>Link to another customization group.  Invoking it creates a new
+customization buffer for <var class="var">group</var>.
+</p></dd>
+</dl>
+
+<p>You can specify the text to use in the customization buffer by adding
+<code class="code">:tag <var class="var">name</var></code> after the first element of the <var class="var">link-data</var>;
+for example, <code class="code">(info-link :tag &quot;foo&quot; &quot;(emacs)Top&quot;)</code> makes a link to
+the Emacs manual which appears in the buffer as &lsquo;<samp class="samp">foo</samp>&rsquo;.
+</p>
+<p>You can use this keyword more than once, to add multiple links.
+</p>
+</dd>
+<dt><a id="index-load_002c-customization-keyword"></a><span><code class="code">:load <var class="var">file</var></code><a class="copiable-link" href="#index-load_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>Load file <var class="var">file</var> (a string) before displaying this customization
+item (see <a class="pxref" href="Loading.html#Loading">Loading</a>).  Loading is done with <code class="code">load</code>, and only if
+the file is not already loaded.
+</p>
+</dd>
+<dt><a id="index-require_002c-customization-keyword"></a><span><code class="code">:require <var class="var">feature</var></code><a class="copiable-link" href="#index-require_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>Execute <code class="code">(require '<var class="var">feature</var>)</code> when your saved customizations
+set the value of this item.  <var class="var">feature</var> should be a symbol.
+</p>
+<p>The most common reason to use <code class="code">:require</code> is when a variable enables
+a feature such as a minor mode, and just setting the variable won&rsquo;t have
+any effect unless the code which implements the mode is loaded.
+</p>
+</dd>
+<dt><a id="index-version_002c-customization-keyword"></a><span><code class="code">:version <var class="var">version</var></code><a class="copiable-link" href="#index-version_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>This keyword specifies that the item was first introduced in Emacs
+version <var class="var">version</var>, or that its default value was changed in that
+version.  The value <var class="var">version</var> must be a string.
+</p>
+</dd>
+<dt><a id="index-package_002dversion_002c-customization-keyword"></a><span><code class="code">:package-version '(<var class="var">package</var> . <var class="var">version</var>)</code><a class="copiable-link" href="#index-package_002dversion_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>This keyword specifies that the item was first introduced in
+<var class="var">package</var> version <var class="var">version</var>, or that its meaning or default
+value was changed in that version.  This keyword takes priority over
+<code class="code">:version</code>.
+</p>
+<p><var class="var">package</var> should be the official name of the package, as a symbol
+(e.g., <code class="code">MH-E</code>).  <var class="var">version</var> should be a string.  If the
+package <var class="var">package</var> is released as part of Emacs, <var class="var">package</var> and
+<var class="var">version</var> should appear in the value of
+<code class="code">customize-package-emacs-version-alist</code>.
+</p></dd>
+</dl>
+
+<p>Packages distributed as part of Emacs that use the
+<code class="code">:package-version</code> keyword must also update the
+<code class="code">customize-package-emacs-version-alist</code> variable.
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-customize_002dpackage_002demacs_002dversion_002dalist"><span class="category-def">Variable: </span><span><strong class="def-name">customize-package-emacs-version-alist</strong><a class="copiable-link" href="#index-customize_002dpackage_002demacs_002dversion_002dalist"> &para;</a></span></dt>
+<dd><p>This alist provides a mapping for the versions of Emacs that are
+associated with versions of a package listed in the
+<code class="code">:package-version</code> keyword.  Its elements are:
+</p>
+<div class="example">
+<pre class="example-preformatted">(<var class="var">package</var> (<var class="var">pversion</var> . <var class="var">eversion</var>)...)
+</pre></div>
+
+<p>For each <var class="var">package</var>, which is a symbol, there are one or more
+elements that contain a package version <var class="var">pversion</var> with an
+associated Emacs version <var class="var">eversion</var>.  These versions are strings.
+For example, the MH-E package updates this alist with the following:
+</p>
+<div class="example smallexample">
+<pre class="example-preformatted">(add-to-list 'customize-package-emacs-version-alist
+             '(MH-E (&quot;6.0&quot; . &quot;22.1&quot;) (&quot;6.1&quot; . &quot;22.1&quot;) (&quot;7.0&quot; . &quot;22.1&quot;)
+                    (&quot;7.1&quot; . &quot;22.1&quot;) (&quot;7.2&quot; . &quot;22.1&quot;) (&quot;7.3&quot; . &quot;22.1&quot;)
+                    (&quot;7.4&quot; . &quot;22.1&quot;) (&quot;8.0&quot; . &quot;22.1&quot;)))
+</pre></div>
+
+<p>The value of <var class="var">package</var> needs to be unique and it needs to match
+the <var class="var">package</var> value appearing in the <code class="code">:package-version</code>
+keyword.  Since the user might see the value in an error message, a good
+choice is the official name of the package, such as MH-E or Gnus.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Group-Definitions">
+<div class="nav-panel">
+<p>
+Next: <a href="#Variable-Definitions" accesskey="n" rel="next">Defining Customization Variables</a>, Previous: <a href="#Common-Keywords" accesskey="p" rel="prev">Common Item Keywords</a>, Up: <a href="#Customization" accesskey="u" rel="up">Customization Settings</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Defining-Customization-Groups"><span>15.2 Defining Customization Groups<a class="copiable-link" href="#Defining-Customization-Groups"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-define-customization-group"></a>
+<a class="index-entry-id" id="index-customization-groups_002c-defining"></a>
+
+<p>Each Emacs Lisp package should have one main customization group
+which contains all the options, faces and other groups in the package.
+If the package has a small number of options and faces, use just one
+group and put everything in it.  When there are more than twenty or so
+options and faces, then you should structure them into subgroups, and
+put the subgroups under the package&rsquo;s main customization group.  It is
+OK to put some of the options and faces in the package&rsquo;s main group
+alongside the subgroups.
+</p>
+<p>The package&rsquo;s main or only group should be a member of one or more of
+the standard customization groups.  (To display the full list of them,
+use <kbd class="kbd">M-x customize</kbd>.)  Choose one or more of them (but not too
+many), and add your group to each of them using the <code class="code">:group</code>
+keyword.
+</p>
+<p>The way to declare new customization groups is with <code class="code">defgroup</code>.
+</p>
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-defgroup"><span class="category-def">Macro: </span><span><strong class="def-name">defgroup</strong> <var class="def-var-arguments">group members doc [keyword value]&hellip;</var><a class="copiable-link" href="#index-defgroup"> &para;</a></span></dt>
+<dd><p>Declare <var class="var">group</var> as a customization group containing <var class="var">members</var>.
+Do not quote the symbol <var class="var">group</var>.  The argument <var class="var">doc</var> specifies
+the documentation string for the group.
+</p>
+<p>The argument <var class="var">members</var> is a list specifying an initial set of
+customization items to be members of the group.  However, most often
+<var class="var">members</var> is <code class="code">nil</code>, and you specify the group&rsquo;s members by
+using the <code class="code">:group</code> keyword when defining those members.
+</p>
+<p>If you want to specify group members through <var class="var">members</var>, each element
+should have the form <code class="code">(<var class="var">name</var> <var class="var">widget</var>)</code>.  Here <var class="var">name</var>
+is a symbol, and <var class="var">widget</var> is a widget type for editing that symbol.
+Useful widgets are <code class="code">custom-variable</code> for a variable,
+<code class="code">custom-face</code> for a face, and <code class="code">custom-group</code> for a group.
+</p>
+<p>When you introduce a new group into Emacs, use the <code class="code">:version</code>
+keyword in the <code class="code">defgroup</code>; then you need not use it for
+the individual members of the group.
+</p>
+<p>In addition to the common keywords (see <a class="pxref" href="#Common-Keywords">Common Item Keywords</a>), you can
+also use this keyword in <code class="code">defgroup</code>:
+</p>
+<dl class="table">
+<dt><a id="index-prefix_002c-defgroup-keyword"></a><span><code class="code">:prefix <var class="var">prefix</var></code><a class="copiable-link" href="#index-prefix_002c-defgroup-keyword"> &para;</a></span></dt>
+<dd><p>If the name of an item in the group starts with <var class="var">prefix</var>, and the
+customizable variable <code class="code">custom-unlispify-remove-prefixes</code> is
+non-<code class="code">nil</code>, the item&rsquo;s tag will omit <var class="var">prefix</var>.  A group can
+have any number of prefixes.
+</p></dd>
+</dl>
+
+<a class="index-entry-id" id="index-custom_002dgroup-property"></a>
+<p>The variables, faces, and subgroups of a group are stored in the
+<code class="code">custom-group</code> property of the group&rsquo;s symbol.  See <a class="xref" href="Symbols.html#Symbol-Plists">Accessing Symbol Properties</a>.  The value of that property is a list of pairs whose
+<code class="code">car</code> is the symbol of the variable or the face or the subgroup,
+and the <code class="code">cdr</code> is one of the corresponding symbols
+<code class="code">custom-variable</code>, <code class="code">custom-face</code>, or <code class="code">custom-group</code>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-custom_002dunlispify_002dremove_002dprefixes"><span class="category-def">User Option: </span><span><strong class="def-name">custom-unlispify-remove-prefixes</strong><a class="copiable-link" href="#index-custom_002dunlispify_002dremove_002dprefixes"> &para;</a></span></dt>
+<dd><p>If this variable is non-<code class="code">nil</code>, the prefixes specified by a
+group&rsquo;s <code class="code">:prefix</code> keyword are omitted from tag names, whenever
+the user customizes the group.
+</p>
+<p>The default value is <code class="code">nil</code>, i.e., the prefix-discarding feature
+is disabled.  This is because discarding prefixes often leads to
+confusing names for options and faces.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Variable-Definitions">
+<div class="nav-panel">
+<p>
+Next: <a href="#Customization-Types" accesskey="n" rel="next">Customization Types</a>, Previous: <a href="#Group-Definitions" accesskey="p" rel="prev">Defining Customization Groups</a>, Up: <a href="#Customization" accesskey="u" rel="up">Customization Settings</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Defining-Customization-Variables"><span>15.3 Defining Customization Variables<a class="copiable-link" href="#Defining-Customization-Variables"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-define-customization-options"></a>
+<a class="index-entry-id" id="index-customizable-variables_002c-how-to-define"></a>
+<a class="index-entry-id" id="index-user-options_002c-how-to-define"></a>
+
+<p><em class="dfn">Customizable variables</em>, also called <em class="dfn">user options</em>, are
+global Lisp variables whose values can be set through the Customize
+interface.  Unlike other global variables, which are defined with
+<code class="code">defvar</code> (see <a class="pxref" href="Variables.html#Defining-Variables">Defining Global Variables</a>), customizable variables are
+defined using the <code class="code">defcustom</code> macro.  In addition to calling
+<code class="code">defvar</code> as a subroutine, <code class="code">defcustom</code> states how the
+variable should be displayed in the Customize interface, the values it
+is allowed to take, etc.
+</p>
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-defcustom"><span class="category-def">Macro: </span><span><strong class="def-name">defcustom</strong> <var class="def-var-arguments">option standard doc [keyword value]&hellip;</var><a class="copiable-link" href="#index-defcustom"> &para;</a></span></dt>
+<dd><p>This macro declares <var class="var">option</var> as a user option (i.e., a
+customizable variable).  You should not quote <var class="var">option</var>.
+</p>
+<p>The argument <var class="var">standard</var> is an expression that specifies the
+standard value for <var class="var">option</var>.  Evaluating the <code class="code">defcustom</code> form
+evaluates <var class="var">standard</var>, but does not necessarily bind the option to
+that value.  If <var class="var">option</var> already has a default value, it is left
+unchanged.  If the user has already saved a customization for
+<var class="var">option</var>, the user&rsquo;s customized value is installed as the default
+value.  Otherwise, the result of evaluating <var class="var">standard</var> is
+installed as the default value.
+</p>
+<p>Like <code class="code">defvar</code>, this macro marks <code class="code">option</code> as a special
+variable, meaning that it should always be dynamically bound.  If
+<var class="var">option</var> is already lexically bound, that lexical binding remains
+in effect until the binding construct exits.  See <a class="xref" href="Variables.html#Variable-Scoping">Scoping Rules for Variable Bindings</a>.
+</p>
+<p>The expression <var class="var">standard</var> can be evaluated at various other times,
+too&mdash;whenever the customization facility needs to know <var class="var">option</var>&rsquo;s
+standard value.  So be sure to use an expression which is harmless to
+evaluate at any time.
+</p>
+<p>The argument <var class="var">doc</var> specifies the documentation string for the
+variable.
+</p>
+<p>If a <code class="code">defcustom</code> does not specify any <code class="code">:group</code>, the last group
+defined with <code class="code">defgroup</code> in the same file will be used.  This way, most
+<code class="code">defcustom</code> do not need an explicit <code class="code">:group</code>.
+</p>
+<a class="index-entry-id" id="index-eval_002ddefun_002c-and-defcustom-forms"></a>
+<p>When you evaluate a <code class="code">defcustom</code> form with <kbd class="kbd">C-M-x</kbd> in Emacs Lisp
+mode (<code class="code">eval-defun</code>), a special feature of <code class="code">eval-defun</code>
+arranges to set the variable unconditionally, without testing whether
+its value is void.  (The same feature applies to <code class="code">defvar</code>,
+see <a class="pxref" href="Variables.html#Defining-Variables">Defining Global Variables</a>.)  Using <code class="code">eval-defun</code> on a defcustom
+that is already defined calls the <code class="code">:set</code> function (see below),
+if there is one.
+</p>
+<p>If you put a <code class="code">defcustom</code> in a pre-loaded Emacs Lisp file
+(see <a class="pxref" href="GNU-Emacs-Internals.html#Building-Emacs">Building Emacs</a>), the standard value installed at dump time
+might be incorrect, e.g., because another variable that it depends on
+has not been assigned the right value yet.  In that case, use
+<code class="code">custom-reevaluate-setting</code>, described below, to re-evaluate the
+standard value after Emacs starts up.
+</p></dd></dl>
+
+<p>In addition to the keywords listed in <a class="ref" href="#Common-Keywords">Common Item Keywords</a>, this
+macro accepts the following keywords:
+</p>
+<dl class="table">
+<dt><code class="code">:type <var class="var">type</var></code></dt>
+<dd><p>Use <var class="var">type</var> as the data type for this option.  It specifies which
+values are legitimate, and how to display the value
+(see <a class="pxref" href="#Customization-Types">Customization Types</a>).  Every <code class="code">defcustom</code> should specify
+a value for this keyword.
+</p>
+</dd>
+<dt><a id="index-options_002c-defcustom-keyword"></a><span><code class="code">:options <var class="var">value-list</var></code><a class="copiable-link" href="#index-options_002c-defcustom-keyword"> &para;</a></span></dt>
+<dd><p>Specify the list of reasonable values for use in this
+option.  The user is not restricted to using only these values, but they
+are offered as convenient alternatives.
+</p>
+<p>This is meaningful only for certain types, currently including
+<code class="code">hook</code>, <code class="code">plist</code> and <code class="code">alist</code>.  See the definition of the
+individual types for a description of how to use <code class="code">:options</code>.
+</p>
+<p>Re-evaluating a <code class="code">defcustom</code> form with a different <code class="code">:options</code>
+value does not clear the values added by previous evaluations, or
+added by calls to <code class="code">custom-add-frequent-value</code> (see below).
+</p>
+</dd>
+<dt><a id="index-set_002c-defcustom-keyword"></a><span><code class="code">:set <var class="var">setfunction</var></code><a class="copiable-link" href="#index-set_002c-defcustom-keyword"> &para;</a></span></dt>
+<dd><p>Specify <var class="var">setfunction</var> as the way to change the value of this
+option when using the Customize interface.  The function
+<var class="var">setfunction</var> should take two or three arguments, a symbol (the option
+name), the new value, and an optional <var class="var">buffer-local</var> indicator.
+<var class="var">setfunction</var> should do whatever is necessary to update
+the value properly for this option (which may not mean simply setting
+the option as a Lisp variable); preferably, though, it should not
+modify its value argument destructively.  If optional <var class="var">buffer-local</var>
+is non-nil, the new value should be set buffer locally and not affect its
+global or default values.  The default for <var class="var">setfunction</var> is
+<code class="code">set-default-toplevel-value</code>.
+</p>
+<p>If defined, <var class="var">setfunction</var> will also be called when evaluating a
+<code class="code">defcustom</code> form with <kbd class="kbd">C-M-x</kbd> in Emacs Lisp mode and when the
+<var class="var">option</var>&rsquo;s value is changed via the <code class="code">setopt</code> macro
+(see <a class="pxref" href="Variables.html#Setting-Variables">setopt</a>).
+</p>
+<p>If you specify this keyword, the variable&rsquo;s documentation string
+should describe how to do the same job in hand-written Lisp code,
+either by invoking <var class="var">setfunction</var> directly or by using
+<code class="code">setopt</code> or <code class="code">setopt-local</code>.
+</p>
+</dd>
+<dt><a id="index-get_002c-defcustom-keyword"></a><span><code class="code">:get <var class="var">getfunction</var></code><a class="copiable-link" href="#index-get_002c-defcustom-keyword"> &para;</a></span></dt>
+<dd><p>Specify <var class="var">getfunction</var> as the way to extract the value of this
+option.  The function <var class="var">getfunction</var> should take one argument, a
+symbol, and should return whatever customize should use as the
+current value for that symbol (which need not be the symbol&rsquo;s Lisp
+value).  The default is <code class="code">default-toplevel-value</code>.
+</p>
+<p>You have to really understand the workings of Custom to use
+<code class="code">:get</code> correctly.  It is meant for values that are treated in
+Custom as variables but are not actually stored in Lisp variables.  It
+is almost surely a mistake to specify <var class="var">getfunction</var> for a value
+that really is stored in a Lisp variable.
+</p>
+</dd>
+<dt><a id="index-initialize_002c-defcustom-keyword"></a><span><code class="code">:initialize <var class="var">function</var></code><a class="copiable-link" href="#index-initialize_002c-defcustom-keyword"> &para;</a></span></dt>
+<dd><p><var class="var">function</var> should be a function used to initialize the variable
+when the <code class="code">defcustom</code> is evaluated.  It should take two arguments,
+the option name (a symbol) and the value.  Here are some predefined
+functions meant for use in this way:
+</p>
+<dl class="table">
+<dt><code class="code">custom-initialize-set</code></dt>
+<dd><p>Use the variable&rsquo;s <code class="code">:set</code> function to initialize the variable, but
+do not reinitialize it if it is already non-void.
+</p>
+</dd>
+<dt><code class="code">custom-initialize-default</code></dt>
+<dd><p>Like <code class="code">custom-initialize-set</code>, but use the function
+<code class="code">set-default-toplevel-value</code> to set the variable, instead of the
+variable&rsquo;s <code class="code">:set</code> function.  This is the usual choice for a
+variable whose <code class="code">:set</code> function enables or disables a minor mode;
+with this choice, defining the variable will not call the minor mode
+function, but customizing the variable will do so.
+</p>
+</dd>
+<dt><code class="code">custom-initialize-reset</code></dt>
+<dd><p>Always use the <code class="code">:set</code> function to initialize the variable.  If
+the variable is already non-void, reset it by calling the <code class="code">:set</code>
+function using the current value (returned by the <code class="code">:get</code> method).
+This is the default <code class="code">:initialize</code> function.
+</p>
+</dd>
+<dt><code class="code">custom-initialize-changed</code></dt>
+<dd><p>Use the <code class="code">:set</code> function to initialize the variable, if it is
+already set or has been customized; otherwise, just use
+<code class="code">set-default-toplevel-value</code>.
+</p>
+</dd>
+<dt><code class="code">custom-initialize-after-file-load</code></dt>
+<dd><p>This function behaves like <code class="code">custom-initialize-set</code>, but it
+delays the actual initialization until after the containing file is loaded.
+This can be useful to break the common dependency where the setter
+is (or uses) a function which needs to be defined after the variable,
+such as when a global minor mode has a non-<code class="code">nil</code> <code class="code">:init-value</code>.
+</p>
+</dd>
+<dt><code class="code">custom-initialize-delay</code></dt>
+<dd><p>This function behaves like <code class="code">custom-initialize-set</code>, but it delays
+the actual initialization to the next Emacs start.  This should be used
+in Lisp files that are preloaded (loaded when Emacs is built), when it
+is important to ensure that the initialization is performed in the
+run-time context (which could be on a different system or programming
+environment).  See <a class="xref" href="GNU-Emacs-Internals.html#Building-Emacs">custom-initialize-delay</a>.
+</p></dd>
+</dl>
+
+</dd>
+<dt><a id="index-local_002c-defcustom-keyword"></a><span><code class="code">:local <var class="var">value</var></code><a class="copiable-link" href="#index-local_002c-defcustom-keyword"> &para;</a></span></dt>
+<dd><p>If the <var class="var">value</var> is <code class="code">t</code>, mark <var class="var">option</var> as automatically
+buffer-local; if the value is <code class="code">permanent</code>, also set <var class="var">option</var>s
+<code class="code">permanent-local</code> property to <code class="code">t</code>.  Finally, if the value is
+<code class="code">permanent-only</code>, set <var class="var">option</var>s <code class="code">permanent-local</code> property
+to <code class="code">t</code> without marking it as automatically buffer-local.
+See <a class="xref" href="Variables.html#Creating-Buffer_002dLocal">Creating and Deleting Buffer-Local Bindings</a>.
+</p>
+</dd>
+<dt><a id="index-risky_002c-defcustom-keyword"></a><span><code class="code">:risky <var class="var">value</var></code><a class="copiable-link" href="#index-risky_002c-defcustom-keyword"> &para;</a></span></dt>
+<dd><p>Set the variable&rsquo;s <code class="code">risky-local-variable</code> property to
+<var class="var">value</var> (see <a class="pxref" href="Variables.html#File-Local-Variables">File Local Variables</a>).
+</p>
+</dd>
+<dt><a id="index-safe_002c-defcustom-keyword"></a><span><code class="code">:safe <var class="var">function</var></code><a class="copiable-link" href="#index-safe_002c-defcustom-keyword"> &para;</a></span></dt>
+<dd><p>Set the variable&rsquo;s <code class="code">safe-local-variable</code> property to
+<var class="var">function</var> (see <a class="pxref" href="Variables.html#File-Local-Variables">File Local Variables</a>).
+</p>
+</dd>
+<dt><a id="index-set_002dafter_002c-defcustom-keyword"></a><span><code class="code">:set-after <var class="var">variables</var></code><a class="copiable-link" href="#index-set_002dafter_002c-defcustom-keyword"> &para;</a></span></dt>
+<dd><p>When setting variables according to saved customizations, make sure to
+set the variables <var class="var">variables</var> before this one; i.e., delay
+setting this variable until after those others have been handled.  Use
+<code class="code">:set-after</code> if setting this variable won&rsquo;t work properly unless
+those other variables already have their intended values.
+</p></dd>
+</dl>
+
+<p>It is useful to specify the <code class="code">:require</code> keyword for an option
+that turns on a certain feature.  This causes Emacs to load the
+feature, if it is not already loaded, whenever the option is set.
+See <a class="xref" href="#Common-Keywords">Common Item Keywords</a>.  Here is an example:
+</p>
+<div class="example">
+<pre class="example-preformatted">(defcustom frobnicate-automatically nil
+  &quot;Non-nil means automatically frobnicate all buffers.&quot;
+  :type 'boolean
+  :require 'frobnicate-mode
+  :group 'frobnicate)
+</pre></div>
+
+<p>If a customization item has a type such as <code class="code">hook</code> or
+<code class="code">alist</code>, which supports <code class="code">:options</code>, you can add additional
+values to the list from outside the <code class="code">defcustom</code> declaration by
+calling <code class="code">custom-add-frequent-value</code>.  For example, if you define a
+function <code class="code">my-lisp-mode-initialization</code> intended to be called from
+<code class="code">emacs-lisp-mode-hook</code>, you might want to add that to the list of
+reasonable values for <code class="code">emacs-lisp-mode-hook</code>, but not by editing
+its definition.  You can do it thus:
+</p>
+<div class="example">
+<pre class="example-preformatted">(custom-add-frequent-value 'emacs-lisp-mode-hook
+   'my-lisp-mode-initialization)
+</pre></div>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-custom_002dadd_002dfrequent_002dvalue"><span class="category-def">Function: </span><span><strong class="def-name">custom-add-frequent-value</strong> <var class="def-var-arguments">symbol value</var><a class="copiable-link" href="#index-custom_002dadd_002dfrequent_002dvalue"> &para;</a></span></dt>
+<dd><p>For the customization option <var class="var">symbol</var>, add <var class="var">value</var> to the
+list of reasonable values.
+</p>
+<p>The precise effect of adding a value depends on the customization type
+of <var class="var">symbol</var>.
+</p>
+<p>Since evaluating a <code class="code">defcustom</code> form does not clear values added
+previously, Lisp programs can use this function to add values for user
+options not yet defined.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-customized_002dvalue-_0028symbol-property_0029"></a>
+<a class="index-entry-id" id="index-saved_002dvalue-_0028symbol-property_0029"></a>
+<a class="index-entry-id" id="index-standard_002dvalue-_0028symbol-property_0029"></a>
+<a class="index-entry-id" id="index-theme_002dvalue-_0028symbol-property_0029"></a>
+<p>Internally, <code class="code">defcustom</code> uses the symbol property
+<code class="code">standard-value</code> to record the expression for the standard value,
+<code class="code">saved-value</code> to record the value saved by the user with the
+customization buffer, and <code class="code">customized-value</code> to record the value
+set by the user with the customization buffer, but not saved.
+See <a class="xref" href="Symbols.html#Symbol-Properties">Symbol Properties</a>.  In addition, there&rsquo;s <code class="code">themed-value</code>,
+which is used to record the value set by a theme (see <a class="pxref" href="#Custom-Themes">Custom Themes</a>).  These properties are lists, the car of which is an
+expression that evaluates to the value.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-custom_002dreevaluate_002dsetting"><span class="category-def">Function: </span><span><strong class="def-name">custom-reevaluate-setting</strong> <var class="def-var-arguments">symbol</var><a class="copiable-link" href="#index-custom_002dreevaluate_002dsetting"> &para;</a></span></dt>
+<dd><p>This function re-evaluates the standard value of <var class="var">symbol</var>, which
+should be a user option declared via <code class="code">defcustom</code>.  If the
+variable was customized, this function re-evaluates the saved value
+instead.  Then it sets the user option to that value (using the
+option&rsquo;s <code class="code">:set</code> property if that is defined).
+</p>
+<p>This is useful for customizable options that are defined before their
+value could be computed correctly.  For example, during startup Emacs
+calls this function for some user options that were defined in
+pre-loaded Emacs Lisp files, but whose initial values depend on
+information available only at run-time.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-custom_002dvariable_002dp"><span class="category-def">Function: </span><span><strong class="def-name">custom-variable-p</strong> <var class="def-var-arguments">arg</var><a class="copiable-link" href="#index-custom_002dvariable_002dp"> &para;</a></span></dt>
+<dd><p>This function returns non-<code class="code">nil</code> if <var class="var">arg</var> is a customizable
+variable.  A customizable variable is either a variable that has a
+<code class="code">standard-value</code> or <code class="code">custom-autoload</code> property (usually
+meaning it was declared with <code class="code">defcustom</code>), or an alias for
+another customizable variable.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Customization-Types">
+<div class="nav-panel">
+<p>
+Next: <a href="#Applying-Customizations" accesskey="n" rel="next">Applying Customizations</a>, Previous: <a href="#Variable-Definitions" accesskey="p" rel="prev">Defining Customization Variables</a>, Up: <a href="#Customization" accesskey="u" rel="up">Customization Settings</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Customization-Types-1"><span>15.4 Customization Types<a class="copiable-link" href="#Customization-Types-1"> &para;</a></span></h3>
+
+<a class="index-entry-id" id="index-customization-types"></a>
+<p>When you define a user option with <code class="code">defcustom</code>, you must specify
+its <em class="dfn">customization type</em>.  That is a Lisp object which describes (1)
+which values are legitimate and (2) how to display the value in the
+customization buffer for editing.
+</p>
+<a class="index-entry-id" id="index-type_002c-defcustom-keyword"></a>
+<p>You specify the customization type in <code class="code">defcustom</code> with the
+<code class="code">:type</code> keyword.  The argument of <code class="code">:type</code> is evaluated, but
+only once when the <code class="code">defcustom</code> is executed, so it isn&rsquo;t useful
+for the value to vary.  Normally we use a quoted constant.  For
+example:
+</p>
+<div class="example">
+<pre class="example-preformatted">(defcustom diff-command &quot;diff&quot;
+  &quot;The command to use to run diff.&quot;
+  :type '(string)
+  :group 'diff)
+</pre></div>
+
+<p>In general, a customization type is a list whose first element is a
+symbol, one of the customization type names defined in the following
+sections.  After this symbol come a number of arguments, depending on
+the symbol.  Between the type symbol and its arguments, you can
+optionally write keyword-value pairs (see <a class="pxref" href="#Type-Keywords">Type Keywords</a>).
+</p>
+<p>Some type symbols do not use any arguments; those are called
+<em class="dfn">simple types</em>.  For a simple type, if you do not use any
+keyword-value pairs, you can omit the parentheses around the type
+symbol.  For example just <code class="code">string</code> as a customization type is
+equivalent to <code class="code">(string)</code>.
+</p>
+<p>All customization types are implemented as widgets; see <a data-manual="widget" href="https://www.gnu.org/software/emacs/manual/html_node/widget/index.html#Top">Introduction</a> in <cite class="cite">The Emacs Widget Library</cite>, for details.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Simple-Types" accesskey="1">Simple Types</a></li>
+<li><a href="#Composite-Types" accesskey="2">Composite Types</a></li>
+<li><a href="#Splicing-into-Lists" accesskey="3">Splicing into Lists</a></li>
+<li><a href="#Type-Keywords" accesskey="4">Type Keywords</a></li>
+<li><a href="#Defining-New-Types" accesskey="5">Defining New Types</a></li>
+</ul>
+<hr>
+<div class="subsection-level-extent" id="Simple-Types">
+<div class="nav-panel">
+<p>
+Next: <a href="#Composite-Types" accesskey="n" rel="next">Composite Types</a>, Up: <a href="#Customization-Types" accesskey="u" rel="up">Customization Types</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Simple-Types-1"><span>15.4.1 Simple Types<a class="copiable-link" href="#Simple-Types-1"> &para;</a></span></h4>
+
+<p>This section describes all the simple customization types.  For
+several of these customization types, the customization widget
+provides inline completion with <kbd class="kbd">C-M-i</kbd> or <kbd class="kbd">M-<kbd class="key">TAB</kbd></kbd>.
+</p>
+<dl class="table">
+<dt><code class="code">sexp</code></dt>
+<dd><p>The value may be any Lisp object that can be printed and read back.
+You can use <code class="code">sexp</code> as a fall-back for any option, if you don&rsquo;t
+want to take the time to work out a more specific type to use.
+</p>
+</dd>
+<dt><code class="code">integer</code></dt>
+<dd><p>The value must be an integer.
+</p>
+</dd>
+<dt><code class="code">natnum</code></dt>
+<dd><p>The value must be a nonnegative integer.
+</p>
+</dd>
+<dt><code class="code">number</code></dt>
+<dd><p>The value must be a number (floating point or integer).
+</p>
+</dd>
+<dt><code class="code">float</code></dt>
+<dd><p>The value must be floating point.
+</p>
+</dd>
+<dt><code class="code">string</code></dt>
+<dd><p>The value must be a string.  The customization buffer shows the string
+without delimiting &lsquo;<samp class="samp">&quot;</samp>&rsquo; characters or &lsquo;<samp class="samp">\</samp>&rsquo; quotes.
+</p>
+</dd>
+<dt><code class="code">regexp</code></dt>
+<dd><p>Like <code class="code">string</code> except that the string must be a valid regular
+expression.
+</p>
+</dd>
+<dt><code class="code">character</code></dt>
+<dd><p>The value must be a character code.  A character code is actually an
+integer, but this type shows the value by inserting the character in the
+buffer, rather than by showing the number.
+</p>
+</dd>
+<dt><code class="code">file</code></dt>
+<dd><p>The value must be a file name.  The widget provides completion.
+</p>
+</dd>
+<dt><code class="code">(file :must-match t)</code></dt>
+<dd><p>The value must be a file name for an existing file.  The widget
+provides completion.
+</p>
+</dd>
+<dt><code class="code">directory</code></dt>
+<dd><p>The value must be a directory.  The widget provides completion.
+</p>
+</dd>
+<dt><code class="code">hook</code></dt>
+<dd><p>The value must be a list of functions.  This customization type is
+used for hook variables.  You can use the <code class="code">:options</code> keyword in a
+hook variable&rsquo;s <code class="code">defcustom</code> to specify a list of functions
+recommended for use in the hook; See <a class="xref" href="#Variable-Definitions">Defining Customization Variables</a>.
+</p>
+</dd>
+<dt><code class="code">symbol</code></dt>
+<dd><p>The value must be a symbol.  It appears in the customization buffer as
+the symbol name.  The widget provides completion.
+</p>
+</dd>
+<dt><code class="code">function</code></dt>
+<dd><p>The value must be either a lambda expression or a function name.  The
+widget provides completion for function names.
+</p>
+</dd>
+<dt><code class="code">buffer-predicate</code></dt>
+<dd><p>The value must be a form suitable for the <var class="var">condition</var> argument of
+the <code class="code">buffer-match-p</code> function (see <a class="pxref" href="Buffers.html#Buffer-List">The Buffer List</a>).  This is handy
+for options whose value is submitted to <code class="code">buffer-match-p</code> to select
+suitable buffers.
+</p>
+</dd>
+<dt><code class="code">variable</code></dt>
+<dd><p>The value must be a variable name.  The widget provides completion.
+</p>
+</dd>
+<dt><code class="code">face</code></dt>
+<dd><p>The value must be a symbol which is a face name.  The widget provides
+completion.
+</p>
+</dd>
+<dt><code class="code">boolean</code></dt>
+<dd><p>The value is boolean&mdash;either <code class="code">nil</code> or <code class="code">t</code>.  Note that by
+using <code class="code">choice</code> and <code class="code">const</code> together (see the next section),
+you can specify that the value must be <code class="code">nil</code> or <code class="code">t</code>, but also
+specify the text to describe each value in a way that fits the specific
+meaning of the alternative.
+</p>
+</dd>
+<dt><code class="code">key</code></dt>
+<dd><p>The value is a valid key according to <kbd class="kbd">key-valid-p</kbd>, and suitable
+for use with, for example <code class="code">keymap-set</code>.
+</p>
+</dd>
+<dt><code class="code">key-sequence</code></dt>
+<dd><p>The value is a key sequence.  The customization buffer shows the key
+sequence using the same syntax as the <kbd class="kbd">kbd</kbd> function.  See <a class="xref" href="Keymaps.html#Key-Sequences">Key Sequences</a>.  This is a legacy type; use <code class="code">key</code> instead.
+</p>
+</dd>
+<dt><code class="code">coding-system</code></dt>
+<dd><p>The value must be a coding-system name, and you can do completion with
+<kbd class="kbd">M-<kbd class="key">TAB</kbd></kbd>.
+</p>
+</dd>
+<dt><code class="code">color</code></dt>
+<dd><p>The value must be a valid color name.  The widget provides completion
+for color names, as well as a sample and a button for selecting a
+color name from a list of color names shown in a <samp class="file">*Colors*</samp>
+buffer.
+</p>
+</dd>
+<dt><code class="code">fringe-bitmap</code></dt>
+<dd><p>The value must be a valid fringe bitmap name.  The widget provides
+completion.
+</p></dd>
+</dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Composite-Types">
+<div class="nav-panel">
+<p>
+Next: <a href="#Splicing-into-Lists" accesskey="n" rel="next">Splicing into Lists</a>, Previous: <a href="#Simple-Types" accesskey="p" rel="prev">Simple Types</a>, Up: <a href="#Customization-Types" accesskey="u" rel="up">Customization Types</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Composite-Types-1"><span>15.4.2 Composite Types<a class="copiable-link" href="#Composite-Types-1"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-composite-types-_0028customization_0029"></a>
+
+<p>When none of the simple types is appropriate, you can use composite
+types, which build new types from other types or from specified data.
+The specified types or data are called the <em class="dfn">arguments</em> of the
+composite type.  The composite type normally looks like this:
+</p>
+<div class="example">
+<pre class="example-preformatted">(<var class="var">constructor</var> <var class="var">arguments</var>...)
+</pre></div>
+
+<p>but you can also add keyword-value pairs before the arguments, like
+this:
+</p>
+<div class="example">
+<pre class="example-preformatted">(<var class="var">constructor</var> <span class="r">{</span><var class="var">keyword</var> <var class="var">value</var><span class="r">}</span>... <var class="var">arguments</var>...)
+</pre></div>
+
+<p>Here is a table of constructors and how to use them to write
+composite types:
+</p>
+<dl class="table">
+<dt><code class="code">(cons <var class="var">car-type</var> <var class="var">cdr-type</var>)</code></dt>
+<dd><p>The value must be a cons cell, its <small class="sc">CAR</small> must fit <var class="var">car-type</var>, and
+its <small class="sc">CDR</small> must fit <var class="var">cdr-type</var>.  For example, <code class="code">(cons string
+symbol)</code> is a customization type which matches values such as
+<code class="code">(&quot;foo&quot; . foo)</code>.
+</p>
+<p>In the customization buffer, the <small class="sc">CAR</small> and <small class="sc">CDR</small> are displayed
+and edited separately, each according to their specified type.
+</p>
+</dd>
+<dt><code class="code">(list <var class="var">element-types</var>&hellip;)</code></dt>
+<dd><p>The value must be a list with exactly as many elements as the
+<var class="var">element-types</var> given; and each element must fit the
+corresponding <var class="var">element-type</var>.
+</p>
+<p>For example, <code class="code">(list integer string function)</code> describes a list of
+three elements; the first element must be an integer, the second a
+string, and the third a function.
+</p>
+<p>In the customization buffer, each element is displayed and edited
+separately, according to the type specified for it.
+</p>
+</dd>
+<dt><code class="code">(group <var class="var">element-types</var>&hellip;)</code></dt>
+<dd><p>This works like <code class="code">list</code> except for the formatting
+of text in the Custom buffer.  <code class="code">list</code> labels each
+element value with its tag; <code class="code">group</code> does not.
+</p>
+</dd>
+<dt><code class="code">(vector <var class="var">element-types</var>&hellip;)</code></dt>
+<dd><p>Like <code class="code">list</code> except that the value must be a vector instead of a
+list.  The elements work the same as in <code class="code">list</code>.
+</p>
+</dd>
+<dt><code class="code">(alist :key-type <var class="var">key-type</var> :value-type <var class="var">value-type</var>)</code></dt>
+<dd><p>The value must be a list of cons-cells, the <small class="sc">CAR</small> of each cell
+representing a key of customization type <var class="var">key-type</var>, and the
+<small class="sc">CDR</small> of the same cell representing a value of customization type
+<var class="var">value-type</var>.  The user can add and delete key/value pairs, and
+edit both the key and the value of each pair.
+</p>
+<p>If omitted, <var class="var">key-type</var> and <var class="var">value-type</var> default to
+<code class="code">sexp</code>.
+</p>
+<p>The user can add any key matching the specified key type, but you can
+give some keys a preferential treatment by specifying them with the
+<code class="code">:options</code> (see <a class="pxref" href="#Variable-Definitions">Defining Customization Variables</a>).  The specified keys
+will always be shown in the customize buffer (together with a suitable
+value), with a checkbox to include or exclude or disable the key/value
+pair from the alist.  The user will not be able to edit the keys
+specified by the <code class="code">:options</code> keyword argument.
+</p>
+<p>The argument to the <code class="code">:options</code> keywords should be a list of
+specifications for reasonable keys in the alist.  Ordinarily, they are
+simply atoms, which stand for themselves.  For example:
+</p>
+<div class="example">
+<pre class="example-preformatted">:options '(&quot;foo&quot; &quot;bar&quot; &quot;baz&quot;)
+</pre></div>
+
+<p>specifies that there are three known keys, namely <code class="code">&quot;foo&quot;</code>,
+<code class="code">&quot;bar&quot;</code> and <code class="code">&quot;baz&quot;</code>, which will always be shown first.
+</p>
+<p>You may want to restrict the value type for specific keys, for
+example, the value associated with the <code class="code">&quot;bar&quot;</code> key can only be an
+integer.  You can specify this by using a list instead of an atom in
+the list.  The first element will specify the key, like before, while
+the second element will specify the value type.  For example:
+</p>
+<div class="example">
+<pre class="example-preformatted">:options '(&quot;foo&quot; (&quot;bar&quot; integer) &quot;baz&quot;)
+</pre></div>
+
+<p>Finally, you may want to change how the key is presented.  By default,
+the key is simply shown as a <code class="code">const</code>, since the user cannot change
+the special keys specified with the <code class="code">:options</code> keyword.  However,
+you may want to use a more specialized type for presenting the key, like
+<code class="code">function-item</code> if you know it is a symbol with a function binding.
+This is done by using a customization type specification instead of a
+symbol for the key.
+</p>
+<div class="example">
+<pre class="example-preformatted">:options '(&quot;foo&quot;
+           ((function-item some-function) integer)
+           &quot;baz&quot;)
+</pre></div>
+
+<p>Many alists use lists with two elements, instead of cons cells.  For
+example,
+</p>
+<div class="example">
+<pre class="example-preformatted">(defcustom list-alist
+  '((&quot;foo&quot; 1) (&quot;bar&quot; 2) (&quot;baz&quot; 3))
+  &quot;Each element is a list of the form (KEY VALUE).&quot;)
+</pre></div>
+
+<p>instead of
+</p>
+<div class="example">
+<pre class="example-preformatted">(defcustom cons-alist
+  '((&quot;foo&quot; . 1) (&quot;bar&quot; . 2) (&quot;baz&quot; . 3))
+  &quot;Each element is a cons-cell (KEY . VALUE).&quot;)
+</pre></div>
+
+<p>Because of the way lists are implemented on top of cons cells, you can
+treat <code class="code">list-alist</code> in the example above as a cons cell alist, where
+the value type is a list with a single element containing the real
+value.
+</p>
+<div class="example">
+<pre class="example-preformatted">(defcustom list-alist '((&quot;foo&quot; 1) (&quot;bar&quot; 2) (&quot;baz&quot; 3))
+  &quot;Each element is a list of the form (KEY VALUE).&quot;
+  :type '(alist :value-type (group integer)))
+</pre></div>
+
+<p>The <code class="code">group</code> widget is used here instead of <code class="code">list</code> only because
+the formatting is better suited for the purpose.
+</p>
+<p>Similarly, you can have alists with more values associated with each
+key, using variations of this trick:
+</p>
+<div class="example">
+<pre class="example-preformatted">(defcustom person-data '((&quot;brian&quot;  50 t)
+                         (&quot;dorith&quot; 55 nil)
+                         (&quot;ken&quot;    52 t))
+  &quot;Alist of basic info about people.
+Each element has the form (NAME AGE MALE-FLAG).&quot;
+  :type '(alist :value-type (group integer boolean)))
+</pre></div>
+
+</dd>
+<dt><code class="code">(plist :key-type <var class="var">key-type</var> :value-type <var class="var">value-type</var>)</code></dt>
+<dd><p>This customization type is similar to <code class="code">alist</code> (see above), except
+that (i) the information is stored as a property list,
+(see <a class="pxref" href="Lists.html#Property-Lists">Property Lists</a>), and (ii) <var class="var">key-type</var>, if omitted,
+defaults to <code class="code">symbol</code> rather than <code class="code">sexp</code>.
+</p>
+</dd>
+<dt><code class="code">(choice <var class="var">alternative-types</var>&hellip;)</code></dt>
+<dd><p>The value must fit one of <var class="var">alternative-types</var>.  For example,
+<code class="code">(choice integer string)</code> allows either an integer or a string.
+</p>
+<p>In the customization buffer, the user selects an alternative
+using a menu, and can then edit the value in the usual way for that
+alternative.
+</p>
+<p>Normally the strings in this menu are determined automatically from the
+choices; however, you can specify different strings for the menu by
+including the <code class="code">:tag</code> keyword in the alternatives.  For example, if
+an integer stands for a number of spaces, while a string is text to use
+verbatim, you might write the customization type this way,
+</p>
+<div class="example">
+<pre class="example-preformatted">(choice (integer :tag &quot;Number of spaces&quot;)
+        (string :tag &quot;Literal text&quot;))
+</pre></div>
+
+<p>so that the menu offers &lsquo;<samp class="samp">Number of spaces</samp>&rsquo; and &lsquo;<samp class="samp">Literal text</samp>&rsquo;.
+</p>
+<p>In any alternative for which <code class="code">nil</code> is not a valid value, other than
+a <code class="code">const</code>, you should specify a valid default for that alternative
+using the <code class="code">:value</code> keyword.  See <a class="xref" href="#Type-Keywords">Type Keywords</a>.
+</p>
+<p>If some values are covered by more than one of the alternatives,
+customize will choose the first alternative that the value fits.  This
+means you should always list the most specific types first, and the
+most general last.  Here&rsquo;s an example of proper usage:
+</p>
+<div class="example">
+<pre class="example-preformatted">(choice (const :tag &quot;Off&quot; nil)
+        symbol (sexp :tag &quot;Other&quot;))
+</pre></div>
+
+<p>This way, the special value <code class="code">nil</code> is not treated like other
+symbols, and symbols are not treated like other Lisp expressions.
+</p>
+</dd>
+<dt><a id="index-radio_002c-customization-types"></a><span><code class="code">(radio <var class="var">element-types</var>&hellip;)</code><a class="copiable-link" href="#index-radio_002c-customization-types"> &para;</a></span></dt>
+<dd><p>This is similar to <code class="code">choice</code>, except that the choices are displayed
+using radio buttons rather than a menu.  This has the advantage of
+displaying documentation for the choices when applicable and so is often
+a good choice for a choice between constant functions
+(<code class="code">function-item</code> customization types).
+</p>
+</dd>
+<dt><code class="code">(const <var class="var">value</var>)</code></dt>
+<dd><p>The value must be <var class="var">value</var>&mdash;nothing else is allowed.
+</p>
+<p>The main use of <code class="code">const</code> is inside of <code class="code">choice</code>.  For example,
+<code class="code">(choice integer (const nil))</code> allows either an integer or
+<code class="code">nil</code>.
+</p>
+<p><code class="code">:tag</code> is often used with <code class="code">const</code>, inside of <code class="code">choice</code>.
+For example,
+</p>
+<div class="example">
+<pre class="example-preformatted">(choice (const :tag &quot;Yes&quot; t)
+        (const :tag &quot;No&quot; nil)
+        (const :tag &quot;Ask&quot; foo))
+</pre></div>
+
+<p>describes a variable for which <code class="code">t</code> means yes, <code class="code">nil</code> means no,
+and <code class="code">foo</code> means &ldquo;ask&rdquo;.
+</p>
+</dd>
+<dt><code class="code">(other <var class="var">value</var>)</code></dt>
+<dd><p>This alternative can match any Lisp value, but if the user chooses this
+alternative, that selects the value <var class="var">value</var>.
+</p>
+<p>The main use of <code class="code">other</code> is as the last element of <code class="code">choice</code>.
+For example,
+</p>
+<div class="example">
+<pre class="example-preformatted">(choice (const :tag &quot;Yes&quot; t)
+        (const :tag &quot;No&quot; nil)
+        (other :tag &quot;Ask&quot; foo))
+</pre></div>
+
+<p>describes a variable for which <code class="code">t</code> means yes, <code class="code">nil</code> means no,
+and anything else means &ldquo;ask&rdquo;.  If the user chooses &lsquo;<samp class="samp">Ask</samp>&rsquo; from
+the menu of alternatives, that specifies the value <code class="code">foo</code>; but any
+other value (not <code class="code">t</code>, <code class="code">nil</code> or <code class="code">foo</code>) displays as
+&lsquo;<samp class="samp">Ask</samp>&rsquo;, just like <code class="code">foo</code>.
+</p>
+</dd>
+<dt><code class="code">(function-item <var class="var">function</var>)</code></dt>
+<dd><p>Like <code class="code">const</code>, but used for values which are functions.  This
+displays the documentation string as well as the function name.
+The documentation string is either the one you specify with
+<code class="code">:doc</code>, or <var class="var">function</var>&rsquo;s own documentation string.
+</p>
+</dd>
+<dt><code class="code">(variable-item <var class="var">variable</var>)</code></dt>
+<dd><p>Like <code class="code">const</code>, but used for values which are variable names.  This
+displays the documentation string as well as the variable name.  The
+documentation string is either the one you specify with <code class="code">:doc</code>, or
+<var class="var">variable</var>&rsquo;s own documentation string.
+</p>
+</dd>
+<dt><code class="code">(set <var class="var">types</var>&hellip;)</code></dt>
+<dd><p>The value must be a list, and each element of the list must match one of
+the <var class="var">types</var> specified.
+</p>
+<p>This appears in the customization buffer as a checklist, so that each of
+<var class="var">types</var> may have either one corresponding element or none.  It is
+not possible to specify two different elements that match the same one
+of <var class="var">types</var>.  For example, <code class="code">(set integer symbol)</code> allows one
+integer and/or one symbol in the list; it does not allow multiple
+integers or multiple symbols.  As a result, it is rare to use
+nonspecific types such as <code class="code">integer</code> in a <code class="code">set</code>.
+</p>
+<p>Most often, the <var class="var">types</var> in a <code class="code">set</code> are <code class="code">const</code> types, as
+shown here:
+</p>
+<div class="example">
+<pre class="example-preformatted">(set (const :bold) (const :italic))
+</pre></div>
+
+<p>Sometimes they describe possible elements in an alist:
+</p>
+<div class="example">
+<pre class="example-preformatted">(set (cons :tag &quot;Height&quot; (const height) integer)
+     (cons :tag &quot;Width&quot; (const width) integer))
+</pre></div>
+
+<p>That lets the user specify a height value optionally
+and a width value optionally.
+</p>
+</dd>
+<dt><code class="code">(repeat <var class="var">element-type</var>)</code></dt>
+<dd><p>The value must be a list and each element of the list must fit the type
+<var class="var">element-type</var>.  This appears in the customization buffer as a
+list of elements, with &lsquo;<samp class="samp">[INS]</samp>&rsquo; and &lsquo;<samp class="samp">[DEL]</samp>&rsquo; buttons for adding
+more elements or removing elements.
+</p>
+</dd>
+<dt><a id="index-restricted_002dsexp_002c-customization-types"></a><span><code class="code">(restricted-sexp :match-alternatives <var class="var">criteria</var>)</code><a class="copiable-link" href="#index-restricted_002dsexp_002c-customization-types"> &para;</a></span></dt>
+<dd><p>This is the most general composite type construct.  The value may be
+any Lisp object that satisfies one of <var class="var">criteria</var>.  <var class="var">criteria</var>
+should be a list, and each element should be one of these
+possibilities:
+</p>
+<ul class="itemize mark-bullet">
+<li>A predicate&mdash;that is, a function of one argument that returns either
+<code class="code">nil</code> or non-<code class="code">nil</code> according to the argument.  Using a
+predicate in the list says that objects for which the predicate
+returns non-<code class="code">nil</code> are acceptable.
+
+</li><li>A quoted constant&mdash;that is, <code class="code">'<var class="var">object</var></code>.  This sort of element
+in the list says that <var class="var">object</var> itself is an acceptable value.
+</li></ul>
+
+<p>For example,
+</p>
+<div class="example">
+<pre class="example-preformatted">(restricted-sexp :match-alternatives
+                 (integerp 't 'nil))
+</pre></div>
+
+<p>allows integers, <code class="code">t</code> and <code class="code">nil</code> as legitimate values.
+</p>
+<p>The customization buffer shows all legitimate values using their read
+syntax, and the user edits them textually.
+</p></dd>
+</dl>
+
+<p>Here is a table of the keywords you can use in keyword-value pairs
+in a composite type:
+</p>
+<dl class="table">
+<dt><code class="code">:tag <var class="var">tag</var></code></dt>
+<dd><p>Use <var class="var">tag</var> as the name of this alternative, for user communication
+purposes.  This is useful for a type that appears inside of a
+<code class="code">choice</code>.
+</p>
+</dd>
+<dt><a id="index-match_002dalternatives_002c-customization-keyword"></a><span><code class="code">:match-alternatives <var class="var">criteria</var></code><a class="copiable-link" href="#index-match_002dalternatives_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>Use <var class="var">criteria</var> to match possible values.  This is used only in
+<code class="code">restricted-sexp</code>.
+</p>
+</dd>
+<dt><a id="index-args_002c-customization-keyword"></a><span><code class="code">:args <var class="var">argument-list</var></code><a class="copiable-link" href="#index-args_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>Use the elements of <var class="var">argument-list</var> as the arguments of the type
+construct.  For instance, <code class="code">(const :args (foo))</code> is equivalent to
+<code class="code">(const foo)</code>.  You rarely need to write <code class="code">:args</code> explicitly,
+because normally the arguments are recognized automatically as
+whatever follows the last keyword-value pair.
+</p></dd>
+</dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Splicing-into-Lists">
+<div class="nav-panel">
+<p>
+Next: <a href="#Type-Keywords" accesskey="n" rel="next">Type Keywords</a>, Previous: <a href="#Composite-Types" accesskey="p" rel="prev">Composite Types</a>, Up: <a href="#Customization-Types" accesskey="u" rel="up">Customization Types</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Splicing-into-Lists-1"><span>15.4.3 Splicing into Lists<a class="copiable-link" href="#Splicing-into-Lists-1"> &para;</a></span></h4>
+
+<p>The <code class="code">:inline</code> feature lets you splice a variable number of
+elements into the middle of a <code class="code">list</code> or <code class="code">vector</code>
+customization type.  You use it by adding <code class="code">:inline t</code> to a type
+specification which is contained in a <code class="code">list</code> or <code class="code">vector</code>
+specification.
+</p>
+<p>Normally, each entry in a <code class="code">list</code> or <code class="code">vector</code> type
+specification describes a single element type.  But when an entry
+contains <code class="code">:inline t</code>, the value it matches is merged directly
+into the containing sequence.  For example, if the entry matches a
+list with three elements, those become three elements of the overall
+sequence.  This is analogous to &lsquo;<samp class="samp">,@</samp>&rsquo; in a backquote construct
+(see <a class="pxref" href="Evaluation.html#Backquote">Backquote</a>).
+</p>
+<p>For example, to specify a list whose first element must be <code class="code">baz</code>
+and whose remaining arguments should be zero or more of <code class="code">foo</code> and
+<code class="code">bar</code>, use this customization type:
+</p>
+<div class="example">
+<pre class="example-preformatted">(list (const baz) (set :inline t (const foo) (const bar)))
+</pre></div>
+
+<p>This matches values such as <code class="code">(baz)</code>, <code class="code">(baz foo)</code>, <code class="code">(baz bar)</code>
+and <code class="code">(baz foo bar)</code>.
+</p>
+<a class="index-entry-id" id="index-choice_002c-customization-types"></a>
+<p>When the element-type is a <code class="code">choice</code>, you use <code class="code">:inline</code> not
+in the <code class="code">choice</code> itself, but in (some of) the alternatives of the
+<code class="code">choice</code>.  For example, to match a list which must start with a
+file name, followed either by the symbol <code class="code">t</code> or two strings, use
+this customization type:
+</p>
+<div class="example">
+<pre class="example-preformatted">(list file
+      (choice (const t)
+              (list :inline t string string)))
+</pre></div>
+
+<p>If the user chooses the first alternative in the choice, then the
+overall list has two elements and the second element is <code class="code">t</code>.  If
+the user chooses the second alternative, then the overall list has three
+elements and the second and third must be strings.
+</p>
+<p>The widgets can specify predicates to say whether an inline value
+matches the widget with the <code class="code">:match-inline</code> element.
+</p>
+<hr>
+</div>
+<div class="subsection-level-extent" id="Type-Keywords">
+<div class="nav-panel">
+<p>
+Next: <a href="#Defining-New-Types" accesskey="n" rel="next">Defining New Types</a>, Previous: <a href="#Splicing-into-Lists" accesskey="p" rel="prev">Splicing into Lists</a>, Up: <a href="#Customization-Types" accesskey="u" rel="up">Customization Types</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Type-Keywords-1"><span>15.4.4 Type Keywords<a class="copiable-link" href="#Type-Keywords-1"> &para;</a></span></h4>
+
+<p>You can specify keyword-argument pairs in a customization type after the
+type name symbol.  Here are the keywords you can use, and their
+meanings:
+</p>
+<dl class="table">
+<dt><code class="code">:value <var class="var">default</var></code></dt>
+<dd><p>Provide a default value.
+</p>
+<p>If <code class="code">nil</code> is not a valid value for the alternative, then it is
+essential to specify a valid default with <code class="code">:value</code>.
+</p>
+<p>If you use this for a type that appears as an alternative inside of
+<code class="code">choice</code>; it specifies the default value to use, at first, if and
+when the user selects this alternative with the menu in the
+customization buffer.
+</p>
+<p>Of course, if the actual value of the option fits this alternative, it
+will appear showing the actual value, not <var class="var">default</var>.
+</p>
+</dd>
+<dt><a id="index-format_002c-customization-keyword"></a><span><code class="code">:format <var class="var">format-string</var></code><a class="copiable-link" href="#index-format_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>This string will be inserted in the buffer to represent the value
+corresponding to the type.  The following &lsquo;<samp class="samp">%</samp>&rsquo; escapes are available
+for use in <var class="var">format-string</var>:
+</p>
+<dl class="table">
+<dt>&lsquo;<samp class="samp">%[<var class="var">button</var>%]</samp>&rsquo;</dt>
+<dd><p>Display the text <var class="var">button</var> marked as a button.  The <code class="code">:action</code>
+attribute specifies what the button will do if the user invokes it;
+its value is a function which takes two arguments&mdash;the widget which
+the button appears in, and the event.
+</p>
+<p>There is no way to specify two different buttons with different
+actions.
+</p>
+</dd>
+<dt>&lsquo;<samp class="samp">%{<var class="var">sample</var>%}</samp>&rsquo;</dt>
+<dd><p>Show <var class="var">sample</var> in a special face specified by <code class="code">:sample-face</code>.
+</p>
+</dd>
+<dt>&lsquo;<samp class="samp">%v</samp>&rsquo;</dt>
+<dd><p>Substitute the item&rsquo;s value.  How the value is represented depends on
+the kind of item, and (for variables) on the customization type.
+</p>
+</dd>
+<dt>&lsquo;<samp class="samp">%d</samp>&rsquo;</dt>
+<dd><p>Substitute the item&rsquo;s documentation string.
+</p>
+</dd>
+<dt>&lsquo;<samp class="samp">%h</samp>&rsquo;</dt>
+<dd><p>Like &lsquo;<samp class="samp">%d</samp>&rsquo;, but if the documentation string is more than one line,
+add a button to control whether to show all of it or just the first line.
+</p>
+</dd>
+<dt>&lsquo;<samp class="samp">%t</samp>&rsquo;</dt>
+<dd><p>Substitute the tag here.  You specify the tag with the <code class="code">:tag</code>
+keyword.
+</p>
+</dd>
+<dt>&lsquo;<samp class="samp">%%</samp>&rsquo;</dt>
+<dd><p>Display a literal &lsquo;<samp class="samp">%</samp>&rsquo;.
+</p></dd>
+</dl>
+
+</dd>
+<dt><a id="index-action_002c-customization-keyword"></a><span><code class="code">:action <var class="var">action</var></code><a class="copiable-link" href="#index-action_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>Perform <var class="var">action</var> if the user clicks on a button.
+</p>
+</dd>
+<dt><a id="index-button_002dface_002c-customization-keyword"></a><span><code class="code">:button-face <var class="var">face</var></code><a class="copiable-link" href="#index-button_002dface_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>Use the face <var class="var">face</var> (a face name or a list of face names) for button
+text displayed with &lsquo;<samp class="samp">%[&hellip;%]</samp>&rsquo;.
+</p>
+</dd>
+<dt><a class="index-entry-id" id="index-button_002dsuffix_002c-customization-keyword"></a>
+<a id="index-button_002dprefix_002c-customization-keyword"></a><span><code class="code">:button-prefix <var class="var">prefix</var></code><a class="copiable-link" href="#index-button_002dprefix_002c-customization-keyword"> &para;</a></span></dt>
+<dt><code class="code">:button-suffix <var class="var">suffix</var></code></dt>
+<dd><p>These specify the text to display before and after a button.
+Each can be:
+</p>
+<dl class="table">
+<dt><code class="code">nil</code></dt>
+<dd><p>No text is inserted.
+</p>
+</dd>
+<dt>a string</dt>
+<dd><p>The string is inserted literally.
+</p>
+</dd>
+<dt>a symbol</dt>
+<dd><p>The symbol&rsquo;s value is used.
+</p></dd>
+</dl>
+
+</dd>
+<dt><code class="code">:tag <var class="var">tag</var></code></dt>
+<dd><p>Use <var class="var">tag</var> (a string) as the tag for the value (or part of the value)
+that corresponds to this type.  It&rsquo;s important to provide an informative
+tag for the customization interface, especially if you&rsquo;re using the
+<code class="code">restricted-sexp</code> type or if you&rsquo;re defining a new type.
+See <a class="xref" href="#Defining-New-Types">Defining New Types</a>.
+</p>
+</dd>
+<dt><a id="index-doc_002c-customization-keyword"></a><span><code class="code">:doc <var class="var">doc</var></code><a class="copiable-link" href="#index-doc_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>Use <var class="var">doc</var> as the documentation string for this value (or part of the
+value) that corresponds to this type.  In order for this to work, you
+must specify a value for <code class="code">:format</code>, and use &lsquo;<samp class="samp">%d</samp>&rsquo; or &lsquo;<samp class="samp">%h</samp>&rsquo;
+in that value.
+</p>
+<p>The usual reason to specify a documentation string for a type is to
+provide more information about the meanings of alternatives inside a
+<code class="code">choice</code> type or the parts of some other composite type.
+</p>
+</dd>
+<dt><a id="index-help_002decho_002c-customization-keyword"></a><span><code class="code">:help-echo <var class="var">motion-doc</var></code><a class="copiable-link" href="#index-help_002decho_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>When you move to this item with <code class="code">widget-forward</code> or
+<code class="code">widget-backward</code>, it will display the string <var class="var">motion-doc</var> in
+the echo area.  In addition, <var class="var">motion-doc</var> is used as the mouse
+<code class="code">help-echo</code> string and may actually be a function or form evaluated
+to yield a help string.  If it is a function, it is called with one
+argument, the widget.
+</p>
+</dd>
+<dt><a id="index-match_002c-customization-keyword"></a><span><code class="code">:match <var class="var">function</var></code><a class="copiable-link" href="#index-match_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>Specify how to decide whether a value matches the type.  The
+corresponding value, <var class="var">function</var>, should be a function that accepts
+two arguments, a widget and a value; it should return non-<code class="code">nil</code> if
+the value is acceptable.
+</p>
+</dd>
+<dt><a id="index-match_002dinline_002c-customization-keyword"></a><span><code class="code">:match-inline <var class="var">function</var></code><a class="copiable-link" href="#index-match_002dinline_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p>Specify how to decide whether an inline value matches the type.  The
+corresponding value, <var class="var">function</var>, should be a function that accepts
+two arguments, a widget and an inline value; it should return
+non-<code class="code">nil</code> if the value is acceptable.  See <a class="xref" href="#Splicing-into-Lists">Splicing into Lists</a>, for more information about inline values.
+</p>
+</dd>
+<dt><code class="code">:validate <var class="var">function</var></code></dt>
+<dd><p>Specify a validation function for input.  <var class="var">function</var> takes a
+widget as an argument, and should return <code class="code">nil</code> if the widget&rsquo;s
+current value is valid for the widget.  Otherwise, it should return
+the widget containing the invalid data, and set that widget&rsquo;s
+<code class="code">:error</code> property to a string explaining the error.
+</p>
+</dd>
+<dt><a id="index-type_002derror_002c-customization-keyword"></a><span><code class="code">:type-error <var class="var">string</var></code><a class="copiable-link" href="#index-type_002derror_002c-customization-keyword"> &para;</a></span></dt>
+<dd><p><var class="var">string</var> should be a string that describes why a value doesn&rsquo;t
+match the type, as determined by the <code class="code">:match</code> function.  When the
+<code class="code">:match</code> function returns <code class="code">nil</code>, the widget&rsquo;s <code class="code">:error</code>
+property will be set to <var class="var">string</var>.
+</p>
+</dd>
+</dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Defining-New-Types">
+<div class="nav-panel">
+<p>
+Previous: <a href="#Type-Keywords" accesskey="p" rel="prev">Type Keywords</a>, Up: <a href="#Customization-Types" accesskey="u" rel="up">Customization Types</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Defining-New-Types-1"><span>15.4.5 Defining New Types<a class="copiable-link" href="#Defining-New-Types-1"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-customization-types_002c-define-new"></a>
+<a class="index-entry-id" id="index-define-new-customization-types"></a>
+
+<p>In the previous sections we have described how to construct elaborate
+type specifications for <code class="code">defcustom</code>.  In some cases you may want
+to give such a type specification a name.  The obvious case is when
+you are using the same type for many user options: rather than repeat
+the specification for each option, you can give the type specification
+a name, and use that name each <code class="code">defcustom</code>.  The other case is
+when a user option&rsquo;s value is a recursive data structure.  To make it
+possible for a datatype to refer to itself, it needs to have a name.
+</p>
+<p>Since custom types are implemented as widgets, the way to define a new
+customize type is to define a new widget.  We are not going to describe
+the widget interface here in details, see <a data-manual="widget" href="https://www.gnu.org/software/emacs/manual/html_node/widget/index.html#Top">Introduction</a> in <cite class="cite">The Emacs Widget Library</cite>, for that.  Instead we are going to
+demonstrate the minimal functionality needed for defining new customize
+types by a simple example.
+</p>
+<div class="example">
+<pre class="example-preformatted">(define-widget 'binary-tree-of-string 'lazy
+  &quot;A binary tree made of cons-cells and strings.&quot;
+  :offset 4
+  :tag &quot;Node&quot;
+  :type '(choice (string :tag &quot;Leaf&quot; :value &quot;&quot;)
+                 (cons :tag &quot;Interior&quot;
+                       :value (&quot;&quot; . &quot;&quot;)
+                       binary-tree-of-string
+                       binary-tree-of-string)))
+
+(defcustom foo-bar &quot;&quot;
+  &quot;Sample variable holding a binary tree of strings.&quot;
+  :type 'binary-tree-of-string)
+</pre></div>
+
+<p>The function to define a new widget is called <code class="code">define-widget</code>.  The
+first argument is the symbol we want to make a new widget type.  The
+second argument is a symbol representing an existing widget, the new
+widget is going to be defined in terms of difference from the existing
+widget.  For the purpose of defining new customization types, the
+<code class="code">lazy</code> widget is perfect, because it accepts a <code class="code">:type</code> keyword
+argument with the same syntax as the keyword argument to
+<code class="code">defcustom</code> with the same name.  The third argument is a
+documentation string for the new widget.  You will be able to see that
+string with the <kbd class="kbd">M-x widget-browse <kbd class="key">RET</kbd> binary-tree-of-string
+<kbd class="key">RET</kbd></kbd> command.
+</p>
+<p>After these mandatory arguments follow the keyword arguments.  The most
+important is <code class="code">:type</code>, which describes the data type we want to match
+with this widget.  Here a <code class="code">binary-tree-of-string</code> is described as
+being either a string, or a cons-cell whose car and cdr are themselves
+both <code class="code">binary-tree-of-string</code>.  Note the reference to the widget
+type we are currently in the process of defining.  The <code class="code">:tag</code>
+is another important keyword argument because we are using the
+<code class="code">lazy</code> widget for our new widget.  By default, the <code class="code">lazy</code>
+widget doesn&rsquo;t have a tag, and in its absence the customization buffer
+will show the entire widget&rsquo;s value (that is, the value of the user
+option being customized).  Since that&rsquo;s almost never a good idea, we
+provide a string to name the <code class="code">binary-tree-or-string</code> widget.  The
+<code class="code">:offset</code> argument is there to ensure that child nodes are indented
+four spaces relative to the parent node, making the tree structure
+apparent in the customization buffer.
+</p>
+<p>The <code class="code">defcustom</code> shows how the new widget can be used as an ordinary
+customization type.
+</p>
+<p>The reason for the name <code class="code">lazy</code> is that the other composite
+widgets convert their inferior widgets to internal form when the
+widget is instantiated in a buffer.  This conversion is recursive, so
+the inferior widgets will convert <em class="emph">their</em> inferior widgets.  If
+the data structure is itself recursive, this conversion is an infinite
+recursion.  The <code class="code">lazy</code> widget prevents the recursion: it convert
+its <code class="code">:type</code> argument only when needed.
+</p>
+<hr>
+</div>
+</div>
+<div class="section-level-extent" id="Applying-Customizations">
+<div class="nav-panel">
+<p>
+Next: <a href="#Custom-Themes" accesskey="n" rel="next">Custom Themes</a>, Previous: <a href="#Customization-Types" accesskey="p" rel="prev">Customization Types</a>, Up: <a href="#Customization" accesskey="u" rel="up">Customization Settings</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Applying-Customizations-1"><span>15.5 Applying Customizations<a class="copiable-link" href="#Applying-Customizations-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-applying-customizations"></a>
+
+<p>The following functions are responsible for installing the user&rsquo;s
+customization settings for variables and faces, respectively.  When
+the user invokes &lsquo;<samp class="samp">Save for future sessions</samp>&rsquo; in the Customize
+interface, that takes effect by writing a <code class="code">custom-set-variables</code>
+and/or a <code class="code">custom-set-faces</code> form into the custom file, to be
+evaluated the next time Emacs starts.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-custom_002dset_002dvariables"><span class="category-def">Function: </span><span><strong class="def-name">custom-set-variables</strong> <var class="def-var-arguments">&amp;rest args</var><a class="copiable-link" href="#index-custom_002dset_002dvariables"> &para;</a></span></dt>
+<dd><p>This function installs the variable customizations specified by
+<var class="var">args</var>.  Each argument in <var class="var">args</var> should have the form
+</p>
+<div class="example">
+<pre class="example-preformatted">(<var class="var">var</var> <var class="var">expression</var> [<var class="var">now</var> [<var class="var">request</var> [<var class="var">comment</var>]]])
+</pre></div>
+
+<p><var class="var">var</var> is a variable name (a symbol), and <var class="var">expression</var> is an
+expression which evaluates to the desired customized value.
+</p>
+<p>If the <code class="code">defcustom</code> form for <var class="var">var</var> has been evaluated prior to
+this <code class="code">custom-set-variables</code> call, <var class="var">expression</var> is immediately
+evaluated, and the variable&rsquo;s value is set to the result.  Otherwise,
+<var class="var">expression</var> is stored into the variable&rsquo;s <code class="code">saved-value</code>
+property, to be evaluated when the relevant <code class="code">defcustom</code> is called
+(usually when the library defining that variable is loaded into
+Emacs).
+</p>
+<p>The <var class="var">now</var>, <var class="var">request</var>, and <var class="var">comment</var> entries are for
+internal use only, and may be omitted.  <var class="var">now</var>, if non-<code class="code">nil</code>,
+means to set the variable&rsquo;s value now, even if the variable&rsquo;s
+<code class="code">defcustom</code> form has not been evaluated.  <var class="var">request</var> is a list
+of features to be loaded immediately (see <a class="pxref" href="Loading.html#Named-Features">Features</a>).
+<var class="var">comment</var> is a string describing the customization.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-custom_002dset_002dfaces"><span class="category-def">Function: </span><span><strong class="def-name">custom-set-faces</strong> <var class="def-var-arguments">&amp;rest args</var><a class="copiable-link" href="#index-custom_002dset_002dfaces"> &para;</a></span></dt>
+<dd><p>This function installs the face customizations specified by
+<var class="var">args</var>.  Each argument in <var class="var">args</var> should have the form
+</p>
+<div class="example">
+<pre class="example-preformatted">(<var class="var">face</var> <var class="var">spec</var> [<var class="var">now</var> [<var class="var">comment</var>]])
+</pre></div>
+
+<p><var class="var">face</var> is a face name (a symbol), and <var class="var">spec</var> is the customized
+face specification for that face (see <a class="pxref" href="Display.html#Defining-Faces">Defining Faces</a>).
+</p>
+<p>The <var class="var">now</var> and <var class="var">comment</var> entries are for internal use only, and
+may be omitted.  <var class="var">now</var>, if non-<code class="code">nil</code>, means to install the
+face specification now, even if the <code class="code">defface</code> form has not been
+evaluated.  <var class="var">comment</var> is a string describing the customization.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Custom-Themes">
+<div class="nav-panel">
+<p>
+Previous: <a href="#Applying-Customizations" accesskey="p" rel="prev">Applying Customizations</a>, Up: <a href="#Customization" accesskey="u" rel="up">Customization Settings</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Custom-Themes-1"><span>15.6 Custom Themes<a class="copiable-link" href="#Custom-Themes-1"> &para;</a></span></h3>
+
+<a class="index-entry-id" id="index-custom-themes"></a>
+<p><em class="dfn">Custom themes</em> are collections of settings that can be enabled
+or disabled as a unit.  See <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Custom-Themes.html#Custom-Themes">Custom Themes</a> in <cite class="cite">The GNU Emacs
+Manual</cite>.  Each Custom theme is defined by an Emacs Lisp source file,
+which should follow the conventions described in this section.
+(Instead of writing a Custom theme by hand, you can also create one
+using a Customize-like interface; see <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Creating-Custom-Themes.html#Creating-Custom-Themes">Creating Custom Themes</a> in <cite class="cite">The GNU Emacs Manual</cite>.)
+</p>
+<p>A Custom theme file should be named <samp class="file"><var class="var">foo</var>-theme.el</samp>, where
+<var class="var">foo</var> is the theme name.  The first Lisp form in the file should
+be a call to <code class="code">deftheme</code>, and the last form should be a call to
+<code class="code">provide-theme</code>.
+</p>
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-deftheme"><span class="category-def">Macro: </span><span><strong class="def-name">deftheme</strong> <var class="def-var-arguments">theme &amp;optional doc &amp;rest properties</var><a class="copiable-link" href="#index-deftheme"> &para;</a></span></dt>
+<dd><p>This macro declares <var class="var">theme</var> (a symbol) as the name of a Custom
+theme.  The optional argument <var class="var">doc</var> should be a string describing
+the theme; this is the description shown when the user invokes the
+<code class="code">describe-theme</code> command or types <kbd class="kbd">?</kbd> in the &lsquo;<samp class="samp">*Custom
+Themes*</samp>&rsquo; buffer.  The remaining arguments <var class="var">properties</var> are used
+pass a property list with theme attributes.
+</p>
+<p>The following attributes are supported:
+</p>
+<dl class="table">
+<dt><code class="code">:family</code></dt>
+<dd><p>A symbol designating what &ldquo;family&rdquo; a theme belongs to.  A
+<em class="dfn">family</em> of themes is a set of similar themes that differ by minor
+aspects, such as face colors that are meant for the light vs dark
+background of the frame.
+</p></dd>
+<dt><code class="code">:kind</code></dt>
+<dd><p>A symbol.  If a theme is enabled and this property has the value
+<code class="code">color-scheme</code>, then the <code class="code">theme-choose-variant</code> command will
+look for other available themes that belong to the same family in
+order to switch the themes.  Other values are currently unspecified
+and should not be used.
+</p></dd>
+<dt><code class="code">:background-mode</code></dt>
+<dd><p>A symbol, either <code class="code">light</code> or <code class="code">dark</code>.  This attribute is
+currently unused, but should still be specified.
+</p></dd>
+</dl>
+
+<p>Two special theme names are disallowed (using them causes an error):
+<code class="code">user</code> is a dummy theme that stores the user&rsquo;s direct
+customization settings, and <code class="code">changed</code> is a dummy theme that
+stores changes made outside of the Customize system.
+</p></dd></dl>
+
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-provide_002dtheme"><span class="category-def">Macro: </span><span><strong class="def-name">provide-theme</strong> <var class="def-var-arguments">theme</var><a class="copiable-link" href="#index-provide_002dtheme"> &para;</a></span></dt>
+<dd><p>This macro declares that the theme named <var class="var">theme</var> has been fully
+specified.
+</p></dd></dl>
+
+<p>In between <code class="code">deftheme</code> and <code class="code">provide-theme</code> are Lisp forms
+specifying the theme settings: usually a call to
+<code class="code">custom-theme-set-variables</code> and/or a call to
+<code class="code">custom-theme-set-faces</code>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-custom_002dtheme_002dset_002dvariables"><span class="category-def">Function: </span><span><strong class="def-name">custom-theme-set-variables</strong> <var class="def-var-arguments">theme &amp;rest args</var><a class="copiable-link" href="#index-custom_002dtheme_002dset_002dvariables"> &para;</a></span></dt>
+<dd><p>This function specifies the Custom theme <var class="var">theme</var>&rsquo;s variable
+settings.  <var class="var">theme</var> should be a symbol.  Each argument in
+<var class="var">args</var> should be a list of the form
+</p>
+<div class="example">
+<pre class="example-preformatted">(<var class="var">var</var> <var class="var">expression</var> [<var class="var">now</var> [<var class="var">request</var> [<var class="var">comment</var>]]])
+</pre></div>
+
+<p>where the list entries have the same meanings as in
+<code class="code">custom-set-variables</code>.  See <a class="xref" href="#Applying-Customizations">Applying Customizations</a>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-custom_002dtheme_002dset_002dfaces"><span class="category-def">Function: </span><span><strong class="def-name">custom-theme-set-faces</strong> <var class="def-var-arguments">theme &amp;rest args</var><a class="copiable-link" href="#index-custom_002dtheme_002dset_002dfaces"> &para;</a></span></dt>
+<dd><p>This function specifies the Custom theme <var class="var">theme</var>&rsquo;s face settings.
+<var class="var">theme</var> should be a symbol.  Each argument in <var class="var">args</var> should be
+a list of the form
+</p>
+<div class="example">
+<pre class="example-preformatted">(<var class="var">face</var> <var class="var">spec</var> [<var class="var">now</var> [<var class="var">comment</var>]])
+</pre></div>
+
+<p>where the list entries have the same meanings as in
+<code class="code">custom-set-faces</code>.  See <a class="xref" href="#Applying-Customizations">Applying Customizations</a>.
+</p></dd></dl>
+
+<p>In theory, a theme file can also contain other Lisp forms, which
+would be evaluated when loading the theme, but that is bad form.
+To protect against loading themes containing malicious code, Emacs
+displays the source file and asks for confirmation from the user
+before loading any non-built-in theme for the first time.  As
+such, themes are not ordinarily byte-compiled, and source files
+usually take precedence when Emacs is looking for a theme to load.
+</p>
+<p>The following functions are useful for programmatically enabling and
+disabling themes:
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-custom_002dtheme_002dp"><span class="category-def">Function: </span><span><strong class="def-name">custom-theme-p</strong> <var class="def-var-arguments">theme</var><a class="copiable-link" href="#index-custom_002dtheme_002dp"> &para;</a></span></dt>
+<dd><p>This function return a non-<code class="code">nil</code> value if <var class="var">theme</var> (a symbol)
+is the name of a Custom theme (i.e., a Custom theme which has been
+loaded into Emacs, whether or not the theme is enabled).  Otherwise,
+it returns <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-custom_002dknown_002dthemes"><span class="category-def">Variable: </span><span><strong class="def-name">custom-known-themes</strong><a class="copiable-link" href="#index-custom_002dknown_002dthemes"> &para;</a></span></dt>
+<dd><p>The value of this variable is a list of themes loaded into Emacs.
+Each theme is represented by a Lisp symbol (the theme name).  The
+default value of this variable is a list containing two dummy
+themes: <code class="code">(user changed)</code>.  The <code class="code">changed</code> theme stores
+settings made before any Custom themes are applied (e.g., variables
+set outside of Customize).  The <code class="code">user</code> theme stores settings the
+user has customized and saved.  Any additional themes declared with
+the <code class="code">deftheme</code> macro are added to the front of this list.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-load_002dtheme"><span class="category-def">Command: </span><span><strong class="def-name">load-theme</strong> <var class="def-var-arguments">theme &amp;optional no-confirm no-enable</var><a class="copiable-link" href="#index-load_002dtheme"> &para;</a></span></dt>
+<dd><p>This function loads the Custom theme named <var class="var">theme</var> from its source
+file, looking for the source file in the directories specified by the
+variable <code class="code">custom-theme-load-path</code>.  See <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Custom-Themes.html#Custom-Themes">Custom Themes</a> in <cite class="cite">The GNU Emacs Manual</cite>.  It also <em class="dfn">enables</em> the theme (unless the
+optional argument <var class="var">no-enable</var> is non-<code class="code">nil</code>), causing its
+variable and face settings to take effect.  It prompts the user for
+confirmation before loading the theme, unless the optional argument
+<var class="var">no-confirm</var> is non-<code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-require_002dtheme"><span class="category-def">Function: </span><span><strong class="def-name">require-theme</strong> <var class="def-var-arguments">feature &amp;optional noerror</var><a class="copiable-link" href="#index-require_002dtheme"> &para;</a></span></dt>
+<dd><p>This function searches <code class="code">custom-theme-load-path</code> for a file that
+provides <var class="var">feature</var> and then loads it.  This is like the function
+<code class="code">require</code> (see <a class="pxref" href="Loading.html#Named-Features">Features</a>), except it searches
+<code class="code">custom-theme-load-path</code> instead of <code class="code">load-path</code>
+(see <a class="pxref" href="Loading.html#Library-Search">Library Search</a>).  This can be useful in Custom themes that
+need to load supporting Lisp files when <code class="code">require</code> is unsuitable
+for that.
+</p>
+<p>If <var class="var">feature</var>, which should be a symbol, is not already present in
+the current Emacs session according to <code class="code">featurep</code>, then
+<code class="code">require-theme</code> searches for a file named <var class="var">feature</var> with an
+added &lsquo;<samp class="samp">.elc</samp>&rsquo; or &lsquo;<samp class="samp">.el</samp>&rsquo; suffix, in that order, in the
+directories specified by <code class="code">custom-theme-load-path</code>.
+</p>
+<p>If a file providing <var class="var">feature</var> is successfully found and loaded,
+then <code class="code">require-theme</code> returns <var class="var">feature</var>.  The optional
+argument <var class="var">noerror</var> determines what happens if the search or
+loading fails.  If it is <code class="code">nil</code>, the function signals an error;
+otherwise, it returns <code class="code">nil</code>.  If the file loads successfully but
+does not provide <var class="var">feature</var>, then <code class="code">require-theme</code> signals an
+error; this cannot be suppressed.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-enable_002dtheme"><span class="category-def">Command: </span><span><strong class="def-name">enable-theme</strong> <var class="def-var-arguments">theme</var><a class="copiable-link" href="#index-enable_002dtheme"> &para;</a></span></dt>
+<dd><p>This function enables the Custom theme named <var class="var">theme</var>.  It signals
+an error if no such theme has been loaded.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-disable_002dtheme"><span class="category-def">Command: </span><span><strong class="def-name">disable-theme</strong> <var class="def-var-arguments">theme</var><a class="copiable-link" href="#index-disable_002dtheme"> &para;</a></span></dt>
+<dd><p>This function disables the Custom theme named <var class="var">theme</var>.  The theme
+remains loaded, so that a subsequent call to <code class="code">enable-theme</code> will
+re-enable it.
+</p></dd></dl>
+</div>
+</div>
+<hr>
+<div class="nav-panel">
+<p>
+Next: <a href="Loading.html#Loading" accesskey="n" rel="next">Loading</a>, Previous: <a href="Macros.html#Macros" accesskey="p" rel="prev">Macros</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

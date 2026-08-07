@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.0.91.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Read and Print (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Read and Print (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Read and Print (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Minibuffers.html#Minibuffers" rel="next" title="Minibuffers">
+<link href="Debugging.html#Debugging" rel="prev" title="Debugging">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+kbd.kbd {font-style: oblique}
+kbd.key {font-style: normal}
+span.r {font-family: initial; font-weight: normal; font-style: normal}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
+ul.mark-bullet {list-style-type: disc}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Read-and-Print">
+<div class="nav-panel">
+<p>
+Next: <a href="Minibuffers.html#Minibuffers" accesskey="n" rel="next">Minibuffers</a>, Previous: <a href="Debugging.html#Debugging" accesskey="p" rel="prev">Debugging Lisp Programs</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h2 class="chapter" id="Reading-and-Printing-Lisp-Objects"><span>20 Reading and Printing Lisp Objects<a class="copiable-link" href="#Reading-and-Printing-Lisp-Objects"> &para;</a></span></h2>
+
+<p><em class="dfn">Printing</em> and <em class="dfn">reading</em> are the operations of converting Lisp
+objects to textual form and vice versa.  They use the printed
+representations and read syntax described in <a class="ref" href="Lisp-Data-Types.html#Lisp-Data-Types">Lisp Data Types</a>.
+</p>
+<p>This chapter describes the Lisp functions for reading and printing.
+It also describes <em class="dfn">streams</em>, which specify where to get the text (if
+reading) or where to put it (if printing).
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Streams-Intro" accesskey="1">Introduction to Reading and Printing</a></li>
+<li><a href="#Input-Streams" accesskey="2">Input Streams</a></li>
+<li><a href="#Input-Functions" accesskey="3">Input Functions</a></li>
+<li><a href="#Output-Streams" accesskey="4">Output Streams</a></li>
+<li><a href="#Output-Functions" accesskey="5">Output Functions</a></li>
+<li><a href="#Output-Variables" accesskey="6">Variables Affecting Output</a></li>
+<li><a href="#Output-Overrides" accesskey="7">Overriding Output Variables</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Streams-Intro">
+<div class="nav-panel">
+<p>
+Next: <a href="#Input-Streams" accesskey="n" rel="next">Input Streams</a>, Up: <a href="#Read-and-Print" accesskey="u" rel="up">Reading and Printing Lisp Objects</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Introduction-to-Reading-and-Printing"><span>20.1 Introduction to Reading and Printing<a class="copiable-link" href="#Introduction-to-Reading-and-Printing"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-Lisp-reader"></a>
+<a class="index-entry-id" id="index-printing"></a>
+<a class="index-entry-id" id="index-reading"></a>
+
+<p><em class="dfn">Reading</em> a Lisp object means parsing a Lisp expression in textual
+form and producing a corresponding Lisp object.  This is how Lisp
+programs get into Lisp from files of Lisp code.  We call the text the
+<em class="dfn">read syntax</em> of the object.  For example, the text &lsquo;<samp class="samp">(a . 5)</samp>&rsquo;
+is the read syntax for a cons cell whose <small class="sc">CAR</small> is <code class="code">a</code> and whose
+<small class="sc">CDR</small> is the number 5.
+</p>
+<p><em class="dfn">Printing</em> a Lisp object means producing text that represents that
+object&mdash;converting the object to its <em class="dfn">printed representation</em>
+(see <a class="pxref" href="Lisp-Data-Types.html#Printed-Representation">Printed Representation and Read Syntax</a>).  Printing the cons cell described
+above produces the text &lsquo;<samp class="samp">(a . 5)</samp>&rsquo;.
+</p>
+<p>Reading and printing are more or less inverse operations: printing the
+object that results from reading a given piece of text often produces
+the same text, and reading the text that results from printing an object
+usually produces a similar-looking object.  For example, printing the
+symbol <code class="code">foo</code> produces the text &lsquo;<samp class="samp">foo</samp>&rsquo;, and reading that text
+returns the symbol <code class="code">foo</code>.  Printing a list whose elements are
+<code class="code">a</code> and <code class="code">b</code> produces the text &lsquo;<samp class="samp">(a b)</samp>&rsquo;, and reading that
+text produces a list (but not the same list) with elements <code class="code">a</code>
+and <code class="code">b</code>.
+</p>
+<p>However, these two operations are not precisely inverse to each other.
+There are three kinds of exceptions:
+</p>
+<ul class="itemize mark-bullet">
+<li>Printing can produce text that cannot be read.  For example, buffers,
+windows, frames, subprocesses and markers print as text that starts
+with &lsquo;<samp class="samp">#</samp>&rsquo;; if you try to read this text, you get an error.  There is
+no way to read those data types.
+
+</li><li>One object can have multiple textual representations.  For example,
+&lsquo;<samp class="samp">1</samp>&rsquo; and &lsquo;<samp class="samp">01</samp>&rsquo; represent the same integer, and &lsquo;<samp class="samp">(a b)</samp>&rsquo; and
+&lsquo;<samp class="samp">(a . (b))</samp>&rsquo; represent the same list.  Reading will accept any of
+the alternatives, but printing must choose one of them.
+
+</li><li>Comments can appear at certain points in the middle of an object&rsquo;s
+read sequence without affecting the result of reading it.
+</li></ul>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Input-Streams">
+<div class="nav-panel">
+<p>
+Next: <a href="#Input-Functions" accesskey="n" rel="next">Input Functions</a>, Previous: <a href="#Streams-Intro" accesskey="p" rel="prev">Introduction to Reading and Printing</a>, Up: <a href="#Read-and-Print" accesskey="u" rel="up">Reading and Printing Lisp Objects</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Input-Streams-1"><span>20.2 Input Streams<a class="copiable-link" href="#Input-Streams-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-stream-_0028for-reading_0029"></a>
+<a class="index-entry-id" id="index-input-stream"></a>
+
+<p>Most of the Lisp functions for reading text take an <em class="dfn">input stream</em>
+as an argument.  The input stream specifies where or how to get the
+characters of the text to be read.  Here are the possible types of input
+stream:
+</p>
+<dl class="table">
+<dt><a id="index-buffer-input-stream"></a><span><var class="var">buffer</var><a class="copiable-link" href="#index-buffer-input-stream"> &para;</a></span></dt>
+<dd><p>The input characters are read from <var class="var">buffer</var>, starting with the
+character directly after point.  Point advances as characters are read.
+</p>
+</dd>
+<dt><a id="index-marker-input-stream"></a><span><var class="var">marker</var><a class="copiable-link" href="#index-marker-input-stream"> &para;</a></span></dt>
+<dd><p>The input characters are read from the buffer that <var class="var">marker</var> is in,
+starting with the character directly after the marker.  The marker
+position advances as characters are read.  The value of point in the
+buffer has no effect when the stream is a marker.
+</p>
+</dd>
+<dt><a id="index-string-input-stream"></a><span><var class="var">string</var><a class="copiable-link" href="#index-string-input-stream"> &para;</a></span></dt>
+<dd><p>The input characters are taken from <var class="var">string</var>, starting at the first
+character in the string and using as many characters as required.
+</p>
+</dd>
+<dt><a id="index-function-input-stream"></a><span><var class="var">function</var><a class="copiable-link" href="#index-function-input-stream"> &para;</a></span></dt>
+<dd><p>The input characters are generated by <var class="var">function</var>, which must support
+two kinds of calls:
+</p>
+<ul class="itemize mark-bullet">
+<li>When it is called with no arguments, it should return the next character.
+
+</li><li>When it is called with one argument (always a character), <var class="var">function</var>
+should save the argument and arrange to return it on the next call.
+This is called <em class="dfn">unreading</em> the character; it happens when the Lisp
+reader reads one character too many and wants to put it back where it
+came from.  In this case, it makes no difference what value
+<var class="var">function</var> returns.
+</li></ul>
+
+</dd>
+<dt><a id="index-t-input-stream"></a><span><code class="code">t</code><a class="copiable-link" href="#index-t-input-stream"> &para;</a></span></dt>
+<dd><p><code class="code">t</code> used as a stream means that the input is read from the
+minibuffer.  In fact, the minibuffer is invoked once and the text
+given by the user is made into a string that is then used as the
+input stream.  If Emacs is running in batch mode (see <a class="pxref" href="System-Interface.html#Batch-Mode">Batch Mode</a>),
+standard input is used instead of the minibuffer.  For example,
+</p><div class="example">
+<pre class="example-preformatted">(message &quot;%s&quot; (read t))
+</pre></div>
+<p>will in batch mode read a Lisp expression from standard input and
+print the result to standard output.
+</p>
+</dd>
+<dt><a id="index-nil-input-stream"></a><span><code class="code">nil</code><a class="copiable-link" href="#index-nil-input-stream"> &para;</a></span></dt>
+<dd><p><code class="code">nil</code> supplied as an input stream means to use the value of
+<code class="code">standard-input</code> instead; that value is the <em class="dfn">default input
+stream</em>, and must be a non-<code class="code">nil</code> input stream.
+</p>
+</dd>
+<dt><var class="var">symbol</var></dt>
+<dd><p>A symbol as input stream is equivalent to the symbol&rsquo;s function
+definition (if any).
+</p></dd>
+</dl>
+
+<p>Here is an example of reading from a stream that is a buffer, showing
+where point is located before and after:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">---------- Buffer: foo ----------
+This&lowast; is the contents of foo.
+---------- Buffer: foo ----------
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(read (get-buffer &quot;foo&quot;))
+     &rArr; is
+</pre></div><div class="group"><pre class="example-preformatted">(read (get-buffer &quot;foo&quot;))
+     &rArr; the
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">---------- Buffer: foo ----------
+This is the&lowast; contents of foo.
+---------- Buffer: foo ----------
+</pre></div></div>
+
+<p>Note that the first read skips a space.  Reading skips any amount of
+whitespace preceding the significant text.
+</p>
+<p>Here is an example of reading from a stream that is a marker,
+initially positioned at the beginning of the buffer shown.  The value
+read is the symbol <code class="code">This</code>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">
+
+---------- Buffer: foo ----------
+This is the contents of foo.
+---------- Buffer: foo ----------
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(setq m (set-marker (make-marker) 1 (get-buffer &quot;foo&quot;)))
+     &rArr; #&lt;marker at 1 in foo&gt;
+</pre></div><div class="group"><pre class="example-preformatted">(read m)
+     &rArr; This
+</pre></div><div class="group"><pre class="example-preformatted">m
+     &rArr; #&lt;marker at 5 in foo&gt;   ;; <span class="r">Before the first space.</span>
+</pre></div></div>
+
+<p>Here we read from the contents of a string:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(read &quot;(When in) the course&quot;)
+     &rArr; (When in)
+</pre></div></div>
+
+<p>The following example reads from the minibuffer.  The
+prompt is: &lsquo;<samp class="samp">Lisp&nbsp;expression:&nbsp;</samp>&rsquo;<!-- /@w -->.  (That is always the prompt
+used when you read from the stream <code class="code">t</code>.)  The user&rsquo;s input is shown
+following the prompt.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(read t)
+     &rArr; 23
+---------- Buffer: Minibuffer ----------
+Lisp expression: <kbd class="kbd">23 <kbd class="key">RET</kbd></kbd>
+---------- Buffer: Minibuffer ----------
+</pre></div></div>
+
+<p>Finally, here is an example of a stream that is a function, named
+<code class="code">useless-stream</code>.  Before we use the stream, we initialize the
+variable <code class="code">useless-list</code> to a list of characters.  Then each call to
+the function <code class="code">useless-stream</code> obtains the next character in the list
+or unreads a character by adding it to the front of the list.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq useless-list (append &quot;XY()&quot; nil))
+     &rArr; (88 89 40 41)
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(defun useless-stream (&amp;optional unread)
+  (if unread
+      (setq useless-list (cons unread useless-list))
+    (prog1 (car useless-list)
+           (setq useless-list (cdr useless-list)))))
+     &rArr; useless-stream
+</pre></div></div>
+
+<p>Now we read using the stream thus constructed:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(read 'useless-stream)
+     &rArr; XY
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">useless-list
+     &rArr; (40 41)
+</pre></div></div>
+
+<p>Note that the open and close parentheses remain in the list.  The Lisp
+reader encountered the open parenthesis, decided that it ended the
+input, and unread it.  Another attempt to read from the stream at this
+point would read &lsquo;<samp class="samp">()</samp>&rsquo; and return <code class="code">nil</code>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Input-Functions">
+<div class="nav-panel">
+<p>
+Next: <a href="#Output-Streams" accesskey="n" rel="next">Output Streams</a>, Previous: <a href="#Input-Streams" accesskey="p" rel="prev">Input Streams</a>, Up: <a href="#Read-and-Print" accesskey="u" rel="up">Reading and Printing Lisp Objects</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Input-Functions-1"><span>20.3 Input Functions<a class="copiable-link" href="#Input-Functions-1"> &para;</a></span></h3>
+
+<p>This section describes the Lisp functions and variables that pertain
+to reading.
+</p>
+<p>In the functions below, <var class="var">stream</var> stands for an input stream (see
+the previous section).  If <var class="var">stream</var> is <code class="code">nil</code> or omitted, it
+defaults to the value of <code class="code">standard-input</code>.
+</p>
+<a class="index-entry-id" id="index-end_002dof_002dfile"></a>
+<p>An <code class="code">end-of-file</code> error is signaled if reading encounters an
+unterminated list, vector, or string.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-read"><span class="category-def">Function: </span><span><strong class="def-name">read</strong> <var class="def-var-arguments">&amp;optional stream</var><a class="copiable-link" href="#index-read"> &para;</a></span></dt>
+<dd><p>This function reads one textual Lisp expression from <var class="var">stream</var>,
+returning it as a Lisp object.  This is the basic Lisp input function.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-read_002dfrom_002dstring"><span class="category-def">Function: </span><span><strong class="def-name">read-from-string</strong> <var class="def-var-arguments">string &amp;optional start end</var><a class="copiable-link" href="#index-read_002dfrom_002dstring"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-string-to-object"></a>
+<p>This function reads the first textual Lisp expression from the text in
+<var class="var">string</var>.  It returns a cons cell whose <small class="sc">CAR</small> is that expression,
+and whose <small class="sc">CDR</small> is an integer giving the position of the next
+remaining character in the string (i.e., the first one not read).
+</p>
+<p>If <var class="var">start</var> is supplied, then reading begins at index <var class="var">start</var> in
+the string (where the first character is at index 0).  If you specify
+<var class="var">end</var>, then reading is forced to stop just before that index, as if
+the rest of the string were not there.
+</p>
+<p>For example:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(read-from-string &quot;(setq x 55) (setq y 5)&quot;)
+     &rArr; ((setq x 55) . 11)
+</pre></div><div class="group"><pre class="example-preformatted">(read-from-string &quot;\&quot;A short string\&quot;&quot;)
+     &rArr; (&quot;A short string&quot; . 16)
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; <span class="r">Read starting at the first character.</span>
+(read-from-string &quot;(list 112)&quot; 0)
+     &rArr; ((list 112) . 10)
+</pre></div><div class="group"><pre class="example-preformatted">;; <span class="r">Read starting at the second character.</span>
+(read-from-string &quot;(list 112)&quot; 1)
+     &rArr; (list . 5)
+</pre></div><div class="group"><pre class="example-preformatted">;; <span class="r">Read starting at the seventh character,</span>
+;;   <span class="r">and stopping at the ninth.</span>
+(read-from-string &quot;(list 112)&quot; 6 8)
+     &rArr; (11 . 8)
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-read_002dpositioning_002dsymbols"><span class="category-def">Function: </span><span><strong class="def-name">read-positioning-symbols</strong> <var class="def-var-arguments">&amp;optional stream</var><a class="copiable-link" href="#index-read_002dpositioning_002dsymbols"> &para;</a></span></dt>
+<dd><p>This function reads one textual expression from <var class="var">stream</var>, like
+<code class="code">read</code> does, but additionally positions the read symbols to the
+positions in <var class="var">stream</var> where they occurred.  Only the symbol
+<code class="code">nil</code> is not positioned, this for efficiency reasons.
+See <a class="xref" href="Symbols.html#Symbols-with-Position">Symbols with Position</a>.  This function is used by the byte
+compiler.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-standard_002dinput"><span class="category-def">Variable: </span><span><strong class="def-name">standard-input</strong><a class="copiable-link" href="#index-standard_002dinput"> &para;</a></span></dt>
+<dd><p>This variable holds the default input stream&mdash;the stream that
+<code class="code">read</code> uses when the <var class="var">stream</var> argument is <code class="code">nil</code>.
+The default is <code class="code">t</code>, meaning use the minibuffer.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-read_002dcircle"><span class="category-def">Variable: </span><span><strong class="def-name">read-circle</strong><a class="copiable-link" href="#index-read_002dcircle"> &para;</a></span></dt>
+<dd><p>If non-<code class="code">nil</code>, this variable enables the reading of circular and
+shared structures.  See <a class="xref" href="Lisp-Data-Types.html#Circular-Objects">Read Syntax for Circular Objects</a>.  Its default value is
+<code class="code">t</code>.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-binary-I_002fO-in-batch-mode"></a>
+<p>When reading or writing from the standard input/output streams of the
+Emacs process in batch mode, it is sometimes required to make sure any
+arbitrary binary data will be read/written verbatim, and/or that no
+translation of newlines to or from CR-LF pairs is performed.  This
+issue does not exist on POSIX hosts, only on MS-Windows and MS-DOS.
+The following function allows you to control the I/O mode of any
+standard stream of the Emacs process.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dbinary_002dmode"><span class="category-def">Function: </span><span><strong class="def-name">set-binary-mode</strong> <var class="def-var-arguments">stream mode</var><a class="copiable-link" href="#index-set_002dbinary_002dmode"> &para;</a></span></dt>
+<dd><p>Switch <var class="var">stream</var> into binary or text I/O mode.  If <var class="var">mode</var> is
+non-<code class="code">nil</code>, switch to binary mode, otherwise switch to text mode.
+The value of <var class="var">stream</var> can be one of <code class="code">stdin</code>, <code class="code">stdout</code>,
+or <code class="code">stderr</code>.  This function flushes any pending output data of
+<var class="var">stream</var> as a side effect, and returns the previous value of I/O
+mode for <var class="var">stream</var>.  On POSIX hosts, it always returns a
+non-<code class="code">nil</code> value and does nothing except flushing pending output.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-readablep"><span class="category-def">Function: </span><span><strong class="def-name">readablep</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-readablep"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-readable-syntax"></a>
+<p>This predicate says whether <var class="var">object</var> has <em class="dfn">readable syntax</em>,
+i.e., it can be written out and then read back by the Emacs Lisp
+reader.  If it can&rsquo;t, this function returns <code class="code">nil</code>; if it can,
+this function returns a printed representation (via <code class="code">prin1</code>,
+see <a class="pxref" href="#Output-Functions">Output Functions</a>) of <var class="var">object</var>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Output-Streams">
+<div class="nav-panel">
+<p>
+Next: <a href="#Output-Functions" accesskey="n" rel="next">Output Functions</a>, Previous: <a href="#Input-Functions" accesskey="p" rel="prev">Input Functions</a>, Up: <a href="#Read-and-Print" accesskey="u" rel="up">Reading and Printing Lisp Objects</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Output-Streams-1"><span>20.4 Output Streams<a class="copiable-link" href="#Output-Streams-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-stream-_0028for-printing_0029"></a>
+<a class="index-entry-id" id="index-output-stream"></a>
+
+<p>An output stream specifies what to do with the characters produced
+by printing.  Most print functions accept an output stream as an
+optional argument.  Here are the possible types of output stream:
+</p>
+<dl class="table">
+<dt><a id="index-buffer-output-stream"></a><span><var class="var">buffer</var><a class="copiable-link" href="#index-buffer-output-stream"> &para;</a></span></dt>
+<dd><p>The output characters are inserted into <var class="var">buffer</var> at point.
+Point advances as characters are inserted.
+</p>
+</dd>
+<dt><a id="index-marker-output-stream"></a><span><var class="var">marker</var><a class="copiable-link" href="#index-marker-output-stream"> &para;</a></span></dt>
+<dd><p>The output characters are inserted into the buffer that <var class="var">marker</var>
+points into, at the marker position.  The marker position advances as
+characters are inserted.  The value of point in the buffer has no effect
+on printing when the stream is a marker, and this kind of printing
+does not move point (except that if the marker points at or before the
+position of point, point advances with the surrounding text, as
+usual).
+</p>
+</dd>
+<dt><a id="index-function-output-stream"></a><span><var class="var">function</var><a class="copiable-link" href="#index-function-output-stream"> &para;</a></span></dt>
+<dd><p>The output characters are passed to <var class="var">function</var>, which is responsible
+for storing them away.  It is called with a single character as
+argument, as many times as there are characters to be output, and
+is responsible for storing the characters wherever you want to put them.
+</p>
+</dd>
+<dt><a id="index-t-output-stream"></a><span><code class="code">t</code><a class="copiable-link" href="#index-t-output-stream"> &para;</a></span></dt>
+<dd><p>The output characters are displayed in the echo area.  If Emacs is
+running in batch mode (see <a class="pxref" href="System-Interface.html#Batch-Mode">Batch Mode</a>), the output is written to
+the standard output descriptor instead.
+</p>
+</dd>
+<dt><a id="index-nil-output-stream"></a><span><code class="code">nil</code><a class="copiable-link" href="#index-nil-output-stream"> &para;</a></span></dt>
+<dd><p><code class="code">nil</code> specified as an output stream means to use the value of the
+<code class="code">standard-output</code> variable instead; that value is the
+<em class="dfn">default output stream</em>, and must not be <code class="code">nil</code>.
+</p>
+</dd>
+<dt><var class="var">symbol</var></dt>
+<dd><p>A symbol as output stream is equivalent to the symbol&rsquo;s function
+definition (if any).
+</p></dd>
+</dl>
+
+<p>Many of the valid output streams are also valid as input streams.  The
+difference between input and output streams is therefore more a matter
+of how you use a Lisp object, than of different types of object.
+</p>
+<p>Here is an example of a buffer used as an output stream.  Point is
+initially located as shown immediately before the &lsquo;<samp class="samp">h</samp>&rsquo; in
+&lsquo;<samp class="samp">the</samp>&rsquo;.  At the end, point is located directly before that same
+&lsquo;<samp class="samp">h</samp>&rsquo;.
+</p>
+<a class="index-entry-id" id="index-print-example"></a>
+<div class="example">
+<div class="group"><pre class="example-preformatted">---------- Buffer: foo ----------
+This is t&lowast;he contents of foo.
+---------- Buffer: foo ----------
+</pre></div><pre class="example-preformatted">
+
+(print &quot;This is the output&quot; (get-buffer &quot;foo&quot;))
+     &rArr; &quot;This is the output&quot;
+
+</pre><div class="group"><pre class="example-preformatted">---------- Buffer: foo ----------
+This is t
+&quot;This is the output&quot;
+&lowast;he contents of foo.
+---------- Buffer: foo ----------
+</pre></div></div>
+
+<p>Now we show a use of a marker as an output stream.  Initially, the
+marker is in buffer <code class="code">foo</code>, between the &lsquo;<samp class="samp">t</samp>&rsquo; and the &lsquo;<samp class="samp">h</samp>&rsquo; in
+the word &lsquo;<samp class="samp">the</samp>&rsquo;.  At the end, the marker has advanced over the
+inserted text so that it remains positioned before the same &lsquo;<samp class="samp">h</samp>&rsquo;.
+Note that the location of point, shown in the usual fashion, has no
+effect.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">---------- Buffer: foo ----------
+This is the &lowast;output
+---------- Buffer: foo ----------
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(setq m (copy-marker 10))
+     &rArr; #&lt;marker at 10 in foo&gt;
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(print &quot;More output for foo.&quot; m)
+     &rArr; &quot;More output for foo.&quot;
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">---------- Buffer: foo ----------
+This is t
+&quot;More output for foo.&quot;
+he &lowast;output
+---------- Buffer: foo ----------
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">m
+     &rArr; #&lt;marker at 34 in foo&gt;
+</pre></div></div>
+
+<p>The following example shows output to the echo area:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(print &quot;Echo Area output&quot; t)
+     &rArr; &quot;Echo Area output&quot;
+---------- Echo Area ----------
+&quot;Echo Area output&quot;
+---------- Echo Area ----------
+</pre></div></div>
+
+<p>Finally, we show the use of a function as an output stream.  The
+function <code class="code">eat-output</code> takes each character that it is given and
+conses it onto the front of the list <code class="code">last-output</code> (see <a class="pxref" href="Lists.html#Building-Lists">Building Cons Cells and Lists</a>).  At the end, the list contains all the characters output, but
+in reverse order.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq last-output nil)
+     &rArr; nil
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(defun eat-output (c)
+  (setq last-output (cons c last-output)))
+     &rArr; eat-output
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(print &quot;This is the output&quot; #'eat-output)
+     &rArr; &quot;This is the output&quot;
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">last-output
+     &rArr; (10 34 116 117 112 116 117 111 32 101 104
+    116 32 115 105 32 115 105 104 84 34 10)
+</pre></div></div>
+
+<p>Now we can put the output in the proper order by reversing the list:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(concat (nreverse last-output))
+     &rArr; &quot;
+\&quot;This is the output\&quot;
+&quot;
+</pre></div></div>
+
+<p>Calling <code class="code">concat</code> converts the list to a string so you can see its
+contents more clearly.
+</p>
+<a class="index-entry-id" id="index-stderr-stream_002c-use-for-debugging"></a>
+<a class="anchor" id="external_002ddebugging_002doutput"></a><dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-external_002ddebugging_002doutput"><span class="category-def">Function: </span><span><strong class="def-name">external-debugging-output</strong> <var class="def-var-arguments">character</var><a class="copiable-link" href="#index-external_002ddebugging_002doutput"> &para;</a></span></dt>
+<dd><p>This function can be useful as an output stream when debugging.  It
+writes <var class="var">character</var> to the standard error stream.
+</p>
+<p>For example
+</p><div class="example">
+<div class="group"><pre class="example-preformatted">(print &quot;This is the output&quot; #'external-debugging-output)
+-| This is the output
+&rArr; &quot;This is the output&quot;
+</pre></div></div>
+</dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Output-Functions">
+<div class="nav-panel">
+<p>
+Next: <a href="#Output-Variables" accesskey="n" rel="next">Variables Affecting Output</a>, Previous: <a href="#Output-Streams" accesskey="p" rel="prev">Output Streams</a>, Up: <a href="#Read-and-Print" accesskey="u" rel="up">Reading and Printing Lisp Objects</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Output-Functions-1"><span>20.5 Output Functions<a class="copiable-link" href="#Output-Functions-1"> &para;</a></span></h3>
+
+<p>This section describes the Lisp functions for printing Lisp
+objects&mdash;converting objects into their printed representation.
+</p>
+<a class="index-entry-id" id="index-_0022-in-printing"></a>
+<a class="index-entry-id" id="index-_005c-in-printing"></a>
+<a class="index-entry-id" id="index-quoting-characters-in-printing"></a>
+<a class="index-entry-id" id="index-escape-characters-in-printing"></a>
+<p>Some of the Emacs printing functions add quoting characters to the
+output when necessary so that it can be read properly.  The quoting
+characters used are &lsquo;<samp class="samp">&quot;</samp>&rsquo; and &lsquo;<samp class="samp">\</samp>&rsquo;; they distinguish strings from
+symbols, and prevent punctuation characters in strings and symbols from
+being taken as delimiters when reading.  See <a class="xref" href="Lisp-Data-Types.html#Printed-Representation">Printed Representation and Read Syntax</a>,
+for full details.  You specify quoting or no quoting by the choice of
+printing function.
+</p>
+<p>If the text is to be read back into Lisp, then you should print with
+quoting characters to avoid ambiguity.  Likewise, if the purpose is to
+describe a Lisp object clearly for a Lisp programmer.  However, if the
+purpose of the output is to look nice for humans, then it is usually
+better to print without quoting.
+</p>
+<p>Lisp objects can refer to themselves.  Printing a self-referential
+object in the normal way would require an infinite amount of text, and
+the attempt could cause infinite recursion.  Emacs detects such
+recursion and prints &lsquo;<samp class="samp">#<var class="var">level</var></samp>&rsquo; instead of recursively printing
+an object already being printed.  For example, here &lsquo;<samp class="samp">#0</samp>&rsquo; indicates
+a recursive reference to the object at level 0 of the current print
+operation:
+</p>
+<div class="example">
+<pre class="example-preformatted">(setq foo (list nil))
+     &rArr; (nil)
+(setcar foo foo)
+     &rArr; (#0)
+</pre></div>
+
+<p>In the functions below, <var class="var">stream</var> stands for an output stream.
+(See the previous section for a description of output streams.  Also
+See <a class="xref" href="#external_002ddebugging_002doutput">external-debugging-output</a>, a useful stream value for debugging.)
+If <var class="var">stream</var> is <code class="code">nil</code> or omitted, it defaults to the value of
+<code class="code">standard-output</code>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-print"><span class="category-def">Function: </span><span><strong class="def-name">print</strong> <var class="def-var-arguments">object &amp;optional stream</var><a class="copiable-link" href="#index-print"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-Lisp-printer"></a>
+<p>The <code class="code">print</code> function is a convenient way of printing.  It outputs
+the printed representation of <var class="var">object</var> to <var class="var">stream</var>, printing in
+addition one newline before <var class="var">object</var> and another after it.  Quoting
+characters are used.  <code class="code">print</code> returns <var class="var">object</var>.  For example:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(progn (print 'The\ cat\ in)
+       (print &quot;the hat&quot;)
+       (print &quot; came back&quot;))
+     -|
+     -| The\ cat\ in
+     -|
+     -| &quot;the hat&quot;
+     -|
+     -| &quot; came back&quot;
+     &rArr; &quot; came back&quot;
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-prin1"><span class="category-def">Function: </span><span><strong class="def-name">prin1</strong> <var class="def-var-arguments">object &amp;optional stream overrides</var><a class="copiable-link" href="#index-prin1"> &para;</a></span></dt>
+<dd><p>This function outputs the printed representation of <var class="var">object</var> to
+<var class="var">stream</var>.  It does not print newlines to separate output as
+<code class="code">print</code> does, but it does use quoting characters just like
+<code class="code">print</code>.  It returns <var class="var">object</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(progn (prin1 'The\ cat\ in)
+       (prin1 &quot;the hat&quot;)
+       (prin1 &quot; came back&quot;))
+     -| The\ cat\ in&quot;the hat&quot;&quot; came back&quot;
+     &rArr; &quot; came back&quot;
+</pre></div></div>
+
+<p>If <var class="var">overrides</var> is non-<code class="code">nil</code>, it should either be <code class="code">t</code>
+(which tells <code class="code">prin1</code> to use the defaults for all printer related
+variables), or a list of settings.  See <a class="xref" href="#Output-Overrides">Overriding Output Variables</a>, for details.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-princ"><span class="category-def">Function: </span><span><strong class="def-name">princ</strong> <var class="def-var-arguments">object &amp;optional stream</var><a class="copiable-link" href="#index-princ"> &para;</a></span></dt>
+<dd><p>This function outputs the printed representation of <var class="var">object</var> to
+<var class="var">stream</var>.  It returns <var class="var">object</var>.
+</p>
+<p>This function is intended to produce output that is readable by people,
+not by <code class="code">read</code>, so it doesn&rsquo;t insert quoting characters and doesn&rsquo;t
+put double-quotes around the contents of strings.  It does not add any
+spacing between calls.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(progn
+  (princ 'The\ cat)
+  (princ &quot; in the \&quot;hat\&quot;&quot;))
+     -| The cat in the &quot;hat&quot;
+     &rArr; &quot; in the \&quot;hat\&quot;&quot;
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-terpri"><span class="category-def">Function: </span><span><strong class="def-name">terpri</strong> <var class="def-var-arguments">&amp;optional stream ensure</var><a class="copiable-link" href="#index-terpri"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-newline-in-print"></a>
+<p>This function outputs a newline to <var class="var">stream</var>.  The name stands for
+&ldquo;terminate print&rdquo;.  If <var class="var">ensure</var> is non-<code class="code">nil</code> no newline is printed
+if <var class="var">stream</var> is already at the beginning of a line.  Note in this
+case <var class="var">stream</var> can not be a function and an error is signaled if
+it is.  This function returns <code class="code">t</code> if a newline is printed.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-write_002dchar"><span class="category-def">Function: </span><span><strong class="def-name">write-char</strong> <var class="def-var-arguments">character &amp;optional stream</var><a class="copiable-link" href="#index-write_002dchar"> &para;</a></span></dt>
+<dd><p>This function outputs <var class="var">character</var> to <var class="var">stream</var>.  It returns
+<var class="var">character</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-flush_002dstandard_002doutput"><span class="category-def">Function: </span><span><strong class="def-name">flush-standard-output</strong><a class="copiable-link" href="#index-flush_002dstandard_002doutput"> &para;</a></span></dt>
+<dd><p>If you have Emacs-based batch scripts that send output to the
+terminal, Emacs will automatically display the output whenever you
+write a newline characters to <code class="code">standard-output</code>.  This function
+allows you to flush to <code class="code">standard-output</code> without sending a
+newline character first, which enables you to display incomplete
+lines.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-prin1_002dto_002dstring"><span class="category-def">Function: </span><span><strong class="def-name">prin1-to-string</strong> <var class="def-var-arguments">object &amp;optional noescape overrides</var><a class="copiable-link" href="#index-prin1_002dto_002dstring"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-object-to-string"></a>
+<p>This function returns a string containing the text that <code class="code">prin1</code>
+would have printed for the same argument.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(prin1-to-string 'foo)
+     &rArr; &quot;foo&quot;
+</pre></div><div class="group"><pre class="example-preformatted">(prin1-to-string (mark-marker))
+     &rArr; &quot;#&lt;marker at 2773 in strings.texi&gt;&quot;
+</pre></div></div>
+
+<p>If <var class="var">overrides</var> is non-<code class="code">nil</code>, it should either be <code class="code">t</code>
+(which tells <code class="code">prin1</code> to use the defaults for all printer related
+variables), or a list of settings.  See <a class="xref" href="#Output-Overrides">Overriding Output Variables</a>, for details.
+</p>
+<p>If <var class="var">noescape</var> is non-<code class="code">nil</code>, that inhibits use of quoting
+characters in the output.  (This argument is supported in Emacs versions
+19 and later.)
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(prin1-to-string &quot;foo&quot;)
+     &rArr; &quot;\&quot;foo\&quot;&quot;
+</pre></div><div class="group"><pre class="example-preformatted">(prin1-to-string &quot;foo&quot; t)
+     &rArr; &quot;foo&quot;
+</pre></div></div>
+
+<p>See <code class="code">format</code>, in <a class="ref" href="Strings-and-Characters.html#Formatting-Strings">Formatting Strings</a>, for other ways to obtain
+the printed representation of a Lisp object as a string.
+</p></dd></dl>
+
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-with_002doutput_002dto_002dstring"><span class="category-def">Macro: </span><span><strong class="def-name">with-output-to-string</strong> <var class="def-var-arguments">body&hellip;</var><a class="copiable-link" href="#index-with_002doutput_002dto_002dstring"> &para;</a></span></dt>
+<dd><p>This macro executes the <var class="var">body</var> forms with <code class="code">standard-output</code> set
+up to feed output into a string.  Then it returns that string.
+</p>
+<p>For example, if the current buffer name is &lsquo;<samp class="samp">foo</samp>&rsquo;,
+</p>
+<div class="example">
+<pre class="example-preformatted">(with-output-to-string
+  (princ &quot;The buffer is &quot;)
+  (princ (buffer-name)))
+</pre></div>
+
+<p>returns <code class="code">&quot;The buffer is foo&quot;</code>.
+</p></dd></dl>
+
+<a class="index-entry-id" id="index-pretty_002dprinter"></a>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-pp"><span class="category-def">Function: </span><span><strong class="def-name">pp</strong> <var class="def-var-arguments">object &amp;optional stream</var><a class="copiable-link" href="#index-pp"> &para;</a></span></dt>
+<dd><p>This function outputs <var class="var">object</var> to <var class="var">stream</var>, just like
+<code class="code">prin1</code>, but does it in a prettier way.  That is, it&rsquo;ll
+indent and fill the object to make it more readable for humans.
+</p></dd></dl>
+
+<p>If you need to use binary I/O in batch mode, e.g., use the functions
+described in this section to write out arbitrary binary data or avoid
+conversion of newlines on non-POSIX hosts, see <a class="ref" href="#Input-Functions">set-binary-mode</a>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Output-Variables">
+<div class="nav-panel">
+<p>
+Next: <a href="#Output-Overrides" accesskey="n" rel="next">Overriding Output Variables</a>, Previous: <a href="#Output-Functions" accesskey="p" rel="prev">Output Functions</a>, Up: <a href="#Read-and-Print" accesskey="u" rel="up">Reading and Printing Lisp Objects</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Variables-Affecting-Output"><span>20.6 Variables Affecting Output<a class="copiable-link" href="#Variables-Affecting-Output"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-output_002dcontrolling-variables"></a>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-standard_002doutput"><span class="category-def">Variable: </span><span><strong class="def-name">standard-output</strong><a class="copiable-link" href="#index-standard_002doutput"> &para;</a></span></dt>
+<dd><p>The value of this variable is the default output stream&mdash;the stream
+that print functions use when the <var class="var">stream</var> argument is <code class="code">nil</code>.
+The default is <code class="code">t</code>, meaning display in the echo area.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-print_002dquoted"><span class="category-def">Variable: </span><span><strong class="def-name">print-quoted</strong><a class="copiable-link" href="#index-print_002dquoted"> &para;</a></span></dt>
+<dd><p>If this is non-<code class="code">nil</code>, that means to print quoted forms using
+abbreviated reader syntax, e.g., <code class="code">(quote foo)</code> prints as
+<code class="code">'foo</code>, and <code class="code">(function foo)</code> as <code class="code">#'foo</code>.  The default
+is <code class="code">t</code>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-print_002descape_002dnewlines"><span class="category-def">Variable: </span><span><strong class="def-name">print-escape-newlines</strong><a class="copiable-link" href="#index-print_002descape_002dnewlines"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-_005cn-in-print"></a>
+<a class="index-entry-id" id="index-escape-characters"></a>
+<p>If this variable is non-<code class="code">nil</code>, then newline characters in strings
+are printed as &lsquo;<samp class="samp">\n</samp>&rsquo; and formfeeds are printed as &lsquo;<samp class="samp">\f</samp>&rsquo;.
+Normally these characters are printed as actual newlines and formfeeds.
+</p>
+<p>This variable affects the print functions <code class="code">prin1</code> and <code class="code">print</code>
+that print with quoting.  It does not affect <code class="code">princ</code>.  Here is an
+example using <code class="code">prin1</code>:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(prin1 &quot;a\nb&quot;)
+     -| &quot;a
+     -| b&quot;
+     &rArr; &quot;a
+b&quot;
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(let ((print-escape-newlines t))
+  (prin1 &quot;a\nb&quot;))
+     -| &quot;a\nb&quot;
+     &rArr; &quot;a
+b&quot;
+</pre></div></div>
+
+<p>In the second expression, the local binding of
+<code class="code">print-escape-newlines</code> is in effect during the call to
+<code class="code">prin1</code>, but not during the printing of the result.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-print_002descape_002dcontrol_002dcharacters"><span class="category-def">Variable: </span><span><strong class="def-name">print-escape-control-characters</strong><a class="copiable-link" href="#index-print_002descape_002dcontrol_002dcharacters"> &para;</a></span></dt>
+<dd><p>If this variable is non-<code class="code">nil</code>, control characters in strings are
+printed as backslash sequences by the print functions <code class="code">prin1</code> and
+<code class="code">print</code> that print with quoting.  If this variable and
+<code class="code">print-escape-newlines</code> are both non-<code class="code">nil</code>, the latter takes
+precedences for newlines and formfeeds.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-print_002descape_002dnonascii"><span class="category-def">Variable: </span><span><strong class="def-name">print-escape-nonascii</strong><a class="copiable-link" href="#index-print_002descape_002dnonascii"> &para;</a></span></dt>
+<dd><p>If this variable is non-<code class="code">nil</code>, then unibyte non-<abbr class="acronym">ASCII</abbr>
+characters in strings are unconditionally printed as backslash sequences
+by the print functions <code class="code">prin1</code> and <code class="code">print</code> that print with
+quoting.
+</p>
+<p>Those functions also use backslash sequences for unibyte non-<abbr class="acronym">ASCII</abbr>
+characters, regardless of the value of this variable, when the output
+stream is a multibyte buffer or a marker pointing into one.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-print_002descape_002dmultibyte"><span class="category-def">Variable: </span><span><strong class="def-name">print-escape-multibyte</strong><a class="copiable-link" href="#index-print_002descape_002dmultibyte"> &para;</a></span></dt>
+<dd><p>If this variable is non-<code class="code">nil</code>, then multibyte non-<abbr class="acronym">ASCII</abbr>
+characters in strings are unconditionally printed as backslash sequences
+by the print functions <code class="code">prin1</code> and <code class="code">print</code> that print with
+quoting.
+</p>
+<p>Those functions also use backslash sequences for multibyte
+non-<abbr class="acronym">ASCII</abbr> characters, regardless of the value of this variable,
+when the output stream is a unibyte buffer or a marker pointing into
+one.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-print_002dcharset_002dtext_002dproperty"><span class="category-def">Variable: </span><span><strong class="def-name">print-charset-text-property</strong><a class="copiable-link" href="#index-print_002dcharset_002dtext_002dproperty"> &para;</a></span></dt>
+<dd><p>This variable controls printing of &lsquo;charset&rsquo; text property on printing
+a string.  The value should be <code class="code">nil</code>, <code class="code">t</code>, or
+<code class="code">default</code>.
+</p>
+<p>If the value is <code class="code">nil</code>, <code class="code">charset</code> text properties are never
+printed.  If <code class="code">t</code>, they are always printed.
+</p>
+<p>If the value is <code class="code">default</code>, only print <code class="code">charset</code> text
+properties if there is an &ldquo;unexpected&rdquo; <code class="code">charset</code> property.  For
+ascii characters, all charsets are considered &ldquo;expected&rdquo;.
+Otherwise, the expected <code class="code">charset</code> property of a character is
+given by <code class="code">char-charset</code>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-print_002dlength"><span class="category-def">Variable: </span><span><strong class="def-name">print-length</strong><a class="copiable-link" href="#index-print_002dlength"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-printing-limits"></a>
+<p>The value of this variable is the maximum number of elements to print in
+any list, vector or bool-vector.  If an object being printed has more
+than this many elements, it is abbreviated with an ellipsis.
+</p>
+<p>If the value is <code class="code">nil</code> (the default), then there is no limit.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq print-length 2)
+     &rArr; 2
+</pre></div><div class="group"><pre class="example-preformatted">(print '(1 2 3 4 5))
+     -| (1 2 ...)
+     &rArr; (1 2 ...)
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-print_002dlevel"><span class="category-def">Variable: </span><span><strong class="def-name">print-level</strong><a class="copiable-link" href="#index-print_002dlevel"> &para;</a></span></dt>
+<dd><p>The value of this variable is the maximum depth of nesting of
+parentheses and brackets when printed.  Any list or vector at a depth
+exceeding this limit is abbreviated with an ellipsis.  A value of
+<code class="code">nil</code> (which is the default) means no limit.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-eval_002dexpression_002dprint_002dlength"><span class="category-def">User Option: </span><span><strong class="def-name">eval-expression-print-length</strong><a class="copiable-link" href="#index-eval_002dexpression_002dprint_002dlength"> &para;</a></span></dt>
+<dt class="defvrx defoptx-alias-defvrx def-cmd-defvr def-line" id="index-eval_002dexpression_002dprint_002dlevel"><span class="category-def">User Option: </span><span><strong class="def-name">eval-expression-print-level</strong><a class="copiable-link" href="#index-eval_002dexpression_002dprint_002dlevel"> &para;</a></span></dt>
+<dd><p>These are the values for <code class="code">print-length</code> and <code class="code">print-level</code>
+used by <code class="code">eval-expression</code>, and thus, indirectly, by many
+interactive evaluation commands (see <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Lisp-Eval.html#Lisp-Eval">Evaluating
+Emacs Lisp Expressions</a> in <cite class="cite">The GNU Emacs Manual</cite>).
+</p></dd></dl>
+
+<p>These variables are used for detecting and reporting circular
+and shared structure:
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-print_002dcircle"><span class="category-def">Variable: </span><span><strong class="def-name">print-circle</strong><a class="copiable-link" href="#index-print_002dcircle"> &para;</a></span></dt>
+<dd><p>If non-<code class="code">nil</code>, this variable enables detection of circular and
+shared structure in printing.  See <a class="xref" href="Lisp-Data-Types.html#Circular-Objects">Read Syntax for Circular Objects</a>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-print_002dunreadable_002dfunction"><span class="category-def">Variable: </span><span><strong class="def-name">print-unreadable-function</strong><a class="copiable-link" href="#index-print_002dunreadable_002dfunction"> &para;</a></span></dt>
+<dd><p>By default, Emacs prints unreadable objects as &lsquo;<samp class="samp">#&lt;...&gt;&quot;</samp>&rsquo;.  For
+instance:
+</p>
+<div class="example">
+<pre class="example-preformatted">(prin1-to-string (make-marker))
+     &rArr; &quot;#&lt;marker in no buffer&gt;&quot;
+</pre></div>
+
+<p>If this variable is non-<code class="code">nil</code>, it should be a function that will
+be called to handle printing of these objects.  The function will be
+called with two arguments: the object and the <var class="var">noescape</var> flag used by
+the printing functions (see <a class="pxref" href="#Output-Functions">Output Functions</a>).
+</p>
+<p>The function should return either <code class="code">nil</code> (print the object as
+usual), or a string (which will be printed), or any other object
+(don&rsquo;t print the object).  For instance:
+</p>
+<div class="example">
+<pre class="example-preformatted">(let ((print-unreadable-function
+       (lambda (object escape) &quot;hello&quot;)))
+  (prin1-to-string (make-marker)))
+     &rArr; &quot;hello&quot;
+</pre></div>
+</dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-print_002dgensym"><span class="category-def">Variable: </span><span><strong class="def-name">print-gensym</strong><a class="copiable-link" href="#index-print_002dgensym"> &para;</a></span></dt>
+<dd><p>If non-<code class="code">nil</code>, this variable enables detection of uninterned symbols
+(see <a class="pxref" href="Symbols.html#Creating-Symbols">Creating and Interning Symbols</a>) in printing.  When this is enabled,
+uninterned symbols print with the prefix &lsquo;<samp class="samp">#:</samp>&rsquo;, which tells the Lisp
+reader to produce an uninterned symbol.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-print_002dcontinuous_002dnumbering"><span class="category-def">Variable: </span><span><strong class="def-name">print-continuous-numbering</strong><a class="copiable-link" href="#index-print_002dcontinuous_002dnumbering"> &para;</a></span></dt>
+<dd><p>If non-<code class="code">nil</code>, that means number continuously across print calls.
+This affects the numbers printed for &lsquo;<samp class="samp">#<var class="var">n</var>=</samp>&rsquo; labels and
+&lsquo;<samp class="samp">#<var class="var">m</var>#</samp>&rsquo; references.
+Don&rsquo;t set this variable with <code class="code">setq</code>; you should only bind it
+temporarily to <code class="code">t</code> with <code class="code">let</code>.  When you do that, you should
+also bind <code class="code">print-number-table</code> to <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-print_002dnumber_002dtable"><span class="category-def">Variable: </span><span><strong class="def-name">print-number-table</strong><a class="copiable-link" href="#index-print_002dnumber_002dtable"> &para;</a></span></dt>
+<dd><p>This variable holds a vector used internally by printing to implement
+the <code class="code">print-circle</code> feature.  You should not use it except
+to bind it to <code class="code">nil</code> when you bind <code class="code">print-continuous-numbering</code>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-float_002doutput_002dformat"><span class="category-def">Variable: </span><span><strong class="def-name">float-output-format</strong><a class="copiable-link" href="#index-float_002doutput_002dformat"> &para;</a></span></dt>
+<dd><p>This variable specifies how to print floating-point numbers.  The
+default is <code class="code">nil</code>, meaning use the shortest output
+that represents the number without losing information.
+</p>
+<p>To control output format more precisely, you can put a string in this
+variable.  The string should hold a &lsquo;<samp class="samp">%</samp>&rsquo;-specification to be used
+in the C function <code class="code">sprintf</code>.  For further restrictions on what
+you can use, see the variable&rsquo;s documentation string.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-print_002dintegers_002das_002dcharacters"><span class="category-def">Variable: </span><span><strong class="def-name">print-integers-as-characters</strong><a class="copiable-link" href="#index-print_002dintegers_002das_002dcharacters"> &para;</a></span></dt>
+<dd><p>When this variable is non-<code class="code">nil</code>, integers that represent
+graphic base characters will be printed using Lisp character syntax
+(see <a class="pxref" href="Lisp-Data-Types.html#Basic-Char-Syntax">Basic Char Syntax</a>).  Other numbers are printed the usual way.
+For example, the list <code class="code">(4 65 -1 10)</code> would be printed as
+&lsquo;<samp class="samp">(4 ?A -1 ?\n)</samp>&rsquo;.
+</p>
+<p>More precisely, values printed in character syntax are those
+representing characters belonging to the Unicode general categories
+Letter, Number, Punctuation, Symbol and Private-use
+(see <a class="pxref" href="Non_002dASCII-Characters.html#Character-Properties">Character Properties</a>), as well as the control characters
+having their own escape syntax such as newline.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-pp_002ddefault_002dfunction"><span class="category-def">User Option: </span><span><strong class="def-name">pp-default-function</strong><a class="copiable-link" href="#index-pp_002ddefault_002dfunction"> &para;</a></span></dt>
+<dd><p>This user variable specifies the function used by <code class="code">pp</code> to prettify
+its output.  By default it uses <code class="code">pp-fill</code> which attempts to
+strike a good balance between speed and generating natural looking output
+that fits within <code class="code">fill-column</code>.  The previous default was
+<code class="code">pp-28</code>, which tends to be faster but generate output that looks
+less natural and is less compact.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Output-Overrides">
+<div class="nav-panel">
+<p>
+Previous: <a href="#Output-Variables" accesskey="p" rel="prev">Variables Affecting Output</a>, Up: <a href="#Read-and-Print" accesskey="u" rel="up">Reading and Printing Lisp Objects</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Overriding-Output-Variables"><span>20.7 Overriding Output Variables<a class="copiable-link" href="#Overriding-Output-Variables"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-overrides_002c-in-output-functions"></a>
+<a class="index-entry-id" id="index-output-variables_002c-overriding"></a>
+
+<p>The previous section (see <a class="pxref" href="#Output-Variables">Variables Affecting Output</a>) lists the numerous
+variables that control how the Emacs Lisp printer formats data for
+outputs.  These are generally available for users to change, but
+sometimes you want to output data in the default format, or override
+the user settings in some other way.  For instance, if you&rsquo;re storing
+Emacs Lisp data in a file, you don&rsquo;t want that data to be shortened by
+a <code class="code">print-length</code> setting.
+</p>
+<p>The <code class="code">prin1</code> and <code class="code">prin1-to-string</code> functions therefore have
+an optional <var class="var">overrides</var> argument.  This argument can either be
+<code class="code">t</code> (which means that all printing variables should be reset to
+the default values), or a list of settings for some of the variables.
+Each element in the list can be either <code class="code">t</code> (which means &ldquo;reset
+to defaults&rdquo;, and will usually be the first element of the list), or
+a pair whose <code class="code">car</code> is a symbol that stands for an output variable
+and whose <code class="code">cdr</code> is the value for that variable.
+</p>
+<p>For instance, this prints using nothing but defaults:
+</p>
+<div class="example lisp">
+<pre class="lisp-preformatted">(prin1 object nil t)
+</pre></div>
+
+<p>This prints <var class="var">object</var> using the current printing settings, but
+overrides the value of <code class="code">print-length</code> to be 5:
+</p>
+<div class="example lisp">
+<pre class="lisp-preformatted">(prin1 object nil '((length . 5)))
+</pre></div>
+
+<p>And finally, this prints <var class="var">object</var> using only default settings, but
+with <code class="code">print-length</code> bound to 5:
+</p>
+<div class="example lisp">
+<pre class="lisp-preformatted">(prin1 object nil '(t (length . 5)))
+</pre></div>
+
+<p>Below is a list of symbols that can be used, and which variables they
+map to:
+</p>
+<dl class="table">
+<dt><code class="code">length</code></dt>
+<dd><p>This overrides <code class="code">print-length</code>.
+</p></dd>
+<dt><code class="code">level</code></dt>
+<dd><p>This overrides <code class="code">print-level</code>.
+</p></dd>
+<dt><code class="code">circle</code></dt>
+<dd><p>This overrides <code class="code">print-circle</code>.
+</p></dd>
+<dt><code class="code">quoted</code></dt>
+<dd><p>This overrides <code class="code">print-quoted</code>.
+</p></dd>
+<dt><code class="code">escape-newlines</code></dt>
+<dd><p>This overrides <code class="code">print-escape-newlines</code>.
+</p></dd>
+<dt><code class="code">escape-control-characters</code></dt>
+<dd><p>This overrides <code class="code">print-escape-control-characters</code>.
+</p></dd>
+<dt><code class="code">escape-nonascii</code></dt>
+<dd><p>This overrides <code class="code">print-escape-nonascii</code>.
+</p></dd>
+<dt><code class="code">escape-multibyte</code></dt>
+<dd><p>This overrides <code class="code">print-escape-multibyte</code>.
+</p></dd>
+<dt><code class="code">charset-text-property</code></dt>
+<dd><p>This overrides <code class="code">print-charset-text-property</code>.
+</p></dd>
+<dt><code class="code">unreadable-function</code></dt>
+<dd><p>This overrides <code class="code">print-unreadable-function</code>.
+</p></dd>
+<dt><code class="code">gensym</code></dt>
+<dd><p>This overrides <code class="code">print-gensym</code>.
+</p></dd>
+<dt><code class="code">continuous-numbering</code></dt>
+<dd><p>This overrides <code class="code">print-continuous-numbering</code>.
+</p></dd>
+<dt><code class="code">number-table</code></dt>
+<dd><p>This overrides <code class="code">print-number-table</code>.
+</p></dd>
+<dt><code class="code">float-format</code></dt>
+<dd><p>This overrides <code class="code">float-output-format</code>.
+</p></dd>
+<dt><code class="code">integers-as-characters</code></dt>
+<dd><p>This overrides <code class="code">print-integers-as-characters</code>.
+</p></dd>
+<dt><code class="code">symbols-bare</code></dt>
+<dd><p>This overrides <code class="code">print-symbols-bare</code>.
+</p></dd>
+</dl>
+
+<p>In the future, more overrides may be offered that do not map directly
+to a variable, but can only be used via this parameter.
+</p></div>
+</div>
+<hr>
+<div class="nav-panel">
+<p>
+Next: <a href="Minibuffers.html#Minibuffers" accesskey="n" rel="next">Minibuffers</a>, Previous: <a href="Debugging.html#Debugging" accesskey="p" rel="prev">Debugging Lisp Programs</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

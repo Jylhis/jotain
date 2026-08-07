@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.0.91.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Parsing Expression Grammars (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Parsing Expression Grammars (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Parsing Expression Grammars (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Parsing-Program-Source.html#Parsing-Program-Source" rel="next" title="Parsing Program Source">
+<link href="Syntax-Tables.html#Syntax-Tables" rel="prev" title="Syntax Tables">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Parsing-Expression-Grammars">
+<div class="nav-panel">
+<p>
+Next: <a href="Parsing-Program-Source.html#Parsing-Program-Source" accesskey="n" rel="next">Parsing Program Source</a>, Previous: <a href="Syntax-Tables.html#Syntax-Tables" accesskey="p" rel="prev">Syntax Tables</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h2 class="chapter" id="Parsing-Expression-Grammars-1"><span>37 Parsing Expression Grammars<a class="copiable-link" href="#Parsing-Expression-Grammars-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-text-parsing-1"></a>
+<a class="index-entry-id" id="index-parsing-expression-grammar"></a>
+<a class="index-entry-id" id="index-PEG"></a>
+
+<p>Emacs Lisp provides several tools for parsing and matching text,
+from regular expressions (see <a class="pxref" href="Searching-and-Matching.html#Regular-Expressions">Regular Expressions</a>) to full
+left-to-right (a.k.a. <abbr class="acronym">LL</abbr>) grammar parsers (see <a data-manual="bovine" href="https://www.gnu.org/software/emacs/manual/html_node/bovine/index.html#Top">Bovine parser development</a>).  <em class="dfn">Parsing Expression Grammars</em>
+(<abbr class="acronym">PEG</abbr>) are another approach to text parsing that offer more
+structure and composability than regular expressions, but less
+complexity than context-free grammars.
+</p>
+<p>A Parsing Expression Grammar (<abbr class="acronym">PEG</abbr>) describes a formal language
+in terms of a set of rules for recognizing strings in the language.  In
+Emacs, a <abbr class="acronym">PEG</abbr> parser is defined as a list of named rules, each
+of which matches text patterns and/or contains references to other
+rules.  Parsing is initiated with the function <code class="code">peg-run</code> or the
+macro <code class="code">peg-parse</code> (see below), and parses text after point in the
+current buffer, using a given set of rules.
+</p>
+<a class="index-entry-id" id="index-parsing-expression"></a>
+<a class="index-entry-id" id="index-root_002c-of-parsing-expression-grammar"></a>
+<a class="index-entry-id" id="index-entry_002dpoint_002c-of-parsing-expression-grammar"></a>
+<p>Each rule in a <abbr class="acronym">PEG</abbr> is referred to as a <em class="dfn">parsing
+expression</em> (<abbr class="acronym">PEX</abbr>), and can be specified a literal string, a
+regexp-like character range or set, a peg-specific construct resembling
+an Emacs Lisp function call, a reference to another rule, or a
+combination of any of these.  A grammar is expressed as a tree of rules
+in which one rule is typically treated as a &ldquo;root&rdquo; or &ldquo;entry-point&rdquo;
+rule.  For instance:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">((number sign digit (* digit))
+ (sign   (or &quot;+&quot; &quot;-&quot; &quot;&quot;))
+ (digit  [0-9]))
+</pre></div></div>
+
+<p>Once defined, grammars can be used to parse text after point in the
+current buffer, in a number of ways.  The <code class="code">peg-parse</code> macro is the
+simplest:
+</p>
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-peg_002dparse"><span class="category-def">Macro: </span><span><strong class="def-name">peg-parse</strong> <var class="def-var-arguments">&amp;rest pexs</var><a class="copiable-link" href="#index-peg_002dparse"> &para;</a></span></dt>
+<dd><p>Match <var class="var">pexs</var> at point.
+</p></dd></dl>
+
+<div class="example">
+<div class="group"><pre class="example-preformatted">(peg-parse
+  (number sign digit (* digit))
+  (sign   (or &quot;+&quot; &quot;-&quot; &quot;&quot;))
+  (digit  [0-9]))
+</pre></div></div>
+
+<p>While this macro is simple it is also inflexible, as the rules must be
+written directly into the source code.  More flexibility can be gained
+by using a combination of other functions and macros.
+</p>
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-with_002dpeg_002drules"><span class="category-def">Macro: </span><span><strong class="def-name">with-peg-rules</strong> <var class="def-var-arguments">rules &amp;rest body</var><a class="copiable-link" href="#index-with_002dpeg_002drules"> &para;</a></span></dt>
+<dd><p>Execute <var class="var">body</var> with <var class="var">rules</var>, a list of <abbr class="acronym">PEX</abbr>s, in
+effect.  Within <var class="var">BODY</var>, parsing is initiated with a call to
+<code class="code">peg-run</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-peg_002drun"><span class="category-def">Function: </span><span><strong class="def-name">peg-run</strong> <var class="def-var-arguments">peg-matcher &amp;optional failure-function success-function</var><a class="copiable-link" href="#index-peg_002drun"> &para;</a></span></dt>
+<dd><p>This function accepts a single <var class="var">peg-matcher</var>, which is the result of
+calling <code class="code">peg</code> (see below) on a named rule, usually the entry-point
+of a larger grammar.
+</p>
+<p>At the end of parsing, one of <var class="var">failure-function</var> or
+<var class="var">success-function</var> is called, depending on whether the parsing
+succeeded or not.  If <var class="var">success-function</var> is provided, it should be a
+function that receives as its only argument an anonymous function that
+runs all the actions collected on the stack during parsing.  By default
+this anonymous function is simply executed.  If parsing fails, a
+function provided as <var class="var">failure-function</var> will be called with a list
+of <abbr class="acronym">PEG</abbr> expressions that failed during parsing.  By default
+this list is discarded.
+</p></dd></dl>
+
+<p>The <var class="var">peg-matcher</var> passed to <code class="code">peg-run</code> is produced by a call to
+<code class="code">peg</code>:
+</p>
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-peg"><span class="category-def">Macro: </span><span><strong class="def-name">peg</strong> <var class="def-var-arguments">&amp;rest pexs</var><a class="copiable-link" href="#index-peg"> &para;</a></span></dt>
+<dd><p>Convert <var class="var">pexs</var> into a single peg-matcher suitable for passing to
+<code class="code">peg-run</code>.
+</p></dd></dl>
+
+<p>The <code class="code">peg-parse</code> example above expands to a set of calls to these
+functions, and could be written in full as:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(with-peg-rules
+    ((number sign digit (* digit))
+     (sign   (or &quot;+&quot; &quot;-&quot; &quot;&quot;))
+     (digit  [0-9]))
+  (peg-run (peg number)))
+</pre></div></div>
+
+<p>This approach allows more explicit control over the &ldquo;entry-point&rdquo; of
+parsing, and allows the combination of rules from different sources.
+</p>
+<p>Individual rules can also be defined using a more <code class="code">defun</code>-like
+syntax, using the macro <code class="code">define-peg-rule</code>:
+</p>
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-define_002dpeg_002drule"><span class="category-def">Macro: </span><span><strong class="def-name">define-peg-rule</strong> <var class="def-var-arguments">name args &amp;rest pexs</var><a class="copiable-link" href="#index-define_002dpeg_002drule"> &para;</a></span></dt>
+<dd><p>Define <var class="var">name</var> as a PEG rule that accepts <var class="var">args</var> and matches
+<var class="var">pexs</var> at point.
+</p></dd></dl>
+
+<p>For instance:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(define-peg-rule digit ()
+  [0-9])
+</pre></div></div>
+
+<p>Arguments can be supplied to rules by the <code class="code">funcall</code> PEG rule
+(see <a class="pxref" href="#PEX-Definitions">PEX Definitions</a>).
+</p>
+<p>Another possibility is to define a named set of rules with
+<code class="code">define-peg-ruleset</code>:
+</p>
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-define_002dpeg_002druleset"><span class="category-def">Macro: </span><span><strong class="def-name">define-peg-ruleset</strong> <var class="def-var-arguments">name &amp;rest rules</var><a class="copiable-link" href="#index-define_002dpeg_002druleset"> &para;</a></span></dt>
+<dd><p>Define <var class="var">name</var> as an identifier for <var class="var">rules</var>.
+</p></dd></dl>
+
+<div class="example">
+<div class="group"><pre class="example-preformatted">(define-peg-ruleset number-grammar
+  ;; `digit' here references the definition above.
+  (number () sign digit (* digit))
+  (sign () (or &quot;+&quot; &quot;-&quot; &quot;&quot;)))
+</pre></div></div>
+
+<p>Rules and rulesets defined this way can be referred to by name in
+later calls to <code class="code">peg-run</code> or <code class="code">with-peg-rules</code>:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(with-peg-rules number-grammar
+  (peg-run (peg number)))
+</pre></div></div>
+
+<p>By default, calls to <code class="code">peg-run</code> or <code class="code">peg-parse</code> produce no
+output: parsing simply moves point.  In order to return or otherwise
+act upon parsed strings, rules can include <em class="dfn">actions</em>, see
+<a class="ref" href="#Parsing-Actions">Parsing Actions</a>.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#PEX-Definitions" accesskey="1">PEX Definitions</a></li>
+<li><a href="#Parsing-Actions" accesskey="2">Parsing Actions</a></li>
+<li><a href="#Writing-PEG-Rules" accesskey="3">Writing PEG Rules</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="PEX-Definitions">
+<div class="nav-panel">
+<p>
+Next: <a href="#Parsing-Actions" accesskey="n" rel="next">Parsing Actions</a>, Up: <a href="#Parsing-Expression-Grammars" accesskey="u" rel="up">Parsing Expression Grammars</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="PEX-Definitions-1"><span>37.1 PEX Definitions<a class="copiable-link" href="#PEX-Definitions-1"> &para;</a></span></h3>
+
+<p>Parsing expressions can be defined using the following syntax:
+</p>
+<dl class="table">
+<dt><code class="code">(and <var class="var">e1</var> <var class="var">e2</var>&hellip;)</code></dt>
+<dd><p>A sequence of <abbr class="acronym">PEX</abbr>s that must all be matched.  The <code class="code">and</code>
+form is optional and implicit.
+</p>
+</dd>
+<dt><code class="code">(or <var class="var">e1</var> <var class="var">e2</var>&hellip;)</code></dt>
+<dd><p>Prioritized choices, meaning that, as in Elisp, the choices are tried
+in order, and the first successful match is used.  Note that this is
+distinct from context-free grammars, in which selection between
+multiple matches is indeterminate.
+</p>
+</dd>
+<dt><code class="code">(any)</code></dt>
+<dd><p>Matches any single character, as the regexp &ldquo;.&rdquo;.
+</p>
+</dd>
+<dt><code class="code"><var class="var">string</var></code></dt>
+<dd><p>A literal string.
+</p>
+</dd>
+<dt><code class="code">(char <var class="var">c</var>)</code></dt>
+<dd><p>A single character <var class="var">c</var>, as an Elisp character literal.
+</p>
+</dd>
+<dt><code class="code">(* <var class="var">e</var>)</code></dt>
+<dd><p>Zero or more instances of expression <var class="var">e</var>, as the regexp &lsquo;<samp class="samp">*</samp>&rsquo;.
+Matching is always &ldquo;greedy&rdquo;.
+</p>
+</dd>
+<dt><code class="code">(+ <var class="var">e</var>)</code></dt>
+<dd><p>One or more instances of expression <var class="var">e</var>, as the regexp &lsquo;<samp class="samp">+</samp>&rsquo;.
+Matching is always &ldquo;greedy&rdquo;.
+</p>
+</dd>
+<dt><code class="code">(opt <var class="var">e</var>)</code></dt>
+<dd><p>Zero or one instance of expression <var class="var">e</var>, as the regexp &lsquo;<samp class="samp">?</samp>&rsquo;.
+</p>
+</dd>
+<dt><code class="code"><var class="var">symbol</var></code></dt>
+<dd><p>A symbol representing a previously-defined PEG rule.
+</p>
+</dd>
+<dt><code class="code">(range <var class="var">ch1</var> <var class="var">ch2</var>)</code></dt>
+<dd><p>The character range between <var class="var">ch1</var> and <var class="var">ch2</var>, as the regexp
+&lsquo;<samp class="samp">[<var class="var">ch1</var>-<var class="var">ch2</var>]</samp>&rsquo;.
+</p>
+</dd>
+<dt><code class="code">[<var class="var">ch1</var>-<var class="var">ch2</var> &quot;+*&quot; ?x]</code></dt>
+<dd><p>A character set, which can include ranges, character literals, or
+strings of characters.
+</p>
+</dd>
+<dt><code class="code">[ascii cntrl]</code></dt>
+<dd><p>A list of named character classes.
+</p>
+</dd>
+<dt><code class="code">(syntax-class <var class="var">name</var>)</code></dt>
+<dd><p>A single syntax class.
+</p>
+</dd>
+<dt><code class="code">(funcall <var class="var">e</var> <var class="var">args</var>&hellip;)</code></dt>
+<dd><p>Call <abbr class="acronym">PEX</abbr> <var class="var">e</var> (previously defined with
+<code class="code">define-peg-rule</code>) with arguments <var class="var">args</var>.
+</p>
+</dd>
+<dt><code class="code">(null)</code></dt>
+<dd><p>The empty string.
+</p></dd>
+</dl>
+
+<p>The following expressions are used as anchors or tests &ndash; they do not
+move point, but return a boolean value which can be used to constrain
+matches as a way of controlling the parsing process (see <a class="pxref" href="#Writing-PEG-Rules">Writing PEG Rules</a>).
+</p>
+<dl class="table">
+<dt><code class="code">(bob)</code></dt>
+<dd><p>Beginning of buffer.
+</p>
+</dd>
+<dt><code class="code">(eob)</code></dt>
+<dd><p>End of buffer.
+</p>
+</dd>
+<dt><code class="code">(bol)</code></dt>
+<dd><p>Beginning of line.
+</p>
+</dd>
+<dt><code class="code">(eol)</code></dt>
+<dd><p>End of line.
+</p>
+</dd>
+<dt><code class="code">(bow)</code></dt>
+<dd><p>Beginning of word.
+</p>
+</dd>
+<dt><code class="code">(eow)</code></dt>
+<dd><p>End of word.
+</p>
+</dd>
+<dt><code class="code">(bos)</code></dt>
+<dd><p>Beginning of symbol.
+</p>
+</dd>
+<dt><code class="code">(eos)</code></dt>
+<dd><p>End of symbol.
+</p>
+</dd>
+<dt><code class="code">(if <var class="var">e</var>)</code></dt>
+<dd><p>Returns non-<code class="code">nil</code> if parsing <abbr class="acronym">PEX</abbr> <var class="var">e</var> from point
+succeeds (point is not moved).
+</p>
+</dd>
+<dt><code class="code">(not <var class="var">e</var>)</code></dt>
+<dd><p>Returns non-<code class="code">nil</code> if parsing <abbr class="acronym">PEX</abbr> <var class="var">e</var> from point fails
+(point is not moved).
+</p>
+</dd>
+<dt><code class="code">(guard <var class="var">exp</var>)</code></dt>
+<dd><p>Treats the value of the Lisp expression <var class="var">exp</var> as a boolean.
+</p></dd>
+</dl>
+
+<a class="index-entry-id" id="index-peg_002dchar_002dclasses"></a>
+<p>Character-class matching can refer to the classes named in
+<code class="code">peg-char-classes</code>, equivalent to character classes in regular
+expressions (see <a data-manual="elisp" href="https://www.gnu.org/software/emacs/manual/html_node/elisp/index.html#Top">Character Classes</a>)
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Parsing-Actions">
+<div class="nav-panel">
+<p>
+Next: <a href="#Writing-PEG-Rules" accesskey="n" rel="next">Writing PEG Rules</a>, Previous: <a href="#PEX-Definitions" accesskey="p" rel="prev">PEX Definitions</a>, Up: <a href="#Parsing-Expression-Grammars" accesskey="u" rel="up">Parsing Expression Grammars</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Parsing-Actions-1"><span>37.2 Parsing Actions<a class="copiable-link" href="#Parsing-Actions-1"> &para;</a></span></h3>
+
+<a class="index-entry-id" id="index-parsing-actions"></a>
+<a class="index-entry-id" id="index-parsing-stack"></a>
+<p>By default the process of parsing simply moves point in the current
+buffer, ultimately returning <code class="code">t</code> if the parsing succeeds, and
+<code class="code">nil</code> if it doesn&rsquo;t.  It&rsquo;s also possible to define <em class="dfn">parsing
+actions</em> that can run arbitrary Elisp at certain points in the parsed
+text.  These actions can optionally affect something called the
+<em class="dfn">parsing stack</em>, which is a list of values returned by the parsing
+process.  These actions only run (and only return values) if the parsing
+process ultimately succeeds; if it fails the action code is not run at
+all.
+</p>
+<p>Actions can be added anywhere in the definition of a rule.  They are
+distinguished from parsing expressions by an initial backquote
+(&lsquo;<samp class="samp">`</samp>&rsquo;), followed by a parenthetical form that must contain a pair
+of hyphens (&lsquo;<samp class="samp">--</samp>&rsquo;) somewhere within it.  Symbols to the left of
+the hyphens are bound to values popped from the stack (they are
+somewhat analogous to the argument list of a lambda form).  Values
+produced by code to the right of the hyphens are pushed onto the stack
+(analogous to the return value of the lambda).  For instance, the
+previous grammar can be augmented with actions to return the parsed
+number as an actual integer:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(with-peg-rules ((number sign digit (* digit
+                                       `(a b -- (+ (* a 10) b)))
+                         `(sign val -- (* sign val)))
+                 (sign (or (and &quot;+&quot; `(-- 1))
+                           (and &quot;-&quot; `(-- -1))
+                           (and &quot;&quot;  `(-- 1))))
+                 (digit [0-9] `(-- (- (char-before) ?0))))
+  (peg-run (peg number)))
+</pre></div></div>
+
+<p>There must be values on the stack before they can be popped and
+returned &ndash; if there aren&rsquo;t enough stack values to bind to an action&rsquo;s
+left-hand terms, they will be bound to <code class="code">nil</code>.  An action with
+only right-hand terms will push values to the stack; an action with
+only left-hand terms will consume (and discard) values from the stack.
+At the end of parsing, stack values are returned as a flat list.
+</p>
+<p>To return the string matched by a <abbr class="acronym">PEX</abbr> (instead of simply
+moving point over it), a grammar can use a rule like this:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(one-word
+  `(-- (point))
+  (+ [word])
+  `(start -- (buffer-substring start (point))))
+</pre></div></div>
+
+<p>The first action above pushes the initial value of point to the stack.
+The intervening <abbr class="acronym">PEX</abbr> moves point over the next word.  The
+second action pops the previous value from the stack (binding it to the
+variable <code class="code">start</code>), then uses that value to extract a substring from
+the buffer and push it to the stack.  This pattern is so common that
+<abbr class="acronym">PEG</abbr> provides a shorthand function that does exactly the above,
+along with a few other shorthands for common scenarios:
+</p>
+<dl class="table">
+<dt><a id="index-substring-_0028a-PEG-shorthand_0029"></a><span><code class="code">(substring <var class="var">e</var>)</code><a class="copiable-link" href="#index-substring-_0028a-PEG-shorthand_0029"> &para;</a></span></dt>
+<dd><p>Match <abbr class="acronym">PEX</abbr> <var class="var">e</var> and push the matched string onto the stack.
+</p>
+</dd>
+<dt><a id="index-region-_0028a-PEG-shorthand_0029"></a><span><code class="code">(region <var class="var">e</var>)</code><a class="copiable-link" href="#index-region-_0028a-PEG-shorthand_0029"> &para;</a></span></dt>
+<dd><p>Match <var class="var">e</var> and push the start and end positions of the matched
+region onto the stack.
+</p>
+</dd>
+<dt><a id="index-replace-_0028a-PEG-shorthand_0029"></a><span><code class="code">(replace <var class="var">e</var> <var class="var">replacement</var>)</code><a class="copiable-link" href="#index-replace-_0028a-PEG-shorthand_0029"> &para;</a></span></dt>
+<dd><p>Match <var class="var">e</var> and replaced the matched region with the string
+<var class="var">replacement</var>.
+</p>
+</dd>
+<dt><a id="index-list-_0028a-PEG-shorthand_0029"></a><span><code class="code">(list <var class="var">e</var>)</code><a class="copiable-link" href="#index-list-_0028a-PEG-shorthand_0029"> &para;</a></span></dt>
+<dd><p>Match <var class="var">e</var>, collect all values produced by <var class="var">e</var> (and its
+sub-expressions) into a list, and push that list onto the stack.  Stack
+values are typically returned as a flat list; this is a way of
+&ldquo;grouping&rdquo; values together.
+</p></dd>
+</dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Writing-PEG-Rules">
+<div class="nav-panel">
+<p>
+Previous: <a href="#Parsing-Actions" accesskey="p" rel="prev">Parsing Actions</a>, Up: <a href="#Parsing-Expression-Grammars" accesskey="u" rel="up">Parsing Expression Grammars</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Writing-PEG-Rules-1"><span>37.3 Writing PEG Rules<a class="copiable-link" href="#Writing-PEG-Rules-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-PEG-rules_002c-pitfalls"></a>
+<a class="index-entry-id" id="index-Parsing-Expression-Grammar_002c-pitfalls-in-rules"></a>
+
+<p>Something to be aware of when writing PEG rules is that they are
+greedy.  Rules which can consume a variable amount of text will always
+consume the maximum amount possible, even if that causes a rule that
+might otherwise have matched to fail later on &ndash; there is no
+backtracking.  For instance, this rule will never succeed:
+</p>
+<div class="example">
+<pre class="example-preformatted">(forest (+ &quot;tree&quot; (* [blank])) &quot;tree&quot; (eol))
+</pre></div>
+
+<p>The <abbr class="acronym">PEX</abbr> <code class="code">(+&nbsp;&quot;tree&quot;&nbsp;(*&nbsp;[blank]))</code><!-- /@w --> will consume all
+the repetitions of the word &lsquo;<samp class="samp">tree</samp>&rsquo;, leaving none to match the final
+&lsquo;<samp class="samp">tree</samp>&rsquo;.
+</p>
+<p>In these situations, the desired result can be obtained by using
+predicates and guards &ndash; namely the <code class="code">not</code>, <code class="code">if</code> and
+<code class="code">guard</code> expressions &ndash; to constrain behavior.  For instance:
+</p>
+<div class="example">
+<pre class="example-preformatted">(forest (+ &quot;tree&quot; (* [blank])) (not (eol)) &quot;tree&quot; (eol))
+</pre></div>
+
+<p>The <code class="code">if</code> and <code class="code">not</code> operators accept a parsing expression and
+interpret it as a boolean, without moving point.  The contents of a
+<code class="code">guard</code> operator are evaluated as regular Lisp (not a
+<abbr class="acronym">PEX</abbr>) and should return a boolean value.  A <code class="code">nil</code> value
+causes the match to fail.
+</p>
+<p>Another potentially unexpected behavior is that parsing will move
+point as far as possible, even if the parsing ultimately fails.  This
+rule:
+</p>
+<div class="example">
+<pre class="example-preformatted">(end-game &quot;game&quot; (eob))
+</pre></div>
+
+<p>when run in a buffer containing the text &ldquo;game over&rdquo; after point,
+will move point to just after &ldquo;game&rdquo; then halt parsing, returning
+<code class="code">nil</code>.  Successful parsing will always return <code class="code">t</code>, or the
+contexts of the parsing stack.
+</p></div>
+</div>
+<hr>
+<div class="nav-panel">
+<p>
+Next: <a href="Parsing-Program-Source.html#Parsing-Program-Source" accesskey="n" rel="next">Parsing Program Source</a>, Previous: <a href="Syntax-Tables.html#Syntax-Tables" accesskey="p" rel="prev">Syntax Tables</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

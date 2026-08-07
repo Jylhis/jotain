@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.0.91.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Records (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Records (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Records (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Hash-Tables.html#Hash-Tables" rel="next" title="Hash Tables">
+<link href="Sequences-Arrays-Vectors.html#Sequences-Arrays-Vectors" rel="prev" title="Sequences Arrays Vectors">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Records">
+<div class="nav-panel">
+<p>
+Next: <a href="Hash-Tables.html#Hash-Tables" accesskey="n" rel="next">Hash Tables</a>, Previous: <a href="Sequences-Arrays-Vectors.html#Sequences-Arrays-Vectors" accesskey="p" rel="prev">Sequences, Arrays, and Vectors</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h2 class="chapter" id="Records-1"><span>7 Records<a class="copiable-link" href="#Records-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-records"></a>
+
+<p>The purpose of records is to allow programmers to create objects
+with new types that are not built into Emacs.  They are used as the
+underlying representation of <code class="code">cl-defstruct</code> and <code class="code">defclass</code>
+instances.
+</p>
+<p>Internally, a record object is much like a vector; its slots can be
+accessed using <code class="code">aref</code> and it can be copied using
+<code class="code">copy-sequence</code>.  However, the first slot is used to hold its
+type as returned by <code class="code">type-of</code>.  Also, in the current
+implementation records can have at most 4096 slots, whereas vectors
+can be much larger.  Like arrays, records use zero-origin indexing:
+the first slot has index 0.
+</p>
+<p>The type slot should be a symbol or a type descriptor.  If it&rsquo;s a
+type descriptor, the symbol naming its type will be returned;
+<a class="ref" href="Lisp-Data-Types.html#Type-Descriptors">Type Descriptors</a>.  Any other kind of object is returned as-is.
+</p>
+<p>The printed representation of records is &lsquo;<samp class="samp">#s</samp>&rsquo; followed by a
+list specifying the contents.  The first list element must be the
+record type.  The following elements are the record slots.
+</p>
+<p>To avoid conflicts with other type names, Lisp programs that define
+new types of records should normally use the naming conventions of the
+package where these record types are introduced for the names of the
+types.  Note that the names of the types which could possibly conflict
+might not be known at the time the package defining a record type is
+loaded; they could be loaded at some future point in time.
+</p>
+<p>A record is considered a constant for evaluation: the result of
+evaluating it is the same record.  This does not evaluate or even
+examine the slots.  See <a class="xref" href="Evaluation.html#Self_002dEvaluating-Forms">Self-Evaluating Forms</a>.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Record-Functions" accesskey="1">Record Functions</a></li>
+<li><a href="#Backward-Compatibility" accesskey="2">Backward Compatibility</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Record-Functions">
+<div class="nav-panel">
+<p>
+Next: <a href="#Backward-Compatibility" accesskey="n" rel="next">Backward Compatibility</a>, Up: <a href="#Records" accesskey="u" rel="up">Records</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Record-Functions-1"><span>7.1 Record Functions<a class="copiable-link" href="#Record-Functions-1"> &para;</a></span></h3>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-recordp"><span class="category-def">Function: </span><span><strong class="def-name">recordp</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-recordp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is a record.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(recordp #s(a))
+     &rArr; t
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-record"><span class="category-def">Function: </span><span><strong class="def-name">record</strong> <var class="def-var-arguments">type &amp;rest objects</var><a class="copiable-link" href="#index-record"> &para;</a></span></dt>
+<dd><p>This function creates and returns a record whose type is <var class="var">type</var>
+and remaining slots are the rest of the arguments, <var class="var">objects</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(record 'foo 23 [bar baz] &quot;rats&quot;)
+     &rArr; #s(foo 23 [bar baz] &quot;rats&quot;)
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002drecord"><span class="category-def">Function: </span><span><strong class="def-name">make-record</strong> <var class="def-var-arguments">type length object</var><a class="copiable-link" href="#index-make_002drecord"> &para;</a></span></dt>
+<dd><p>This function returns a new record with type <var class="var">type</var> and
+<var class="var">length</var> more slots, each initialized to <var class="var">object</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq sleepy (make-record 'foo 9 'Z))
+     &rArr; #s(foo Z Z Z Z Z Z Z Z Z)
+</pre></div></div>
+</dd></dl>
+
+<p>To copy trees consisting of records, vectors and conses (lists), use
+<code class="code">copy-tree</code> with its optional second argument non-<code class="code">nil</code>.
+See <a class="xref" href="Lists.html#Building-Lists">copy-tree</a>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Backward-Compatibility">
+<div class="nav-panel">
+<p>
+Previous: <a href="#Record-Functions" accesskey="p" rel="prev">Record Functions</a>, Up: <a href="#Records" accesskey="u" rel="up">Records</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Backward-Compatibility-1"><span>7.2 Backward Compatibility<a class="copiable-link" href="#Backward-Compatibility-1"> &para;</a></span></h3>
+
+<p>Code compiled with older versions of <code class="code">cl-defstruct</code> that
+doesn&rsquo;t use records may run into problems when used in a new Emacs.
+To alleviate this, Emacs detects when an old <code class="code">cl-defstruct</code> is
+used, and enables a mode in which <code class="code">type-of</code> handles old struct
+objects as if they were records.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-cl_002dold_002dstruct_002dcompat_002dmode"><span class="category-def">Function: </span><span><strong class="def-name">cl-old-struct-compat-mode</strong> <var class="def-var-arguments">arg</var><a class="copiable-link" href="#index-cl_002dold_002dstruct_002dcompat_002dmode"> &para;</a></span></dt>
+<dd><p>If <var class="var">arg</var> is positive, enable backward compatibility with old-style
+structs.
+</p></dd></dl>
+</div>
+</div>
+<hr>
+<div class="nav-panel">
+<p>
+Next: <a href="Hash-Tables.html#Hash-Tables" accesskey="n" rel="next">Hash Tables</a>, Previous: <a href="Sequences-Arrays-Vectors.html#Sequences-Arrays-Vectors" accesskey="p" rel="prev">Sequences, Arrays, and Vectors</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

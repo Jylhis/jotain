@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.0.91.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Syntax Tables (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Syntax Tables (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Syntax Tables (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Parsing-Expression-Grammars.html#Parsing-Expression-Grammars" rel="next" title="Parsing Expression Grammars">
+<link href="Searching-and-Matching.html#Searching-and-Matching" rel="prev" title="Searching and Matching">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+span.r {font-family: initial; font-weight: normal; font-style: normal}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
+ul.mark-bullet {list-style-type: disc}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Syntax-Tables">
+<div class="nav-panel">
+<p>
+Next: <a href="Parsing-Expression-Grammars.html#Parsing-Expression-Grammars" accesskey="n" rel="next">Parsing Expression Grammars</a>, Previous: <a href="Searching-and-Matching.html#Searching-and-Matching" accesskey="p" rel="prev">Searching and Matching</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h2 class="chapter" id="Syntax-Tables-1"><span>36 Syntax Tables<a class="copiable-link" href="#Syntax-Tables-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-parsing-buffer-text"></a>
+<a class="index-entry-id" id="index-syntax-table"></a>
+<a class="index-entry-id" id="index-text-parsing"></a>
+
+<p>A <em class="dfn">syntax table</em> specifies the syntactic role of each character
+in a buffer.  It can be used to determine where words, symbols, and
+other syntactic constructs begin and end.  This information is used by
+many Emacs facilities, including Font Lock mode (see <a class="pxref" href="Modes.html#Font-Lock-Mode">Font Lock Mode</a>) and the various complex movement commands (see <a class="pxref" href="Positions.html#Motion">Motion</a>).
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Syntax-Basics" accesskey="1">Syntax Table Concepts</a></li>
+<li><a href="#Syntax-Descriptors" accesskey="2">Syntax Descriptors</a></li>
+<li><a href="#Syntax-Table-Functions" accesskey="3">Syntax Table Functions</a></li>
+<li><a href="#Syntax-Properties" accesskey="4">Syntax Properties</a></li>
+<li><a href="#Motion-and-Syntax" accesskey="5">Motion and Syntax</a></li>
+<li><a href="#Parsing-Expressions" accesskey="6">Parsing Expressions</a></li>
+<li><a href="#Syntax-Table-Internals" accesskey="7">Syntax Table Internals</a></li>
+<li><a href="#Categories" accesskey="8">Categories</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Syntax-Basics">
+<div class="nav-panel">
+<p>
+Next: <a href="#Syntax-Descriptors" accesskey="n" rel="next">Syntax Descriptors</a>, Up: <a href="#Syntax-Tables" accesskey="u" rel="up">Syntax Tables</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Syntax-Table-Concepts"><span>36.1 Syntax Table Concepts<a class="copiable-link" href="#Syntax-Table-Concepts"> &para;</a></span></h3>
+
+<p>A syntax table is a data structure which can be used to look up the
+<em class="dfn">syntax class</em> and other syntactic properties of each character.
+Syntax tables are used by Lisp programs for scanning and moving across
+text.
+</p>
+<p>Internally, a syntax table is a char-table (see <a class="pxref" href="Sequences-Arrays-Vectors.html#Char_002dTables">Char-Tables</a>).
+The element at index <var class="var">c</var> describes the character with code
+<var class="var">c</var>; its value is a cons cell which specifies the syntax of the
+character in question.  See <a class="xref" href="#Syntax-Table-Internals">Syntax Table Internals</a>, for details.
+However, instead of using <code class="code">aset</code> and <code class="code">aref</code> to modify and
+inspect syntax table contents, you should usually use the higher-level
+functions <code class="code">char-syntax</code> and <code class="code">modify-syntax-entry</code>, which are
+described in <a class="ref" href="#Syntax-Table-Functions">Syntax Table Functions</a>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-syntax_002dtable_002dp"><span class="category-def">Function: </span><span><strong class="def-name">syntax-table-p</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-syntax_002dtable_002dp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is a syntax table.
+</p></dd></dl>
+
+<p>Each buffer has its own major mode, and each major mode has its own
+idea of the syntax class of various characters.  For example, in Lisp
+mode, the character &lsquo;<samp class="samp">;</samp>&rsquo; begins a comment, but in C mode, it
+terminates a statement.  To support these variations, the syntax table
+is local to each buffer.  Typically, each major mode has its own
+syntax table, which it installs in all buffers that use that mode.
+For example, the variable <code class="code">emacs-lisp-mode-syntax-table</code> holds
+the syntax table used by Emacs Lisp mode, and
+<code class="code">c-mode-syntax-table</code> holds the syntax table used by C mode.
+Changing a major mode&rsquo;s syntax table alters the syntax in all of that
+mode&rsquo;s buffers, as well as in any buffers subsequently put in that
+mode.  Occasionally, several similar modes share one syntax table.
+See <a class="xref" href="Modes.html#Example-Major-Modes">Major Mode Examples</a>, for an example of how to set up a syntax
+table.
+</p>
+<a class="index-entry-id" id="index-standard-syntax-table"></a>
+<a class="index-entry-id" id="index-inheritance_002c-syntax-table"></a>
+<p>A syntax table can <em class="dfn">inherit</em> from another syntax table, which is
+called its <em class="dfn">parent syntax table</em>.  A syntax table can leave the
+syntax class of some characters unspecified, by giving them the
+&ldquo;inherit&rdquo; syntax class; such a character then acquires the syntax
+class specified by the parent syntax table (see <a class="pxref" href="#Syntax-Class-Table">Table of Syntax Classes</a>).  Emacs defines a <em class="dfn">standard syntax table</em>, which is the
+default parent syntax table, and is also the syntax table used by
+Fundamental mode.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-standard_002dsyntax_002dtable"><span class="category-def">Function: </span><span><strong class="def-name">standard-syntax-table</strong><a class="copiable-link" href="#index-standard_002dsyntax_002dtable"> &para;</a></span></dt>
+<dd><p>This function returns the standard syntax table, which is the syntax
+table used in Fundamental mode.
+</p></dd></dl>
+
+<p>Syntax tables are not used by the Emacs Lisp reader, which has its
+own built-in syntactic rules which cannot be changed.  (Some Lisp
+systems provide ways to redefine the read syntax, but we decided to
+leave this feature out of Emacs Lisp for simplicity.)
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Syntax-Descriptors">
+<div class="nav-panel">
+<p>
+Next: <a href="#Syntax-Table-Functions" accesskey="n" rel="next">Syntax Table Functions</a>, Previous: <a href="#Syntax-Basics" accesskey="p" rel="prev">Syntax Table Concepts</a>, Up: <a href="#Syntax-Tables" accesskey="u" rel="up">Syntax Tables</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Syntax-Descriptors-1"><span>36.2 Syntax Descriptors<a class="copiable-link" href="#Syntax-Descriptors-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-syntax-class"></a>
+
+<p>The <em class="dfn">syntax class</em> of a character describes its syntactic role.
+Each syntax table specifies the syntax class of each character.  There
+is no necessary relationship between the class of a character in one
+syntax table and its class in any other table.
+</p>
+<p>Each syntax class is designated by a mnemonic character, which
+serves as the name of the class when you need to specify a class.
+Usually, this designator character is one that is often assigned that
+class; however, its meaning as a designator is unvarying and
+independent of what syntax that character currently has.  Thus,
+&lsquo;<samp class="samp">\</samp>&rsquo; as a designator character always stands for escape character
+syntax, regardless of whether the &lsquo;<samp class="samp">\</samp>&rsquo; character actually has that
+syntax in the current syntax table.
+See <a class="xref" href="#Syntax-Class-Table">Table of Syntax Classes</a>, for a list of syntax classes and their
+designator characters.
+</p>
+<a class="index-entry-id" id="index-syntax-descriptor"></a>
+<p>A <em class="dfn">syntax descriptor</em> is a Lisp string that describes the syntax
+class and other syntactic properties of a character.  When you want to
+modify the syntax of a character, that is done by calling the function
+<code class="code">modify-syntax-entry</code> and passing a syntax descriptor as one of
+its arguments (see <a class="pxref" href="#Syntax-Table-Functions">Syntax Table Functions</a>).
+</p>
+<p>The first character in a syntax descriptor must be a syntax class
+designator character.  The second character, if present, specifies a
+matching character (e.g., in Lisp, the matching character for
+&lsquo;<samp class="samp">(</samp>&rsquo; is &lsquo;<samp class="samp">)</samp>&rsquo;); a space specifies that there is no matching
+character.  Then come characters specifying additional syntax
+properties (see <a class="pxref" href="#Syntax-Flags">Syntax Flags</a>).
+</p>
+<p>If no matching character or flags are needed, only one character
+(specifying the syntax class) is sufficient.
+</p>
+<p>For example, the syntax descriptor for the character &lsquo;<samp class="samp">*</samp>&rsquo; in C
+mode is <code class="code">&quot;. 23&quot;</code> (i.e., punctuation, matching character slot
+unused, second character of a comment-starter, first character of a
+comment-ender), and the entry for &lsquo;<samp class="samp">/</samp>&rsquo; is &lsquo;<samp class="samp">.&nbsp;14<!-- /@w --></samp>&rsquo; (i.e.,
+punctuation, matching character slot unused, first character of a
+comment-starter, second character of a comment-ender).
+</p>
+<p>Emacs also defines <em class="dfn">raw syntax descriptors</em>, which are used to
+describe syntax classes at a lower level.  See <a class="xref" href="#Syntax-Table-Internals">Syntax Table Internals</a>.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Syntax-Class-Table" accesskey="1">Table of Syntax Classes</a></li>
+<li><a href="#Syntax-Flags" accesskey="2">Syntax Flags</a></li>
+</ul>
+<hr>
+<div class="subsection-level-extent" id="Syntax-Class-Table">
+<div class="nav-panel">
+<p>
+Next: <a href="#Syntax-Flags" accesskey="n" rel="next">Syntax Flags</a>, Up: <a href="#Syntax-Descriptors" accesskey="u" rel="up">Syntax Descriptors</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Table-of-Syntax-Classes"><span>36.2.1 Table of Syntax Classes<a class="copiable-link" href="#Table-of-Syntax-Classes"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-syntax-class-table"></a>
+
+<p>Here is a table of syntax classes, the characters that designate
+them, their meanings, and examples of their use.
+</p>
+<dl class="table">
+<dt>Whitespace characters: &lsquo;<samp class="samp">&nbsp;</samp>&rsquo; or &lsquo;<samp class="samp">-</samp>&rsquo;</dt>
+<dd><p>Characters that separate symbols and words from each other.
+Typically, whitespace characters have no other syntactic significance,
+and multiple whitespace characters are syntactically equivalent to a
+single one.  Space, tab, and formfeed are classified as whitespace in
+almost all major modes.
+</p>
+<p>This syntax class can be designated by either &lsquo;<samp class="samp">&nbsp;</samp>&rsquo;<!-- /@w --> or
+&lsquo;<samp class="samp">-</samp>&rsquo;.  Both designators are equivalent.
+</p>
+</dd>
+<dt>Word constituents: &lsquo;<samp class="samp">w</samp>&rsquo;</dt>
+<dd><p>Parts of words in human languages.  These are typically used in
+variable and command names in programs.  All upper- and lower-case
+letters, and the digits, are typically word constituents.
+</p>
+</dd>
+<dt>Symbol constituents: &lsquo;<samp class="samp">_</samp>&rsquo;</dt>
+<dd><p>Extra characters used in variable and command names along with word
+constituents.  Examples include the characters &lsquo;<samp class="samp">$&amp;*+-_&lt;&gt;</samp>&rsquo; in Lisp
+mode, which may be part of a symbol name even though they are not part
+of English words.  In standard C, the only non-word-constituent
+character that is valid in symbols is underscore (&lsquo;<samp class="samp">_</samp>&rsquo;).
+</p>
+</dd>
+<dt>Punctuation characters: &lsquo;<samp class="samp">.</samp>&rsquo;</dt>
+<dd><p>Characters used as punctuation in a human language, or used in a
+programming language to separate symbols from one another.  Some
+programming language modes, such as Emacs Lisp mode, have no
+characters in this class since the few characters that are not symbol
+or word constituents all have other uses.  Other programming language
+modes, such as C mode, use punctuation syntax for operators.
+</p>
+</dd>
+<dt>Open parenthesis characters: &lsquo;<samp class="samp">(</samp>&rsquo;</dt>
+<dt>Close parenthesis characters: &lsquo;<samp class="samp">)</samp>&rsquo;</dt>
+<dd><p>Characters used in dissimilar pairs to surround sentences or
+expressions.  Such a grouping is begun with an open parenthesis
+character and terminated with a close.  Each open parenthesis
+character matches a particular close parenthesis character, and vice
+versa.  Normally, Emacs indicates momentarily the matching open
+parenthesis when you insert a close parenthesis.  See <a class="xref" href="Display.html#Blinking">Blinking Parentheses</a>.
+</p>
+<p>In human languages, and in C code, the parenthesis pairs are
+&lsquo;<samp class="samp">()</samp>&rsquo;, &lsquo;<samp class="samp">[]</samp>&rsquo;, and &lsquo;<samp class="samp">{}</samp>&rsquo;.  In Emacs Lisp, the delimiters
+for lists and vectors (&lsquo;<samp class="samp">()</samp>&rsquo; and &lsquo;<samp class="samp">[]</samp>&rsquo;) are classified as
+parenthesis characters.
+</p>
+</dd>
+<dt>String quotes: &lsquo;<samp class="samp">&quot;</samp>&rsquo;</dt>
+<dd><p>Characters used to delimit string constants.  The same string quote
+character appears at the beginning and the end of a string.  Such
+quoted strings do not nest.
+</p>
+<p>The parsing facilities of Emacs consider a string as a single token.
+The usual syntactic meanings of the characters in the string are
+suppressed.
+</p>
+<p>The Lisp modes have two string quote characters: double-quote (&lsquo;<samp class="samp">&quot;</samp>&rsquo;)
+and vertical bar (&lsquo;<samp class="samp">|</samp>&rsquo;).  &lsquo;<samp class="samp">|</samp>&rsquo; is not used in Emacs Lisp, but it
+is used in Common Lisp.  C also has two string quote characters:
+double-quote for strings, and apostrophe (&lsquo;<samp class="samp">'</samp>&rsquo;) for character
+constants.
+</p>
+<p>Human text has no string quote characters.  We do not want quotation
+marks to turn off the usual syntactic properties of other characters
+in the quotation.
+</p>
+</dd>
+<dt>Escape-syntax characters: &lsquo;<samp class="samp">\</samp>&rsquo;</dt>
+<dd><p>Characters that start an escape sequence, such as is used in string
+and character constants.  The character &lsquo;<samp class="samp">\</samp>&rsquo; belongs to this class
+in both C and Lisp.  (In C, it is used thus only inside strings, but
+it turns out to cause no trouble to treat it this way throughout C
+code.)
+</p>
+<p>Characters in this class count as part of words if
+<code class="code">words-include-escapes</code> is non-<code class="code">nil</code>.  See <a class="xref" href="Positions.html#Word-Motion">Motion by Words</a>.
+</p>
+</dd>
+<dt>Character quotes: &lsquo;<samp class="samp">/</samp>&rsquo;</dt>
+<dd><p>Characters used to quote the following character so that it loses its
+normal syntactic meaning.  This differs from an escape character in
+that only the character immediately following is ever affected.
+</p>
+<p>Characters in this class count as part of words if
+<code class="code">words-include-escapes</code> is non-<code class="code">nil</code>.  See <a class="xref" href="Positions.html#Word-Motion">Motion by Words</a>.
+</p>
+<p>This class is used for backslash in TeX mode.
+</p>
+</dd>
+<dt>Paired delimiters: &lsquo;<samp class="samp">$</samp>&rsquo;</dt>
+<dd><p>Similar to string quote characters, except that the syntactic
+properties of the characters between the delimiters are not
+suppressed.  Only TeX mode uses a paired delimiter presently&mdash;the
+&lsquo;<samp class="samp">$</samp>&rsquo; that both enters and leaves math mode.
+</p>
+</dd>
+<dt>Expression prefixes: &lsquo;<samp class="samp">'</samp>&rsquo;</dt>
+<dd><p>Characters used for syntactic operators that are considered as part of
+an expression if they appear next to one.  In Lisp modes, these
+characters include the apostrophe, &lsquo;<samp class="samp">'</samp>&rsquo; (used for quoting), the
+comma, &lsquo;<samp class="samp">,</samp>&rsquo; (used in macros), and &lsquo;<samp class="samp">#</samp>&rsquo; (used in the read
+syntax for certain data types).
+</p>
+</dd>
+<dt><a id="index-comment-syntax"></a><span>Comment starters: &lsquo;<samp class="samp">&lt;</samp>&rsquo;<a class="copiable-link" href="#index-comment-syntax"> &para;</a></span></dt>
+<dt>Comment enders: &lsquo;<samp class="samp">&gt;</samp>&rsquo;</dt>
+<dd><p>Characters used in various languages to delimit comments.  Human text
+has no comment characters.  In Lisp, the semicolon (&lsquo;<samp class="samp">;</samp>&rsquo;) starts a
+comment and a newline or formfeed ends one.
+</p>
+</dd>
+<dt>Inherit standard syntax: &lsquo;<samp class="samp">@</samp>&rsquo;</dt>
+<dd><p>This syntax class does not specify a particular syntax.  It says to
+look in the parent syntax table to find the syntax of this
+character.
+</p>
+</dd>
+<dt>Generic comment delimiters: &lsquo;<samp class="samp">!</samp>&rsquo;</dt>
+<dd><p>(This syntax class is also known as &ldquo;comment-fence&rdquo;.)  Characters
+that start or end a special kind of comment.  <em class="emph">Any</em> generic
+comment delimiter matches <em class="emph">any</em> generic comment delimiter, but
+they cannot match a comment starter or comment ender; generic comment
+delimiters can only match each other.
+</p>
+<p>This syntax class is primarily meant for use with the
+<code class="code">syntax-table</code> text property (see <a class="pxref" href="#Syntax-Properties">Syntax Properties</a>).  You
+can mark any range of characters as forming a comment, by giving the
+first and last characters of the range <code class="code">syntax-table</code> properties
+identifying them as generic comment delimiters.
+</p>
+</dd>
+<dt>Generic string delimiters: &lsquo;<samp class="samp">|</samp>&rsquo;</dt>
+<dd><p>(This syntax class is also known as &ldquo;string-fence&rdquo;.)  Characters
+that start or end a string.  This class differs from the string quote
+class in that <em class="emph">any</em> generic string delimiter can match any other
+generic string delimiter; but they do not match ordinary string quote
+characters.
+</p>
+<p>This syntax class is primarily meant for use with the
+<code class="code">syntax-table</code> text property (see <a class="pxref" href="#Syntax-Properties">Syntax Properties</a>).  You
+can mark any range of characters as forming a string constant, by
+giving the first and last characters of the range <code class="code">syntax-table</code>
+properties identifying them as generic string delimiters.
+</p></dd>
+</dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Syntax-Flags">
+<div class="nav-panel">
+<p>
+Previous: <a href="#Syntax-Class-Table" accesskey="p" rel="prev">Table of Syntax Classes</a>, Up: <a href="#Syntax-Descriptors" accesskey="u" rel="up">Syntax Descriptors</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Syntax-Flags-1"><span>36.2.2 Syntax Flags<a class="copiable-link" href="#Syntax-Flags-1"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-syntax-flags"></a>
+
+<p>In addition to the classes, entries for characters in a syntax table
+can specify flags.  There are eight possible flags, represented by the
+characters &lsquo;<samp class="samp">1</samp>&rsquo;, &lsquo;<samp class="samp">2</samp>&rsquo;, &lsquo;<samp class="samp">3</samp>&rsquo;, &lsquo;<samp class="samp">4</samp>&rsquo;, &lsquo;<samp class="samp">b</samp>&rsquo;, &lsquo;<samp class="samp">c</samp>&rsquo;,
+&lsquo;<samp class="samp">n</samp>&rsquo;, and &lsquo;<samp class="samp">p</samp>&rsquo;.
+</p>
+<p>All the flags except &lsquo;<samp class="samp">p</samp>&rsquo; are used to describe comment
+delimiters.  The digit flags are used for comment delimiters made up
+of 2 characters.  They indicate that a character can <em class="emph">also</em> be
+part of a comment sequence, in addition to the syntactic properties
+associated with its character class.  The flags are independent of the
+class and each other for the sake of characters such as &lsquo;<samp class="samp">*</samp>&rsquo; in
+C mode, which is a punctuation character, <em class="emph">and</em> the second
+character of a start-of-comment sequence (&lsquo;<samp class="samp">/*</samp>&rsquo;), <em class="emph">and</em> the
+first character of an end-of-comment sequence (&lsquo;<samp class="samp">*/</samp>&rsquo;).  The flags
+&lsquo;<samp class="samp">b</samp>&rsquo;, &lsquo;<samp class="samp">c</samp>&rsquo;, and &lsquo;<samp class="samp">n</samp>&rsquo; are used to qualify the corresponding
+comment delimiter.
+</p>
+<p>Here is a table of the possible flags for a character <var class="var">c</var>,
+and what they mean:
+</p>
+<ul class="itemize mark-bullet">
+<li>&lsquo;<samp class="samp">1</samp>&rsquo; means <var class="var">c</var> is the start of a two-character comment-start
+sequence.
+
+</li><li>&lsquo;<samp class="samp">2</samp>&rsquo; means <var class="var">c</var> is the second character of such a sequence.
+
+</li><li>&lsquo;<samp class="samp">3</samp>&rsquo; means <var class="var">c</var> is the start of a two-character comment-end
+sequence.
+
+</li><li>&lsquo;<samp class="samp">4</samp>&rsquo; means <var class="var">c</var> is the second character of such a sequence.
+
+</li><li>&lsquo;<samp class="samp">b</samp>&rsquo; means that <var class="var">c</var> as a comment delimiter belongs to the
+alternative &ldquo;b&rdquo; comment style.  For a two-character comment starter,
+this flag is only significant on the second char, and for a 2-character
+comment ender it is only significant on the first char.
+
+</li><li>&lsquo;<samp class="samp">c</samp>&rsquo; means that <var class="var">c</var> as a comment delimiter belongs to the
+alternative &ldquo;c&rdquo; comment style.  For a two-character comment
+delimiter, &lsquo;<samp class="samp">c</samp>&rsquo; on either character makes it of style &ldquo;c&rdquo;.
+
+</li><li>&lsquo;<samp class="samp">n</samp>&rsquo; on a comment delimiter character specifies that this kind of
+comment can be nested.  Inside such a comment, only comments of the
+same style will be recognized.  For a two-character comment delimiter,
+&lsquo;<samp class="samp">n</samp>&rsquo; on either character makes it nestable.
+
+<a class="index-entry-id" id="index-comment-style"></a>
+<p>Emacs supports several comment styles simultaneously in any one syntax
+table.  A comment style is a set of flags &lsquo;<samp class="samp">b</samp>&rsquo;, &lsquo;<samp class="samp">c</samp>&rsquo;, and
+&lsquo;<samp class="samp">n</samp>&rsquo;, so there can be up to 8 different comment styles, each one
+named by the set of its flags.  Each comment delimiter has a style and
+only matches comment delimiters of the same style.  Thus if a comment
+starts with the comment-start sequence of style &ldquo;bn&rdquo;, it will extend
+until the next matching comment-end sequence of style &ldquo;bn&rdquo;.  When
+the set of flags has neither flag &lsquo;<samp class="samp">b</samp>&rsquo; nor flag &lsquo;<samp class="samp">c</samp>&rsquo; set, the
+resulting style is called the &ldquo;a&rdquo; style.
+</p>
+<p>The appropriate comment syntax settings for C++ can be as follows:
+</p>
+<dl class="table">
+<dt>&lsquo;<samp class="samp">/</samp>&rsquo;</dt>
+<dd><p>&lsquo;<samp class="samp">124</samp>&rsquo;
+</p></dd>
+<dt>&lsquo;<samp class="samp">*</samp>&rsquo;</dt>
+<dd><p>&lsquo;<samp class="samp">23b</samp>&rsquo;
+</p></dd>
+<dt>newline</dt>
+<dd><p>&lsquo;<samp class="samp">&gt;</samp>&rsquo;
+</p></dd>
+</dl>
+
+<p>This defines four comment-delimiting sequences:
+</p>
+<dl class="table">
+<dt>&lsquo;<samp class="samp">/*</samp>&rsquo;</dt>
+<dd><p>This is a comment-start sequence for &ldquo;b&rdquo; style because the
+second character, &lsquo;<samp class="samp">*</samp>&rsquo;, has the &lsquo;<samp class="samp">b</samp>&rsquo; flag.
+</p>
+</dd>
+<dt>&lsquo;<samp class="samp">//</samp>&rsquo;</dt>
+<dd><p>This is a comment-start sequence for &ldquo;a&rdquo; style because the second
+character, &lsquo;<samp class="samp">/</samp>&rsquo;, does not have the &lsquo;<samp class="samp">b</samp>&rsquo; flag.
+</p>
+</dd>
+<dt>&lsquo;<samp class="samp">*/</samp>&rsquo;</dt>
+<dd><p>This is a comment-end sequence for &ldquo;b&rdquo; style because the first
+character, &lsquo;<samp class="samp">*</samp>&rsquo;, has the &lsquo;<samp class="samp">b</samp>&rsquo; flag.
+</p>
+</dd>
+<dt>newline</dt>
+<dd><p>This is a comment-end sequence for &ldquo;a&rdquo; style, because the newline
+character does not have the &lsquo;<samp class="samp">b</samp>&rsquo; flag.
+</p></dd>
+</dl>
+
+</li><li>&lsquo;<samp class="samp">p</samp>&rsquo; identifies an additional prefix character for Lisp syntax.
+These characters are treated as whitespace when they appear between
+expressions.  When they appear within an expression, they are handled
+according to their usual syntax classes.
+
+<p>The function <code class="code">backward-prefix-chars</code> moves back over these
+characters, as well as over characters whose primary syntax class is
+prefix (&lsquo;<samp class="samp">'</samp>&rsquo;).  See <a class="xref" href="#Motion-and-Syntax">Motion and Syntax</a>.
+</p></li></ul>
+
+<hr>
+</div>
+</div>
+<div class="section-level-extent" id="Syntax-Table-Functions">
+<div class="nav-panel">
+<p>
+Next: <a href="#Syntax-Properties" accesskey="n" rel="next">Syntax Properties</a>, Previous: <a href="#Syntax-Descriptors" accesskey="p" rel="prev">Syntax Descriptors</a>, Up: <a href="#Syntax-Tables" accesskey="u" rel="up">Syntax Tables</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Syntax-Table-Functions-1"><span>36.3 Syntax Table Functions<a class="copiable-link" href="#Syntax-Table-Functions-1"> &para;</a></span></h3>
+
+<p>In this section we describe functions for creating, accessing and
+altering syntax tables.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dsyntax_002dtable"><span class="category-def">Function: </span><span><strong class="def-name">make-syntax-table</strong> <var class="def-var-arguments">&amp;optional table</var><a class="copiable-link" href="#index-make_002dsyntax_002dtable"> &para;</a></span></dt>
+<dd><p>This function creates a new syntax table.  If <var class="var">table</var> is
+non-<code class="code">nil</code>, the parent of the new syntax table is <var class="var">table</var>;
+otherwise, the parent is the standard syntax table.
+</p>
+<p>In the new syntax table, all characters are initially given the
+&ldquo;inherit&rdquo; (&lsquo;<samp class="samp">@</samp>&rsquo;) syntax class, i.e., their syntax is inherited
+from the parent table (see <a class="pxref" href="#Syntax-Class-Table">Table of Syntax Classes</a>).
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-copy_002dsyntax_002dtable"><span class="category-def">Function: </span><span><strong class="def-name">copy-syntax-table</strong> <var class="def-var-arguments">&amp;optional table</var><a class="copiable-link" href="#index-copy_002dsyntax_002dtable"> &para;</a></span></dt>
+<dd><p>This function constructs a copy of <var class="var">table</var> and returns it.  If
+<var class="var">table</var> is omitted or <code class="code">nil</code>, it returns a copy of the
+standard syntax table.  Otherwise, an error is signaled if <var class="var">table</var>
+is not a syntax table.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-modify_002dsyntax_002dentry"><span class="category-def">Command: </span><span><strong class="def-name">modify-syntax-entry</strong> <var class="def-var-arguments">char syntax-descriptor  &amp;optional table</var><a class="copiable-link" href="#index-modify_002dsyntax_002dentry"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-syntax-entry_002c-setting"></a>
+<p>This function sets the syntax entry for <var class="var">char</var> according to
+<var class="var">syntax-descriptor</var>.  <var class="var">char</var> must be a character, or a cons
+cell of the form <code class="code">(<var class="var">min</var> . <var class="var">max</var>)</code>; in the latter case,
+the function sets the syntax entries for all characters in the range
+between <var class="var">min</var> and <var class="var">max</var>, inclusive.
+</p>
+<p>The syntax is changed only for <var class="var">table</var>, which defaults to the
+current buffer&rsquo;s syntax table, and not in any other syntax table.
+</p>
+<p>The argument <var class="var">syntax-descriptor</var> is a syntax descriptor, i.e., a
+string whose first character is a syntax class designator and whose
+second and subsequent characters optionally specify a matching
+character and syntax flags.  See <a class="xref" href="#Syntax-Descriptors">Syntax Descriptors</a>.  An error is
+signaled if <var class="var">syntax-descriptor</var> is not a valid syntax descriptor.
+</p>
+<p>This function always returns <code class="code">nil</code>.  The old syntax information in
+the table for this character is discarded.
+</p>
+<div class="example">
+<div class="group"><pre class="exdent"><span class="r">Examples:</span>
+</pre><pre class="example-preformatted">
+
+;; <span class="r">Put the space character in class whitespace.</span>
+(modify-syntax-entry ?\s &quot; &quot;)
+     &rArr; nil
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; <span class="r">Make &lsquo;<samp class="samp">$</samp>&rsquo; an open parenthesis character,</span>
+;;   <span class="r">with &lsquo;<samp class="samp">^</samp>&rsquo; as its matching close.</span>
+(modify-syntax-entry ?$ &quot;(^&quot;)
+     &rArr; nil
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; <span class="r">Make &lsquo;<samp class="samp">^</samp>&rsquo; a close parenthesis character,</span>
+;;   <span class="r">with &lsquo;<samp class="samp">$</samp>&rsquo; as its matching open.</span>
+(modify-syntax-entry ?^ &quot;)$&quot;)
+     &rArr; nil
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; <span class="r">Make &lsquo;<samp class="samp">/</samp>&rsquo; a punctuation character,</span>
+;;   <span class="r">the first character of a start-comment sequence,</span>
+;;   <span class="r">and the second character of an end-comment sequence.</span>
+;;   <span class="r">This is used in C mode.</span>
+(modify-syntax-entry ?/ &quot;. 14&quot;)
+     &rArr; nil
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-char_002dsyntax"><span class="category-def">Function: </span><span><strong class="def-name">char-syntax</strong> <var class="def-var-arguments">character</var><a class="copiable-link" href="#index-char_002dsyntax"> &para;</a></span></dt>
+<dd><p>This function returns the syntax class of <var class="var">character</var>, represented
+by its designator character (see <a class="pxref" href="#Syntax-Class-Table">Table of Syntax Classes</a>).  This
+returns <em class="emph">only</em> the class, not its matching character or syntax
+flags.
+</p>
+<p>The following examples apply to C mode.  (We use <code class="code">string</code> to make
+it easier to see the character returned by <code class="code">char-syntax</code>.)
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">;; Space characters have whitespace syntax class.
+(string (char-syntax ?\s))
+     &rArr; &quot; &quot;
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; Forward slash characters have punctuation syntax.
+;; Note that this <code class="code">char-syntax</code> call does not reveal
+;; that it is also part of comment-start and -end sequences.
+(string (char-syntax ?/))
+     &rArr; &quot;.&quot;
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; Open parenthesis characters have open parenthesis syntax.
+;; Note that this <code class="code">char-syntax</code> call does not reveal that
+;; it has a matching character, &lsquo;<samp class="samp">)</samp>&rsquo;.
+(string (char-syntax ?\())
+     &rArr; &quot;(&quot;
+</pre></div></div>
+
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dsyntax_002dtable"><span class="category-def">Function: </span><span><strong class="def-name">set-syntax-table</strong> <var class="def-var-arguments">table</var><a class="copiable-link" href="#index-set_002dsyntax_002dtable"> &para;</a></span></dt>
+<dd><p>This function makes <var class="var">table</var> the syntax table for the current buffer.
+It returns <var class="var">table</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-syntax_002dtable"><span class="category-def">Function: </span><span><strong class="def-name">syntax-table</strong><a class="copiable-link" href="#index-syntax_002dtable"> &para;</a></span></dt>
+<dd><p>This function returns the current syntax table, which is the table for
+the current buffer.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-describe_002dsyntax"><span class="category-def">Command: </span><span><strong class="def-name">describe-syntax</strong> <var class="def-var-arguments">&amp;optional buffer</var><a class="copiable-link" href="#index-describe_002dsyntax"> &para;</a></span></dt>
+<dd><p>This command displays the contents of the syntax table of
+<var class="var">buffer</var> (by default, the current buffer) in a help buffer.
+</p></dd></dl>
+
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-with_002dsyntax_002dtable"><span class="category-def">Macro: </span><span><strong class="def-name">with-syntax-table</strong> <var class="def-var-arguments">table body&hellip;</var><a class="copiable-link" href="#index-with_002dsyntax_002dtable"> &para;</a></span></dt>
+<dd><p>This macro executes <var class="var">body</var> using <var class="var">table</var> as the current syntax
+table.  It returns the value of the last form in <var class="var">body</var>, after
+restoring the old current syntax table.
+</p>
+<p>Since each buffer has its own current syntax table, we should make that
+more precise: <code class="code">with-syntax-table</code> temporarily alters the current
+syntax table of whichever buffer is current at the time the macro
+execution starts.  Other buffers are not affected.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Syntax-Properties">
+<div class="nav-panel">
+<p>
+Next: <a href="#Motion-and-Syntax" accesskey="n" rel="next">Motion and Syntax</a>, Previous: <a href="#Syntax-Table-Functions" accesskey="p" rel="prev">Syntax Table Functions</a>, Up: <a href="#Syntax-Tables" accesskey="u" rel="up">Syntax Tables</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Syntax-Properties-1"><span>36.4 Syntax Properties<a class="copiable-link" href="#Syntax-Properties-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-syntax_002dtable-_0028text-property_0029"></a>
+
+<p>When the syntax table is not flexible enough to specify the syntax of
+a language, you can override the syntax table for specific character
+occurrences in the buffer, by applying a <code class="code">syntax-table</code> text
+property.  See <a class="xref" href="Text.html#Text-Properties">Text Properties</a>, for how to apply text properties.
+</p>
+<p>The valid values of <code class="code">syntax-table</code> text property are:
+</p>
+<dl class="table">
+<dt><var class="var">syntax-table</var></dt>
+<dd><p>If the property value is a syntax table, that table is used instead of
+the current buffer&rsquo;s syntax table to determine the syntax for the
+underlying text character.
+</p>
+</dd>
+<dt><code class="code">(<var class="var">syntax-code</var> . <var class="var">matching-char</var>)</code></dt>
+<dd><p>A cons cell of this format is a raw syntax descriptor (see <a class="pxref" href="#Syntax-Table-Internals">Syntax Table Internals</a>), which directly specifies a syntax class for the
+underlying text character.
+</p>
+</dd>
+<dt><code class="code">nil</code></dt>
+<dd><p>If the property is <code class="code">nil</code>, the character&rsquo;s syntax is determined from
+the current syntax table in the usual way.
+</p></dd>
+</dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-parse_002dsexp_002dlookup_002dproperties"><span class="category-def">Variable: </span><span><strong class="def-name">parse-sexp-lookup-properties</strong><a class="copiable-link" href="#index-parse_002dsexp_002dlookup_002dproperties"> &para;</a></span></dt>
+<dd><p>If this is non-<code class="code">nil</code>, the syntax scanning functions, like
+<code class="code">forward-sexp</code>, pay attention to <code class="code">syntax-table</code> text
+properties.  Otherwise they use only the current syntax table.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-syntax_002dpropertize_002dfunction"><span class="category-def">Variable: </span><span><strong class="def-name">syntax-propertize-function</strong><a class="copiable-link" href="#index-syntax_002dpropertize_002dfunction"> &para;</a></span></dt>
+<dd><p>This variable, if non-<code class="code">nil</code>, should store a function for applying
+<code class="code">syntax-table</code> properties to a specified stretch of text.  It is
+intended to be used by major modes to install a function which applies
+<code class="code">syntax-table</code> properties in some mode-appropriate way.
+</p>
+<p>The function is called by <code class="code">syntax-ppss</code> (see <a class="pxref" href="#Position-Parse">Finding the Parse State for a Position</a>),
+and by Font Lock mode during syntactic fontification (see <a class="pxref" href="Modes.html#Syntactic-Font-Lock">Syntactic Font Lock</a>).  It is called with two arguments, <var class="var">start</var> and
+<var class="var">end</var>, which are the starting and ending positions of the text on
+which it should act.  It is allowed to arbitrarily move point within
+the region delimited by <var class="var">start</var> and <var class="var">end</var>; such motions don&rsquo;t
+need to use <code class="code">save-excursion</code> (see <a class="pxref" href="Positions.html#Excursions">Excursions</a>).  It is also
+allowed to call <code class="code">syntax-ppss</code> on any position before <var class="var">end</var>,
+but if a Lisp program calls <code class="code">syntax-ppss</code> on some position and
+later modifies the buffer at some earlier position, then it is that
+program&rsquo;s responsibility to call <code class="code">syntax-ppss-flush-cache</code> to
+flush the now obsolete info from the cache.
+</p>
+<p><strong class="strong">Caution:</strong> When this variable is non-<code class="code">nil</code>, Emacs removes
+<code class="code">syntax-table</code> text properties arbitrarily and relies on
+<code class="code">syntax-propertize-function</code> to reapply them.  Thus if this
+facility is used at all, the function must apply <strong class="strong">all</strong>
+<code class="code">syntax-table</code> text properties used by the major mode.  In
+particular, Modes derived from a CC Mode mode must not use this
+variable, since CC Mode uses other means to apply and remove these
+text properties.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-syntax_002dpropertize_002dextend_002dregion_002dfunctions"><span class="category-def">Variable: </span><span><strong class="def-name">syntax-propertize-extend-region-functions</strong><a class="copiable-link" href="#index-syntax_002dpropertize_002dextend_002dregion_002dfunctions"> &para;</a></span></dt>
+<dd><p>This abnormal hook is run by the syntax parsing code prior to calling
+<code class="code">syntax-propertize-function</code>.  Its role is to help locate safe
+starting and ending buffer positions for passing to
+<code class="code">syntax-propertize-function</code>.  For example, a major mode can add
+a function to this hook to identify multi-line syntactic constructs,
+and ensure that the boundaries do not fall in the middle of one.
+</p>
+<p>Each function in this hook should accept two arguments, <var class="var">start</var>
+and <var class="var">end</var>.  It should return either a cons cell of two adjusted
+buffer positions, <code class="code">(<var class="var">new-start</var> . <var class="var">new-end</var>)</code>, or
+<code class="code">nil</code> if no adjustment is necessary.  The hook functions are run
+in turn, repeatedly, until they all return <code class="code">nil</code>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Motion-and-Syntax">
+<div class="nav-panel">
+<p>
+Next: <a href="#Parsing-Expressions" accesskey="n" rel="next">Parsing Expressions</a>, Previous: <a href="#Syntax-Properties" accesskey="p" rel="prev">Syntax Properties</a>, Up: <a href="#Syntax-Tables" accesskey="u" rel="up">Syntax Tables</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Motion-and-Syntax-1"><span>36.5 Motion and Syntax<a class="copiable-link" href="#Motion-and-Syntax-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-moving-across-syntax-classes"></a>
+<a class="index-entry-id" id="index-skipping-characters-of-certain-syntax"></a>
+
+<p>This section describes functions for moving across characters that
+have certain syntax classes.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-skip_002dsyntax_002dforward"><span class="category-def">Function: </span><span><strong class="def-name">skip-syntax-forward</strong> <var class="def-var-arguments">syntaxes &amp;optional limit</var><a class="copiable-link" href="#index-skip_002dsyntax_002dforward"> &para;</a></span></dt>
+<dd><p>This function moves point forward across characters having syntax
+classes mentioned in <var class="var">syntaxes</var> (a string of syntax class
+characters).  It stops when it encounters the end of the buffer, or
+position <var class="var">limit</var> (if specified), or a character it is not supposed
+to skip.
+</p>
+<p>If <var class="var">syntaxes</var> starts with &lsquo;<samp class="samp">^</samp>&rsquo;, then the function skips
+characters whose syntax is <em class="emph">not</em> in <var class="var">syntaxes</var>.
+</p>
+<p>The return value is the distance traveled, which is a nonnegative
+integer.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-skip_002dsyntax_002dbackward"><span class="category-def">Function: </span><span><strong class="def-name">skip-syntax-backward</strong> <var class="def-var-arguments">syntaxes &amp;optional limit</var><a class="copiable-link" href="#index-skip_002dsyntax_002dbackward"> &para;</a></span></dt>
+<dd><p>This function moves point backward across characters whose syntax
+classes are mentioned in <var class="var">syntaxes</var>.  It stops when it encounters
+the beginning of the buffer, or position <var class="var">limit</var> (if specified), or
+a character it is not supposed to skip.
+</p>
+<p>If <var class="var">syntaxes</var> starts with &lsquo;<samp class="samp">^</samp>&rsquo;, then the function skips
+characters whose syntax is <em class="emph">not</em> in <var class="var">syntaxes</var>.
+</p>
+<p>The return value indicates the distance traveled.  It is an integer that
+is zero or less.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-backward_002dprefix_002dchars"><span class="category-def">Function: </span><span><strong class="def-name">backward-prefix-chars</strong><a class="copiable-link" href="#index-backward_002dprefix_002dchars"> &para;</a></span></dt>
+<dd><p>This function moves point backward over any number of characters with
+expression prefix syntax.  This includes both characters in the
+expression prefix syntax class, and characters with the &lsquo;<samp class="samp">p</samp>&rsquo; flag.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Parsing-Expressions">
+<div class="nav-panel">
+<p>
+Next: <a href="#Syntax-Table-Internals" accesskey="n" rel="next">Syntax Table Internals</a>, Previous: <a href="#Motion-and-Syntax" accesskey="p" rel="prev">Motion and Syntax</a>, Up: <a href="#Syntax-Tables" accesskey="u" rel="up">Syntax Tables</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Parsing-Expressions-1"><span>36.6 Parsing Expressions<a class="copiable-link" href="#Parsing-Expressions-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-parsing-expressions"></a>
+<a class="index-entry-id" id="index-scanning-expressions"></a>
+
+<p>This section describes functions for parsing and scanning balanced
+expressions.  We will refer to such expressions as <em class="dfn">sexps</em>,
+following the terminology of Lisp, even though these functions can act
+on languages other than Lisp.  Basically, a sexp is either a balanced
+parenthetical grouping, a string, or a symbol (i.e., a sequence
+of characters whose syntax is either word constituent or symbol
+constituent).  However, characters in the expression prefix syntax
+class (see <a class="pxref" href="#Syntax-Class-Table">Table of Syntax Classes</a>) are treated as part of the sexp if
+they appear next to it.
+</p>
+<p>The syntax table controls the interpretation of characters, so these
+functions can be used for Lisp expressions when in Lisp mode and for C
+expressions when in C mode.  See <a class="xref" href="Positions.html#List-Motion">Moving over Balanced Expressions</a>, for convenient
+higher-level functions for moving over balanced expressions.
+</p>
+<p>A character&rsquo;s syntax controls how it changes the state of the
+parser, rather than describing the state itself.  For example, a
+string delimiter character toggles the parser state between
+in-string and in-code, but the syntax of characters does not
+directly say whether they are inside a string.  For example (note that
+15 is the syntax code for generic string delimiters),
+</p>
+<div class="example">
+<pre class="example-preformatted">(put-text-property 1 9 'syntax-table '(15 . nil))
+</pre></div>
+
+<p>does not tell Emacs that the first eight chars of the current buffer
+are a string, but rather that they are all string delimiters.  As a
+result, Emacs treats them as four consecutive empty string constants.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Motion-via-Parsing" accesskey="1">Motion Commands Based on Parsing</a></li>
+<li><a href="#Position-Parse" accesskey="2">Finding the Parse State for a Position</a></li>
+<li><a href="#Parser-State" accesskey="3">Parser State</a></li>
+<li><a href="#Low_002dLevel-Parsing" accesskey="4">Low-Level Parsing</a></li>
+<li><a href="#Control-Parsing" accesskey="5">Parameters to Control Parsing</a></li>
+</ul>
+<hr>
+<div class="subsection-level-extent" id="Motion-via-Parsing">
+<div class="nav-panel">
+<p>
+Next: <a href="#Position-Parse" accesskey="n" rel="next">Finding the Parse State for a Position</a>, Up: <a href="#Parsing-Expressions" accesskey="u" rel="up">Parsing Expressions</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Motion-Commands-Based-on-Parsing"><span>36.6.1 Motion Commands Based on Parsing<a class="copiable-link" href="#Motion-Commands-Based-on-Parsing"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-motion-based-on-parsing"></a>
+
+<p>This section describes simple point-motion functions that operate
+based on parsing expressions.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-scan_002dlists"><span class="category-def">Function: </span><span><strong class="def-name">scan-lists</strong> <var class="def-var-arguments">from count depth</var><a class="copiable-link" href="#index-scan_002dlists"> &para;</a></span></dt>
+<dd><p>This function scans forward <var class="var">count</var> balanced parenthetical
+groupings from position <var class="var">from</var>.  It returns the position where the
+scan stops.  If <var class="var">count</var> is negative, the scan moves backwards.
+</p>
+<p>If <var class="var">depth</var> is nonzero, treat the starting position as being
+<var class="var">depth</var> parentheses deep.  The scanner moves forward or backward
+through the buffer until the depth changes to zero <var class="var">count</var> times.
+Hence, a positive value for <var class="var">depth</var> has the effect of moving out
+<var class="var">depth</var> levels of parenthesis from the starting position, while a
+negative <var class="var">depth</var> has the effect of moving deeper by <var class="var">-depth</var>
+levels of parenthesis.
+</p>
+<p>Scanning ignores comments if <code class="code">parse-sexp-ignore-comments</code> is
+non-<code class="code">nil</code>.
+</p>
+<p>If the scan reaches the beginning or end of the accessible part of the
+buffer before it has scanned over <var class="var">count</var> parenthetical groupings,
+the return value is <code class="code">nil</code> if the depth at that point is zero; if
+the depth is non-zero, a <code class="code">scan-error</code> error is signaled.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-scan_002dsexps"><span class="category-def">Function: </span><span><strong class="def-name">scan-sexps</strong> <var class="def-var-arguments">from count</var><a class="copiable-link" href="#index-scan_002dsexps"> &para;</a></span></dt>
+<dd><p>This function scans forward <var class="var">count</var> sexps from position <var class="var">from</var>.
+It returns the position where the scan stops.  If <var class="var">count</var> is
+negative, the scan moves backwards.
+</p>
+<p>Scanning ignores comments if <code class="code">parse-sexp-ignore-comments</code> is
+non-<code class="code">nil</code>.
+</p>
+<p>If the scan reaches the beginning or end of (the accessible part of) the
+buffer while in the middle of a parenthetical grouping, an error is
+signaled.  If it reaches the beginning or end between groupings but
+before count is used up, <code class="code">nil</code> is returned.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-forward_002dcomment"><span class="category-def">Function: </span><span><strong class="def-name">forward-comment</strong> <var class="def-var-arguments">count</var><a class="copiable-link" href="#index-forward_002dcomment"> &para;</a></span></dt>
+<dd><p>This function moves point forward across <var class="var">count</var> complete comments
+     (that is, including the starting delimiter and the terminating
+delimiter if any), plus any whitespace encountered on the way.  It
+moves backward if <var class="var">count</var> is negative.  If it encounters anything
+other than a comment or whitespace, it stops, leaving point at the
+place where it stopped.  This includes (for instance) finding the end
+of a comment when moving forward and expecting the beginning of one.
+The function also stops immediately after moving over the specified
+number of complete comments.  If <var class="var">count</var> comments are found as
+expected, with nothing except whitespace between them, it returns
+<code class="code">t</code>; otherwise it returns <code class="code">nil</code>.
+</p>
+<p>This function cannot tell whether the comments it traverses are
+embedded within a string.  If they look like comments, it treats them
+as comments.
+</p>
+<p>To move forward over all comments and whitespace following point, use
+<code class="code">(forward-comment (buffer-size))</code>.  <code class="code">(buffer-size)</code> is a
+good argument to use, because the number of comments in the buffer
+cannot exceed that many.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Position-Parse">
+<div class="nav-panel">
+<p>
+Next: <a href="#Parser-State" accesskey="n" rel="next">Parser State</a>, Previous: <a href="#Motion-via-Parsing" accesskey="p" rel="prev">Motion Commands Based on Parsing</a>, Up: <a href="#Parsing-Expressions" accesskey="u" rel="up">Parsing Expressions</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Finding-the-Parse-State-for-a-Position"><span>36.6.2 Finding the Parse State for a Position<a class="copiable-link" href="#Finding-the-Parse-State-for-a-Position"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-parse-state-for-a-position"></a>
+
+<p>For syntactic analysis, such as in indentation, often the useful
+thing is to compute the syntactic state corresponding to a given buffer
+position.  This function does that conveniently.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-syntax_002dppss"><span class="category-def">Function: </span><span><strong class="def-name">syntax-ppss</strong> <var class="def-var-arguments">&amp;optional pos</var><a class="copiable-link" href="#index-syntax_002dppss"> &para;</a></span></dt>
+<dd><p>This function returns the parser state that the parser would reach at
+position <var class="var">pos</var> starting from the beginning of the visible portion
+of the buffer.
+See <a class="xref" href="#Parser-State">Parser State</a>,
+for a description of the parser state.
+</p>
+<p>The return value is the same as if you call the low-level parsing
+function <code class="code">parse-partial-sexp</code> to parse from the beginning of the
+visible portion of the buffer to <var class="var">pos</var> (see <a class="pxref" href="#Low_002dLevel-Parsing">Low-Level Parsing</a>).  However, <code class="code">syntax-ppss</code> uses caches to speed up the
+computation.  Due to this optimization, the second value (previous
+complete subexpression) and sixth value (minimum parenthesis depth) in
+the returned parser state are not meaningful.
+</p>
+<p>This function has a side effect: it adds a buffer-local entry to
+<code class="code">before-change-functions</code> (see <a class="pxref" href="Text.html#Change-Hooks">Change Hooks</a>) for
+<code class="code">syntax-ppss-flush-cache</code> (see below).  This entry keeps the
+cache consistent as the buffer is modified.  However, the cache might
+not be updated if <code class="code">syntax-ppss</code> is called while
+<code class="code">before-change-functions</code> is temporarily let-bound, or if the
+buffer is modified without running the hook, such as when using
+<code class="code">inhibit-modification-hooks</code>.  In those cases, it is necessary to
+call <code class="code">syntax-ppss-flush-cache</code> explicitly.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-syntax_002dppss_002dflush_002dcache"><span class="category-def">Function: </span><span><strong class="def-name">syntax-ppss-flush-cache</strong> <var class="def-var-arguments">beg &amp;rest ignored-args</var><a class="copiable-link" href="#index-syntax_002dppss_002dflush_002dcache"> &para;</a></span></dt>
+<dd><p>This function flushes the cache used by <code class="code">syntax-ppss</code>, starting
+at position <var class="var">beg</var>.  The remaining arguments, <var class="var">ignored-args</var>,
+are ignored; this function accepts them so that it can be directly
+used on hooks such as <code class="code">before-change-functions</code> (see <a class="pxref" href="Text.html#Change-Hooks">Change Hooks</a>).
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Parser-State">
+<div class="nav-panel">
+<p>
+Next: <a href="#Low_002dLevel-Parsing" accesskey="n" rel="next">Low-Level Parsing</a>, Previous: <a href="#Position-Parse" accesskey="p" rel="prev">Finding the Parse State for a Position</a>, Up: <a href="#Parsing-Expressions" accesskey="u" rel="up">Parsing Expressions</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Parser-State-1"><span>36.6.3 Parser State<a class="copiable-link" href="#Parser-State-1"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-parser-state"></a>
+
+<p>A <em class="dfn">parser state</em> is a list of (currently) eleven elements
+describing the state of the syntactic parser, after it parses the text
+between a specified starting point and a specified end point in the
+buffer using <code class="code">parse-partial-sexp</code> (see <a class="pxref" href="#Low_002dLevel-Parsing">Low-Level Parsing</a>).
+Parsing functions such as <code class="code">syntax-ppss</code>
+(see <a class="pxref" href="#Position-Parse">Finding the Parse State for a Position</a>)
+also return a parser state as the value.  <code class="code">parse-partial-sexp</code>
+can accept a parser state as an argument, for resuming parsing.
+</p>
+<p>Here are the meanings of the elements of the parser state:
+</p>
+<ol class="enumerate" start="0">
+<li> The depth in parentheses, counting from 0.  <strong class="strong">Warning:</strong> this can
+be negative if there are more close parens than open parens between
+the parser&rsquo;s starting point and end point.
+
+</li><li> <a class="index-entry-id" id="index-innermost-containing-parentheses"></a>
+The character position of the start of the innermost parenthetical
+grouping containing the stopping point; <code class="code">nil</code> if none.
+
+</li><li> <a class="index-entry-id" id="index-previous-complete-subexpression"></a>
+The character position of the start of the last complete subexpression
+terminated; <code class="code">nil</code> if none.
+
+</li><li> <a class="index-entry-id" id="index-inside-string"></a>
+Non-<code class="code">nil</code> if inside a string.  More precisely, this is the
+character that will terminate the string, or <code class="code">t</code> if a generic
+string delimiter character should terminate it.
+
+</li><li> <a class="index-entry-id" id="index-inside-comment"></a>
+<code class="code">t</code> if inside a non-nestable comment (of any comment style;
+see <a class="pxref" href="#Syntax-Flags">Syntax Flags</a>); or the comment nesting level if inside a
+comment that can be nested.
+
+</li><li> <a class="index-entry-id" id="index-quote-character"></a>
+<code class="code">t</code> if the end point is just after a quote character.
+
+</li><li> The minimum parenthesis depth encountered during this scan.
+
+</li><li> What kind of comment is active: <code class="code">nil</code> if not in a comment or in a
+comment of style &lsquo;<samp class="samp">a</samp>&rsquo;; 1 for a comment of style &lsquo;<samp class="samp">b</samp>&rsquo;; 2 for a
+comment of style &lsquo;<samp class="samp">c</samp>&rsquo;; and <code class="code">syntax-table</code> for a comment that
+should be ended by a generic comment delimiter character.
+
+</li><li> The string or comment start position.  While inside a comment, this is
+the position where the comment began; while inside a string, this is the
+position where the string began.  When outside of strings and comments,
+this element is <code class="code">nil</code>.
+
+</li><li> The list of the positions of the currently open parentheses, starting
+with the outermost.
+
+</li><li> When the last buffer position scanned was the (potential) first
+character of a two character construct (comment delimiter or
+escaped/char-quoted character pair), the <var class="var">syntax-code</var>
+(see <a class="pxref" href="#Syntax-Table-Internals">Syntax Table Internals</a>) of that position.  Otherwise
+<code class="code">nil</code>.
+</li></ol>
+
+<p>Elements 1, 2, and 6 are ignored in a state which you pass as an
+argument to <code class="code">parse-partial-sexp</code> to continue parsing.  Elements 9
+and 10 are mainly used internally by the parser code.
+</p>
+<p>Some additional useful information is available from a parser state
+using these functions:
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-syntax_002dppss_002dtoplevel_002dpos"><span class="category-def">Function: </span><span><strong class="def-name">syntax-ppss-toplevel-pos</strong> <var class="def-var-arguments">state</var><a class="copiable-link" href="#index-syntax_002dppss_002dtoplevel_002dpos"> &para;</a></span></dt>
+<dd><p>This function extracts, from parser state <var class="var">state</var>, the last
+position scanned in the parse which was at top level in grammatical
+structure.  &ldquo;At top level&rdquo; means outside of any parentheses,
+comments, or strings.
+</p>
+<p>The value is <code class="code">nil</code> if <var class="var">state</var> represents a parse which has
+arrived at a top level position.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-syntax_002dppss_002dcontext"><span class="category-def">Function: </span><span><strong class="def-name">syntax-ppss-context</strong> <var class="def-var-arguments">state</var><a class="copiable-link" href="#index-syntax_002dppss_002dcontext"> &para;</a></span></dt>
+<dd><p>Return <code class="code">string</code> if the end position of the scan returning
+<var class="var">state</var> is in a string, and <code class="code">comment</code> if it&rsquo;s in a comment.
+Otherwise return <code class="code">nil</code>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Low_002dLevel-Parsing">
+<div class="nav-panel">
+<p>
+Next: <a href="#Control-Parsing" accesskey="n" rel="next">Parameters to Control Parsing</a>, Previous: <a href="#Parser-State" accesskey="p" rel="prev">Parser State</a>, Up: <a href="#Parsing-Expressions" accesskey="u" rel="up">Parsing Expressions</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Low_002dLevel-Parsing-1"><span>36.6.4 Low-Level Parsing<a class="copiable-link" href="#Low_002dLevel-Parsing-1"> &para;</a></span></h4>
+
+<p>The most basic way to use the expression parser is to tell it
+to start at a given position with a certain state, and parse up to
+a specified end position.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-parse_002dpartial_002dsexp"><span class="category-def">Function: </span><span><strong class="def-name">parse-partial-sexp</strong> <var class="def-var-arguments">start limit &amp;optional target-depth stop-before state stop-comment</var><a class="copiable-link" href="#index-parse_002dpartial_002dsexp"> &para;</a></span></dt>
+<dd><p>This function parses a sexp in the current buffer starting at
+<var class="var">start</var>, not scanning past <var class="var">limit</var>.  It stops at position
+<var class="var">limit</var> or when certain criteria described below are met, and sets
+point to the location where parsing stops.  It returns a parser state
+describing the status of the parse at the point where it stops.
+</p>
+<a class="index-entry-id" id="index-parenthesis-depth"></a>
+<p>If the third argument <var class="var">target-depth</var> is non-<code class="code">nil</code>, parsing
+stops if the depth in parentheses becomes equal to <var class="var">target-depth</var>.
+The depth starts at 0, or at whatever is given in <var class="var">state</var>.
+</p>
+<p>If the fourth argument <var class="var">stop-before</var> is non-<code class="code">nil</code>, parsing
+stops when it comes to any character that starts a sexp.  If
+<var class="var">stop-comment</var> is non-<code class="code">nil</code>, parsing stops after the start of
+an unnested comment.  If <var class="var">stop-comment</var> is the symbol
+<code class="code">syntax-table</code>, parsing stops after the start of an unnested
+comment or a string, or after the end of an unnested comment or a
+string, whichever comes first.
+</p>
+<p>If <var class="var">state</var> is <code class="code">nil</code>, <var class="var">start</var> is assumed to be at the top
+level of parenthesis structure, such as the beginning of a function
+definition.  Alternatively, you might wish to resume parsing in the
+middle of the structure.  To do this, you must provide a <var class="var">state</var>
+argument that describes the initial status of parsing.  The value
+returned by a previous call to <code class="code">parse-partial-sexp</code> will do
+nicely.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="subsection-level-extent" id="Control-Parsing">
+<div class="nav-panel">
+<p>
+Previous: <a href="#Low_002dLevel-Parsing" accesskey="p" rel="prev">Low-Level Parsing</a>, Up: <a href="#Parsing-Expressions" accesskey="u" rel="up">Parsing Expressions</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h4 class="subsection" id="Parameters-to-Control-Parsing"><span>36.6.5 Parameters to Control Parsing<a class="copiable-link" href="#Parameters-to-Control-Parsing"> &para;</a></span></h4>
+<a class="index-entry-id" id="index-parsing_002c-control-parameters"></a>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-multibyte_002dsyntax_002das_002dsymbol"><span class="category-def">Variable: </span><span><strong class="def-name">multibyte-syntax-as-symbol</strong><a class="copiable-link" href="#index-multibyte_002dsyntax_002das_002dsymbol"> &para;</a></span></dt>
+<dd><p>If this variable is non-<code class="code">nil</code>, <code class="code">scan-sexps</code> treats all
+non-<abbr class="acronym">ASCII</abbr> characters as symbol constituents regardless of
+what the syntax table says about them.  (However, <code class="code">syntax-table
+</code>text properties can still override the syntax.)
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-parse_002dsexp_002dignore_002dcomments"><span class="category-def">User Option: </span><span><strong class="def-name">parse-sexp-ignore-comments</strong><a class="copiable-link" href="#index-parse_002dsexp_002dignore_002dcomments"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-skipping-comments"></a>
+<p>If the value is non-<code class="code">nil</code>, then comments are treated as
+whitespace by the functions in this section and by <code class="code">forward-sexp</code>,
+<code class="code">scan-lists</code> and <code class="code">scan-sexps</code>.
+</p></dd></dl>
+
+<p>The behavior of <code class="code">parse-partial-sexp</code> is also affected by
+<code class="code">parse-sexp-lookup-properties</code> (see <a class="pxref" href="#Syntax-Properties">Syntax Properties</a>).
+</p>
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-comment_002dend_002dcan_002dbe_002descaped"><span class="category-def">Variable: </span><span><strong class="def-name">comment-end-can-be-escaped</strong><a class="copiable-link" href="#index-comment_002dend_002dcan_002dbe_002descaped"> &para;</a></span></dt>
+<dd><p>If this buffer local variable is non-<code class="code">nil</code>, a single character
+which usually terminates a comment doesn&rsquo;t do so when that character
+is escaped.  This is used in C and C++ Modes, where line comments
+starting with &lsquo;<samp class="samp">//</samp>&rsquo; can be continued onto the next line by
+escaping the newline with &lsquo;<samp class="samp">\</samp>&rsquo;.
+</p></dd></dl>
+
+<p>You can use <code class="code">forward-comment</code> to move forward or backward over
+one comment or several comments.
+</p>
+<hr>
+</div>
+</div>
+<div class="section-level-extent" id="Syntax-Table-Internals">
+<div class="nav-panel">
+<p>
+Next: <a href="#Categories" accesskey="n" rel="next">Categories</a>, Previous: <a href="#Parsing-Expressions" accesskey="p" rel="prev">Parsing Expressions</a>, Up: <a href="#Syntax-Tables" accesskey="u" rel="up">Syntax Tables</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Syntax-Table-Internals-1"><span>36.7 Syntax Table Internals<a class="copiable-link" href="#Syntax-Table-Internals-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-syntax-table-internals"></a>
+
+<p>Syntax tables are implemented as char-tables (see <a class="pxref" href="Sequences-Arrays-Vectors.html#Char_002dTables">Char-Tables</a>),
+but most Lisp programs don&rsquo;t work directly with their elements.
+Syntax tables do not store syntax data as syntax descriptors
+(see <a class="pxref" href="#Syntax-Descriptors">Syntax Descriptors</a>); they use an internal format, which is
+documented in this section.  This internal format can also be assigned
+as syntax properties (see <a class="pxref" href="#Syntax-Properties">Syntax Properties</a>).
+</p>
+<a class="index-entry-id" id="index-syntax-code"></a>
+<a class="index-entry-id" id="index-raw-syntax-descriptor"></a>
+<p>Each entry in a syntax table is a <em class="dfn">raw syntax descriptor</em>: a
+cons cell of the form <code class="code">(<var class="var">syntax-code</var>
+. <var class="var">matching-char</var>)</code>.  <var class="var">syntax-code</var> is an integer which
+encodes the syntax class and syntax flags, according to the table
+below.  <var class="var">matching-char</var>, if non-<code class="code">nil</code>, specifies a matching
+character (similar to the second character in a syntax descriptor).
+</p>
+<a class="index-entry-id" id="index-syntax-tables-_0028accessing-elements-of_0029"></a>
+<p>Use <code class="code">aref</code> (see <a class="pxref" href="Sequences-Arrays-Vectors.html#Array-Functions">Functions that Operate on Arrays</a>) to get the raw syntax
+descriptor of a character, for example <code class="code">(aref&nbsp;(syntax-table)&nbsp;ch)</code><!-- /@w -->.
+</p>
+<p>Here are the syntax codes corresponding to the various syntax
+classes:
+</p>
+<table class="multitable">
+<tbody><tr><td width="20%"><i class="i">Code</i></td><td width="30%"><i class="i">Class</i></td><td width="20%"><i class="i">Code</i></td><td width="30%"><i class="i">Class</i></td></tr>
+<tr><td width="20%">0</td><td width="30%">whitespace</td><td width="20%">8</td><td width="30%">paired delimiter</td></tr>
+<tr><td width="20%">1</td><td width="30%">punctuation</td><td width="20%">9</td><td width="30%">escape</td></tr>
+<tr><td width="20%">2</td><td width="30%">word</td><td width="20%">10</td><td width="30%">character quote</td></tr>
+<tr><td width="20%">3</td><td width="30%">symbol</td><td width="20%">11</td><td width="30%">comment-start</td></tr>
+<tr><td width="20%">4</td><td width="30%">open parenthesis</td><td width="20%">12</td><td width="30%">comment-end</td></tr>
+<tr><td width="20%">5</td><td width="30%">close parenthesis</td><td width="20%">13</td><td width="30%">inherit</td></tr>
+<tr><td width="20%">6</td><td width="30%">expression prefix</td><td width="20%">14</td><td width="30%">generic comment</td></tr>
+<tr><td width="20%">7</td><td width="30%">string quote</td><td width="20%">15</td><td width="30%">generic string</td></tr>
+</tbody>
+</table>
+
+<p>For example, in the standard syntax table, the entry for &lsquo;<samp class="samp">(</samp>&rsquo; is
+<code class="code">(4 . 41)</code>.  41 is the character code for &lsquo;<samp class="samp">)</samp>&rsquo;.
+</p>
+<p>Syntax flags are encoded in higher order bits, starting 16 bits from
+the least significant bit.  This table gives the power of two which
+corresponds to each syntax flag.
+</p>
+<table class="multitable">
+<tbody><tr><td width="15%"><i class="i">Prefix</i></td><td width="30%"><i class="i">Flag</i></td><td width="15%"><i class="i">Prefix</i></td><td width="30%"><i class="i">Flag</i></td></tr>
+<tr><td width="15%">&lsquo;<samp class="samp">1</samp>&rsquo;</td><td width="30%"><code class="code">(ash 1 16)</code></td><td width="15%">&lsquo;<samp class="samp">p</samp>&rsquo;</td><td width="30%"><code class="code">(ash 1 20)</code></td></tr>
+<tr><td width="15%">&lsquo;<samp class="samp">2</samp>&rsquo;</td><td width="30%"><code class="code">(ash 1 17)</code></td><td width="15%">&lsquo;<samp class="samp">b</samp>&rsquo;</td><td width="30%"><code class="code">(ash 1 21)</code></td></tr>
+<tr><td width="15%">&lsquo;<samp class="samp">3</samp>&rsquo;</td><td width="30%"><code class="code">(ash 1 18)</code></td><td width="15%">&lsquo;<samp class="samp">n</samp>&rsquo;</td><td width="30%"><code class="code">(ash 1 22)</code></td></tr>
+<tr><td width="15%">&lsquo;<samp class="samp">4</samp>&rsquo;</td><td width="30%"><code class="code">(ash 1 19)</code></td><td width="15%">&lsquo;<samp class="samp">c</samp>&rsquo;</td><td width="30%"><code class="code">(ash 1 23)</code></td></tr>
+</tbody>
+</table>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-string_002dto_002dsyntax"><span class="category-def">Function: </span><span><strong class="def-name">string-to-syntax</strong> <var class="def-var-arguments">desc</var><a class="copiable-link" href="#index-string_002dto_002dsyntax"> &para;</a></span></dt>
+<dd><p>Given a syntax descriptor <var class="var">desc</var> (a string), this function returns
+the corresponding raw syntax descriptor.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-syntax_002dclass_002dto_002dchar"><span class="category-def">Function: </span><span><strong class="def-name">syntax-class-to-char</strong> <var class="def-var-arguments">syntax</var><a class="copiable-link" href="#index-syntax_002dclass_002dto_002dchar"> &para;</a></span></dt>
+<dd><p>Given a raw syntax descriptor <var class="var">syntax</var> (an integer), this function
+returns the corresponding syntax descriptor (a character).
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-syntax_002dafter"><span class="category-def">Function: </span><span><strong class="def-name">syntax-after</strong> <var class="def-var-arguments">pos</var><a class="copiable-link" href="#index-syntax_002dafter"> &para;</a></span></dt>
+<dd><p>This function returns the raw syntax descriptor for the character in
+the buffer after position <var class="var">pos</var>, taking account of syntax
+properties as well as the syntax table.  If <var class="var">pos</var> is outside the
+buffer&rsquo;s accessible portion (see <a class="pxref" href="Positions.html#Narrowing">accessible portion</a>),
+the return value is <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-syntax_002dclass"><span class="category-def">Function: </span><span><strong class="def-name">syntax-class</strong> <var class="def-var-arguments">syntax</var><a class="copiable-link" href="#index-syntax_002dclass"> &para;</a></span></dt>
+<dd><p>This function returns the syntax code for the raw syntax descriptor
+<var class="var">syntax</var>.  More precisely, it takes the raw syntax descriptor&rsquo;s
+<var class="var">syntax-code</var> component, masks off the high 16 bits which record
+the syntax flags, and returns the resulting integer.
+</p>
+<p>If <var class="var">syntax</var> is <code class="code">nil</code>, the return value is <code class="code">nil</code>.  This
+is so that the expression
+</p>
+<div class="example">
+<pre class="example-preformatted">(syntax-class (syntax-after pos))
+</pre></div>
+
+<p>evaluates to <code class="code">nil</code> if <code class="code">pos</code> is outside the buffer&rsquo;s
+accessible portion, without throwing errors or returning an incorrect
+code.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Categories">
+<div class="nav-panel">
+<p>
+Previous: <a href="#Syntax-Table-Internals" accesskey="p" rel="prev">Syntax Table Internals</a>, Up: <a href="#Syntax-Tables" accesskey="u" rel="up">Syntax Tables</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Categories-1"><span>36.8 Categories<a class="copiable-link" href="#Categories-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-categories-of-characters"></a>
+<a class="index-entry-id" id="index-character-categories"></a>
+
+<p><em class="dfn">Categories</em> provide an alternate way of classifying characters
+syntactically.  You can define several categories as needed, then
+independently assign each character to one or more categories.  Unlike
+syntax classes, categories are not mutually exclusive; it is normal for
+one character to belong to several categories.
+</p>
+<a class="index-entry-id" id="index-category-table"></a>
+<p>Each buffer has a <em class="dfn">category table</em> which records which categories
+are defined and also which characters belong to each category.  Each
+category table defines its own categories, but normally these are
+initialized by copying from the standard categories table, so that the
+standard categories are available in all modes.
+</p>
+<p>Each category has a name, which is an <abbr class="acronym">ASCII</abbr> printing character in
+the range &lsquo;<samp class="samp">&nbsp;</samp>&rsquo;<!-- /@w --> to &lsquo;<samp class="samp">~</samp>&rsquo;.  You specify the name of a category
+when you define it with <code class="code">define-category</code>.
+</p>
+<a class="index-entry-id" id="index-category-set"></a>
+<p>The category table is actually a char-table (see <a class="pxref" href="Sequences-Arrays-Vectors.html#Char_002dTables">Char-Tables</a>).
+The element of the category table at index <var class="var">c</var> is a <em class="dfn">category
+set</em>&mdash;a bool-vector&mdash;that indicates which categories character <var class="var">c</var>
+belongs to.  In this category set, if the element at index <var class="var">cat</var> is
+<code class="code">t</code>, that means category <var class="var">cat</var> is a member of the set, and that
+character <var class="var">c</var> belongs to category <var class="var">cat</var>.
+</p>
+<p>For the next three functions, the optional argument <var class="var">table</var>
+defaults to the current buffer&rsquo;s category table.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-define_002dcategory"><span class="category-def">Function: </span><span><strong class="def-name">define-category</strong> <var class="def-var-arguments">char docstring &amp;optional table</var><a class="copiable-link" href="#index-define_002dcategory"> &para;</a></span></dt>
+<dd><p>This function defines a new category, with name <var class="var">char</var> and
+documentation <var class="var">docstring</var>, for the category table <var class="var">table</var>.
+</p>
+<p>Here&rsquo;s an example of defining a new category for characters that have
+strong right-to-left directionality (see <a class="pxref" href="Display.html#Bidirectional-Display">Bidirectional Display</a>)
+and using it in a special category table.  To obtain the information
+about the directionality of characters, the example code uses the
+&lsquo;<samp class="samp">bidi-class</samp>&rsquo; Unicode property (see <a class="pxref" href="Non_002dASCII-Characters.html#Character-Properties">bidi-class</a>).
+</p>
+<div class="example">
+<pre class="example-preformatted">(defvar special-category-table-for-bidi
+  ;;     Make an empty category-table.
+  (let ((category-table (make-category-table))
+        ;; Create a char-table which gives the 'bidi-class' Unicode
+        ;; property for each character.
+        (uniprop-table
+         (unicode-property-table-internal 'bidi-class)))
+    (define-category ?R &quot;Characters of bidi-class R, AL, or RLO&quot;
+                     category-table)
+    ;; Modify the category entry of each character whose
+    ;; 'bidi-class' Unicode property is R, AL, or RLO --
+    ;; these have a right-to-left directionality.
+    (map-char-table
+     (lambda (key val)
+       (if (memq val '(R AL RLO))
+           (modify-category-entry key ?R category-table)))
+     uniprop-table)
+    category-table))
+</pre></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-category_002ddocstring"><span class="category-def">Function: </span><span><strong class="def-name">category-docstring</strong> <var class="def-var-arguments">category &amp;optional table</var><a class="copiable-link" href="#index-category_002ddocstring"> &para;</a></span></dt>
+<dd><p>This function returns the documentation string of category <var class="var">category</var>
+in category table <var class="var">table</var>.
+</p>
+<div class="example">
+<pre class="example-preformatted">(category-docstring ?a)
+     &rArr; &quot;ASCII&quot;
+(category-docstring ?l)
+     &rArr; &quot;Latin&quot;
+</pre></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-get_002dunused_002dcategory"><span class="category-def">Function: </span><span><strong class="def-name">get-unused-category</strong> <var class="def-var-arguments">&amp;optional table</var><a class="copiable-link" href="#index-get_002dunused_002dcategory"> &para;</a></span></dt>
+<dd><p>This function returns a category name (a character) which is not
+currently defined in <var class="var">table</var>.  If all possible categories are in use
+in <var class="var">table</var>, it returns <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-category_002dtable"><span class="category-def">Function: </span><span><strong class="def-name">category-table</strong><a class="copiable-link" href="#index-category_002dtable"> &para;</a></span></dt>
+<dd><p>This function returns the current buffer&rsquo;s category table.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-category_002dtable_002dp"><span class="category-def">Function: </span><span><strong class="def-name">category-table-p</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-category_002dtable_002dp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is a category table,
+otherwise <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-standard_002dcategory_002dtable"><span class="category-def">Function: </span><span><strong class="def-name">standard-category-table</strong><a class="copiable-link" href="#index-standard_002dcategory_002dtable"> &para;</a></span></dt>
+<dd><p>This function returns the standard category table.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-copy_002dcategory_002dtable"><span class="category-def">Function: </span><span><strong class="def-name">copy-category-table</strong> <var class="def-var-arguments">&amp;optional table</var><a class="copiable-link" href="#index-copy_002dcategory_002dtable"> &para;</a></span></dt>
+<dd><p>This function constructs a copy of <var class="var">table</var> and returns it.  If
+<var class="var">table</var> is not supplied (or is <code class="code">nil</code>), it returns a copy of the
+standard category table.  Otherwise, an error is signaled if <var class="var">table</var>
+is not a category table.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dcategory_002dtable"><span class="category-def">Function: </span><span><strong class="def-name">set-category-table</strong> <var class="def-var-arguments">table</var><a class="copiable-link" href="#index-set_002dcategory_002dtable"> &para;</a></span></dt>
+<dd><p>This function makes <var class="var">table</var> the category table for the current
+buffer.  It returns <var class="var">table</var>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dcategory_002dtable"><span class="category-def">Function: </span><span><strong class="def-name">make-category-table</strong><a class="copiable-link" href="#index-make_002dcategory_002dtable"> &para;</a></span></dt>
+<dd><p>This creates and returns an empty category table.  In an empty category
+table, no categories have been allocated, and no characters belong to
+any categories.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dcategory_002dset"><span class="category-def">Function: </span><span><strong class="def-name">make-category-set</strong> <var class="def-var-arguments">categories</var><a class="copiable-link" href="#index-make_002dcategory_002dset"> &para;</a></span></dt>
+<dd><p>This function returns a new category set&mdash;a bool-vector&mdash;whose initial
+contents are the categories listed in the string <var class="var">categories</var>.  The
+elements of <var class="var">categories</var> should be category names; the new category
+set has <code class="code">t</code> for each of those categories, and <code class="code">nil</code> for all
+other categories.
+</p>
+<div class="example">
+<pre class="example-preformatted">(make-category-set &quot;al&quot;)
+     &rArr; #&amp;128&quot;\0\0\0\0\0\0\0\0\0\0\0\0\2\20\0\0&quot;
+</pre></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-char_002dcategory_002dset"><span class="category-def">Function: </span><span><strong class="def-name">char-category-set</strong> <var class="def-var-arguments">char</var><a class="copiable-link" href="#index-char_002dcategory_002dset"> &para;</a></span></dt>
+<dd><p>This function returns the category set for character <var class="var">char</var> in the
+current buffer&rsquo;s category table.  This is the bool-vector which
+records which categories the character <var class="var">char</var> belongs to.  The
+function <code class="code">char-category-set</code> does not allocate storage, because
+it returns the same bool-vector that exists in the category table.
+</p>
+<div class="example">
+<pre class="example-preformatted">(char-category-set ?a)
+     &rArr; #&amp;128&quot;\0\0\0\0\0\0\0\0\0\0\0\0\2\20\0\0&quot;
+</pre></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-category_002dset_002dmnemonics"><span class="category-def">Function: </span><span><strong class="def-name">category-set-mnemonics</strong> <var class="def-var-arguments">category-set</var><a class="copiable-link" href="#index-category_002dset_002dmnemonics"> &para;</a></span></dt>
+<dd><p>This function converts the category set <var class="var">category-set</var> into a string
+containing the characters that designate the categories that are members
+of the set.
+</p>
+<div class="example">
+<pre class="example-preformatted">(category-set-mnemonics (char-category-set ?a))
+     &rArr; &quot;al&quot;
+</pre></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-modify_002dcategory_002dentry"><span class="category-def">Function: </span><span><strong class="def-name">modify-category-entry</strong> <var class="def-var-arguments">char category &amp;optional table reset</var><a class="copiable-link" href="#index-modify_002dcategory_002dentry"> &para;</a></span></dt>
+<dd><p>This function modifies the category set of <var class="var">char</var> in category
+table <var class="var">table</var> (which defaults to the current buffer&rsquo;s category
+table).  <var class="var">char</var> can be a character, or a cons cell of the form
+<code class="code">(<var class="var">min</var> . <var class="var">max</var>)</code>; in the latter case, the function
+modifies the category sets of all characters in the range between
+<var class="var">min</var> and <var class="var">max</var>, inclusive.
+</p>
+<p>Normally, it modifies a category set by adding <var class="var">category</var> to it.
+But if <var class="var">reset</var> is non-<code class="code">nil</code>, then it deletes <var class="var">category</var>
+instead.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-describe_002dcategories"><span class="category-def">Command: </span><span><strong class="def-name">describe-categories</strong> <var class="def-var-arguments">&amp;optional buffer-or-name</var><a class="copiable-link" href="#index-describe_002dcategories"> &para;</a></span></dt>
+<dd><p>This function describes the category specifications in the current
+category table.  It inserts the descriptions in a buffer, and then
+displays that buffer.  If <var class="var">buffer-or-name</var> is non-<code class="code">nil</code>, it
+describes the category table of that buffer instead.
+</p></dd></dl>
+</div>
+</div>
+<hr>
+<div class="nav-panel">
+<p>
+Next: <a href="Parsing-Expression-Grammars.html#Parsing-Expression-Grammars" accesskey="n" rel="next">Parsing Expression Grammars</a>, Previous: <a href="Searching-and-Matching.html#Searching-and-Matching" accesskey="p" rel="prev">Searching and Matching</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

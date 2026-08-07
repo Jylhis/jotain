@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- Jotain - a GNU Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer.
+
+Copyright © Markus Jylhänkangas. -->
+<title>AI Screenshots (Jotain Emacs Configuration)</title>
+
+<meta name="description" content="AI Screenshots (Jotain Emacs Configuration)">
+<meta name="keywords" content="AI Screenshots (Jotain Emacs Configuration)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Finding-Information-in-Emacs.html" rel="next" title="Finding Information in Emacs">
+<link href="Notebooks.html" rel="prev" title="Notebooks">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+span:hover a.copiable-link {visibility: visible}
+ul.mark-bullet {list-style-type: disc}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="AI-Screenshots">
+<div class="nav-panel">
+<p>
+Next: <a href="Finding-Information-in-Emacs.html" accesskey="n" rel="next">Finding Information in Emacs</a>, Previous: <a href="Notebooks.html" accesskey="p" rel="prev">Notebooks</a>, Up: <a href="index.html" accesskey="u" rel="up">Jotain</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
+</div>
+<h2 class="chapter" id="AI-Screenshots-1"><span>14 AI Screenshots<a class="copiable-link" href="#AI-Screenshots-1"> &para;</a></span></h2>
+
+<p>Jotain can render the current frame to an image file so an AI assistant (or you) can <em class="emph">see</em> how Emacs looks. The capture uses the built-in <code class="code">x-export-frames</code>, which draws the frame straight to PNG/SVG/PDF on cairo builds &mdash; no external screenshot tool, no window-manager wrangling. The technique follows <a class="uref" href="https://emacsredux.com/blog/2026/07/03/automating-emacs-screenshots/">Automating Emacs Screenshots Emacs Redux</a>.
+</p>
+<p>Two entry points share the same code path: an interactive command for live sessions, and a headless <code class="code">just</code> recipe for terminal-only environments such as CI or a cloud agent container.
+</p>
+<ul class="mini-toc">
+<li><a href="#M_002dx-jotain_002dscreenshot" accesskey="1"><code class="code">M-x jotain-screenshot</code></a></li>
+<li><a href="#The-emacs_005fscreenshot-MCP-tool" accesskey="2">The <code class="code">emacs_screenshot</code> MCP tool</a></li>
+<li><a href="#Headless_003a-just-screenshot" accesskey="3">Headless: <code class="code">just screenshot</code></a></li>
+</ul>
+<div class="section-level-extent" id="M_002dx-jotain_002dscreenshot">
+<h3 class="section"><span>14.1 <code class="code">M-x jotain-screenshot</code><a class="copiable-link" href="#M_002dx-jotain_002dscreenshot"> &para;</a></span></h3>
+<p>Captures the selected frame and writes it to <code class="code">var/screenshots/&lt;timestamp&gt;.png</code> (the path is echoed and pushed onto the kill ring). From Lisp, both the output file and the format are parameters:
+</p>
+<pre class="verbatim">(jotain-screenshot)                    ; var/screenshots/&lt;timestamp&gt;.png
+(jotain-screenshot &quot;/tmp/frame.svg&quot; 'svg)
+</pre>
+<p>The command needs a graphical frame on a cairo build (the default Linux X11 build; pgtk also carries cairo). It signals a <code class="code">user-error</code> on tty frames and on builds without <code class="code">x-export-frames</code> &mdash; <code class="code">noGui</code> (nix-on-droid) and the macOS NS port.
+</p>
+</div>
+<div class="section-level-extent" id="The-emacs_005fscreenshot-MCP-tool">
+<h3 class="section"><span>14.2 The <code class="code">emacs_screenshot</code> MCP tool<a class="copiable-link" href="#The-emacs_005fscreenshot-MCP-tool"> &para;</a></span></h3>
+<p><code class="code">init-ai.el</code> registers the command as a custom MCP tool with <a class="uref" href="https://github.com/manzaltu/claude-code-ide.el">claude-code-ide</a>, so a Claude Code session attached to Emacs (<code class="code">C-c q</code>) can call <code class="code">emacs_screenshot</code>, get back the image path, and read the file to see the frame.
+</p>
+<p>For the tool to be served, <code class="code">claude-code-ide-enable-mcp-server</code> must be non-nil &mdash; Jotain now sets it in the <code class="code">claude-code-ide</code> block. This starts a small local MCP server per Claude session (loopback only); it also enables claude-code-ide&rsquo;s built-in Emacs tools for the session.
+</p>
+<p>A typical exchange: ask Claude <em class="emph">&quot;take a screenshot and check the mode line&quot;</em> &mdash; it calls <code class="code">emacs_screenshot</code>, then views the returned PNG.
+</p>
+</div>
+<div class="section-level-extent" id="Headless_003a-just-screenshot">
+<h3 class="section"><span>14.3 Headless: <code class="code">just screenshot</code><a class="copiable-link" href="#Headless_003a-just-screenshot"> &para;</a></span></h3>
+<p>For environments with no display at all &mdash; CI, a cloud agent container, an SSH box &mdash; the <code class="code">screenshot</code> recipe builds Emacs via Nix, launches it with this repo&rsquo;s config under a virtual X server (Xvfb, 1920×1080), captures the frame once startup settles, and exits:
+</p>
+<pre class="verbatim">just screenshot                      # → var/screenshots/headless.png
+just screenshot /tmp/frame.png       # explicit output path
+</pre>
+<p><code class="code">xvfb-run</code> comes from the devenv shell (Linux only &mdash; Xvfb is X11, and the macOS ports lack <code class="code">x-export-frames</code> anyway). Exit status is 0 on success, 2 if init or the capture failed, non-zero from <code class="code">timeout</code> if the run wedged.
+</p>
+<p>Caveats:
+</p>
+<ul class="itemize mark-bullet">
+<li><strong class="strong">First run is slow.</strong> It pays a full <code class="code">nix-build</code> (binary-cache pull of a multi-GB closure) plus the MELPA bootstrap of every package during init, and needs network for both. The recipe wraps the run in <code class="code">timeout 600</code>; raise it if a cold cache needs more.
+</li><li><strong class="strong">Fonts may differ.</strong> If fontconfig doesn&rsquo;t see the devenv-shell fonts, Xvfb falls back to whatever is available &mdash; the capture still succeeds, just less faithful to your desktop.
+</li><li><code class="code">var/screenshots/</code> lives under <code class="code">var/</code>, so it is gitignored and wiped by <code class="code">just clean-all</code>.
+</li></ul>
+
+</div>
+</div>
+<hr>
+<div class="nav-panel">
+<p>
+Next: <a href="Finding-Information-in-Emacs.html" accesskey="n" rel="next">Finding Information in Emacs</a>, Previous: <a href="Notebooks.html" accesskey="p" rel="prev">Notebooks</a>, Up: <a href="index.html" accesskey="u" rel="up">Jotain</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
+</div>
+
+
+
+</body>
+</html>

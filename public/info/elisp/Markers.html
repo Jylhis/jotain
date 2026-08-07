@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.0.91.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Markers (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Markers (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Markers (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Text.html#Text" rel="next" title="Text">
+<link href="Positions.html#Positions" rel="prev" title="Positions">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+span.r {font-family: initial; font-weight: normal; font-style: normal}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Markers">
+<div class="nav-panel">
+<p>
+Next: <a href="Text.html#Text" accesskey="n" rel="next">Text</a>, Previous: <a href="Positions.html#Positions" accesskey="p" rel="prev">Positions</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h2 class="chapter" id="Markers-1"><span>32 Markers<a class="copiable-link" href="#Markers-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-markers"></a>
+
+<p>A <em class="dfn">marker</em> is a Lisp object used to specify a position in a buffer
+relative to the surrounding text.  A marker changes its offset from the
+beginning of the buffer automatically whenever text is inserted or
+deleted, so that it stays with the two characters on either side of it.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Overview-of-Markers" accesskey="1">Overview of Markers</a></li>
+<li><a href="#Predicates-on-Markers" accesskey="2">Predicates on Markers</a></li>
+<li><a href="#Creating-Markers" accesskey="3">Functions that Create Markers</a></li>
+<li><a href="#Information-from-Markers" accesskey="4">Information from Markers</a></li>
+<li><a href="#Marker-Insertion-Types" accesskey="5">Marker Insertion Types</a></li>
+<li><a href="#Moving-Markers" accesskey="6">Moving Marker Positions</a></li>
+<li><a href="#The-Mark" accesskey="7">The Mark</a></li>
+<li><a href="#The-Region" accesskey="8">The Region</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Overview-of-Markers">
+<div class="nav-panel">
+<p>
+Next: <a href="#Predicates-on-Markers" accesskey="n" rel="next">Predicates on Markers</a>, Up: <a href="#Markers" accesskey="u" rel="up">Markers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Overview-of-Markers-1"><span>32.1 Overview of Markers<a class="copiable-link" href="#Overview-of-Markers-1"> &para;</a></span></h3>
+
+<p>A marker specifies a buffer and a position in that buffer.  A
+marker can be used to represent a position in functions that
+require one, just as an integer could be used.  In that case, the
+marker&rsquo;s buffer is normally ignored.  Of course, a marker used in this
+way usually points to a position in the buffer that the function
+operates on, but that is entirely the programmer&rsquo;s responsibility.
+See <a class="xref" href="Positions.html#Positions">Positions</a>, for a complete description of positions.
+</p>
+<p>A marker has three attributes: the marker position, the marker
+buffer, and the insertion type.  The marker position is an integer
+that is equivalent (at a given time) to the marker as a position in
+that buffer.  But the marker&rsquo;s position value can change during
+the life of the marker, and often does.  Insertion and deletion of
+text in the buffer relocate the marker.  The idea is that a marker
+positioned between two characters remains between those two characters
+despite insertion and deletion elsewhere in the buffer.  Relocation
+changes the integer equivalent of the marker.
+</p>
+<a class="index-entry-id" id="index-marker-relocation"></a>
+<p>Deleting text around a marker&rsquo;s position leaves the marker between the
+characters immediately before and after the deleted text.  Inserting
+text at the position of a marker normally leaves the marker either in
+front of or after the new text, depending on the marker&rsquo;s <em class="dfn">insertion
+type</em> (see <a class="pxref" href="#Marker-Insertion-Types">Marker Insertion Types</a>)&mdash;unless the insertion is done
+with <code class="code">insert-before-markers</code> (see <a class="pxref" href="Text.html#Insertion">Inserting Text</a>).
+</p>
+<a class="index-entry-id" id="index-marker-garbage-collection"></a>
+<p>Insertion and deletion in a buffer must check all the markers and
+relocate them if necessary.  This slows processing in a buffer with a
+large number of markers.  For this reason, it is a good idea to make a
+marker point nowhere if you are sure you don&rsquo;t need it any more.
+Markers that can no longer be accessed are eventually removed
+(see <a class="pxref" href="GNU-Emacs-Internals.html#Garbage-Collection">Garbage Collection</a>).
+</p>
+<a class="index-entry-id" id="index-markers-as-numbers"></a>
+<p>Because it is common to perform arithmetic operations on a marker
+position, most of these operations (including <code class="code">+</code> and
+<code class="code">-</code>) accept markers as arguments.  In such cases, the marker
+stands for its current position.
+</p>
+<p>Here are examples of creating markers, setting markers, and moving point
+to markers:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">;; <span class="r">Make a new marker that initially does not point anywhere:</span>
+(setq m1 (make-marker))
+     &rArr; #&lt;marker in no buffer&gt;
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; <span class="r">Set <code class="code">m1</code> to point between the 99th and 100th characters</span>
+;;   <span class="r">in the current buffer:</span>
+(set-marker m1 100)
+     &rArr; #&lt;marker at 100 in markers.texi&gt;
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; <span class="r">Now insert one character at the beginning of the buffer:</span>
+(goto-char (point-min))
+     &rArr; 1
+(insert &quot;Q&quot;)
+     &rArr; nil
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; <span class="r"><code class="code">m1</code> is updated appropriately.</span>
+m1
+     &rArr; #&lt;marker at 101 in markers.texi&gt;
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; <span class="r">Two markers that point to the same position</span>
+;;   <span class="r">are not <code class="code">eq</code>, but they are <code class="code">equal</code>.</span>
+(setq m2 (copy-marker m1))
+     &rArr; #&lt;marker at 101 in markers.texi&gt;
+(eq m1 m2)
+     &rArr; nil
+(equal m1 m2)
+     &rArr; t
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; <span class="r">When you are finished using a marker, make it point nowhere.</span>
+(set-marker m1 nil)
+     &rArr; #&lt;marker in no buffer&gt;
+</pre></div></div>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Predicates-on-Markers">
+<div class="nav-panel">
+<p>
+Next: <a href="#Creating-Markers" accesskey="n" rel="next">Functions that Create Markers</a>, Previous: <a href="#Overview-of-Markers" accesskey="p" rel="prev">Overview of Markers</a>, Up: <a href="#Markers" accesskey="u" rel="up">Markers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Predicates-on-Markers-1"><span>32.2 Predicates on Markers<a class="copiable-link" href="#Predicates-on-Markers-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-predicates-for-markers"></a>
+<a class="index-entry-id" id="index-markers_002c-predicates-for"></a>
+
+<p>You can test an object to see whether it is a marker, or whether it is
+either an integer or a marker.  The latter test is useful in connection
+with the arithmetic functions that work with both markers and integers.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-markerp"><span class="category-def">Function: </span><span><strong class="def-name">markerp</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-markerp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is a marker, <code class="code">nil</code>
+otherwise.  Note that integers are not markers, even though many
+functions will accept either a marker or an integer.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-integer_002dor_002dmarker_002dp"><span class="category-def">Function: </span><span><strong class="def-name">integer-or-marker-p</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-integer_002dor_002dmarker_002dp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is an integer or a marker,
+<code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-number_002dor_002dmarker_002dp"><span class="category-def">Function: </span><span><strong class="def-name">number-or-marker-p</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-number_002dor_002dmarker_002dp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is a number (either
+integer or floating point) or a marker, <code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Creating-Markers">
+<div class="nav-panel">
+<p>
+Next: <a href="#Information-from-Markers" accesskey="n" rel="next">Information from Markers</a>, Previous: <a href="#Predicates-on-Markers" accesskey="p" rel="prev">Predicates on Markers</a>, Up: <a href="#Markers" accesskey="u" rel="up">Markers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Functions-that-Create-Markers"><span>32.3 Functions that Create Markers<a class="copiable-link" href="#Functions-that-Create-Markers"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-creating-markers"></a>
+<a class="index-entry-id" id="index-marker-creation"></a>
+
+<p>When you create a new marker, you can make it point nowhere, or point
+to the present position of point, or to the beginning or end of the
+accessible portion of the buffer, or to the same place as another given
+marker.
+</p>
+<p>The next four functions all return markers with insertion type
+<code class="code">nil</code>.  See <a class="xref" href="#Marker-Insertion-Types">Marker Insertion Types</a>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-make_002dmarker"><span class="category-def">Function: </span><span><strong class="def-name">make-marker</strong><a class="copiable-link" href="#index-make_002dmarker"> &para;</a></span></dt>
+<dd><p>This function returns a newly created marker that does not point
+anywhere.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(make-marker)
+     &rArr; #&lt;marker in no buffer&gt;
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-point_002dmarker"><span class="category-def">Function: </span><span><strong class="def-name">point-marker</strong><a class="copiable-link" href="#index-point_002dmarker"> &para;</a></span></dt>
+<dd><p>This function returns a new marker that points to the present position
+of point in the current buffer.  See <a class="xref" href="Positions.html#Point">Point</a>.  For an example, see
+<code class="code">copy-marker</code>, below.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-point_002dmin_002dmarker"><span class="category-def">Function: </span><span><strong class="def-name">point-min-marker</strong><a class="copiable-link" href="#index-point_002dmin_002dmarker"> &para;</a></span></dt>
+<dd><p>This function returns a new marker that points to the beginning of the
+accessible portion of the buffer.  This will be the beginning of the
+buffer unless narrowing is in effect.  See <a class="xref" href="Positions.html#Narrowing">Narrowing</a>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-point_002dmax_002dmarker"><span class="category-def">Function: </span><span><strong class="def-name">point-max-marker</strong><a class="copiable-link" href="#index-point_002dmax_002dmarker"> &para;</a></span></dt>
+<dd><p>This function returns a new marker that points to the end of the
+accessible portion of the buffer.  This will be the end of the buffer
+unless narrowing is in effect.  See <a class="xref" href="Positions.html#Narrowing">Narrowing</a>.
+</p>
+<p>Here are examples of this function and <code class="code">point-min-marker</code>, shown in
+a buffer containing a version of the source file for the text of this
+chapter.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(point-min-marker)
+     &rArr; #&lt;marker at 1 in markers.texi&gt;
+(point-max-marker)
+     &rArr; #&lt;marker at 24080 in markers.texi&gt;
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(narrow-to-region 100 200)
+     &rArr; nil
+</pre></div><div class="group"><pre class="example-preformatted">(point-min-marker)
+     &rArr; #&lt;marker at 100 in markers.texi&gt;
+</pre></div><div class="group"><pre class="example-preformatted">(point-max-marker)
+     &rArr; #&lt;marker at 200 in markers.texi&gt;
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-copy_002dmarker"><span class="category-def">Function: </span><span><strong class="def-name">copy-marker</strong> <var class="def-var-arguments">&amp;optional marker-or-integer insertion-type</var><a class="copiable-link" href="#index-copy_002dmarker"> &para;</a></span></dt>
+<dd><p>If passed a marker as its argument, <code class="code">copy-marker</code> returns a
+new marker that points to the same place and the same buffer as does
+<var class="var">marker-or-integer</var>.  If passed an integer as its argument,
+<code class="code">copy-marker</code> returns a new marker that points to position
+<var class="var">marker-or-integer</var> in the current buffer.
+</p>
+<p>The new marker&rsquo;s insertion type is specified by the argument
+<var class="var">insertion-type</var>.  See <a class="xref" href="#Marker-Insertion-Types">Marker Insertion Types</a>.
+</p>
+
+<div class="example">
+<div class="group"><pre class="example-preformatted">(copy-marker 0)
+     &rArr; #&lt;marker at 1 in markers.texi&gt;
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(copy-marker 90000)
+     &rArr; #&lt;marker at 24080 in markers.texi&gt;
+</pre></div></div>
+
+<p>An error is signaled if <var class="var">marker</var> is neither a marker nor an
+integer.
+</p></dd></dl>
+
+<p>Two distinct markers are considered <code class="code">equal</code> (even though not
+<code class="code">eq</code>) to each other if they have the same position and buffer, or
+if they both point nowhere.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq p (point-marker))
+     &rArr; #&lt;marker at 2139 in markers.texi&gt;
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(setq q (copy-marker p))
+     &rArr; #&lt;marker at 2139 in markers.texi&gt;
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(eq p q)
+     &rArr; nil
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(equal p q)
+     &rArr; t
+</pre></div></div>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Information-from-Markers">
+<div class="nav-panel">
+<p>
+Next: <a href="#Marker-Insertion-Types" accesskey="n" rel="next">Marker Insertion Types</a>, Previous: <a href="#Creating-Markers" accesskey="p" rel="prev">Functions that Create Markers</a>, Up: <a href="#Markers" accesskey="u" rel="up">Markers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Information-from-Markers-1"><span>32.4 Information from Markers<a class="copiable-link" href="#Information-from-Markers-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-marker-information"></a>
+
+<p>This section describes the functions for accessing the components of a
+marker object.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-marker_002dposition"><span class="category-def">Function: </span><span><strong class="def-name">marker-position</strong> <var class="def-var-arguments">marker</var><a class="copiable-link" href="#index-marker_002dposition"> &para;</a></span></dt>
+<dd><p>This function returns the position that <var class="var">marker</var> points to, or
+<code class="code">nil</code> if it points nowhere.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-marker_002dlast_002dposition"><span class="category-def">Function: </span><span><strong class="def-name">marker-last-position</strong> <var class="def-var-arguments">marker</var><a class="copiable-link" href="#index-marker_002dlast_002dposition"> &para;</a></span></dt>
+<dd><p>This function returns the last known position of <var class="var">marker</var> in its
+buffer.  It behaves like <code class="code">marker-position</code> with one exception: if
+the buffer of <var class="var">marker</var> has been killed, it returns the last position
+of <var class="var">marker</var> in that buffer before the buffer was killed, instead of
+returning <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-marker_002dbuffer"><span class="category-def">Function: </span><span><strong class="def-name">marker-buffer</strong> <var class="def-var-arguments">marker</var><a class="copiable-link" href="#index-marker_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function returns the buffer that <var class="var">marker</var> points into, or
+<code class="code">nil</code> if it points nowhere.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq m (make-marker))
+     &rArr; #&lt;marker in no buffer&gt;
+</pre></div><div class="group"><pre class="example-preformatted">(marker-position m)
+     &rArr; nil
+</pre></div><div class="group"><pre class="example-preformatted">(marker-buffer m)
+     &rArr; nil
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(set-marker m 3770 (current-buffer))
+     &rArr; #&lt;marker at 3770 in markers.texi&gt;
+</pre></div><div class="group"><pre class="example-preformatted">(marker-buffer m)
+     &rArr; #&lt;buffer markers.texi&gt;
+</pre></div><div class="group"><pre class="example-preformatted">(marker-position m)
+     &rArr; 3770
+</pre></div></div>
+</dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Marker-Insertion-Types">
+<div class="nav-panel">
+<p>
+Next: <a href="#Moving-Markers" accesskey="n" rel="next">Moving Marker Positions</a>, Previous: <a href="#Information-from-Markers" accesskey="p" rel="prev">Information from Markers</a>, Up: <a href="#Markers" accesskey="u" rel="up">Markers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Marker-Insertion-Types-1"><span>32.5 Marker Insertion Types<a class="copiable-link" href="#Marker-Insertion-Types-1"> &para;</a></span></h3>
+
+<a class="index-entry-id" id="index-insertion-type-of-a-marker"></a>
+<p>When you insert text directly at the place where a marker points,
+there are two possible ways to relocate that marker: it can point before
+the inserted text, or point after it.  You can specify which one a given
+marker should do by setting its <em class="dfn">insertion type</em>.  Note that use of
+<code class="code">insert-before-markers</code> ignores markers&rsquo; insertion types, always
+relocating a marker to point after the inserted text.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dmarker_002dinsertion_002dtype"><span class="category-def">Function: </span><span><strong class="def-name">set-marker-insertion-type</strong> <var class="def-var-arguments">marker type</var><a class="copiable-link" href="#index-set_002dmarker_002dinsertion_002dtype"> &para;</a></span></dt>
+<dd><p>This function sets the insertion type of marker <var class="var">marker</var> to
+<var class="var">type</var>.  If <var class="var">type</var> is <code class="code">t</code>, <var class="var">marker</var> will advance when
+text is inserted at its position.  If <var class="var">type</var> is <code class="code">nil</code>,
+<var class="var">marker</var> does not advance when text is inserted there.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-marker_002dinsertion_002dtype"><span class="category-def">Function: </span><span><strong class="def-name">marker-insertion-type</strong> <var class="def-var-arguments">marker</var><a class="copiable-link" href="#index-marker_002dinsertion_002dtype"> &para;</a></span></dt>
+<dd><p>This function reports the current insertion type of <var class="var">marker</var>.
+</p></dd></dl>
+
+<p>All functions that create markers without accepting an argument that
+specifies the insertion type, create them with insertion type
+<code class="code">nil</code> (see <a class="pxref" href="#Creating-Markers">Functions that Create Markers</a>).  Also, the mark has, by
+default, insertion type <code class="code">nil</code>.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Moving-Markers">
+<div class="nav-panel">
+<p>
+Next: <a href="#The-Mark" accesskey="n" rel="next">The Mark</a>, Previous: <a href="#Marker-Insertion-Types" accesskey="p" rel="prev">Marker Insertion Types</a>, Up: <a href="#Markers" accesskey="u" rel="up">Markers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Moving-Marker-Positions"><span>32.6 Moving Marker Positions<a class="copiable-link" href="#Moving-Marker-Positions"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-moving-markers"></a>
+<a class="index-entry-id" id="index-marker_002c-how-to-move-position"></a>
+
+<p>This section describes how to change the position of an existing
+marker.  When you do this, be sure you know whether the marker is used
+outside of your program, and, if so, what effects will result from
+moving it&mdash;otherwise, confusing things may happen in other parts of
+Emacs.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dmarker"><span class="category-def">Function: </span><span><strong class="def-name">set-marker</strong> <var class="def-var-arguments">marker position &amp;optional buffer</var><a class="copiable-link" href="#index-set_002dmarker"> &para;</a></span></dt>
+<dd><p>This function moves <var class="var">marker</var> to <var class="var">position</var>
+in <var class="var">buffer</var>.  If <var class="var">buffer</var> is not provided, it defaults to
+the current buffer.
+</p>
+<p>If <var class="var">position</var> is <code class="code">nil</code> or a marker that points nowhere, then
+<var class="var">marker</var> is set to point nowhere.
+</p>
+<p>The value returned is <var class="var">marker</var>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq m (point-marker))
+     &rArr; #&lt;marker at 4714 in markers.texi&gt;
+</pre></div><div class="group"><pre class="example-preformatted">(set-marker m 55)
+     &rArr; #&lt;marker at 55 in markers.texi&gt;
+</pre></div><div class="group"><pre class="example-preformatted">(setq b (get-buffer &quot;foo&quot;))
+     &rArr; #&lt;buffer foo&gt;
+</pre></div><div class="group"><pre class="example-preformatted">(set-marker m 0 b)
+     &rArr; #&lt;marker at 1 in foo&gt;
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-move_002dmarker"><span class="category-def">Function: </span><span><strong class="def-name">move-marker</strong> <var class="def-var-arguments">marker position &amp;optional buffer</var><a class="copiable-link" href="#index-move_002dmarker"> &para;</a></span></dt>
+<dd><p>This is another name for <code class="code">set-marker</code>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="The-Mark">
+<div class="nav-panel">
+<p>
+Next: <a href="#The-Region" accesskey="n" rel="next">The Region</a>, Previous: <a href="#Moving-Markers" accesskey="p" rel="prev">Moving Marker Positions</a>, Up: <a href="#Markers" accesskey="u" rel="up">Markers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="The-Mark-1"><span>32.7 The Mark<a class="copiable-link" href="#The-Mark-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-mark_002c-the"></a>
+
+<p>Each buffer has a special marker, which is designated <em class="dfn">the
+mark</em>.  When a buffer is newly created, this marker exists but does
+not point anywhere; this means that the mark doesn&rsquo;t exist in that
+buffer yet.  Subsequent commands can set the mark.
+</p>
+<p>The mark specifies a position to bound a range of text for many
+commands, such as <code class="code">kill-region</code> and <code class="code">indent-rigidly</code>.  These
+commands typically act on the text between point and the mark, which
+is called the <em class="dfn">region</em>.  If you are writing a command that
+operates on the region, don&rsquo;t examine the mark directly; instead, use
+<code class="code">interactive</code> with the &lsquo;<samp class="samp">r</samp>&rsquo; specification.  This provides the
+values of point and the mark as arguments to the command in an
+interactive call, but permits other Lisp programs to specify arguments
+explicitly.  See <a class="xref" href="Command-Loop.html#Interactive-Codes">Code Characters for <code class="code">interactive</code></a>.
+</p>
+<p>Some commands set the mark as a side-effect.  Commands should do
+this only if it has a potential use to the user, and never for their
+own internal purposes.  For example, the <code class="code">replace-regexp</code> command
+sets the mark to the value of point before doing any replacements,
+because this enables the user to move back there conveniently after
+the replace is finished.
+</p>
+<p>Once the mark exists in a buffer, it normally never ceases to
+exist.  However, it may become <em class="dfn">inactive</em>, if Transient Mark mode
+is enabled.  The buffer-local variable <code class="code">mark-active</code>, if
+non-<code class="code">nil</code>, means that the mark is active.  A command can call the
+function <code class="code">deactivate-mark</code> to deactivate the mark directly, or it
+can request deactivation of the mark upon return to the editor command
+loop by setting the variable <code class="code">deactivate-mark</code> to a
+non-<code class="code">nil</code> value.
+</p>
+<p>If Transient Mark mode is enabled, certain editing commands that
+normally apply to text near point, apply instead to the region when
+the mark is active.  This is the main motivation for using Transient
+Mark mode.  (Another is that this enables highlighting of the region
+when the mark is active.  See <a class="xref" href="Display.html#Display">Emacs Display</a>.)
+</p>
+<a class="index-entry-id" id="index-mark-ring"></a>
+<p>In addition to the mark, each buffer has a <em class="dfn">mark ring</em> which is a
+list of markers containing previous values of the mark.  When editing
+commands change the mark, they should normally save the old value of the
+mark on the mark ring.  The variable <code class="code">mark-ring-max</code> specifies the
+maximum number of entries in the mark ring; once the list becomes this
+long, adding a new element deletes the last element.
+</p>
+<p>There is also a separate global mark ring, but that is used only in a
+few particular user-level commands, and is not relevant to Lisp
+programming.  So we do not describe it here.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-mark"><span class="category-def">Function: </span><span><strong class="def-name">mark</strong> <var class="def-var-arguments">&amp;optional force</var><a class="copiable-link" href="#index-mark"> &para;</a></span></dt>
+<dd><a class="index-entry-id" id="index-current-buffer-mark"></a>
+<p>This function returns the current buffer&rsquo;s mark position as an integer,
+or <code class="code">nil</code> if no mark has ever been set in this buffer.
+</p>
+<p>If Transient Mark mode is enabled, and <code class="code">mark-even-if-inactive</code> is
+<code class="code">nil</code>, <code class="code">mark</code> signals an error if the mark is inactive.
+However, if <var class="var">force</var> is non-<code class="code">nil</code>, then <code class="code">mark</code> disregards
+inactivity of the mark, and returns the mark position (or <code class="code">nil</code>)
+anyway.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-mark_002dmarker"><span class="category-def">Function: </span><span><strong class="def-name">mark-marker</strong><a class="copiable-link" href="#index-mark_002dmarker"> &para;</a></span></dt>
+<dd><p>This function returns the marker that represents the current buffer&rsquo;s
+mark.  It is not a copy, it is the marker used internally.  Therefore,
+changing this marker&rsquo;s position will directly affect the buffer&rsquo;s
+mark.  Don&rsquo;t do that unless that is the effect you want.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq m (mark-marker))
+     &rArr; #&lt;marker at 3420 in markers.texi&gt;
+</pre></div><div class="group"><pre class="example-preformatted">(set-marker m 100)
+     &rArr; #&lt;marker at 100 in markers.texi&gt;
+</pre></div><div class="group"><pre class="example-preformatted">(mark-marker)
+     &rArr; #&lt;marker at 100 in markers.texi&gt;
+</pre></div></div>
+
+<p>Like any marker, this marker can be set to point at any buffer you
+like.  If you make it point at any buffer other than the one of which
+it is the mark, it will yield perfectly consistent, but rather odd,
+results.  We recommend that you not do it!
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dmark"><span class="category-def">Function: </span><span><strong class="def-name">set-mark</strong> <var class="def-var-arguments">position</var><a class="copiable-link" href="#index-set_002dmark"> &para;</a></span></dt>
+<dd><p>This function sets the mark to <var class="var">position</var>, and activates the mark.
+The old value of the mark is <em class="emph">not</em> pushed onto the mark ring.
+</p>
+<p><strong class="strong">Please note:</strong> Use this function only if you want the user to
+see that the mark has moved, and you want the previous mark position to
+be lost.  Normally, when a new mark is set, the old one should go on the
+<code class="code">mark-ring</code>.  For this reason, most applications should use
+<code class="code">push-mark</code> and <code class="code">pop-mark</code>, not <code class="code">set-mark</code>.
+</p>
+<p>Novice Emacs Lisp programmers often try to use the mark for the wrong
+purposes.  The mark saves a location for the user&rsquo;s convenience.  An
+editing command should not alter the mark unless altering the mark is
+part of the user-level functionality of the command.  (And, in that
+case, this effect should be documented.)  To remember a location for
+internal use in the Lisp program, store it in a Lisp variable.  For
+example:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(let ((beg (point)))
+  (forward-line 1)
+  (delete-region beg (point))).
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-push_002dmark"><span class="category-def">Function: </span><span><strong class="def-name">push-mark</strong> <var class="def-var-arguments">&amp;optional position nomsg activate</var><a class="copiable-link" href="#index-push_002dmark"> &para;</a></span></dt>
+<dd><p>This function sets the current buffer&rsquo;s mark to <var class="var">position</var>, and
+pushes a copy of the previous mark onto <code class="code">mark-ring</code>.  If
+<var class="var">position</var> is <code class="code">nil</code>, then the value of point is used.
+</p>
+<p>The function <code class="code">push-mark</code> normally <em class="emph">does not</em> activate the
+mark.  To do that, specify <code class="code">t</code> for the argument <var class="var">activate</var>.
+</p>
+<p>A &lsquo;<samp class="samp">Mark set</samp>&rsquo; message is displayed unless <var class="var">nomsg</var> is
+non-<code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-pop_002dmark"><span class="category-def">Function: </span><span><strong class="def-name">pop-mark</strong><a class="copiable-link" href="#index-pop_002dmark"> &para;</a></span></dt>
+<dd><p>This function pops off the top element of <code class="code">mark-ring</code> and makes
+that mark become the buffer&rsquo;s actual mark.  This does not move point in
+the buffer, and it does nothing if <code class="code">mark-ring</code> is empty.  It
+deactivates the mark.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-transient_002dmark_002dmode"><span class="category-def">User Option: </span><span><strong class="def-name">transient-mark-mode</strong><a class="copiable-link" href="#index-transient_002dmark_002dmode"> &para;</a></span></dt>
+<dd><p>This variable, if non-<code class="code">nil</code>, enables Transient Mark mode.  In
+Transient Mark mode, every buffer-modifying primitive sets
+<code class="code">deactivate-mark</code>.  As a consequence, most commands that modify
+the buffer also deactivate the mark.
+</p>
+<p>When Transient Mark mode is enabled and the mark is active, many
+commands that normally apply to the text near point instead apply to
+the region.  Such commands should use the function <code class="code">use-region-p</code>
+to test whether they should operate on the region.  See <a class="xref" href="#The-Region">The Region</a>.
+</p>
+<p>Lisp programs can set <code class="code">transient-mark-mode</code> to non-<code class="code">nil</code>,
+non-<code class="code">t</code> values to enable Transient Mark mode temporarily.  If the
+value is <code class="code">lambda</code>, Transient Mark mode is automatically turned
+off after any action, such as buffer modification, that would normally
+deactivate the mark.  If the value is <code class="code">(only&nbsp;.&nbsp;<var class="var">oldval</var>)</code><!-- /@w -->,
+then <code class="code">transient-mark-mode</code> is set to the value <var class="var">oldval</var> after
+any subsequent command that moves point and is not shift-translated
+(see <a class="pxref" href="Command-Loop.html#Key-Sequence-Input">shift-translation</a>), or after any other
+action that would normally deactivate the mark.  (Marking a region
+with the mouse will temporarily enable <code class="code">transient-mark-mode</code> in
+this way.)
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-mark_002deven_002dif_002dinactive"><span class="category-def">User Option: </span><span><strong class="def-name">mark-even-if-inactive</strong><a class="copiable-link" href="#index-mark_002deven_002dif_002dinactive"> &para;</a></span></dt>
+<dd><p>If this is non-<code class="code">nil</code>, Lisp programs and the Emacs user can use the
+mark even when it is inactive.  This option affects the behavior of
+Transient Mark mode.  When the option is non-<code class="code">nil</code>, deactivation of
+the mark turns off region highlighting, but commands that use the mark
+behave as if the mark were still active.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-deactivate_002dmark-1"><span class="category-def">Variable: </span><span><strong class="def-name">deactivate-mark</strong><a class="copiable-link" href="#index-deactivate_002dmark-1"> &para;</a></span></dt>
+<dd><p>If an editor command sets this variable non-<code class="code">nil</code>, then the editor
+command loop deactivates the mark after the command returns (if
+Transient Mark mode is enabled).  All the primitives that change the
+buffer set <code class="code">deactivate-mark</code>, to deactivate the mark when the
+command is finished.  Setting this variable makes it buffer-local.
+</p>
+<p>To write Lisp code that modifies the buffer without causing
+deactivation of the mark at the end of the command, bind
+<code class="code">deactivate-mark</code> to <code class="code">nil</code> around the code that does the
+modification.  For example:
+</p>
+<div class="example">
+<pre class="example-preformatted">(let (deactivate-mark)
+  (insert &quot; &quot;))
+</pre></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-deactivate_002dmark"><span class="category-def">Function: </span><span><strong class="def-name">deactivate-mark</strong> <var class="def-var-arguments">&amp;optional force</var><a class="copiable-link" href="#index-deactivate_002dmark"> &para;</a></span></dt>
+<dd><p>If Transient Mark mode is enabled or <var class="var">force</var> is non-<code class="code">nil</code>,
+this function deactivates the mark and runs the normal hook
+<code class="code">deactivate-mark-hook</code>.  Otherwise, it does nothing.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-mark_002dactive"><span class="category-def">Variable: </span><span><strong class="def-name">mark-active</strong><a class="copiable-link" href="#index-mark_002dactive"> &para;</a></span></dt>
+<dd><p>The mark is active when this variable is non-<code class="code">nil</code>.  This
+variable is always buffer-local in each buffer.  Do <em class="emph">not</em> use the
+value of this variable to decide whether a command that normally
+operates on text near point should operate on the region instead.  Use
+the function <code class="code">use-region-p</code> for that (see <a class="pxref" href="#The-Region">The Region</a>).
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-activate_002dmark_002dhook"><span class="category-def">Variable: </span><span><strong class="def-name">activate-mark-hook</strong><a class="copiable-link" href="#index-activate_002dmark_002dhook"> &para;</a></span></dt>
+<dt class="defvrx defvarx-alias-defvrx def-cmd-defvr def-line" id="index-deactivate_002dmark_002dhook"><span class="category-def">Variable: </span><span><strong class="def-name">deactivate-mark-hook</strong><a class="copiable-link" href="#index-deactivate_002dmark_002dhook"> &para;</a></span></dt>
+<dd><p>These normal hooks are run, respectively, when the mark becomes active
+and when it becomes inactive.  The hook <code class="code">activate-mark-hook</code> is
+also run when the region is reactivated, for instance after using a
+command that switches back to a buffer that has an active mark.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-handle_002dshift_002dselection"><span class="category-def">Function: </span><span><strong class="def-name">handle-shift-selection</strong><a class="copiable-link" href="#index-handle_002dshift_002dselection"> &para;</a></span></dt>
+<dd><p>This function implements the shift-selection behavior of
+point-motion commands.  See <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Shift-Selection.html#Shift-Selection">Shift Selection</a> in <cite class="cite">The GNU Emacs
+Manual</cite>.  It is called automatically by the Emacs command loop
+whenever a command with a &lsquo;<samp class="samp">^</samp>&rsquo; character in its <code class="code">interactive</code>
+spec is invoked, before the command itself is executed
+(see <a class="pxref" href="Command-Loop.html#Interactive-Codes">^</a>).
+</p>
+<p>If <code class="code">shift-select-mode</code> is non-<code class="code">nil</code> and the current command
+was invoked via shift translation (see <a class="pxref" href="Command-Loop.html#Key-Sequence-Input">shift-translation</a>), this function sets the mark and temporarily
+activates the region, unless the region was already temporarily
+activated in this way.  Otherwise, if the region has been activated
+temporarily, it deactivates the mark and restores the variable
+<code class="code">transient-mark-mode</code> to its earlier value.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-mark_002dring"><span class="category-def">Variable: </span><span><strong class="def-name">mark-ring</strong><a class="copiable-link" href="#index-mark_002dring"> &para;</a></span></dt>
+<dd><p>The value of this buffer-local variable is the list of saved former
+marks of the current buffer, most recent first.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">mark-ring
+&rArr; (#&lt;marker at 11050 in markers.texi&gt;
+    #&lt;marker at 10832 in markers.texi&gt;
+    ...)
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-mark_002dring_002dmax"><span class="category-def">User Option: </span><span><strong class="def-name">mark-ring-max</strong><a class="copiable-link" href="#index-mark_002dring_002dmax"> &para;</a></span></dt>
+<dd><p>The value of this variable is the maximum size of <code class="code">mark-ring</code>.  If
+more marks than this are pushed onto the <code class="code">mark-ring</code>,
+<code class="code">push-mark</code> discards an old mark when it adds a new one.
+</p></dd></dl>
+
+
+<a class="index-entry-id" id="index-delete_002dselection_002c-symbol-property"></a>
+<a class="index-entry-id" id="index-delete_002dselection_002dhelper"></a>
+<a class="index-entry-id" id="index-delete_002dselection_002dpre_002dhook"></a>
+<p>When Delete Selection mode (see <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Using-Region.html#Using-Region">Delete Selection</a> in <cite class="cite">The GNU Emacs Manual</cite>) is enabled, commands that operate on the
+active region (a.k.a. &ldquo;selection&rdquo;) behave slightly differently.
+This works by adding the function <code class="code">delete-selection-pre-hook</code> to
+the <code class="code">pre-command-hook</code> (see <a class="pxref" href="Command-Loop.html#Command-Overview">Command Loop Overview</a>).  That function
+calls <code class="code">delete-selection-helper</code> to delete the selection as
+appropriate for the command.  If you want to adapt a command to Delete
+Selection mode, put the <code class="code">delete-selection</code> property on the
+function&rsquo;s symbol (see <a class="pxref" href="Symbols.html#Symbol-Plists">Accessing Symbol Properties</a>); commands that don&rsquo;t have
+this property on their symbol won&rsquo;t delete the selection.  This
+property can have one of several values to tailor the behavior to what
+the command is supposed to do; see the doc strings of
+<code class="code">delete-selection-pre-hook</code> and <code class="code">delete-selection-helper</code>
+for the details.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="The-Region">
+<div class="nav-panel">
+<p>
+Previous: <a href="#The-Mark" accesskey="p" rel="prev">The Mark</a>, Up: <a href="#Markers" accesskey="u" rel="up">Markers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="The-Region-1"><span>32.8 The Region<a class="copiable-link" href="#The-Region-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-region"></a>
+
+<p>The text between point and the mark is known as <em class="dfn">the region</em>.
+Various functions operate on text delimited by point and the mark, but
+only those functions specifically related to the region itself are
+described here.
+</p>
+<p>The next two functions signal an error if the mark does not point
+anywhere.  If Transient Mark mode is enabled and
+<code class="code">mark-even-if-inactive</code> is <code class="code">nil</code>, they also signal an error
+if the mark is inactive.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-region_002dbeginning"><span class="category-def">Function: </span><span><strong class="def-name">region-beginning</strong><a class="copiable-link" href="#index-region_002dbeginning"> &para;</a></span></dt>
+<dd><p>This function returns the position of the beginning of the region (as
+an integer).  This is the position of either point or the mark,
+whichever is smaller.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-region_002dend"><span class="category-def">Function: </span><span><strong class="def-name">region-end</strong><a class="copiable-link" href="#index-region_002dend"> &para;</a></span></dt>
+<dd><p>This function returns the position of the end of the region (as an
+integer).  This is the position of either point or the mark, whichever is
+larger.
+</p></dd></dl>
+
+<p>Instead of using <code class="code">region-beginning</code> and <code class="code">region-end</code>, a
+command designed to operate on a region should normally use
+<code class="code">interactive</code> with either a &lsquo;<samp class="samp">r</samp>&rsquo; or &lsquo;<samp class="samp">R</samp>&rsquo; code letter to
+find the beginning and end of the region.  This lets other Lisp programs
+specify the bounds explicitly as arguments.  See <a class="xref" href="Command-Loop.html#Interactive-Codes">Code Characters for <code class="code">interactive</code></a>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-use_002dregion_002dp"><span class="category-def">Function: </span><span><strong class="def-name">use-region-p</strong><a class="copiable-link" href="#index-use_002dregion_002dp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if Transient Mark mode is enabled, the
+mark is active, and there is a valid region in the buffer.  This
+function is intended to be used by commands that operate on the
+region, instead of on text near point, when the mark is active.
+</p>
+<a class="index-entry-id" id="index-empty-region"></a>
+<a class="index-entry-id" id="index-use_002dempty_002dactive_002dregion"></a>
+<p>A region is valid if it has a non-zero size, or if the user option
+<code class="code">use-empty-active-region</code> is non-<code class="code">nil</code> (by default, it is
+<code class="code">nil</code>).  The function <code class="code">region-active-p</code> is similar to
+<code class="code">use-region-p</code>, but considers all regions as valid.  In most
+cases, you should not use <code class="code">region-active-p</code>, since if the region
+is empty it is often more appropriate to operate on point.
+</p></dd></dl>
+</div>
+</div>
+<hr>
+<div class="nav-panel">
+<p>
+Next: <a href="Text.html#Text" accesskey="n" rel="next">Text</a>, Previous: <a href="Positions.html#Positions" accesskey="p" rel="prev">Positions</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

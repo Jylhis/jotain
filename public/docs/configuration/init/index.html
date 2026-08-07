@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>init.el — jotain</title>
+<link rel="canonical" href="https://jotain.j10s.io/">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f8fb">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d0f14">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script src="/js/theme-init.js"></script>
+<link rel="stylesheet" href="/css/site.css">
+<link rel="stylesheet" href="/css/docs.css">
+</head>
+<body>
+<div class="frame">
+  <header class="tab-bar">
+    <div class="tab-brand"><a class="tab-brand-link" href="/"><span class="tab-prompt">jy ❯</span></a></div>
+    <nav class="tabs" aria-label="buffers">
+      <a class="tab" href="/#readme">README.org</a>
+      <a class="tab" href="/#man">*Man JOTAIN(7)*</a>
+      <a class="tab" href="/#keys">keybindings</a>
+      <span class="tab tab-current" aria-current="page">docs/configuration/init.mdx</span>
+    </nav>
+    <div class="tab-actions">
+      <a class="gh-link" href="https://github.com/Jylhis/jotain">github ⑂</a>
+      <button type="button" class="theme-btn" id="theme-btn" aria-label="toggle theme">☾</button>
+    </div>
+  </header>
+  <main class="buffer">
+    <article class="page docs-prose">
+<h1 id="initel">init.el</h1>
+<p><code>init.el</code> is deliberately tiny. Its only jobs are:</p>
+<ol type="1">
+<li>Register MELPA and NonGNU ELPA as fallback archives for anything Nix does not ship.</li>
+<li>Put <code>lisp/</code> on the load-path.</li>
+<li>Point <code>custom-file</code> at <code>var/custom.el</code> so <code>M-x customize</code> has somewhere to scribble.</li>
+<li><code>require</code> each module in the right order. Archive refresh is <em>not</em> on the startup path — there is no background warm-up at all; archives are fetched only on demand.</li>
+</ol>
+<p>Everything else — GC, encoding, theme, modeline, keybindings, package configuration — lives in <code>early-init.el</code> or one of the <code>lisp/init-*.el</code> modules.</p>
+<h2 id="package-archives">Package archives</h2>
+<pre class="elisp"><code>(require &#39;package)
+(add-to-list &#39;package-archives &#39;(&quot;melpa&quot;  . &quot;https://melpa.org/packages/&quot;)     t)
+(add-to-list &#39;package-archives &#39;(&quot;nongnu&quot; . &quot;https://elpa.nongnu.org/nongnu/&quot;) t)</code></pre>
+<p>Nix provides most packages via <code>load-path</code>, so <code>use-package</code> finds them without touching the network. The archives above only come into play for packages that Nix does not ship.</p>
+<p>Registering an archive performs no I/O, and nothing in the config refreshes the archive index at launch. A download happens only when it is actually needed:</p>
+<ul>
+<li><code>package-install</code> — including the <code>:ensure t</code> path — calls <code>package--archives-initialize</code>, which reads the on-disk cache under <code>elpa/archives/</code> and downloads only when that cache is empty.</li>
+<li><code>M-x package-refresh-contents</code> and <code>M-x list-packages</code> refresh when you ask them to.</li>
+</ul>
+<p>So a fresh Nix deployment, where every <code>:ensure</code>d package is already on <code>load-path</code>, starts up without contacting MELPA at all.</p>
+<h2 id="load-path">Load path</h2>
+<pre class="elisp"><code>(add-to-list &#39;load-path (expand-file-name &quot;lisp&quot; user-emacs-directory))</code></pre>
+<h2 id="custom-file">Custom file</h2>
+<pre class="elisp"><code>(setq custom-file (locate-user-emacs-file &quot;var/custom.el&quot;))</code></pre>
+<p><code>custom.el</code> is write-only: Jotain never loads it back. The declarative config in git remains the single source of truth; the file exists only so <code>M-x customize</code> has somewhere to scribble without touching <code>init.el</code>.</p>
+<h2 id="module-loading">Module loading</h2>
+<p><code>init.el</code> then <code>require</code>s each module in order. See <a href="/docs/architecture/modules/">Modules</a> for what each file owns and the full load order.</p>
+<pre class="elisp"><code>(require &#39;init-core)         ; GC, encoding, var/ paths, sane defaults
+(require &#39;init-keys)         ; Global keymap and leader-key setup
+(require &#39;init-ui)           ; Theme, modeline, fonts, frame tweaks
+(require &#39;init-tabs)         ; Workspace tabs via tab-bar-mode
+(require &#39;init-help)         ; helpful + built-in help tweaks
+(require &#39;init-docs)         ; Surface jotain.info under C-h i
+(require &#39;init-editing)      ; Electric pairs, delsel, whitespace, region tools
+(require &#39;init-completion)   ; Vertico, marginalia, orderless, consult, corfu
+(require &#39;init-navigation)   ; Dired + dirvish, project, windmove, winner
+(require &#39;init-vc)           ; vc + magit + diff-hl + forge
+(require &#39;init-prog)         ; prog-mode, treesit, eglot, flymake, eldoc, compile
+(require &#39;init-snippets)     ; tempel snippets + eglot-tempel LSP expansion
+(require &#39;init-project)      ; project + projection + compile-multi
+(require &#39;init-devenv)       ; devenv.sh: tasks, processes, env, LSP, MCP
+(require &#39;init-ai)           ; eca, claude-code-ide, gptel, mcp
+(require &#39;init-shell)        ; eshell, comint, ielm
+(require &#39;init-terminal)     ; ghostel terminal + tty integration (kkp, clipetty)
+(require &#39;init-systems)      ; sops, logview, auth-source-1password
+(require &#39;init-tracking)     ; keyfreq, wakatime, activity-watch
+(require &#39;init-writing)      ; jinx, markdown-mode, denote, pdf-tools
+(require &#39;init-org)          ; org, org-modern, capture templates
+
+(require &#39;init-lang-nix)
+(require &#39;init-lang-rust)
+(require &#39;init-lang-python)
+(require &#39;init-lang-go)
+(require &#39;init-lang-web)       ; TS/TSX/CSS/HTML/JSON/web-mode
+(require &#39;init-lang-devops)    ; Dockerfile, terraform, just, ansible
+(require &#39;init-lang-data)      ; yaml, csv, sql, jinja2, gnuplot
+(require &#39;init-lang-systems)   ; C/C++, CMake, Meson, Haskell, Zig</code></pre>
+    <nav class="keys-nav docs-nav"><a href="/docs/architecture/modules/">← Modules</a><a href="/docs/configuration/early-init/">early-init.el →</a></nav>
+    </article>
+  </main>
+  <footer class="modeline">
+    <span>-UUU:**--</span>
+    <span class="modeline-buffer">docs/configuration/init.mdx</span>
+    <span class="modeline-pos">Top L1</span>
+    <span>(Markdown)</span>
+    <span class="modeline-version">U:jotain 2026.07</span>
+  </footer>
+  <div class="minibuffer">
+    <span class="echo">C-x C-f <a href="/docs/">/docs/</a> · <a href="/manual/">manual</a> · <a href="/man/">man</a> · <a href="/info/">info</a> · ☾ theme</span>
+  </div>
+</div>
+<script src="/js/docs.js"></script>
+</body>
+</html>

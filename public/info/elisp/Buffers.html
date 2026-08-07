@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This is the GNU Emacs Lisp Reference Manual
+corresponding to Emacs version 31.0.91.
+
+Copyright © 1990-1996, 1998-2026 Free Software Foundation,
+Inc.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being "GNU General Public License," with the
+Front-Cover Texts being "A GNU Manual," and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled "GNU Free Documentation License."
+
+(a) The FSF's Back-Cover Text is: "You have the freedom to copy and
+modify this GNU manual.  Buying copies from the FSF supports it in
+developing GNU and promoting software freedom." -->
+<title>Buffers (GNU Emacs Lisp Reference Manual)</title>
+
+<meta name="description" content="Buffers (GNU Emacs Lisp Reference Manual)">
+<meta name="keywords" content="Buffers (GNU Emacs Lisp Reference Manual)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="Index.html" rel="index" title="Index">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Windows.html#Windows" rel="next" title="Windows">
+<link href="Backups-and-Auto_002dSaving.html#Backups-and-Auto_002dSaving" rel="prev" title="Backups and Auto-Saving">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+div.example {margin-left: 3.2em}
+kbd.kbd {font-style: oblique}
+span.r {font-family: initial; font-weight: normal; font-style: normal}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
+ul.mark-bullet {list-style-type: disc}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="../manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Buffers">
+<div class="nav-panel">
+<p>
+Next: <a href="Windows.html#Windows" accesskey="n" rel="next">Windows</a>, Previous: <a href="Backups-and-Auto_002dSaving.html#Backups-and-Auto_002dSaving" accesskey="p" rel="prev">Backups and Auto-Saving</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h2 class="chapter" id="Buffers-1"><span>28 Buffers<a class="copiable-link" href="#Buffers-1"> &para;</a></span></h2>
+<a class="index-entry-id" id="index-buffer"></a>
+
+<p>A <em class="dfn">buffer</em> is a Lisp object containing text to be edited.  Buffers
+are used to hold the contents of files that are being visited; there may
+also be buffers that are not visiting files.  While several buffers may
+exist at one time, only one buffer is designated the <em class="dfn">current
+buffer</em> at any time.  Most editing commands act on the contents of the
+current buffer.  Each buffer, including the current buffer, may or may
+not be displayed in any windows.
+</p>
+
+<ul class="mini-toc">
+<li><a href="#Buffer-Basics" accesskey="1">Buffer Basics</a></li>
+<li><a href="#Current-Buffer" accesskey="2">The Current Buffer</a></li>
+<li><a href="#Buffer-Names" accesskey="3">Buffer Names</a></li>
+<li><a href="#Buffer-File-Name" accesskey="4">Buffer File Name</a></li>
+<li><a href="#Buffer-Modification" accesskey="5">Buffer Modification</a></li>
+<li><a href="#Modification-Time" accesskey="6">Buffer Modification Time</a></li>
+<li><a href="#Read-Only-Buffers" accesskey="7">Read-Only Buffers</a></li>
+<li><a href="#Buffer-List" accesskey="8">The Buffer List</a></li>
+<li><a href="#Creating-Buffers" accesskey="9">Creating Buffers</a></li>
+<li><a href="#Killing-Buffers">Killing Buffers</a></li>
+<li><a href="#Indirect-Buffers">Indirect Buffers</a></li>
+<li><a href="#Swapping-Text">Swapping Text Between Two Buffers</a></li>
+<li><a href="#Buffer-Gap">The Buffer Gap</a></li>
+</ul>
+<hr>
+<div class="section-level-extent" id="Buffer-Basics">
+<div class="nav-panel">
+<p>
+Next: <a href="#Current-Buffer" accesskey="n" rel="next">The Current Buffer</a>, Up: <a href="#Buffers" accesskey="u" rel="up">Buffers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Buffer-Basics-1"><span>28.1 Buffer Basics<a class="copiable-link" href="#Buffer-Basics-1"> &para;</a></span></h3>
+
+<p>A <em class="dfn">buffer</em> is a Lisp object containing text to be edited.  Buffers
+are used to hold the contents of files that are being visited; there may
+also be buffers that are not visiting files.  Although several buffers
+normally exist, only one buffer is designated the <em class="dfn">current
+buffer</em> at any time.  Most editing commands act on the contents of the
+current buffer.  Each buffer, including the current buffer, may or may
+not be displayed in any windows.
+</p>
+<p>Buffers in Emacs editing are objects that have distinct names and hold
+text that can be edited.  Buffers appear to Lisp programs as a special
+data type.  You can think of the contents of a buffer as a string that
+you can extend; insertions and deletions may occur in any part of the
+buffer.  See <a class="xref" href="Text.html#Text">Text</a>.
+</p>
+<p>A Lisp buffer object contains numerous pieces of information.  Some of
+this information is directly accessible to the programmer through
+variables, while other information is accessible only through
+special-purpose functions.  For example, the visited file name is
+directly accessible through a variable, while the value of point is
+accessible only through a primitive function.
+</p>
+<p>Buffer-specific information that is directly accessible is stored in
+<em class="dfn">buffer-local</em> variable bindings, which are variable values that are
+effective only in a particular buffer.  This feature allows each buffer
+to override the values of certain variables.  Most major modes override
+variables such as <code class="code">fill-column</code> or <code class="code">comment-column</code> in this
+way.  For more information about buffer-local variables and functions
+related to them, see <a class="ref" href="Variables.html#Buffer_002dLocal-Variables">Buffer-Local Variables</a>.
+</p>
+<p>For functions and variables related to visiting files in buffers, see
+<a class="ref" href="Files.html#Visiting-Files">Visiting Files</a> and <a class="ref" href="Files.html#Saving-Buffers">Saving Buffers</a>.  For functions and
+variables related to the display of buffers in windows, see
+<a class="ref" href="Windows.html#Buffers-and-Windows">Buffers and Windows</a>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-bufferp"><span class="category-def">Function: </span><span><strong class="def-name">bufferp</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-bufferp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is a buffer,
+<code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Current-Buffer">
+<div class="nav-panel">
+<p>
+Next: <a href="#Buffer-Names" accesskey="n" rel="next">Buffer Names</a>, Previous: <a href="#Buffer-Basics" accesskey="p" rel="prev">Buffer Basics</a>, Up: <a href="#Buffers" accesskey="u" rel="up">Buffers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="The-Current-Buffer"><span>28.2 The Current Buffer<a class="copiable-link" href="#The-Current-Buffer"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-selecting-a-buffer"></a>
+<a class="index-entry-id" id="index-changing-to-another-buffer"></a>
+<a class="index-entry-id" id="index-current-buffer"></a>
+
+<p>There are, in general, many buffers in an Emacs session.  At any
+time, one of them is designated the <em class="dfn">current buffer</em>&mdash;the buffer
+in which most editing takes place.  Most of the primitives for
+examining or changing text operate implicitly on the current buffer
+(see <a class="pxref" href="Text.html#Text">Text</a>).
+</p>
+<p>Normally, the buffer displayed in the selected window
+(see <a class="pxref" href="Windows.html#Selecting-Windows">Selecting Windows</a>) is the current buffer, but this is not
+always so: a Lisp program can temporarily designate any buffer as
+current in order to operate on its contents, without changing what is
+displayed on the screen.  The most basic function for designating a
+current buffer is <code class="code">set-buffer</code>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-current_002dbuffer"><span class="category-def">Function: </span><span><strong class="def-name">current-buffer</strong><a class="copiable-link" href="#index-current_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function returns the current buffer.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(current-buffer)
+     &rArr; #&lt;buffer buffers.texi&gt;
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dbuffer"><span class="category-def">Function: </span><span><strong class="def-name">set-buffer</strong> <var class="def-var-arguments">buffer-or-name</var><a class="copiable-link" href="#index-set_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function makes <var class="var">buffer-or-name</var> the current buffer.
+<var class="var">buffer-or-name</var> must be an existing buffer or the name of an
+existing buffer.  The return value is the buffer made current.
+</p>
+<p>This function does not display the buffer in any window, so the user
+cannot necessarily see the buffer.  But Lisp programs will now operate
+on it.
+</p></dd></dl>
+
+<p>When an editing command returns to the editor command loop, Emacs
+automatically calls <code class="code">set-buffer</code> on the buffer shown in the
+selected window (see <a class="pxref" href="Windows.html#Selecting-Windows">Selecting Windows</a>).  This is to prevent
+confusion: it ensures that the buffer that the cursor is in, when Emacs
+reads a command, is the buffer to which that command applies
+(see <a class="pxref" href="Command-Loop.html#Command-Loop">Command Loop</a>).  Thus, you should not use <code class="code">set-buffer</code> to
+switch visibly to a different buffer; for that, use the functions
+described in <a class="ref" href="Windows.html#Switching-Buffers">Switching to a Buffer in a Window</a>.
+</p>
+<p>When writing a Lisp function, do <em class="emph">not</em> rely on this behavior of
+the command loop to restore the current buffer after an operation.
+Editing commands can also be called as Lisp functions by other
+programs, not just from the command loop; it is convenient for the
+caller if the subroutine does not change which buffer is current
+(unless, of course, that is the subroutine&rsquo;s purpose).
+</p>
+<p>To operate temporarily on another buffer, put the <code class="code">set-buffer</code>
+within a <code class="code">save-current-buffer</code> form.  Here, as an example, is a
+simplified version of the command <code class="code">append-to-buffer</code>:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(defun append-to-buffer (buffer start end)
+  &quot;Append the text of the region to BUFFER.&quot;
+  (interactive &quot;BAppend to buffer: \nr&quot;)
+  (let ((oldbuf (current-buffer)))
+    (save-current-buffer
+      (set-buffer (get-buffer-create buffer))
+      (insert-buffer-substring oldbuf start end))))
+</pre></div></div>
+
+<p>Here, we bind a local variable to record the current buffer, and then
+<code class="code">save-current-buffer</code> arranges to make it current again later.
+Next, <code class="code">set-buffer</code> makes the specified buffer current, and
+<code class="code">insert-buffer-substring</code> copies the string from the original
+buffer to the specified (and now current) buffer.
+</p>
+<p>Alternatively, we can use the <code class="code">with-current-buffer</code> macro:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(defun append-to-buffer (buffer start end)
+  &quot;Append the text of the region to BUFFER.&quot;
+  (interactive &quot;BAppend to buffer: \nr&quot;)
+  (let ((oldbuf (current-buffer)))
+    (with-current-buffer (get-buffer-create buffer)
+      (insert-buffer-substring oldbuf start end))))
+</pre></div></div>
+
+<p>In either case, if the buffer appended to happens to be displayed in
+some window, the next redisplay will show how its text has changed.
+If it is not displayed in any window, you will not see the change
+immediately on the screen.  The command causes the buffer to become
+current temporarily, but does not cause it to be displayed.
+</p>
+<p>If you make local bindings (with <code class="code">let</code> or function arguments)
+for a variable that may also have buffer-local bindings, make sure
+that the same buffer is current at the beginning and at the end of the
+local binding&rsquo;s scope.  Otherwise you might bind it in one buffer and
+unbind it in another!
+</p>
+<p>Do not rely on using <code class="code">set-buffer</code> to change the current buffer
+back, because that won&rsquo;t do the job if a quit happens while the wrong
+buffer is current.  For instance, in the previous example, it would
+have been wrong to do this:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">  (let ((oldbuf (current-buffer)))
+    (set-buffer (get-buffer-create buffer))
+    (insert-buffer-substring oldbuf start end)
+    (set-buffer oldbuf))
+</pre></div></div>
+
+<p>Using <code class="code">save-current-buffer</code> or <code class="code">with-current-buffer</code>, as we
+did, correctly handles quitting, errors, and <code class="code">throw</code>, as well as
+ordinary evaluation.
+</p>
+<dl class="first-deffn first-defspec-alias-first-deffn def-block">
+<dt class="deffn defspec-alias-deffn def-line" id="index-save_002dcurrent_002dbuffer"><span class="category-def">Special Form: </span><span><strong class="def-name">save-current-buffer</strong> <var class="def-var-arguments">body&hellip;</var><a class="copiable-link" href="#index-save_002dcurrent_002dbuffer"> &para;</a></span></dt>
+<dd><p>The <code class="code">save-current-buffer</code> special form saves the identity of the
+current buffer, evaluates the <var class="var">body</var> forms, and finally restores
+that buffer as current.  The return value is the value of the last
+form in <var class="var">body</var>.  The current buffer is restored even in case of an
+abnormal exit via <code class="code">throw</code> or error (see <a class="pxref" href="Control-Structures.html#Nonlocal-Exits">Nonlocal Exits</a>).
+</p>
+<p>If the buffer that used to be current has been killed by the time of
+exit from <code class="code">save-current-buffer</code>, then it is not made current again,
+of course.  Instead, whichever buffer was current just before exit
+remains current.
+</p></dd></dl>
+
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-with_002dcurrent_002dbuffer"><span class="category-def">Macro: </span><span><strong class="def-name">with-current-buffer</strong> <var class="def-var-arguments">buffer-or-name body&hellip;</var><a class="copiable-link" href="#index-with_002dcurrent_002dbuffer"> &para;</a></span></dt>
+<dd><p>The <code class="code">with-current-buffer</code> macro saves the identity of the current
+buffer, makes <var class="var">buffer-or-name</var> current, evaluates the <var class="var">body</var>
+forms, and finally restores the current buffer.  <var class="var">buffer-or-name</var>
+must specify an existing buffer or the name of an existing buffer.
+</p>
+<p>The return value is the value of the last form in <var class="var">body</var>.  The
+current buffer is restored even in case of an abnormal exit via
+<code class="code">throw</code> or error (see <a class="pxref" href="Control-Structures.html#Nonlocal-Exits">Nonlocal Exits</a>).
+</p></dd></dl>
+
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-with_002dtemp_002dbuffer"><span class="category-def">Macro: </span><span><strong class="def-name">with-temp-buffer</strong> <var class="def-var-arguments">body&hellip;</var><a class="copiable-link" href="#index-with_002dtemp_002dbuffer"> &para;</a></span></dt>
+<dd><a class="anchor" id="Definition-of-with_002dtemp_002dbuffer"></a><p>The <code class="code">with-temp-buffer</code> macro evaluates the <var class="var">body</var> forms with
+a temporary buffer as the current buffer.  It saves the identity of
+the current buffer, creates a temporary buffer and makes it current,
+evaluates the <var class="var">body</var> forms, and finally restores the previous
+current buffer while killing the temporary buffer.
+</p>
+<a class="index-entry-id" id="index-undo-in-temporary-buffers"></a>
+<a class="index-entry-id" id="index-kill_002dbuffer_002dhook-in-temporary-buffers"></a>
+<a class="index-entry-id" id="index-kill_002dbuffer_002dquery_002dfunctions-in-temporary-buffers"></a>
+<a class="index-entry-id" id="index-buffer_002dlist_002dupdate_002dhook-in-temporary-buffers"></a>
+<p>By default, undo information (see <a class="pxref" href="Text.html#Undo">Undo</a>) is not recorded in the
+buffer created by this macro (but <var class="var">body</var> can enable that, if
+needed).  The temporary buffer also does not run the hooks
+<code class="code">kill-buffer-hook</code>, <code class="code">kill-buffer-query-functions</code>
+(see <a class="pxref" href="#Killing-Buffers">Killing Buffers</a>), and <code class="code">buffer-list-update-hook</code>
+(see <a class="pxref" href="#Buffer-List">The Buffer List</a>).
+</p>
+<p>The return value is the value of the last form in <var class="var">body</var>.  You can
+return the contents of the temporary buffer by using
+<code class="code">(buffer-string)</code> as the last form.
+</p>
+<p>The current buffer is restored even in case of an abnormal exit via
+<code class="code">throw</code> or error (see <a class="pxref" href="Control-Structures.html#Nonlocal-Exits">Nonlocal Exits</a>).
+</p>
+<p>See also <code class="code">with-temp-file</code> in <a class="ref" href="Files.html#Definition-of-with_002dtemp_002dfile">Writing to Files</a>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Buffer-Names">
+<div class="nav-panel">
+<p>
+Next: <a href="#Buffer-File-Name" accesskey="n" rel="next">Buffer File Name</a>, Previous: <a href="#Current-Buffer" accesskey="p" rel="prev">The Current Buffer</a>, Up: <a href="#Buffers" accesskey="u" rel="up">Buffers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Buffer-Names-1"><span>28.3 Buffer Names<a class="copiable-link" href="#Buffer-Names-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-buffer-names"></a>
+
+<p>Each buffer has a unique name, which is a string.  Many of the
+functions that work on buffers accept either a buffer or a buffer name
+as an argument.  Any argument called <var class="var">buffer-or-name</var> is of this
+sort, and an error is signaled if it is neither a string nor a buffer.
+Any argument called <var class="var">buffer</var> must be an actual buffer
+object, not a name.
+</p>
+<a class="index-entry-id" id="index-hidden-buffers"></a>
+<a class="index-entry-id" id="index-buffers-without-undo-information"></a>
+<p>Buffers that are ephemeral and generally uninteresting to the user
+have names starting with a space, so that the <code class="code">list-buffers</code> and
+<code class="code">buffer-menu</code> commands don&rsquo;t mention them (but if such a buffer
+visits a file, it <strong class="strong">is</strong> mentioned).  A name starting with
+space also initially disables recording undo information; see
+<a class="ref" href="Text.html#Undo">Undo</a>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-buffer_002dname"><span class="category-def">Function: </span><span><strong class="def-name">buffer-name</strong> <var class="def-var-arguments">&amp;optional buffer</var><a class="copiable-link" href="#index-buffer_002dname"> &para;</a></span></dt>
+<dd><p>This function returns the name of <var class="var">buffer</var> as a string.
+<var class="var">buffer</var> defaults to the current buffer.
+</p>
+<p>If <code class="code">buffer-name</code> returns <code class="code">nil</code>, it means that <var class="var">buffer</var>
+has been killed.  See <a class="xref" href="#Killing-Buffers">Killing Buffers</a>.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(buffer-name)
+     &rArr; &quot;buffers.texi&quot;
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">(setq foo (get-buffer &quot;temp&quot;))
+     &rArr; #&lt;buffer temp&gt;
+</pre></div><div class="group"><pre class="example-preformatted">(kill-buffer foo)
+     &rArr; nil
+</pre></div><div class="group"><pre class="example-preformatted">(buffer-name foo)
+     &rArr; nil
+</pre></div><div class="group"><pre class="example-preformatted">foo
+     &rArr; #&lt;killed buffer&gt;
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-rename_002dbuffer"><span class="category-def">Command: </span><span><strong class="def-name">rename-buffer</strong> <var class="def-var-arguments">newname &amp;optional unique</var><a class="copiable-link" href="#index-rename_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function renames the current buffer to <var class="var">newname</var>.  An error
+is signaled if <var class="var">newname</var> is not a string.
+</p>
+<p>Ordinarily, <code class="code">rename-buffer</code> signals an error if <var class="var">newname</var> is
+already in use.  However, if <var class="var">unique</var> is non-<code class="code">nil</code>, it modifies
+<var class="var">newname</var> to make a name that is not in use.  Interactively, you can
+make <var class="var">unique</var> non-<code class="code">nil</code> with a numeric prefix argument.
+(This is how the command <code class="code">rename-uniquely</code> is implemented.)
+</p>
+<p>This function returns the name actually given to the buffer.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-get_002dbuffer"><span class="category-def">Function: </span><span><strong class="def-name">get-buffer</strong> <var class="def-var-arguments">buffer-or-name</var><a class="copiable-link" href="#index-get_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function returns the buffer specified by <var class="var">buffer-or-name</var>.
+If <var class="var">buffer-or-name</var> is a string and there is no buffer with that
+name, the value is <code class="code">nil</code>.  If <var class="var">buffer-or-name</var> is a buffer, it
+is returned as given; that is not very useful, so the argument is usually
+a name.  For example:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(setq b (get-buffer &quot;lewis&quot;))
+     &rArr; #&lt;buffer lewis&gt;
+</pre></div><div class="group"><pre class="example-preformatted">(get-buffer b)
+     &rArr; #&lt;buffer lewis&gt;
+</pre></div><div class="group"><pre class="example-preformatted">(get-buffer &quot;Frazzle-nots&quot;)
+     &rArr; nil
+</pre></div></div>
+
+<p>See also the function <code class="code">get-buffer-create</code> in <a class="ref" href="#Creating-Buffers">Creating Buffers</a>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-generate_002dnew_002dbuffer_002dname"><span class="category-def">Function: </span><span><strong class="def-name">generate-new-buffer-name</strong> <var class="def-var-arguments">starting-name &amp;optional ignore</var><a class="copiable-link" href="#index-generate_002dnew_002dbuffer_002dname"> &para;</a></span></dt>
+<dd><p>This function returns a name that would be unique for a new buffer&mdash;but
+does not create the buffer.  It starts with <var class="var">starting-name</var>, and
+produces a name not currently in use for any buffer by appending a
+number inside of &lsquo;<samp class="samp">&lt;&hellip;&gt;</samp>&rsquo;.  It starts at 2 and keeps
+incrementing the number until it is not the name of an existing buffer.
+</p>
+<p>If the optional second argument <var class="var">ignore</var> is non-<code class="code">nil</code>, it
+should be a string, a potential buffer name.  It means to consider
+that potential buffer acceptable, if it is tried, even if it is the
+name of an existing buffer (which would normally be rejected).  Thus,
+if buffers named &lsquo;<samp class="samp">foo</samp>&rsquo;, &lsquo;<samp class="samp">foo&lt;2&gt;</samp>&rsquo;, &lsquo;<samp class="samp">foo&lt;3&gt;</samp>&rsquo; and
+&lsquo;<samp class="samp">foo&lt;4&gt;</samp>&rsquo; exist,
+</p>
+<div class="example">
+<pre class="example-preformatted">(generate-new-buffer-name &quot;foo&quot;)
+     &rArr; &quot;foo&lt;5&gt;&quot;
+(generate-new-buffer-name &quot;foo&quot; &quot;foo&lt;3&gt;&quot;)
+     &rArr; &quot;foo&lt;3&gt;&quot;
+(generate-new-buffer-name &quot;foo&quot; &quot;foo&lt;6&gt;&quot;)
+     &rArr; &quot;foo&lt;5&gt;&quot;
+</pre></div>
+
+<p>See the related function <code class="code">generate-new-buffer</code> in <a class="ref" href="#Creating-Buffers">Creating Buffers</a>.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-buffer_002dlast_002dname"><span class="category-def">Function: </span><span><strong class="def-name">buffer-last-name</strong> <var class="def-var-arguments">&amp;optional buffer</var><a class="copiable-link" href="#index-buffer_002dlast_002dname"> &para;</a></span></dt>
+<dd><p>This function returns the previous name of <var class="var">buffer</var>, before it was
+killed or before the last time it was renamed.  If nil or omitted,
+<var class="var">buffer</var> defaults to the current buffer.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Buffer-File-Name">
+<div class="nav-panel">
+<p>
+Next: <a href="#Buffer-Modification" accesskey="n" rel="next">Buffer Modification</a>, Previous: <a href="#Buffer-Names" accesskey="p" rel="prev">Buffer Names</a>, Up: <a href="#Buffers" accesskey="u" rel="up">Buffers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Buffer-File-Name-1"><span>28.4 Buffer File Name<a class="copiable-link" href="#Buffer-File-Name-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-visited-file"></a>
+<a class="index-entry-id" id="index-buffer-file-name"></a>
+<a class="index-entry-id" id="index-file-name-of-buffer"></a>
+
+<p>The <em class="dfn">buffer file name</em> is the name of the file that is visited in
+that buffer.  When a buffer is not visiting a file, its buffer file name
+is <code class="code">nil</code>.  Most of the time, the buffer name is the same as the
+nondirectory part of the buffer file name, but the buffer file name and
+the buffer name are distinct and can be set independently.
+See <a class="xref" href="Files.html#Visiting-Files">Visiting Files</a>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-buffer_002dfile_002dname"><span class="category-def">Function: </span><span><strong class="def-name">buffer-file-name</strong> <var class="def-var-arguments">&amp;optional buffer</var><a class="copiable-link" href="#index-buffer_002dfile_002dname"> &para;</a></span></dt>
+<dd><p>This function returns the fully-expanded absolute file name of the file that
+<var class="var">buffer</var> is visiting.  If <var class="var">buffer</var> is not visiting any file,
+<code class="code">buffer-file-name</code> returns <code class="code">nil</code>.  If <var class="var">buffer</var> is not
+supplied, it defaults to the current buffer.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(buffer-file-name (other-buffer))
+     &rArr; &quot;/usr/user/lewis/manual/files.texi&quot;
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-buffer_002dfile_002dname-1"><span class="category-def">Variable: </span><span><strong class="def-name">buffer-file-name</strong><a class="copiable-link" href="#index-buffer_002dfile_002dname-1"> &para;</a></span></dt>
+<dd><p>This buffer-local variable contains the absolute name of the file being visited
+in the current buffer, or <code class="code">nil</code> if it is not visiting a file.  It
+is a permanent local variable, unaffected by
+<code class="code">kill-all-local-variables</code>.  The value is identical to the one
+which the <code class="code">buffer-file-name</code> function returns.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">buffer-file-name
+     &rArr; &quot;/usr/user/lewis/manual/buffers.texi&quot;
+</pre></div></div>
+
+<p>It is risky to change this variable&rsquo;s value without doing various other
+things.  Normally it is better to use <code class="code">set-visited-file-name</code> (see
+below); some of the things done there, such as changing the buffer name,
+are not strictly necessary, but others are essential to avoid confusing
+Emacs.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-buffer_002dfile_002dtruename"><span class="category-def">Variable: </span><span><strong class="def-name">buffer-file-truename</strong><a class="copiable-link" href="#index-buffer_002dfile_002dtruename"> &para;</a></span></dt>
+<dd><p>This buffer-local variable holds the abbreviated truename of the file
+visited in the current buffer, or <code class="code">nil</code> if no file is visited.
+It is a permanent local, unaffected by
+<code class="code">kill-all-local-variables</code>.  See <a class="xref" href="Files.html#Truenames">Truenames</a>, and
+<a class="ref" href="Files.html#abbreviate_002dfile_002dname">abbreviate-file-name</a>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-buffer_002dfile_002dnumber"><span class="category-def">Variable: </span><span><strong class="def-name">buffer-file-number</strong><a class="copiable-link" href="#index-buffer_002dfile_002dnumber"> &para;</a></span></dt>
+<dd><p>This buffer-local variable holds the inode number and device
+identifier of the file visited in the current buffer, or <code class="code">nil</code> if no
+file or a nonexistent file is visited.  It is a permanent local,
+unaffected by <code class="code">kill-all-local-variables</code>.
+</p>
+<p>The value is normally a list of the form <code class="code">(<var class="var">inodenum</var>
+<var class="var">device</var>)</code>.  This tuple uniquely identifies the file among
+all files accessible on the system.  See the function
+<code class="code">file-attributes</code>, in <a class="ref" href="Files.html#File-Attributes">File Attributes</a>, for more information
+about them.
+</p>
+<p>If <code class="code">buffer-file-name</code> is the name of a symbolic link, then both
+<var class="var">inodenum</var> and <var class="var">device</var> refer to the recursive target of the link.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-get_002dfile_002dbuffer"><span class="category-def">Function: </span><span><strong class="def-name">get-file-buffer</strong> <var class="def-var-arguments">filename</var><a class="copiable-link" href="#index-get_002dfile_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function returns the buffer visiting file <var class="var">filename</var>.  If
+there is no such buffer, it returns <code class="code">nil</code>.  The argument
+<var class="var">filename</var>, which must be a string, is expanded (see <a class="pxref" href="Files.html#File-Name-Expansion">Functions that Expand Filenames</a>), then compared against the visited file names of all live
+buffers.  Note that the buffer&rsquo;s <code class="code">buffer-file-name</code> must match
+the expansion of <var class="var">filename</var> exactly.  This function will not
+recognize other names for the same file.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(get-file-buffer &quot;buffers.texi&quot;)
+    &rArr; #&lt;buffer buffers.texi&gt;
+</pre></div></div>
+
+<p>In unusual circumstances, there can be more than one buffer visiting
+the same file name.  In such cases, this function returns the first
+such buffer in the buffer list.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-find_002dbuffer_002dvisiting"><span class="category-def">Function: </span><span><strong class="def-name">find-buffer-visiting</strong> <var class="def-var-arguments">filename &amp;optional predicate</var><a class="copiable-link" href="#index-find_002dbuffer_002dvisiting"> &para;</a></span></dt>
+<dd><p>This is like <code class="code">get-file-buffer</code>, except that it can return any
+buffer visiting the file <em class="emph">possibly under a different name</em>.  That
+is, the buffer&rsquo;s <code class="code">buffer-file-name</code> does not need to match the
+expansion of <var class="var">filename</var> exactly, it only needs to refer to the
+same file.  If <var class="var">predicate</var> is non-<code class="code">nil</code>, it should be a
+function of one argument, a buffer visiting <var class="var">filename</var>.  The
+buffer is only considered a suitable return value if <var class="var">predicate</var>
+returns non-<code class="code">nil</code>.  If it can not find a suitable buffer to
+return, <code class="code">find-buffer-visiting</code> returns <code class="code">nil</code>.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-set_002dvisited_002dfile_002dname"><span class="category-def">Command: </span><span><strong class="def-name">set-visited-file-name</strong> <var class="def-var-arguments">filename &amp;optional no-query along-with-file</var><a class="copiable-link" href="#index-set_002dvisited_002dfile_002dname"> &para;</a></span></dt>
+<dd><p>If <var class="var">filename</var> is a non-empty string, this function changes the
+name of the file visited in the current buffer to <var class="var">filename</var>.  (If the
+buffer had no visited file, this gives it one.)  The <em class="emph">next time</em>
+the buffer is saved it will go in the newly-specified file.
+</p>
+<p>This command marks the buffer as modified, since it does not (as far
+as Emacs knows) match the contents of <var class="var">filename</var>, even if it
+matched the former visited file.  It also renames the buffer to
+correspond to the new file name, unless the new name is already in
+use.
+</p>
+<p>If <var class="var">filename</var> is <code class="code">nil</code> or the empty string, that stands for
+&ldquo;no visited file&rdquo;.  In this case, <code class="code">set-visited-file-name</code> marks
+the buffer as having no visited file, without changing the buffer&rsquo;s
+modified flag.
+</p>
+<p>Normally, this function asks the user for confirmation if there
+already is a buffer visiting <var class="var">filename</var>.  If <var class="var">no-query</var> is
+non-<code class="code">nil</code>, that prevents asking this question.  If there already
+is a buffer visiting <var class="var">filename</var>, and the user confirms or
+<var class="var">no-query</var> is non-<code class="code">nil</code>, this function makes the new
+buffer name unique by appending a number inside of &lsquo;<samp class="samp">&lt;&hellip;&gt;</samp>&rsquo; to
+<var class="var">filename</var>.
+</p>
+<p>If <var class="var">along-with-file</var> is non-<code class="code">nil</code>, that means to assume that
+the former visited file has been renamed to <var class="var">filename</var>.  In this
+case, the command does not change the buffer&rsquo;s modified flag, nor the
+buffer&rsquo;s recorded last file modification time as reported by
+<code class="code">visited-file-modtime</code> (see <a class="pxref" href="#Modification-Time">Buffer Modification Time</a>).  If
+<var class="var">along-with-file</var> is <code class="code">nil</code>, this function clears the recorded
+last file modification time, after which <code class="code">visited-file-modtime</code>
+returns zero.
+</p>
+<p>When the function <code class="code">set-visited-file-name</code> is called
+interactively, it prompts for <var class="var">filename</var> in the minibuffer.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-list_002dbuffers_002ddirectory"><span class="category-def">Variable: </span><span><strong class="def-name">list-buffers-directory</strong><a class="copiable-link" href="#index-list_002dbuffers_002ddirectory"> &para;</a></span></dt>
+<dd><p>This buffer-local variable specifies a string to display in a buffer
+listing where the visited file name would go, for buffers that don&rsquo;t
+have a visited file name.  Dired buffers use this variable.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Buffer-Modification">
+<div class="nav-panel">
+<p>
+Next: <a href="#Modification-Time" accesskey="n" rel="next">Buffer Modification Time</a>, Previous: <a href="#Buffer-File-Name" accesskey="p" rel="prev">Buffer File Name</a>, Up: <a href="#Buffers" accesskey="u" rel="up">Buffers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Buffer-Modification-1"><span>28.5 Buffer Modification<a class="copiable-link" href="#Buffer-Modification-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-buffer-modification"></a>
+<a class="index-entry-id" id="index-modification-flag-_0028of-buffer_0029"></a>
+
+<p>Emacs keeps a flag called the <em class="dfn">modified flag</em> for each buffer, to
+record whether you have changed the text of the buffer.  This flag is
+set to <code class="code">t</code> whenever you alter the contents of the buffer, and
+cleared to <code class="code">nil</code> when you save it.  Thus, the flag shows whether
+there are unsaved changes.  The flag value is normally shown in the mode
+line (see <a class="pxref" href="Modes.html#Mode-Line-Variables">Variables Used in the Mode Line</a>), and controls saving (see <a class="pxref" href="Files.html#Saving-Buffers">Saving Buffers</a>) and auto-saving (see <a class="pxref" href="Backups-and-Auto_002dSaving.html#Auto_002dSaving">Auto-Saving</a>).
+</p>
+<p>Some Lisp programs set the flag explicitly.  For example, the function
+<code class="code">set-visited-file-name</code> sets the flag to <code class="code">t</code>, because the text
+does not match the newly-visited file, even if it is unchanged from the
+file formerly visited.
+</p>
+<p>The functions that modify the contents of buffers are described in
+<a class="ref" href="Text.html#Text">Text</a>.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-buffer_002dmodified_002dp"><span class="category-def">Function: </span><span><strong class="def-name">buffer-modified-p</strong> <var class="def-var-arguments">&amp;optional buffer</var><a class="copiable-link" href="#index-buffer_002dmodified_002dp"> &para;</a></span></dt>
+<dd><p>This function returns non-<code class="code">nil</code> if <var class="var">buffer</var> has
+been modified since it was last read in from a file or saved, or
+<code class="code">nil</code> otherwise.  If <var class="var">buffer</var> has been auto-saved since the
+time it was last modified, this function returns the symbol
+<code class="code">autosaved</code>.  If <var class="var">buffer</var> is <code class="code">nil</code> or omitted, it
+defaults to the current buffer.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dbuffer_002dmodified_002dp"><span class="category-def">Function: </span><span><strong class="def-name">set-buffer-modified-p</strong> <var class="def-var-arguments">flag</var><a class="copiable-link" href="#index-set_002dbuffer_002dmodified_002dp"> &para;</a></span></dt>
+<dd><p>This function marks the current buffer as modified if <var class="var">flag</var> is
+non-<code class="code">nil</code>, or as unmodified if the flag is <code class="code">nil</code>.
+</p>
+<p>Another effect of calling this function is to cause unconditional
+redisplay of the mode line for the current buffer.  In fact, the
+function <code class="code">force-mode-line-update</code> works by doing this:
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(set-buffer-modified-p (buffer-modified-p))
+</pre></div></div>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-restore_002dbuffer_002dmodified_002dp"><span class="category-def">Function: </span><span><strong class="def-name">restore-buffer-modified-p</strong> <var class="def-var-arguments">flag</var><a class="copiable-link" href="#index-restore_002dbuffer_002dmodified_002dp"> &para;</a></span></dt>
+<dd><p>Like <code class="code">set-buffer-modified-p</code>, but does not force redisplay of
+mode lines.  This function also allows <var class="var">flag</var>&rsquo;s value to be
+the symbol <code class="code">autosaved</code>, which marks the buffer as modified and
+auto-saved after the last modification.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-not_002dmodified"><span class="category-def">Command: </span><span><strong class="def-name">not-modified</strong> <var class="def-var-arguments">&amp;optional arg</var><a class="copiable-link" href="#index-not_002dmodified"> &para;</a></span></dt>
+<dd><p>This command marks the current buffer as unmodified, and not needing
+to be saved.  If <var class="var">arg</var> is non-<code class="code">nil</code>, it marks the buffer as
+modified, so that it will be saved at the next suitable occasion.
+Interactively, <var class="var">arg</var> is the prefix argument.
+</p>
+<p>Don&rsquo;t use this function in programs, since it prints a message in the
+echo area; use <code class="code">set-buffer-modified-p</code> (above) instead.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-buffer_002dmodified_002dtick"><span class="category-def">Function: </span><span><strong class="def-name">buffer-modified-tick</strong> <var class="def-var-arguments">&amp;optional buffer</var><a class="copiable-link" href="#index-buffer_002dmodified_002dtick"> &para;</a></span></dt>
+<dd><p>This function returns <var class="var">buffer</var>&rsquo;s modification-count.  This is a
+counter that increments every time the buffer is modified.  If
+<var class="var">buffer</var> is <code class="code">nil</code> (or omitted), the current buffer is used.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-buffer_002dchars_002dmodified_002dtick"><span class="category-def">Function: </span><span><strong class="def-name">buffer-chars-modified-tick</strong> <var class="def-var-arguments">&amp;optional buffer</var><a class="copiable-link" href="#index-buffer_002dchars_002dmodified_002dtick"> &para;</a></span></dt>
+<dd><p>This function returns <var class="var">buffer</var>&rsquo;s character-change modification-count.
+Changes to text properties leave this counter unchanged; however, each
+time text is inserted or removed from the buffer, the counter is reset
+to the value that would be returned by <code class="code">buffer-modified-tick</code>.
+By comparing the values returned by two <code class="code">buffer-chars-modified-tick</code>
+calls, you can tell whether a character change occurred in that buffer
+in between the calls.  If <var class="var">buffer</var> is <code class="code">nil</code> (or omitted), the
+current buffer is used.
+</p></dd></dl>
+
+<p>Sometimes there&rsquo;s a need for modifying buffer in a way that doesn&rsquo;t
+really change its text, like if only its text properties are changed.
+If your program needs to modify a buffer without triggering any hooks
+and features that react to buffer modifications, use the
+<code class="code">with-silent-modifications</code> macro.
+</p>
+<dl class="first-deffn first-defmac-alias-first-deffn def-block">
+<dt class="deffn defmac-alias-deffn def-line" id="index-with_002dsilent_002dmodifications"><span class="category-def">Macro: </span><span><strong class="def-name">with-silent-modifications</strong> <var class="def-var-arguments">body&hellip;</var><a class="copiable-link" href="#index-with_002dsilent_002dmodifications"> &para;</a></span></dt>
+<dd><p>Execute <var class="var">body</var> pretending it does not modify the buffer.  This
+includes checking whether the buffer&rsquo;s file is locked (see <a class="pxref" href="Files.html#File-Locks">File Locks</a>), running buffer modification hooks (see <a class="pxref" href="Text.html#Change-Hooks">Change Hooks</a>),
+etc.  Note that if <var class="var">body</var> actually modifies the buffer text (as
+opposed to its text properties), its undo data may become corrupted.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Modification-Time">
+<div class="nav-panel">
+<p>
+Next: <a href="#Read-Only-Buffers" accesskey="n" rel="next">Read-Only Buffers</a>, Previous: <a href="#Buffer-Modification" accesskey="p" rel="prev">Buffer Modification</a>, Up: <a href="#Buffers" accesskey="u" rel="up">Buffers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Buffer-Modification-Time"><span>28.6 Buffer Modification Time<a class="copiable-link" href="#Buffer-Modification-Time"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-comparing-file-modification-time"></a>
+<a class="index-entry-id" id="index-modification-time-of-buffer"></a>
+
+<p>Suppose that you visit a file and make changes in its buffer, and
+meanwhile the file itself is changed on disk.  At this point, saving the
+buffer would overwrite the changes in the file.  Occasionally this may
+be what you want, but usually it would lose valuable information.  Emacs
+therefore checks the file&rsquo;s modification time using the functions
+described below before saving the file.  (See <a class="xref" href="Files.html#File-Attributes">File Attributes</a>,
+for how to examine a file&rsquo;s modification time.)
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-verify_002dvisited_002dfile_002dmodtime"><span class="category-def">Function: </span><span><strong class="def-name">verify-visited-file-modtime</strong> <var class="def-var-arguments">&amp;optional buffer</var><a class="copiable-link" href="#index-verify_002dvisited_002dfile_002dmodtime"> &para;</a></span></dt>
+<dd><p>This function compares what <var class="var">buffer</var> (by default, the
+current-buffer) has recorded for the modification time of its visited
+file against the actual modification time of the file as recorded by the
+operating system.  The two should be the same unless some other process
+has written the file since Emacs visited or saved it.
+</p>
+<p>The function returns <code class="code">t</code> if the last actual modification time and
+Emacs&rsquo;s recorded modification time are the same, <code class="code">nil</code> otherwise.
+It also returns <code class="code">t</code> if the buffer has no recorded last
+modification time, that is if <code class="code">visited-file-modtime</code> would return
+zero.
+</p>
+<p>It always returns <code class="code">t</code> for buffers that are not visiting a file,
+even if <code class="code">visited-file-modtime</code> returns a non-zero value.  For
+instance, it always returns <code class="code">t</code> for dired buffers.  It returns
+<code class="code">t</code> for buffers that are visiting a file that does not exist and
+never existed, but <code class="code">nil</code> for file-visiting buffers whose file has
+been deleted.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-clear_002dvisited_002dfile_002dmodtime"><span class="category-def">Function: </span><span><strong class="def-name">clear-visited-file-modtime</strong><a class="copiable-link" href="#index-clear_002dvisited_002dfile_002dmodtime"> &para;</a></span></dt>
+<dd><p>This function clears out the record of the last modification time of
+the file being visited by the current buffer.  As a result, the next
+attempt to save this buffer will not complain of a discrepancy in
+file modification times.
+</p>
+<p>This function is called in <code class="code">set-visited-file-name</code> and other
+exceptional places where the usual test to avoid overwriting a changed
+file should not be done.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-visited_002dfile_002dmodtime"><span class="category-def">Function: </span><span><strong class="def-name">visited-file-modtime</strong><a class="copiable-link" href="#index-visited_002dfile_002dmodtime"> &para;</a></span></dt>
+<dd><p>This function returns the current buffer&rsquo;s recorded last file
+modification time, as a Lisp timestamp (see <a class="pxref" href="System-Interface.html#Time-of-Day">Time of Day</a>).
+</p>
+<p>If the buffer has no recorded last modification time, this function
+returns zero.  This case occurs, for instance, if the buffer is not
+visiting a file or if the time has been explicitly cleared by
+<code class="code">clear-visited-file-modtime</code>.  Note, however, that
+<code class="code">visited-file-modtime</code> returns a timestamp for some non-file buffers
+too.  For instance, in a Dired buffer listing a directory, it returns
+the last modification time of that directory, as recorded by Dired.
+</p>
+<p>If the buffer is visiting a file that doesn&rsquo;t exist, this function
+returns &minus;1.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-set_002dvisited_002dfile_002dmodtime"><span class="category-def">Function: </span><span><strong class="def-name">set-visited-file-modtime</strong> <var class="def-var-arguments">&amp;optional time</var><a class="copiable-link" href="#index-set_002dvisited_002dfile_002dmodtime"> &para;</a></span></dt>
+<dd><p>This function updates the buffer&rsquo;s record of the last modification time
+of the visited file, to the value specified by <var class="var">time</var> if <var class="var">time</var>
+is not <code class="code">nil</code>, and otherwise to the last modification time of the
+visited file.
+</p>
+<p>If <var class="var">time</var> is neither <code class="code">nil</code> nor an integer flag returned
+by <code class="code">visited-file-modtime</code>, it should be a Lisp time value
+(see <a class="pxref" href="System-Interface.html#Time-of-Day">Time of Day</a>).
+</p>
+<p>This function is useful if the buffer was not read from the file
+normally, or if the file itself has been changed for some known benign
+reason.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-ask_002duser_002dabout_002dsupersession_002dthreat"><span class="category-def">Function: </span><span><strong class="def-name">ask-user-about-supersession-threat</strong> <var class="def-var-arguments">filename</var><a class="copiable-link" href="#index-ask_002duser_002dabout_002dsupersession_002dthreat"> &para;</a></span></dt>
+<dd><p>This function is used to ask a user how to proceed after an attempt to
+modify a buffer visiting file <var class="var">filename</var> when the file is newer
+than the buffer text.  Emacs detects this because the modification
+time of the file on disk is newer than the last save-time and its contents
+have changed.
+This means some other program has probably altered the file.
+</p>
+<a class="index-entry-id" id="index-file_002dsupersession"></a>
+<p>Depending on the user&rsquo;s answer, the function may return normally, in
+which case the modification of the buffer proceeds, or it may signal a
+<code class="code">file-supersession</code> error with data <code class="code">(<var class="var">filename</var>)</code>, in which
+case the proposed buffer modification is not allowed.
+</p>
+<p>This function is called automatically by Emacs on the proper
+occasions.  It exists so you can customize Emacs by redefining it.
+See the file <samp class="file">userlock.el</samp> for the standard definition.
+</p>
+<p>See also the file locking mechanism in <a class="ref" href="Files.html#File-Locks">File Locks</a>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Read-Only-Buffers">
+<div class="nav-panel">
+<p>
+Next: <a href="#Buffer-List" accesskey="n" rel="next">The Buffer List</a>, Previous: <a href="#Modification-Time" accesskey="p" rel="prev">Buffer Modification Time</a>, Up: <a href="#Buffers" accesskey="u" rel="up">Buffers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Read_002dOnly-Buffers"><span>28.7 Read-Only Buffers<a class="copiable-link" href="#Read_002dOnly-Buffers"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-read_002donly-buffer"></a>
+<a class="index-entry-id" id="index-buffer_002c-read_002donly"></a>
+
+<p>If a buffer is <em class="dfn">read-only</em>, then you cannot change its contents,
+although you may change your view of the contents by scrolling and
+narrowing.
+</p>
+<p>Read-only buffers are used in two kinds of situations:
+</p>
+<ul class="itemize mark-bullet">
+<li>A buffer visiting a write-protected file is normally read-only.
+
+<p>Here, the purpose is to inform the user that editing the buffer with the
+aim of saving it in the file may be futile or undesirable.  The user who
+wants to change the buffer text despite this can do so after clearing
+the read-only flag with <kbd class="kbd">C-x C-q</kbd>.
+</p>
+</li><li>Modes such as Dired and Rmail make buffers read-only when altering the
+contents with the usual editing commands would probably be a mistake.
+
+<p>The special commands of these modes bind <code class="code">buffer-read-only</code> to
+<code class="code">nil</code> (with <code class="code">let</code>) or bind <code class="code">inhibit-read-only</code> to
+<code class="code">t</code> around the places where they themselves change the text.
+</p></li></ul>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-buffer_002dread_002donly"><span class="category-def">Variable: </span><span><strong class="def-name">buffer-read-only</strong><a class="copiable-link" href="#index-buffer_002dread_002donly"> &para;</a></span></dt>
+<dd><p>This buffer-local variable specifies whether the buffer is read-only.
+The buffer is read-only if this variable is non-<code class="code">nil</code>.  However,
+characters that have the <code class="code">inhibit-read-only</code> text property can
+still be modified.  See <a class="xref" href="Text.html#Special-Properties">inhibit-read-only</a>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-inhibit_002dread_002donly"><span class="category-def">Variable: </span><span><strong class="def-name">inhibit-read-only</strong><a class="copiable-link" href="#index-inhibit_002dread_002donly"> &para;</a></span></dt>
+<dd><p>If this variable is non-<code class="code">nil</code>, then read-only buffers and,
+depending on the actual value, some or all read-only characters may be
+modified.  Read-only characters in a buffer are those that have a
+non-<code class="code">nil</code> <code class="code">read-only</code> text property.  See <a class="xref" href="Text.html#Special-Properties">Properties with Special Meanings</a>, for more information about text properties.
+</p>
+<p>If <code class="code">inhibit-read-only</code> is <code class="code">t</code>, all <code class="code">read-only</code> character
+properties have no effect.  If <code class="code">inhibit-read-only</code> is a list, then
+<code class="code">read-only</code> character properties have no effect if they are members
+of the list (comparison is done with <code class="code">eq</code>).
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-read_002donly_002dmode"><span class="category-def">Command: </span><span><strong class="def-name">read-only-mode</strong> <var class="def-var-arguments">&amp;optional arg</var><a class="copiable-link" href="#index-read_002donly_002dmode"> &para;</a></span></dt>
+<dd><p>This is the mode command for Read Only minor mode, a buffer-local
+minor mode.  When the mode is enabled, <code class="code">buffer-read-only</code> is
+non-<code class="code">nil</code> in the buffer; when disabled, <code class="code">buffer-read-only</code>
+is <code class="code">nil</code> in the buffer.  The calling convention is the same as
+for other minor mode commands (see <a class="pxref" href="Modes.html#Minor-Mode-Conventions">Conventions for Writing Minor Modes</a>).
+</p>
+<p>This minor mode mainly serves as a wrapper for
+<code class="code">buffer-read-only</code>; unlike most minor modes, there is no separate
+<code class="code">read-only-mode</code> variable.  Even when Read Only mode is disabled,
+characters with non-<code class="code">nil</code> <code class="code">read-only</code> text properties remain
+read-only.  To temporarily ignore all read-only states, bind
+<code class="code">inhibit-read-only</code>, as described above.
+</p>
+<p>When enabling Read Only mode, this mode command also enables View mode
+if the option <code class="code">view-read-only</code> is non-<code class="code">nil</code>.  See <a data-manual="emacs" href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Misc-Buffer.html#Misc-Buffer">Miscellaneous Buffer Operations</a> in <cite class="cite">The GNU Emacs Manual</cite>.
+When disabling Read Only mode, it disables View mode if View mode was
+enabled.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-barf_002dif_002dbuffer_002dread_002donly"><span class="category-def">Function: </span><span><strong class="def-name">barf-if-buffer-read-only</strong> <var class="def-var-arguments">&amp;optional position</var><a class="copiable-link" href="#index-barf_002dif_002dbuffer_002dread_002donly"> &para;</a></span></dt>
+<dd><p>This function signals a <code class="code">buffer-read-only</code> error if the current
+buffer is read-only.  If the text at <var class="var">position</var> (which defaults to
+point) has the <code class="code">inhibit-read-only</code> text property set, the error
+will not be raised.
+</p>
+<p>See <a class="xref" href="Command-Loop.html#Using-Interactive">Using <code class="code">interactive</code></a>, for another way to signal an error if the
+current buffer is read-only.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Buffer-List">
+<div class="nav-panel">
+<p>
+Next: <a href="#Creating-Buffers" accesskey="n" rel="next">Creating Buffers</a>, Previous: <a href="#Read-Only-Buffers" accesskey="p" rel="prev">Read-Only Buffers</a>, Up: <a href="#Buffers" accesskey="u" rel="up">Buffers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="The-Buffer-List"><span>28.8 The Buffer List<a class="copiable-link" href="#The-Buffer-List"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-buffer-list"></a>
+<a class="index-entry-id" id="index-listing-all-buffers"></a>
+
+<p>The <em class="dfn">buffer list</em> is a list of all live buffers.  The order of the
+buffers in this list is based primarily on how recently each buffer has
+been displayed in a window.  Several functions, notably
+<code class="code">other-buffer</code>, use this ordering.  A buffer list displayed for the
+user also follows this order.
+</p>
+<p>Creating a buffer adds it to the end of the buffer list, and killing
+a buffer removes it from that list.  A buffer moves to the front of
+this list whenever it is chosen for display in a window
+(see <a class="pxref" href="Windows.html#Switching-Buffers">Switching to a Buffer in a Window</a>) or a window displaying it is selected
+(see <a class="pxref" href="Windows.html#Selecting-Windows">Selecting Windows</a>).  A buffer moves to the end of the list
+when it is buried (see <code class="code">bury-buffer</code>, below).  There are no
+functions available to the Lisp programmer which directly manipulate
+the buffer list.
+</p>
+<p>In addition to the fundamental buffer list just described, Emacs
+maintains a local buffer list for each frame, in which the buffers that
+have been displayed (or had their windows selected) in that frame come
+first.  (This order is recorded in the frame&rsquo;s <code class="code">buffer-list</code> frame
+parameter; see <a class="ref" href="Frames.html#Buffer-Parameters">Buffer Parameters</a>.)  Buffers never displayed in
+that frame come afterward, ordered according to the fundamental buffer
+list.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-buffer_002dlist"><span class="category-def">Function: </span><span><strong class="def-name">buffer-list</strong> <var class="def-var-arguments">&amp;optional frame</var><a class="copiable-link" href="#index-buffer_002dlist"> &para;</a></span></dt>
+<dd><p>This function returns the buffer list, including all buffers, even those
+whose names begin with a space.  The elements are actual buffers, not
+their names.
+</p>
+<p>If <var class="var">frame</var> is a frame, this returns <var class="var">frame</var>&rsquo;s local buffer list.
+If <var class="var">frame</var> is <code class="code">nil</code> or omitted, the fundamental buffer list is
+used: the buffers appear in order of most recent display or selection,
+regardless of which frames they were displayed on.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(buffer-list)
+     &rArr; (#&lt;buffer buffers.texi&gt;
+         #&lt;buffer  *Minibuf-1*&gt; #&lt;buffer buffer.c&gt;
+         #&lt;buffer *Help*&gt; #&lt;buffer TAGS&gt;)
+</pre></div><pre class="example-preformatted">
+
+</pre><div class="group"><pre class="example-preformatted">;; <span class="r">Note that the name of the minibuffer</span>
+;;   <span class="r">begins with a space!</span>
+(mapcar #'buffer-name (buffer-list))
+    &rArr; (&quot;buffers.texi&quot; &quot; *Minibuf-1*&quot;
+        &quot;buffer.c&quot; &quot;*Help*&quot; &quot;TAGS&quot;)
+</pre></div></div>
+</dd></dl>
+
+<p>The list returned by <code class="code">buffer-list</code> is constructed specifically;
+it is not an internal Emacs data structure, and modifying it has no
+effect on the order of buffers.  If you want to change the order of
+buffers in the fundamental buffer list, here is an easy way:
+</p>
+<div class="example">
+<pre class="example-preformatted">(defun reorder-buffer-list (new-list)
+  (while new-list
+    (bury-buffer (car new-list))
+    (setq new-list (cdr new-list))))
+</pre></div>
+
+<p>With this method, you can specify any order for the list, but there is
+no danger of losing a buffer or adding something that is not a valid
+live buffer.
+</p>
+<p>To change the order or value of a specific frame&rsquo;s buffer list, set
+that frame&rsquo;s <code class="code">buffer-list</code> parameter with
+<code class="code">modify-frame-parameters</code> (see <a class="pxref" href="Frames.html#Parameter-Access">Access to Frame Parameters</a>).
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-other_002dbuffer"><span class="category-def">Function: </span><span><strong class="def-name">other-buffer</strong> <var class="def-var-arguments">&amp;optional buffer visible-ok frame</var><a class="copiable-link" href="#index-other_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function returns the first buffer in the buffer list other than
+<var class="var">buffer</var>.  Usually, this is the buffer appearing in the most
+recently selected window (in frame <var class="var">frame</var> or else the selected
+frame, see <a class="pxref" href="Frames.html#Input-Focus">Input Focus</a>), aside from <var class="var">buffer</var>.  Buffers whose
+names start with a space are not considered at all.
+</p>
+<p>If <var class="var">buffer</var> is not supplied (or if it is not a live buffer), then
+<code class="code">other-buffer</code> returns the first buffer in the selected frame&rsquo;s
+local buffer list.  (If <var class="var">frame</var> is non-<code class="code">nil</code>, it returns the
+first buffer in <var class="var">frame</var>&rsquo;s local buffer list instead.)
+</p>
+<p>If <var class="var">frame</var> has a non-<code class="code">nil</code> <code class="code">buffer-predicate</code> parameter,
+then <code class="code">other-buffer</code> uses that predicate to decide which buffers to
+consider.  It calls the predicate once for each buffer, and if the value
+is <code class="code">nil</code>, that buffer is ignored.  See <a class="xref" href="Frames.html#Buffer-Parameters">Buffer Parameters</a>.
+</p>
+<p>If <var class="var">visible-ok</var> is <code class="code">nil</code>, <code class="code">other-buffer</code> avoids returning
+a buffer visible in any window on any visible frame, except as a last
+resort.  If <var class="var">visible-ok</var> is non-<code class="code">nil</code>, then it does not matter
+whether a buffer is displayed somewhere or not.
+</p>
+<p>If no suitable buffer exists, the buffer <samp class="file">*scratch*</samp> is returned
+(and created, if necessary).
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-last_002dbuffer"><span class="category-def">Function: </span><span><strong class="def-name">last-buffer</strong> <var class="def-var-arguments">&amp;optional buffer visible-ok frame</var><a class="copiable-link" href="#index-last_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function returns the last buffer in <var class="var">frame</var>&rsquo;s buffer list other
+than <var class="var">buffer</var>.  If <var class="var">frame</var> is omitted or <code class="code">nil</code>, it uses the
+selected frame&rsquo;s buffer list.
+</p>
+<p>The argument <var class="var">visible-ok</var> is handled as with <code class="code">other-buffer</code>,
+see above.  If no suitable buffer can be found, the buffer
+<samp class="file">*scratch*</samp> is returned.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-bury_002dbuffer"><span class="category-def">Command: </span><span><strong class="def-name">bury-buffer</strong> <var class="def-var-arguments">&amp;optional buffer-or-name</var><a class="copiable-link" href="#index-bury_002dbuffer"> &para;</a></span></dt>
+<dd><p>This command puts <var class="var">buffer-or-name</var> at the end of the buffer list,
+without changing the order of any of the other buffers on the list.
+This buffer therefore becomes the least desirable candidate for
+<code class="code">other-buffer</code> to return.  The argument can be either a buffer
+itself or the name of one.
+</p>
+<p>This function operates on each frame&rsquo;s <code class="code">buffer-list</code> parameter as
+well as the fundamental buffer list; therefore, the buffer that you bury
+will come last in the value of <code class="code">(buffer-list <var class="var">frame</var>)</code> and in
+the value of <code class="code">(buffer-list)</code>.  In addition, it also puts the buffer
+at the end of the list of buffers of the selected window (see <a class="pxref" href="Windows.html#Window-History">Window History</a>) provided it is shown in that window.
+</p>
+<p>If <var class="var">buffer-or-name</var> is <code class="code">nil</code> or omitted, this means to bury the
+current buffer.  In addition, if the current buffer is displayed in the
+selected window (see <a class="pxref" href="Windows.html#Selecting-Windows">Selecting Windows</a>), this makes sure that the
+window is either deleted or another buffer is shown in it.  More
+precisely, if the selected window is dedicated (see <a class="pxref" href="Windows.html#Dedicated-Windows">Dedicated Windows</a>) and there are other windows on its frame, the window is
+deleted.  If it is the only window on its frame and that frame is not
+the only frame on its terminal, the frame is dismissed by calling the
+function specified by <code class="code">frame-auto-hide-function</code> (see <a class="pxref" href="Windows.html#Quitting-Windows">Quitting Windows</a>).  Otherwise, it calls <code class="code">switch-to-prev-buffer</code>
+(see <a class="pxref" href="Windows.html#Window-History">Window History</a>) to show another buffer in that window.  If
+<var class="var">buffer-or-name</var> is displayed in some other window, it remains
+displayed there.
+</p>
+<p>To replace a buffer in all the windows that display it, use
+<code class="code">replace-buffer-in-windows</code>, See <a class="xref" href="Windows.html#Buffers-and-Windows">Buffers and Windows</a>.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-unbury_002dbuffer"><span class="category-def">Command: </span><span><strong class="def-name">unbury-buffer</strong><a class="copiable-link" href="#index-unbury_002dbuffer"> &para;</a></span></dt>
+<dd><p>This command switches to the last buffer in the local buffer list of
+the selected frame.  More precisely, it calls the function
+<code class="code">switch-to-buffer</code> (see <a class="pxref" href="Windows.html#Switching-Buffers">Switching to a Buffer in a Window</a>), to display the
+buffer returned by <code class="code">last-buffer</code> (see above), in the selected
+window.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-buffer_002dlist_002dupdate_002dhook"><span class="category-def">Variable: </span><span><strong class="def-name">buffer-list-update-hook</strong><a class="copiable-link" href="#index-buffer_002dlist_002dupdate_002dhook"> &para;</a></span></dt>
+<dd><p>This is a normal hook run whenever the buffer list changes.  Functions
+(implicitly) running this hook are <code class="code">get-buffer-create</code>
+(see <a class="pxref" href="#Creating-Buffers">Creating Buffers</a>), <code class="code">rename-buffer</code> (see <a class="pxref" href="#Buffer-Names">Buffer Names</a>), <code class="code">kill-buffer</code> (see <a class="pxref" href="#Killing-Buffers">Killing Buffers</a>),
+<code class="code">bury-buffer</code> (see above), and <code class="code">select-window</code>
+(see <a class="pxref" href="Windows.html#Selecting-Windows">Selecting Windows</a>).  This hook is not run for internal or
+temporary buffers created by <code class="code">get-buffer-create</code> or
+<code class="code">generate-new-buffer</code> with a non-<code class="code">nil</code> argument
+<var class="var">inhibit-buffer-hooks</var>.
+</p>
+<p>Functions run by this hook should avoid calling <code class="code">select-window</code>
+with a <code class="code">nil</code> <var class="var">norecord</var> argument since this may lead to
+infinite recursion.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-buffer_002dmatch_002dp"><span class="category-def">Function: </span><span><strong class="def-name">buffer-match-p</strong> <var class="def-var-arguments">condition buffer-or-name &amp;rest args</var><a class="copiable-link" href="#index-buffer_002dmatch_002dp"> &para;</a></span></dt>
+<dd><p>This function checks if a buffer designated by <code class="code">buffer-or-name</code>
+satisfies the specified <var class="var">condition</var>.  Optional arguments
+<var class="var">args</var> are passed to the predicate function in <var class="var">condition</var>.  A
+valid <var class="var">condition</var> can be one of the following:
+</p><ul class="itemize mark-bullet">
+<li>A string, interpreted as a regular expression.  The buffer
+satisfies the condition if the regular expression matches the buffer
+name.
+</li><li>A predicate function, which should return non-<code class="code">nil</code> if the buffer
+matches.  It is called with
+<var class="var">buffer-or-name</var> as the first argument followed by <var class="var">args</var>.
+</li><li>A cons-cell <code class="code">(<var class="var">oper</var> . <var class="var">expr</var>)</code> where <var class="var">oper</var> is one
+of
+<dl class="table">
+<dt><code class="code">(not <var class="var">cond</var>)</code></dt>
+<dd><p>Satisfied if <var class="var">cond</var> doesn&rsquo;t satisfy <code class="code">buffer-match-p</code> with
+the same buffer and <code class="code">args</code>.
+</p></dd>
+<dt><code class="code">(or <var class="var">conds</var>&hellip;)</code></dt>
+<dd><p>Satisfied if <em class="emph">any</em> condition in <var class="var">conds</var> satisfies
+<code class="code">buffer-match-p</code>, with the same buffer and <code class="code">args</code>.
+</p></dd>
+<dt><code class="code">(and <var class="var">conds</var>&hellip;)</code></dt>
+<dd><p>Satisfied if <em class="emph">all</em> the conditions in <var class="var">conds</var> satisfy
+<code class="code">buffer-match-p</code>, with the same buffer and <code class="code">args</code>.
+</p></dd>
+<dt><code class="code">derived-mode</code></dt>
+<dd><p>Satisfied if the buffer&rsquo;s major mode derives from <var class="var">expr</var>.
+The value of <var class="var">expr</var> can be either a single mode symbol
+or a list of mode symbols as accepted by the function
+<code class="code">provided-mode-derived-p</code> (see <a class="pxref" href="Modes.html#Derived-Modes">Defining Derived Modes</a>).
+Note that this condition might fail to report a match if
+<code class="code">buffer-match-p</code> is invoked before the major mode of
+the buffer has been established.
+</p></dd>
+<dt><code class="code">major-mode</code></dt>
+<dd><p>Satisfied if the buffer&rsquo;s major mode is equal to <var class="var">expr</var>.  Prefer
+using <code class="code">derived-mode</code> instead, when both can work.  Note that this
+condition might fail to report a match if <code class="code">buffer-match-p</code> is
+invoked before the major mode of the buffer has been established.
+</p></dd>
+<dt><code class="code">category</code></dt>
+<dd><p>This is pertinent only when this function is called by
+<code class="code">display-buffer</code> (see <a class="pxref" href="Windows.html#Buffer-Display-Action-Alists">Action Alists for Buffer Display</a>), and is
+satisfied if the action alist with which <code class="code">display-buffer</code> was
+called includes <code class="code">(category&nbsp;.&nbsp;<var class="var">expr</var>)</code><!-- /@w --> in the value of its
+<var class="var">action</var> argument.  See <a class="xref" href="Windows.html#Buffer-Display-Action-Alists">Action Alists for Buffer Display</a>.
+</p></dd>
+<dt><a id="index-this_002dcommand_002c-a-buffer-display-condition-entry"></a><span><code class="code">this-command</code><a class="copiable-link" href="#index-this_002dcommand_002c-a-buffer-display-condition-entry"> &para;</a></span></dt>
+<dd><p>This too is pertinent only when this function is called by
+<code class="code">display-buffer</code> (see <a class="pxref" href="Windows.html#Buffer-Display-Action-Alists">Action Alists for Buffer Display</a>), and is
+satisfied when the command now being executed is equal to <var class="var">expr</var>, or
+if <var class="var">expr</var> is a list, when the command now being executed is a member
+of that list.
+</p></dd>
+</dl>
+</li><li>t
+Satisfied by any buffer.  A convenient alternative to <code class="code">&quot;&quot;</code> (empty
+string) or <code class="code">(and)</code> (empty conjunction).
+</li></ul>
+</dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-match_002dbuffers"><span class="category-def">Function: </span><span><strong class="def-name">match-buffers</strong> <var class="def-var-arguments">condition &amp;optional buffer-list &amp;rest args</var><a class="copiable-link" href="#index-match_002dbuffers"> &para;</a></span></dt>
+<dd><p>This function returns a list of all buffers that satisfy the
+<var class="var">condition</var>.  If no buffers match, the function returns
+<code class="code">nil</code>.  The argument <var class="var">condition</var> is as defined in
+<code class="code">buffer-match-p</code> above.  By default, all the buffers are
+considered, but this can be restricted via the optional argument
+<code class="code">buffer-list</code>, which should be a list of buffers to consider.
+Remaining arguments <var class="var">args</var> will be passed to <var class="var">condition</var> in
+the same way as <code class="code">buffer-match-p</code> does.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Creating-Buffers">
+<div class="nav-panel">
+<p>
+Next: <a href="#Killing-Buffers" accesskey="n" rel="next">Killing Buffers</a>, Previous: <a href="#Buffer-List" accesskey="p" rel="prev">The Buffer List</a>, Up: <a href="#Buffers" accesskey="u" rel="up">Buffers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Creating-Buffers-1"><span>28.9 Creating Buffers<a class="copiable-link" href="#Creating-Buffers-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-creating-buffers"></a>
+<a class="index-entry-id" id="index-buffers_002c-creating"></a>
+
+<p>This section describes the two primitives for creating buffers.
+<code class="code">get-buffer-create</code> creates a buffer if it finds no existing
+buffer with the specified name; <code class="code">generate-new-buffer</code> always
+creates a new buffer and gives it a unique name.
+</p>
+<p>Both functions accept an optional argument <var class="var">inhibit-buffer-hooks</var>.
+If it is non-<code class="code">nil</code>, the buffer they create does not run the hooks
+<code class="code">kill-buffer-hook</code>, <code class="code">kill-buffer-query-functions</code>
+(see <a class="pxref" href="#Killing-Buffers">Killing Buffers</a>), and <code class="code">buffer-list-update-hook</code>
+(see <a class="pxref" href="#Buffer-List">The Buffer List</a>).  This avoids slowing down internal or temporary
+buffers that are never presented to users or passed on to other
+applications.
+</p>
+<p>Other functions you can use to create buffers include
+<code class="code">with-output-to-temp-buffer</code> (see <a class="pxref" href="Display.html#Temporary-Displays">Temporary Displays</a>) and
+<code class="code">create-file-buffer</code> (see <a class="pxref" href="Files.html#Visiting-Files">Visiting Files</a>).  Starting a
+subprocess can also create a buffer (see <a class="pxref" href="Processes.html#Processes">Processes</a>).
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-get_002dbuffer_002dcreate"><span class="category-def">Function: </span><span><strong class="def-name">get-buffer-create</strong> <var class="def-var-arguments">buffer-or-name &amp;optional inhibit-buffer-hooks</var><a class="copiable-link" href="#index-get_002dbuffer_002dcreate"> &para;</a></span></dt>
+<dd><p>This function returns a buffer named <var class="var">buffer-or-name</var>.  The buffer
+returned does not become the current buffer&mdash;this function does not
+change which buffer is current.
+</p>
+<p><var class="var">buffer-or-name</var> must be either a string or an existing buffer.  If
+it is a string and a live buffer with that name already exists,
+<code class="code">get-buffer-create</code> returns that buffer.  If no such buffer exists,
+it creates a new buffer.  If <var class="var">buffer-or-name</var> is a buffer instead of
+a string, it is returned as given, even if it is dead.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(get-buffer-create &quot;foo&quot;)
+     &rArr; #&lt;buffer foo&gt;
+</pre></div></div>
+
+<p>The major mode for a newly created buffer is set to Fundamental mode.
+(The default value of the variable <code class="code">major-mode</code> is handled at a higher
+level; see <a class="ref" href="Modes.html#Auto-Major-Mode">How Emacs Chooses a Major Mode</a>.)  If the name begins with a space, the
+buffer initially disables undo information recording (see <a class="pxref" href="Text.html#Undo">Undo</a>).
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-generate_002dnew_002dbuffer"><span class="category-def">Function: </span><span><strong class="def-name">generate-new-buffer</strong> <var class="def-var-arguments">name &amp;optional inhibit-buffer-hooks</var><a class="copiable-link" href="#index-generate_002dnew_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function returns a newly created, empty buffer, but does not make
+it current.  The name of the buffer is generated by passing <var class="var">name</var>
+to the function <code class="code">generate-new-buffer-name</code> (see <a class="pxref" href="#Buffer-Names">Buffer Names</a>).  Thus, if there is no buffer named <var class="var">name</var>, then that is
+the name of the new buffer; if that name is in use, a suffix of the
+form &lsquo;<samp class="samp">&lt;<var class="var">n</var>&gt;</samp>&rsquo;, where <var class="var">n</var> is an integer, is appended to
+<var class="var">name</var>.
+</p>
+<p>An error is signaled if <var class="var">name</var> is not a string.
+</p>
+<div class="example">
+<div class="group"><pre class="example-preformatted">(generate-new-buffer &quot;bar&quot;)
+     &rArr; #&lt;buffer bar&gt;
+</pre></div><div class="group"><pre class="example-preformatted">(generate-new-buffer &quot;bar&quot;)
+     &rArr; #&lt;buffer bar&lt;2&gt;&gt;
+</pre></div><div class="group"><pre class="example-preformatted">(generate-new-buffer &quot;bar&quot;)
+     &rArr; #&lt;buffer bar&lt;3&gt;&gt;
+</pre></div></div>
+
+<p>The major mode for the new buffer is set to Fundamental mode.  The default
+value of the variable <code class="code">major-mode</code> is handled at a higher level.
+See <a class="xref" href="Modes.html#Auto-Major-Mode">How Emacs Chooses a Major Mode</a>.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Killing-Buffers">
+<div class="nav-panel">
+<p>
+Next: <a href="#Indirect-Buffers" accesskey="n" rel="next">Indirect Buffers</a>, Previous: <a href="#Creating-Buffers" accesskey="p" rel="prev">Creating Buffers</a>, Up: <a href="#Buffers" accesskey="u" rel="up">Buffers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Killing-Buffers-1"><span>28.10 Killing Buffers<a class="copiable-link" href="#Killing-Buffers-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-killing-buffers"></a>
+<a class="index-entry-id" id="index-buffers_002c-killing"></a>
+
+<p><em class="dfn">Killing a buffer</em> makes its name unknown to Emacs and makes the
+memory space it occupied available for other use.
+</p>
+<p>The buffer object for the buffer that has been killed remains in
+existence as long as anything refers to it, but it is specially marked
+so that you cannot make it current or display it.  Killed buffers retain
+their identity, however; if you kill two distinct buffers, they remain
+distinct according to <code class="code">eq</code> although both are dead.
+</p>
+<p>If you kill a buffer that is current or displayed in a window, Emacs
+automatically selects or displays some other buffer instead.  This
+means that killing a buffer can change the current buffer.  Therefore,
+when you kill a buffer, you should also take the precautions
+associated with changing the current buffer (unless you happen to know
+that the buffer being killed isn&rsquo;t current).  See <a class="xref" href="#Current-Buffer">The Current Buffer</a>.
+</p>
+<p>If you kill a buffer that is the base buffer of one or more indirect
+buffers (see <a class="pxref" href="#Indirect-Buffers">Indirect Buffers</a>),
+the indirect buffers are automatically killed as well.
+</p>
+<a class="index-entry-id" id="index-live-buffer"></a>
+<p>The <code class="code">buffer-name</code> of a buffer is <code class="code">nil</code> if, and only if,
+the buffer is killed.  A buffer that has not been killed is called a
+<em class="dfn">live</em> buffer.  To test whether a buffer is live or killed, use
+the function <code class="code">buffer-live-p</code> (see below).
+</p>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-kill_002dbuffer"><span class="category-def">Command: </span><span><strong class="def-name">kill-buffer</strong> <var class="def-var-arguments">&amp;optional buffer-or-name</var><a class="copiable-link" href="#index-kill_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function kills the buffer <var class="var">buffer-or-name</var>, freeing all its
+memory for other uses or to be returned to the operating system.  If
+<var class="var">buffer-or-name</var> is <code class="code">nil</code> or omitted, it kills the current
+buffer.
+</p>
+<p>Any processes that have this buffer as the <code class="code">process-buffer</code> are
+sent the <code class="code">SIGHUP</code> (hangup) signal, which normally causes them
+to terminate.  See <a class="xref" href="Processes.html#Signals-to-Processes">Sending Signals to Processes</a>.
+</p>
+<p>If the buffer is visiting a file and contains unsaved changes,
+<code class="code">kill-buffer</code> asks the user to confirm before the buffer is killed.
+It does this even if not called interactively.  To prevent the request
+for confirmation, clear the modified flag before calling
+<code class="code">kill-buffer</code>.  See <a class="xref" href="#Buffer-Modification">Buffer Modification</a>.
+</p>
+<p>This function calls <code class="code">replace-buffer-in-windows</code> for cleaning up
+all windows currently displaying the buffer to be killed.
+</p>
+<p>Killing a buffer that is already dead has no effect.
+</p>
+<p>This function returns <code class="code">t</code> if it actually killed the buffer.  It
+returns <code class="code">nil</code> if the user refuses to confirm or if
+<var class="var">buffer-or-name</var> was already dead.
+</p>
+<div class="example smallexample">
+<pre class="example-preformatted">(kill-buffer &quot;foo.unchanged&quot;)
+     &rArr; t
+(kill-buffer &quot;foo.changed&quot;)
+
+---------- Buffer: Minibuffer ----------
+Buffer foo.changed modified; kill anyway? (yes or no) <kbd class="kbd">yes</kbd>
+---------- Buffer: Minibuffer ----------
+
+     &rArr; t
+</pre></div>
+</dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-kill_002dbuffer_002dquery_002dfunctions"><span class="category-def">Variable: </span><span><strong class="def-name">kill-buffer-query-functions</strong><a class="copiable-link" href="#index-kill_002dbuffer_002dquery_002dfunctions"> &para;</a></span></dt>
+<dd><p>Before confirming unsaved changes, <code class="code">kill-buffer</code> calls the functions
+in the list <code class="code">kill-buffer-query-functions</code>, in order of appearance,
+with no arguments.  The buffer being killed is the current buffer when
+they are called.  The idea of this feature is that these functions will
+ask for confirmation from the user.  If any of them returns <code class="code">nil</code>,
+<code class="code">kill-buffer</code> spares the buffer&rsquo;s life.
+</p>
+<p>This hook is not run for internal or temporary buffers created by
+<code class="code">get-buffer-create</code> or <code class="code">generate-new-buffer</code> with a
+non-<code class="code">nil</code> argument <var class="var">inhibit-buffer-hooks</var>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-kill_002dbuffer_002dhook"><span class="category-def">Variable: </span><span><strong class="def-name">kill-buffer-hook</strong><a class="copiable-link" href="#index-kill_002dbuffer_002dhook"> &para;</a></span></dt>
+<dd><p>This is a normal hook run by <code class="code">kill-buffer</code> after asking all the
+questions it is going to ask, just before actually killing the buffer.
+The buffer to be killed is current when the hook functions run.
+See <a class="xref" href="Modes.html#Hooks">Hooks</a>.  This variable is a permanent local, so its local binding
+is not cleared by changing major modes.
+</p>
+<p>This hook is not run for internal or temporary buffers created by
+<code class="code">get-buffer-create</code> or <code class="code">generate-new-buffer</code> with a
+non-<code class="code">nil</code> argument <var class="var">inhibit-buffer-hooks</var>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defopt-alias-first-defvr def-block">
+<dt class="defvr defopt-alias-defvr def-line" id="index-buffer_002doffer_002dsave"><span class="category-def">User Option: </span><span><strong class="def-name">buffer-offer-save</strong><a class="copiable-link" href="#index-buffer_002doffer_002dsave"> &para;</a></span></dt>
+<dd><p>This variable, if non-<code class="code">nil</code> in a particular buffer, tells
+<code class="code">save-buffers-kill-emacs</code> to offer to save that buffer, just as
+it offers to save file-visiting buffers.  If <code class="code">save-some-buffers</code>
+is called with the second optional argument set to <code class="code">t</code>, it will
+also offer to save the buffer.  Lastly, if this variable is set to the
+symbol <code class="code">always</code>, both <code class="code">save-buffers-kill-emacs</code> and
+<code class="code">save-some-buffers</code> will always offer to save.  See <a class="xref" href="Files.html#Definition-of-save_002dsome_002dbuffers">Definition of save-some-buffers</a>.  The variable <code class="code">buffer-offer-save</code>
+automatically becomes buffer-local when set for any reason.
+See <a class="xref" href="Variables.html#Buffer_002dLocal-Variables">Buffer-Local Variables</a>.
+</p></dd></dl>
+
+<dl class="first-defvr first-defvar-alias-first-defvr def-block">
+<dt class="defvr defvar-alias-defvr def-line" id="index-buffer_002dsave_002dwithout_002dquery"><span class="category-def">Variable: </span><span><strong class="def-name">buffer-save-without-query</strong><a class="copiable-link" href="#index-buffer_002dsave_002dwithout_002dquery"> &para;</a></span></dt>
+<dd><p>This variable, if non-<code class="code">nil</code> in a particular buffer, tells
+<code class="code">save-buffers-kill-emacs</code> and <code class="code">save-some-buffers</code> to save
+this buffer (if it&rsquo;s modified) without asking the user.  The variable
+automatically becomes buffer-local when set for any reason.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-buffer_002dlive_002dp"><span class="category-def">Function: </span><span><strong class="def-name">buffer-live-p</strong> <var class="def-var-arguments">object</var><a class="copiable-link" href="#index-buffer_002dlive_002dp"> &para;</a></span></dt>
+<dd><p>This function returns <code class="code">t</code> if <var class="var">object</var> is a live buffer (a
+buffer which has not been killed), <code class="code">nil</code> otherwise.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Indirect-Buffers">
+<div class="nav-panel">
+<p>
+Next: <a href="#Swapping-Text" accesskey="n" rel="next">Swapping Text Between Two Buffers</a>, Previous: <a href="#Killing-Buffers" accesskey="p" rel="prev">Killing Buffers</a>, Up: <a href="#Buffers" accesskey="u" rel="up">Buffers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Indirect-Buffers-1"><span>28.11 Indirect Buffers<a class="copiable-link" href="#Indirect-Buffers-1"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-indirect-buffers"></a>
+<a class="index-entry-id" id="index-base-buffer"></a>
+
+<p>An <em class="dfn">indirect buffer</em> shares the text of some other buffer, which
+is called the <em class="dfn">base buffer</em> of the indirect buffer.  In some ways it
+is the analogue, for buffers, of a symbolic link among files.  The base
+buffer may not itself be an indirect buffer.
+</p>
+<p>The text of the indirect buffer is always identical to the text of its
+base buffer; changes made by editing either one are visible immediately
+in the other.  This includes the text properties as well as the characters
+themselves.
+</p>
+<p>In all other respects, the indirect buffer and its base buffer are
+completely separate.  They have different names, independent values of
+point, independent narrowing, independent markers and overlays (though
+inserting or deleting text in either buffer relocates the markers and
+overlays for both), independent major modes, and independent
+buffer-local variable bindings.
+</p>
+<p>An indirect buffer cannot visit a file, but its base buffer can.  If
+you try to save the indirect buffer, that actually saves the base
+buffer.
+</p>
+<p>Killing an indirect buffer has no effect on its base buffer.  Killing
+the base buffer effectively kills the indirect buffer in that it cannot
+ever again be the current buffer.
+</p>
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-make_002dindirect_002dbuffer"><span class="category-def">Command: </span><span><strong class="def-name">make-indirect-buffer</strong> <var class="def-var-arguments">base-buffer name &amp;optional clone inhibit-buffer-hooks</var><a class="copiable-link" href="#index-make_002dindirect_002dbuffer"> &para;</a></span></dt>
+<dd><p>This creates and returns an indirect buffer named <var class="var">name</var> whose
+base buffer is <var class="var">base-buffer</var>.  The argument <var class="var">base-buffer</var> may
+be a live buffer or the name (a string) of an existing buffer.  If
+<var class="var">name</var> is the name of an existing buffer, an error is signaled.
+</p>
+<p>If <var class="var">clone</var> is non-<code class="code">nil</code>, then the indirect buffer originally
+shares the state of <var class="var">base-buffer</var> such as major mode, minor
+modes, buffer local variables and so on.  If <var class="var">clone</var> is omitted
+or <code class="code">nil</code> the indirect buffer&rsquo;s state is set to the default state
+for new buffers.
+</p>
+<p>If <var class="var">base-buffer</var> is an indirect buffer, its base buffer is used as
+the base for the new buffer.  If, in addition, <var class="var">clone</var> is
+non-<code class="code">nil</code>, the initial state is copied from the actual base
+buffer, not from <var class="var">base-buffer</var>.
+</p>
+<p>See <a class="xref" href="#Creating-Buffers">Creating Buffers</a>, for the meaning of <var class="var">inhibit-buffer-hooks</var>.
+</p></dd></dl>
+
+<dl class="first-deffn def-block">
+<dt class="deffn def-line" id="index-clone_002dindirect_002dbuffer"><span class="category-def">Command: </span><span><strong class="def-name">clone-indirect-buffer</strong> <var class="def-var-arguments">newname display-flag &amp;optional norecord</var><a class="copiable-link" href="#index-clone_002dindirect_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function creates and returns a new indirect buffer that shares
+the current buffer&rsquo;s base buffer and copies the rest of the current
+buffer&rsquo;s attributes.  (If the current buffer is not indirect, it is
+used as the base buffer.)
+</p>
+<p>If <var class="var">display-flag</var> is non-<code class="code">nil</code>, as it always is in
+interactive calls, that means to display the new buffer by calling
+<code class="code">pop-to-buffer</code>.  If <var class="var">norecord</var> is non-<code class="code">nil</code>, that means
+not to put the new buffer to the front of the buffer list.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-buffer_002dbase_002dbuffer"><span class="category-def">Function: </span><span><strong class="def-name">buffer-base-buffer</strong> <var class="def-var-arguments">&amp;optional buffer</var><a class="copiable-link" href="#index-buffer_002dbase_002dbuffer"> &para;</a></span></dt>
+<dd><p>This function returns the base buffer of <var class="var">buffer</var>, which defaults
+to the current buffer.  If <var class="var">buffer</var> is not indirect, the value is
+<code class="code">nil</code>.  Otherwise, the value is another buffer, which is never an
+indirect buffer.
+</p></dd></dl>
+
+<hr>
+</div>
+<div class="section-level-extent" id="Swapping-Text">
+<div class="nav-panel">
+<p>
+Next: <a href="#Buffer-Gap" accesskey="n" rel="next">The Buffer Gap</a>, Previous: <a href="#Indirect-Buffers" accesskey="p" rel="prev">Indirect Buffers</a>, Up: <a href="#Buffers" accesskey="u" rel="up">Buffers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="Swapping-Text-Between-Two-Buffers"><span>28.12 Swapping Text Between Two Buffers<a class="copiable-link" href="#Swapping-Text-Between-Two-Buffers"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-swap-text-between-buffers"></a>
+<a class="index-entry-id" id="index-virtual-buffers"></a>
+
+<p>Specialized modes sometimes need to let the user access from the
+same buffer several vastly different types of text.  For example, you
+may need to display a summary of the buffer text, in addition to
+letting the user access the text itself.
+</p>
+<p>This could be implemented with multiple buffers (kept in sync when
+the user edits the text), or with narrowing (see <a class="pxref" href="Positions.html#Narrowing">Narrowing</a>).  But
+these alternatives might sometimes become tedious or prohibitively
+expensive, especially if each type of text requires expensive
+buffer-global operations in order to provide correct display and
+editing commands.
+</p>
+<p>Emacs provides another facility for such modes: you can quickly swap
+buffer text between two buffers with <code class="code">buffer-swap-text</code>.  This
+function is very fast because it doesn&rsquo;t move any text, it only
+changes the internal data structures of the buffer object to point to
+a different chunk of text.  Using it, you can pretend that a group of
+two or more buffers are actually a single virtual buffer that holds
+the contents of all the individual buffers together.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-buffer_002dswap_002dtext"><span class="category-def">Function: </span><span><strong class="def-name">buffer-swap-text</strong> <var class="def-var-arguments">buffer</var><a class="copiable-link" href="#index-buffer_002dswap_002dtext"> &para;</a></span></dt>
+<dd><p>This function swaps the text of the current buffer and that of its
+argument <var class="var">buffer</var>.  It signals an error if one of the two buffers
+is an indirect buffer (see <a class="pxref" href="#Indirect-Buffers">Indirect Buffers</a>) or is a base buffer
+of an indirect buffer.
+</p>
+<p>All the buffer properties that are related to the buffer text are
+swapped as well: the positions of point and mark, all the markers, the
+overlays, the text properties, the undo list, the value of the
+<code class="code">enable-multibyte-characters</code> flag (see <a class="pxref" href="Non_002dASCII-Characters.html#Text-Representations">enable-multibyte-characters</a>), etc.
+</p>
+<p><strong class="strong">Warning:</strong> If this function is called from within a
+<code class="code">save-excursion</code> form, the current buffer will be set to
+<var class="var">buffer</var> upon leaving the form, since the marker used by
+<code class="code">save-excursion</code> to save the position and buffer will be swapped
+as well.
+</p></dd></dl>
+
+<p>If you use <code class="code">buffer-swap-text</code> on a file-visiting buffer, you
+should set up a hook to save the buffer&rsquo;s original text rather than
+what it was swapped with.  <code class="code">write-region-annotate-functions</code>
+works for this purpose.  You should probably set
+<code class="code">buffer-saved-size</code> to &minus;2 in the buffer, so that changes
+in the text it is swapped with will not interfere with auto-saving.
+</p>
+<hr>
+</div>
+<div class="section-level-extent" id="Buffer-Gap">
+<div class="nav-panel">
+<p>
+Previous: <a href="#Swapping-Text" accesskey="p" rel="prev">Swapping Text Between Two Buffers</a>, Up: <a href="#Buffers" accesskey="u" rel="up">Buffers</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+<h3 class="section" id="The-Buffer-Gap"><span>28.13 The Buffer Gap<a class="copiable-link" href="#The-Buffer-Gap"> &para;</a></span></h3>
+<a class="index-entry-id" id="index-buffer-gap"></a>
+
+<p>Emacs buffers are implemented using an invisible <em class="dfn">gap</em> to make
+insertion and deletion faster.  Insertion works by filling in part of
+the gap, and deletion adds to the gap.  Of course, this means that the
+gap must first be moved to the locus of the insertion or deletion.
+Emacs moves the gap only when you try to insert or delete.  This is why
+your first editing command in one part of a large buffer, after
+previously editing in another far-away part, sometimes involves a
+noticeable delay.
+</p>
+<p>This mechanism works invisibly, and Lisp code should never be affected
+by the gap&rsquo;s current location, but these functions are available for
+getting information about the gap status.
+</p>
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-gap_002dposition"><span class="category-def">Function: </span><span><strong class="def-name">gap-position</strong><a class="copiable-link" href="#index-gap_002dposition"> &para;</a></span></dt>
+<dd><p>This function returns the current gap position in the current buffer.
+</p></dd></dl>
+
+<dl class="first-deffn first-defun-alias-first-deffn def-block">
+<dt class="deffn defun-alias-deffn def-line" id="index-gap_002dsize"><span class="category-def">Function: </span><span><strong class="def-name">gap-size</strong><a class="copiable-link" href="#index-gap_002dsize"> &para;</a></span></dt>
+<dd><p>This function returns the current gap size of the current buffer.
+</p></dd></dl>
+</div>
+</div>
+<hr>
+<div class="nav-panel">
+<p>
+Next: <a href="Windows.html#Windows" accesskey="n" rel="next">Windows</a>, Previous: <a href="Backups-and-Auto_002dSaving.html#Backups-and-Auto_002dSaving" accesskey="p" rel="prev">Backups and Auto-Saving</a>, Up: <a href="index.html" accesskey="u" rel="up">Emacs Lisp</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Index.html" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

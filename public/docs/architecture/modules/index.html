@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modules — jotain</title>
+<link rel="canonical" href="https://jotain.j10s.io/">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f8fb">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d0f14">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script src="/js/theme-init.js"></script>
+<link rel="stylesheet" href="/css/site.css">
+<link rel="stylesheet" href="/css/docs.css">
+</head>
+<body>
+<div class="frame">
+  <header class="tab-bar">
+    <div class="tab-brand"><a class="tab-brand-link" href="/"><span class="tab-prompt">jy ❯</span></a></div>
+    <nav class="tabs" aria-label="buffers">
+      <a class="tab" href="/#readme">README.org</a>
+      <a class="tab" href="/#man">*Man JOTAIN(7)*</a>
+      <a class="tab" href="/#keys">keybindings</a>
+      <span class="tab tab-current" aria-current="page">docs/architecture/modules.mdx</span>
+    </nav>
+    <div class="tab-actions">
+      <a class="gh-link" href="https://github.com/Jylhis/jotain">github ⑂</a>
+      <button type="button" class="theme-btn" id="theme-btn" aria-label="toggle theme">☾</button>
+    </div>
+  </header>
+  <main class="buffer">
+    <article class="page docs-prose">
+<h1 id="modules">Modules</h1>
+<p>Jotain's Elisp configuration is split across <code>lisp/init-*.el</code>, one file per concern. Each file is self-contained: a package that only exists to enhance a built-in (e.g. <code>dirvish</code> → <code>dired</code>, <code>magit</code> → <code>vc</code>) lives in the same file as the built-in it enhances. There is no "builtins.el" / "third-party.el" split.</p>
+<h2 id="conventions">Conventions</h2>
+<ul>
+<li>Every module file is named <code>init-&lt;concern&gt;.el</code> under <code>lisp/</code>.</li>
+<li>Every file starts with a <code>lexical-binding: t</code> cookie.</li>
+<li>Every file ends with <code>(provide 'init-&lt;concern&gt;)</code>.</li>
+<li>Modules are loaded in order from <code>init.el</code>.</li>
+<li><code>use-package-always-ensure</code> is <code>t</code> (set in <code>early-init.el</code>), so every <code>use-package</code> block defaults to "install if missing". Built-ins must opt out with <code>:ensure nil</code>. Packages provided by Nix use <code>:ensure nil</code> — Nix puts them on <code>load-path</code>, so <code>use-package</code> finds them without touching the network.</li>
+<li>User options (<code>defcustom</code> variables) are set via <code>setopt</code>, not <code>setq</code>, so the <code>:set</code> callback and <code>:type</code> validation run.</li>
+</ul>
+<h2 id="load-order">Load order</h2>
+<p><code>init.el</code> loads modules in this order:</p>
+<pre><code>init-core         GC, encoding, var/ paths, sane file-handling defaults
+init-keys         Global keymap and window-split helpers
+init-ui           Theme, modeline, fonts, frame tweaks, icons
+init-tabs         Workspace tabs via tab-bar-mode
+init-help         helpful + built-in help tweaks
+init-docs         Register the bundled jotain.info with C-h i
+init-editing      elec-pair, delsel, whitespace, region tools
+init-completion   vertico, marginalia, orderless, consult, corfu, cape
+init-navigation   dired, dirvish, project, windmove, winner
+init-vc           vc, vc-jj, magit, majutsu, magit-todos, forge, diff-hl, ediff
+init-prog         prog-mode, treesit, eglot, dape, flymake, eldoc, apheleia, compile
+init-snippets     tempel snippets + eglot-tempel LSP expansion
+init-project      project + projection + compile-multi
+init-devenv       devenv.sh: tasks, processes, env, LSP, MCP
+init-ai           eca, claude-code-ide, gptel, mcp
+init-shell        eshell, comint, ielm
+init-terminal     ghostel terminal + tty integration (kkp, clipetty)
+init-systems      sops, logview, auth-source-1password
+init-tracking     keyfreq, wakatime, activity-watch
+init-writing      jinx, markdown-mode, denote, pdf-tools
+init-org          org, org-modern, capture templates
+
+init-lang-nix
+init-lang-rust
+init-lang-python
+init-lang-go
+init-lang-web         TS/TSX/CSS/HTML/JSON
+init-lang-devops      Dockerfile, terraform, just, ansible, bazel
+init-lang-data        yaml, csv, sql, jinja2, gnuplot
+init-lang-systems     C/C++, CMake, Meson, Haskell, OCaml, Zig</code></pre>
+<h2 id="core-modules">Core modules</h2>
+<h3 id="init-core"><code>init-core</code></h3>
+<p>GC, encoding, and the sane-defaults baseline. Restores <code>gc-cons-threshold</code> to 16 MiB after the early-init bump; pauses GC entirely while the minibuffer is open; forces UTF-8 everywhere; enables <code>save-place-mode</code>, <code>recentf</code>, <code>savehist</code>, <code>repeat-mode</code>, <code>uniquify</code>, <code>ibuffer</code> as the default buffer list, <code>global-auto-revert-mode</code>. Defines <code>jotain-var-dir</code> and the <code>jotain-var-file</code> helper, and themes the built-in state-file variables (<code>recentf-save-file</code>, <code>savehist-file</code>, <code>save-place-file</code>, <code>bookmark-default-file</code>, <code>auto-save-list-file-prefix</code>) to live under <code>var/</code>. Other modules use the same helper to keep their own state (keyfreq, logview, forge, transient) in the same place. Also contains the macOS modifier-key fix (<code>Cmd</code>→Meta, <code>Option</code>→Super, right Option untouched for special characters). Sets <code>read-extended-command-predicate</code> to filter <code>M-x</code> candidates by major mode; untagged commands are still shown, and typing a full command name always runs it regardless of the filter.</p>
+<h3 id="init-keys"><code>init-keys</code></h3>
+<p>Global bindings only — per-package bindings live in the relevant <code>use-package</code> block. Unbinds <code>C-z</code> / <code>C-x C-z</code> (no accidental suspend on GUI), binds <code>M-o</code> to <code>other-window</code>, enables <code>windmove-default-keybindings</code> (Shift + arrows), defines <code>jotain-toggle-window-split</code> on <code>C-x j</code> for rotating a two-window layout, and (on Emacs 31+) ships a <code>repeat-map</code> for the <code>window-layout-*</code> frame transforms under <code>C-x W</code>. Also registers <code>which-key-add-key-based-replacements</code> for the cross-cutting <code>C-c</code> / <code>C-x</code> prefixes (<code>C-c n</code> org-roam, <code>C-c r</code> eglot-refactor, <code>C-c o</code> combobulate, <code>C-x P</code> project, etc.) so the prefix menus surface short noun-phrase labels instead of bare command names. See <a href="/docs/keybindings/">Keybindings</a> for the full namespace map and <a href="/docs/ergonomics/">Ergonomics</a> for the repeat-maps rationale.</p>
+<h3 id="init-ui"><code>init-ui</code></h3>
+<p>Appearance. Uses the Jylhis design system themes <code>jylhis-sheet</code> (light) and <code>jylhis-field</code> (dark), user-customisable via <code>jotain-theme-light</code> / <code>jotain-theme-dark</code>, with <code>auto-dark-mode</code> flipping between them based on the system appearance. The themes come from the pin in <code>nix/design-pin.nix</code>; if that package is unavailable, or a theme it names cannot be loaded, the module degrades to the built-in <code>modus-operandi</code> / <code>modus-vivendi</code> rather than failing the rest of startup. Installs <code>doom-modeline</code>, picks the first available font from <code>jotain-font-preferences</code> (BlexMono Nerd Font → JetBrains Mono Nerd Font → Iosevka Nerd Font → DejaVu Sans Mono), enables <code>display-line-numbers</code>, <code>pixel-scroll-precision-mode</code>, <code>hl-line-mode</code>, <code>show-paren-mode</code>, built-in <code>which-key</code>, <code>nerd-icons</code> integrations for dired/ibuffer/corfu/marginalia, <code>hl-todo</code>, <code>breadcrumb</code>, <code>pulsar</code>, <code>rainbow-delimiters</code>, <code>indent-bars</code>.</p>
+<h3 id="init-help"><code>init-help</code></h3>
+<p>Built-in help tweaks (<code>help-window-select</code>) plus <code>helpful</code> for richer <code>describe-*</code> buffers. See <a href="/docs/finding-information-in-emacs/">Finding Information in Emacs</a> for day-to-day usage.</p>
+<h3 id="init-docs"><code>init-docs</code></h3>
+<p>Makes the bundled Jotain Info manual (<code>jotain.info</code>, generated by <code>nix build .#info</code>) discoverable from <code>C-h i</code>. For NixOS / nix-darwin / Home Manager users this is already wired up at the Nix layer: the Emacs wrapper pre-sets <code>INFOPATH</code>, so no Elisp is needed — this module is the source-checkout fallback. After <code>just info</code>, <code>result-info/share/info</code> is added to <code>Info-directory-list</code>; <code>C-h i d m Jotain RET</code> opens the manual. <code>JOTAIN_INFO_DIR</code> overrides the search.</p>
+<h3 id="init-editing"><code>init-editing</code></h3>
+<p>Baseline editing primitives: <code>electric-pair-mode</code>, <code>delete-selection-mode</code>, <code>whitespace-mode</code>, undo settings, region tools.</p>
+<h3 id="init-completion"><code>init-completion</code></h3>
+<p>The vertico stack on the minibuffer side, corfu + cape on the in-buffer side, plus the built-in <code>minibuffer</code> tweaks they rely on. All configured in one file because touching one nearly always means touching the others. <code>C-s</code> is deliberately left as <code>isearch-forward</code>; use <code>M-s l</code> for <code>consult-line</code> when you want the consult UI.</p>
+<h3 id="init-navigation"><code>init-navigation</code></h3>
+<p><code>dired</code> and <code>dirvish</code> in the same file, along with <code>project</code>, <code>winner-mode</code>, and directional navigation.</p>
+<h3 id="init-vc"><code>init-vc</code></h3>
+<p><code>vc</code> pinned to Git + Jujutsu (other backends are a slow startup tax), <code>vc-jj</code> for jj support through built-in <code>vc</code>/<code>project.el</code> (jj repos are typically colocated with git), <code>magit</code> with refined hunks and worktrees in <code>magit-status</code>, <code>majutsu</code> as a magit-style jj porcelain (<code>C-c j</code> status/log, <code>C-c M-j</code> dispatch), <code>magit-todos</code>, <code>forge</code> (configured with the built-in sqlite backend, <code>emacsql-sqlite-builtin</code>), <code>diff-hl</code> (including <code>diff-hl-flydiff-mode</code> for pre-save indicators), and <code>ediff</code> with sane window setup (<code>smerge-mode</code> needs no config — it self-activates on conflicts with its stock <code>C-c ^</code> bindings). The <code>N/M</code> modeline counter is backend-aware: a <code>.jj</code> directory selects jj probes (<code>jj diff --git</code>, an <code>author_date</code> revset), otherwise git. For correct jj diff/conflict rendering set <code>ui.diff-formatter = ":git"</code> and <code>ui.conflict-marker-style = "git"</code> via <code>jj config edit --user</code>.</p>
+<h3 id="init-prog"><code>init-prog</code></h3>
+<p>The shared substrate for programming modes: <code>prog-mode</code> hooks, <code>treesit</code> setup, <code>eglot</code>, <code>flymake</code>, <code>eldoc</code>, <code>apheleia</code> for format-on-save, <code>compile</code>. Per-language <code>eglot-ensure</code> hooks live here so all LSP wiring is in one place, and beyond that curated list <code>eglot</code> auto-starts for any project file whose language server is on the buffer's (envrc-applied) <code>PATH</code> — so enabling a language in a project's devenv lights up its LSP with no per-language config. Per-language mode settings live in <code>init-lang-*.el</code>. When the <code>rass</code> binary (rassumfrassum, shipped in the devenv shell) is on <code>PATH</code>, <code>tsx-ts-mode</code> / <code>typescript-ts-mode</code> / <code>typescript-mode</code> buffers are routed through it to run <code>typescript-language-server</code> alongside whichever of <code>eslint-lsp</code> and <code>tailwindcss-language-server</code> are also on <code>PATH</code>, and Python buffers run the bundled <code>rass python</code> preset (basedpyright + ruff) when both binaries are present; any missing prerequisite makes eglot fall back to its built-in single-server lookup, so projects using <code>pylsp</code> / <code>pyright</code> / unguarded tsserver keep working unchanged. Also provides <code>jotain-sonarlint</code> for on-demand SonarLint analysis via the <code>sonarlint-ls</code> language server — SonarCloud connected mode is configured per-project via <code>eglot-workspace-configuration</code> in <code>.dir-locals.el</code>. Debugging goes through <code>dape</code> (Debug Adapter Protocol, <code>C-x C-a</code> prefix); the adapter binaries (e.g. <code>dlv</code> for Go, <code>debugpy</code> for Python) come from the project/host PATH, same as the LSP servers.</p>
+<h3 id="init-snippets"><code>init-snippets</code></h3>
+<p>Template/snippet expansion via <code>tempel</code>, chosen over the built-in <code>skeleton</code>/<code>abbrev</code> and the heavier <code>yasnippet</code> because it shares an author with the corfu/cape/vertico stack and plugs straight into <code>completion-at-point-functions</code> — snippet names surface in the corfu popup (added buffer-locally ahead of the cape capfs on <code>prog-mode</code>/<code>text-mode</code>), and <code>M-+</code> (<code>tempel-complete</code>) / <code>M-*</code> (<code>tempel-insert</code>) expand them, with <code>TAB</code> / <code>S-TAB</code> moving between fields. The curated templates themselves live in <code>templates/jotain.eld</code> (keyed by major mode — basic for/while/if/function constructs for Emacs Lisp, Python, Rust, Go, C/C++, and TS/TSX/JS), so adding a snippet never touches Elisp. <code>eglot-tempel</code> is configured here too, so Tempel also expands the snippets language servers return (e.g. function-argument placeholders); it is armed the moment eglot loads, before the first connection.</p>
+<h3 id="init-project"><code>init-project</code></h3>
+<p>Two complementary project command systems: <code>projection</code> (<code>.dir-locals.el</code>-backed commands exposed via <code>C-x P</code>, auto-detected from Makefiles/justfiles/Cargo.toml/etc) and <code>compile-multi</code> (per-major-mode named compile commands like "go test", "pytest file", "nix flake check"). They overlap but neither fully covers the other.</p>
+<h3 id="init-devenv"><code>init-devenv</code></h3>
+<p>Wiring for the in-repo <a href="https://devenv.sh">devenv.sh</a> integration library <code>lisp/devenv.el</code> — the one file under <code>lisp/</code> that is <em>not</em> an <code>init-*</code> module: it is a standalone, reusable package (own <code>devenv-</code> namespace, no <code>jotain-</code> dependencies) that this module merely binds into the configuration. <code>C-c v</code> opens a transient with task and script runners (completing-read over <code>devenv tasks list --json</code> / <code>devenv eval scripts</code>), <code>devenv test</code>/<code>build</code>/<code>update</code>/<code>gc</code> through compilation-mode with Nix-trace error matching, a tabulated process dashboard over the devenv process manager (<code>devenv up</code>/<code>down</code>, per-process start/stop/restart/logs), environment introspection (<code>devenv eval</code>/<code>info</code>/<code>search</code>), and <code>devenv-reload</code> (invalidates caches, re-fetches the environment, offers <code>eglot-reconnect</code>). <code>devenv.nix</code> buffers are routed to the bundled <code>devenv lsp</code> server while <code>nil</code> keeps serving other Nix files. <code>devenv-mcp-setup</code> registers the project's <code>devenv mcp</code> stdio server with mcp.el for gptel tool use. Environment loading is the library's native loader (<code>devenv-env-global-mode</code>), since direnv/envrc is disabled (see <code>init-prog</code>): for a trusted project it sources <code>devenv print-dev-env</code> in bash so the shellHook runs, layers <code>PATH</code> over the login one, and drops the derivation-only variables the JSON form carries. It defers to envrc where <code>devenv-env-defer-to-direnv</code> is left at <code>t</code>. See <a href="/docs/usage/devenv/">devenv integration</a> for the user guide.</p>
+<h3 id="init-ai"><code>init-ai</code></h3>
+<p>AI assistants. <code>claude-code-ide</code> on <code>C-c q</code> for agentic multi-file edits via the Claude Code CLI. <code>eca</code> on <code>C-c e</code> is the Editor Code Assistant client (chat, inline completion, rewrite, MCP) talking to a Nix-provided server. <code>gptel</code> on <code>C-c s</code> (send) / <code>C-c S</code> (menu) with four backends configured: OpenRouter (default, OpenAI-compatible aggregator, <code>anthropic/claude-sonnet-4.6</code>), direct Anthropic, Google Gemini, and a local Ollama instance (no key needed). <code>mcp</code> is loaded after <code>gptel</code> for Model Context Protocol tool use. API keys resolve from the environment (<code>OPENROUTER_API_KEY</code> / <code>ANTHROPIC_API_KEY</code> / <code>GEMINI_API_KEY</code>) first, then fall back to <code>auth-source</code> — <code>auth-source-1password</code> (see <code>init-systems</code>) makes that transparent. The eca server's OpenRouter provider lives in <code>config/eca/config.json</code>, installed by the Home Manager module when <code>services.jotain.openrouter.enable = true</code>.</p>
+<h3 id="init-shell"><code>init-shell</code></h3>
+<p><code>eshell</code>, <code>comint</code>, and <code>ielm</code> together — shells and REPLs have their own input handling, history, prompts, and rendering, so grouping them lets the rules be coordinated in one place. The true PTY terminal emulator lives in <code>init-terminal</code>.</p>
+<h3 id="init-terminal"><code>init-terminal</code></h3>
+<p>Both directions of terminal support. Inside Emacs: <code>ghostel</code>, a terminal emulator powered by libghostty-vt (the VT engine behind Ghostty) through a native dynamic module — real PTY for tmux/ncurses programs, plus automatic shell integration (OSC 7 directory tracking, OSC 133 prompt navigation) and OSC 52 clipboard. The Nix package builds the module from source and ships it in the package directory; in a source checkout the module is downloaded into the writable <code>elpa/</code> dir on first <code>M-x ghostel</code>. Emacs inside a terminal: <code>global-kkp-mode</code> (Kitty Keyboard Protocol), <code>clipetty</code> (OSC 52 clipboard through SSH + tmux), <code>xterm-mouse-mode</code>, and <code>tty-tip-mode</code> on Emacs 31+ — all no-ops in GUI frames. Ghostel's buffers advertise <code>TERM=xterm-ghostty</code>, the same dialect the outer Ghostty terminal uses; the <code>xterm-ghostty → xterm-256color</code> alias that supports both lives in <code>early-init.el</code> because terminal initialisation runs before <code>init.el</code>.</p>
+<h3 id="init-systems"><code>init-systems</code></h3>
+<p>Sysadmin tools: SOPS-encrypted file editing, <code>logview</code> for log files, and <code>auth-source-1password</code> as an <code>auth-source</code> backend so <code>magit</code>/<code>forge</code>, <code>gptel</code>, <code>smtpmail</code>, etc. all resolve credentials against the 1Password vault transparently.</p>
+<h3 id="init-tracking"><code>init-tracking</code></h3>
+<p>Passive usage instrumentation. <code>keyfreq</code> counts command frequency (<code>M-x keyfreq-show</code>), <code>wakatime-mode</code> reports heartbeats to a Wakatime/Wakapi server (guarded by <code>:if</code> on <code>wakatime-cli</code> + <code>WAKATIME_API_KEY</code>, so it is a no-op if either is missing), and <code>activity-watch-mode</code> is installed but off by default — enable with <code>M-x global-activity-watch-mode</code>.</p>
+<h3 id="init-writing"><code>init-writing</code></h3>
+<p>Prose editing: <code>jinx</code> for spell-checking, <code>markdown-mode</code>, <code>denote</code> for notes, <code>pdf-tools</code>. Org is big enough to earn its own file.</p>
+<h3 id="init-org"><code>init-org</code></h3>
+<p><code>org-mode</code>, <code>org-modern</code>, capture templates, agenda, and friends. Binds <code>C-c a</code> → <code>org-agenda</code>, <code>C-c c</code> → <code>org-capture</code>, <code>C-c l</code> → <code>org-store-link</code>.</p>
+<p>Also holds the Org Babel layer that makes an <code>.org</code> file usable as a notebook: <code>jotain-org-babel-languages</code> (a curated set of languages, all backed by <code>ob-*</code> libraries Org itself ships), a trust-aware <code>org-confirm-babel-evaluate</code> predicate that skips the prompt for files under <code>org-directory</code> or inside the current project, inline-image refresh after every run, source-block editing that preserves indentation, and a <code>C-c b</code> notebook prefix (<code>b</code> run buffer, <code>e</code> run subtree, <code>r</code> restart session and run buffer, <code>s</code> switch to session, <code>k</code> clear results, <code>t</code> tangle). See <a href="/docs/usage/notebooks/">Notebooks with Org Babel</a>.</p>
+<h2 id="language-modules">Language modules</h2>
+<p>Each <code>init-lang-*.el</code> file pins <code>:mode</code> regexes and provides font-lock for a group of related languages. Formatter configuration is centralised through <code>apheleia</code> in <code>init-prog.el</code>; LSP server hooks live in <code>init-prog.el</code> too.</p>
+<ul>
+<li><strong><code>init-lang-nix</code></strong> — <code>nix-ts-mode</code>. Formatting via apheleia (which ships a <code>nixfmt</code> entry).</li>
+<li><strong><code>init-lang-rust</code></strong> — <code>rust-ts-mode</code> (built-in) plus Cargo command wrappers.</li>
+<li><strong><code>init-lang-python</code></strong> — <code>python-ts-mode</code> (built-in), the interpreter set to <code>python3</code>. The LSP server (pyright/basedpyright/ruff-lsp) comes from the project environment, not from this config.</li>
+<li><strong><code>init-lang-go</code></strong> — <code>go-ts-mode</code> / <code>go-mod-ts-mode</code> / <code>go-work-ts-mode</code> (built-in), with a buffer-local gopls workspace config that turns on inlay hints, staticcheck, and the <code>unusedparams</code>/<code>shadow</code>/<code>nilness</code>/<code>unusedwrite</code> analyses (eglot wired in <code>init-prog</code>). A <code>major-mode-remap-alist</code> entry routes the classic <code>go-mode</code> to <code>go-ts-mode</code>, so a stale autoload or missing grammar can never drop a <code>.go</code> file into an unavailable classic mode. Adds <code>go-tag</code> (struct-tag editing) and <code>gotest</code> (point-aware test/benchmark/coverage runs) under the buffer-local <code>C-c C-t</code> prefix. Formatting via apheleia → <code>goimports</code>; debugging via dape → <code>dlv</code>. All Go tooling (<code>go</code>, <code>gopls</code>, <code>goimports</code>, <code>dlv</code>, <code>gomodifytags</code>) comes from the project/host PATH.</li>
+<li><strong><code>init-lang-web</code></strong> — <code>typescript-ts-mode</code>, <code>tsx-ts-mode</code>, CSS, HTML, JSON, and related tree-sitter modes.</li>
+<li><strong><code>init-lang-devops</code></strong> — Dockerfile, docker-compose, Terraform (<code>*.tf</code>), gitlab-ci, justfile, Ansible, Bazel/Starlark (<code>BUILD</code>, <code>WORKSPACE</code>, <code>MODULE.bazel</code>, <code>*.bzl</code>, <code>.bazelrc</code>, …). A <code>jotain-docker-backend</code> defcustom (<code>'podman</code> by default, set to <code>'docker</code> for classic Docker) switches the runtime command used by <code>dockerfile-mode</code>. Bazel buffers format on save via buildifier (centralised through apheleia in <code>init-prog</code>).</li>
+<li><strong><code>init-lang-data</code></strong> — YAML, CSV (with <code>csv-align-mode</code>), SQL (<code>sql-indent</code>), Jinja2, gnuplot.</li>
+<li><strong><code>init-lang-systems</code></strong> — C/C++ (<code>cc-mode</code>), CMake, Meson, Haskell, OCaml (<code>tuareg</code> + <code>dune</code>, eglot wires <code>ocamllsp</code>), Zig (<code>zig-ts-mode</code>, eglot wires <code>zls</code>).</li>
+</ul>
+<h2 id="adding-a-new-module">Adding a new module</h2>
+<ol type="1">
+<li>Create <code>lisp/init-&lt;concern&gt;.el</code> with the usual Elisp headers and a <code>lexical-binding: t</code> cookie.</li>
+<li>End the file with <code>(provide 'init-&lt;concern&gt;)</code>.</li>
+<li>Add a <code>(require 'init-&lt;concern&gt;)</code> line in <code>init.el</code> at the appropriate point in the load order.</li>
+<li>Run <code>just check</code> — the <code>elisp-lint</code> flake check confirms the parser is happy and <code>elisp-compile</code> byte-compiles with warnings as errors.</li>
+</ol>
+    <nav class="keys-nav docs-nav"><a href="/docs/architecture/nix-build/">← Nix Build System</a><a href="/docs/configuration/init/">init.el →</a></nav>
+    </article>
+  </main>
+  <footer class="modeline">
+    <span>-UUU:**--</span>
+    <span class="modeline-buffer">docs/architecture/modules.mdx</span>
+    <span class="modeline-pos">Top L1</span>
+    <span>(Markdown)</span>
+    <span class="modeline-version">U:jotain 2026.07</span>
+  </footer>
+  <div class="minibuffer">
+    <span class="echo">C-x C-f <a href="/docs/">/docs/</a> · <a href="/manual/">manual</a> · <a href="/man/">man</a> · <a href="/info/">info</a> · ☾ theme</span>
+  </div>
+</div>
+<script src="/js/docs.js"></script>
+</body>
+</html>

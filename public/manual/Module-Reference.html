@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- Jotain - a GNU Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer.
+
+Copyright © Markus Jylhänkangas. -->
+<title>Module Reference (Jotain Emacs Configuration)</title>
+
+<meta name="description" content="Module Reference (Jotain Emacs Configuration)">
+<meta name="keywords" content="Module Reference (Jotain Emacs Configuration)">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link href="index.html" rel="start" title="Top">
+<link href="index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html" rel="up" title="Top">
+<link href="Init-File.html" rel="next" title="Init File">
+<link href="Nix-Build-Layer.html" rel="prev" title="Nix Build Layer">
+<style type="text/css">
+<!--
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
+span:hover a.copiable-link {visibility: visible}
+ul.mark-bullet {list-style-type: disc}
+-->
+</style>
+<link rel="stylesheet" type="text/css" href="manual.css">
+
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+
+<body lang="en">
+<div class="chapter-level-extent" id="Module-Reference">
+<div class="nav-panel">
+<p>
+Next: <a href="Init-File.html" accesskey="n" rel="next">Init File</a>, Previous: <a href="Nix-Build-Layer.html" accesskey="p" rel="prev">Nix Build Layer</a>, Up: <a href="index.html" accesskey="u" rel="up">Jotain</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
+</div>
+<h2 class="chapter" id="Module-Reference-1"><span>6 Module Reference<a class="copiable-link" href="#Module-Reference-1"> &para;</a></span></h2>
+
+<p>Jotain&rsquo;s Elisp configuration is split across <code class="code">lisp/init-*.el</code>, one file per concern. Each file is self-contained: a package that only exists to enhance a built-in (e.g. <code class="code">dirvish</code> → <code class="code">dired</code>, <code class="code">magit</code> → <code class="code">vc</code>) lives in the same file as the built-in it enhances. There is no &quot;builtins.el&quot; / &quot;third-party.el&quot; split.
+</p>
+<ul class="mini-toc">
+<li><a href="#Conventions" accesskey="1">Conventions</a></li>
+<li><a href="#Load-order" accesskey="2">Load order</a></li>
+<li><a href="#Core-modules" accesskey="3">Core modules</a></li>
+<li><a href="#Language-modules" accesskey="4">Language modules</a></li>
+<li><a href="#Adding-a-new-module" accesskey="5">Adding a new module</a></li>
+</ul>
+<div class="section-level-extent" id="Conventions">
+<h3 class="section"><span>6.1 Conventions<a class="copiable-link" href="#Conventions"> &para;</a></span></h3>
+<ul class="itemize mark-bullet">
+<li>Every module file is named <code class="code">init-&lt;concern&gt;.el</code> under <code class="code">lisp/</code>.
+</li><li>Every file starts with a <code class="code">lexical-binding: t</code> cookie.
+</li><li>Every file ends with <code class="code">(provide 'init-&lt;concern&gt;)</code>.
+</li><li>Modules are loaded in order from <code class="code">init.el</code>.
+</li><li><code class="code">use-package-always-ensure</code> is <code class="code">t</code> (set in <code class="code">early-init.el</code>), so every <code class="code">use-package</code> block defaults to &quot;install if missing&quot;. Built-ins must opt out with <code class="code">:ensure nil</code>. Packages provided by Nix use <code class="code">:ensure nil</code> &mdash; Nix puts them on <code class="code">load-path</code>, so <code class="code">use-package</code> finds them without touching the network.
+</li><li>User options (<code class="code">defcustom</code> variables) are set via <code class="code">setopt</code>, not <code class="code">setq</code>, so the <code class="code">:set</code> callback and <code class="code">:type</code> validation run.
+</li></ul>
+
+</div>
+<div class="section-level-extent" id="Load-order">
+<h3 class="section"><span>6.2 Load order<a class="copiable-link" href="#Load-order"> &para;</a></span></h3>
+<p><code class="code">init.el</code> loads modules in this order:
+</p>
+<pre class="verbatim">init-core         GC, encoding, var/ paths, sane file-handling defaults
+init-keys         Global keymap and window-split helpers
+init-ui           Theme, modeline, fonts, frame tweaks, icons
+init-tabs         Workspace tabs via tab-bar-mode
+init-help         helpful + built-in help tweaks
+init-docs         Register the bundled jotain.info with C-h i
+init-editing      elec-pair, delsel, whitespace, region tools
+init-completion   vertico, marginalia, orderless, consult, corfu, cape
+init-navigation   dired, dirvish, project, windmove, winner
+init-vc           vc, vc-jj, magit, majutsu, magit-todos, forge, diff-hl, ediff
+init-prog         prog-mode, treesit, eglot, dape, flymake, eldoc, apheleia, compile
+init-snippets     tempel snippets + eglot-tempel LSP expansion
+init-project      project + projection + compile-multi
+init-devenv       devenv.sh: tasks, processes, env, LSP, MCP
+init-ai           eca, claude-code-ide, gptel, mcp
+init-shell        eshell, comint, ielm
+init-terminal     ghostel terminal + tty integration (kkp, clipetty)
+init-systems      sops, logview, auth-source-1password
+init-tracking     keyfreq, wakatime, activity-watch
+init-writing      jinx, markdown-mode, denote, pdf-tools
+init-org          org, org-modern, capture templates
+
+init-lang-nix
+init-lang-rust
+init-lang-python
+init-lang-go
+init-lang-web         TS/TSX/CSS/HTML/JSON
+init-lang-devops      Dockerfile, terraform, just, ansible, bazel
+init-lang-data        yaml, csv, sql, jinja2, gnuplot
+init-lang-systems     C/C++, CMake, Meson, Haskell, OCaml, Zig
+</pre>
+</div>
+<div class="section-level-extent" id="Core-modules">
+<h3 class="section"><span>6.3 Core modules<a class="copiable-link" href="#Core-modules"> &para;</a></span></h3>
+
+
+<ul class="mini-toc">
+<li><a href="#init_002dcore" accesskey="1"><code class="code">init-core</code></a></li>
+<li><a href="#init_002dkeys" accesskey="2"><code class="code">init-keys</code></a></li>
+<li><a href="#init_002dui" accesskey="3"><code class="code">init-ui</code></a></li>
+<li><a href="#init_002dhelp" accesskey="4"><code class="code">init-help</code></a></li>
+<li><a href="#init_002ddocs" accesskey="5"><code class="code">init-docs</code></a></li>
+<li><a href="#init_002dediting" accesskey="6"><code class="code">init-editing</code></a></li>
+<li><a href="#init_002dcompletion" accesskey="7"><code class="code">init-completion</code></a></li>
+<li><a href="#init_002dnavigation" accesskey="8"><code class="code">init-navigation</code></a></li>
+<li><a href="#init_002dvc" accesskey="9"><code class="code">init-vc</code></a></li>
+<li><a href="#init_002dprog"><code class="code">init-prog</code></a></li>
+<li><a href="#init_002dsnippets"><code class="code">init-snippets</code></a></li>
+<li><a href="#init_002dproject"><code class="code">init-project</code></a></li>
+<li><a href="#init_002ddevenv"><code class="code">init-devenv</code></a></li>
+<li><a href="#init_002dai"><code class="code">init-ai</code></a></li>
+<li><a href="#init_002dshell"><code class="code">init-shell</code></a></li>
+<li><a href="#init_002dterminal"><code class="code">init-terminal</code></a></li>
+<li><a href="#init_002dsystems"><code class="code">init-systems</code></a></li>
+<li><a href="#init_002dtracking"><code class="code">init-tracking</code></a></li>
+<li><a href="#init_002dwriting"><code class="code">init-writing</code></a></li>
+<li><a href="#init_002dorg"><code class="code">init-org</code></a></li>
+</ul>
+<div class="subsection-level-extent" id="init_002dcore">
+<h4 class="subsection"><span>6.3.1 <code class="code">init-core</code><a class="copiable-link" href="#init_002dcore"> &para;</a></span></h4>
+<p>GC, encoding, and the sane-defaults baseline. Restores <code class="code">gc-cons-threshold</code> to 16 MiB after the early-init bump; pauses GC entirely while the minibuffer is open; forces UTF-8 everywhere; enables <code class="code">save-place-mode</code>, <code class="code">recentf</code>, <code class="code">savehist</code>, <code class="code">repeat-mode</code>, <code class="code">uniquify</code>, <code class="code">ibuffer</code> as the default buffer list, <code class="code">global-auto-revert-mode</code>. Defines <code class="code">jotain-var-dir</code> and the <code class="code">jotain-var-file</code> helper, and themes the built-in state-file variables (<code class="code">recentf-save-file</code>, <code class="code">savehist-file</code>, <code class="code">save-place-file</code>, <code class="code">bookmark-default-file</code>, <code class="code">auto-save-list-file-prefix</code>) to live under <code class="code">var/</code>. Other modules use the same helper to keep their own state (keyfreq, logview, forge, transient) in the same place. Also contains the macOS modifier-key fix (<code class="code">Cmd</code>→Meta, <code class="code">Option</code>→Super, right Option untouched for special characters). Sets <code class="code">read-extended-command-predicate</code> to filter <code class="code">M-x</code> candidates by major mode; untagged commands are still shown, and typing a full command name always runs it regardless of the filter.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dkeys">
+<h4 class="subsection"><span>6.3.2 <code class="code">init-keys</code><a class="copiable-link" href="#init_002dkeys"> &para;</a></span></h4>
+<p>Global bindings only &mdash; per-package bindings live in the relevant <code class="code">use-package</code> block. Unbinds <code class="code">C-z</code> / <code class="code">C-x C-z</code> (no accidental suspend on GUI), binds <code class="code">M-o</code> to <code class="code">other-window</code>, enables <code class="code">windmove-default-keybindings</code> (Shift + arrows), defines <code class="code">jotain-toggle-window-split</code> on <code class="code">C-x j</code> for rotating a two-window layout, and (on Emacs 31+) ships a <code class="code">repeat-map</code> for the <code class="code">window-layout-*</code> frame transforms under <code class="code">C-x W</code>. Also registers <code class="code">which-key-add-key-based-replacements</code> for the cross-cutting <code class="code">C-c</code> / <code class="code">C-x</code> prefixes (<code class="code">C-c n</code> org-roam, <code class="code">C-c r</code> eglot-refactor, <code class="code">C-c o</code> combobulate, <code class="code">C-x P</code> project, etc.) so the prefix menus surface short noun-phrase labels instead of bare command names. See <a class="uref" href="/keybindings">Keybindings</a> for the full namespace map and <a class="uref" href="/ergonomics">Ergonomics</a> for the repeat-maps rationale.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dui">
+<h4 class="subsection"><span>6.3.3 <code class="code">init-ui</code><a class="copiable-link" href="#init_002dui"> &para;</a></span></h4>
+<p>Appearance. Uses the Jylhis design system themes <code class="code">jylhis-sheet</code> (light) and <code class="code">jylhis-field</code> (dark), user-customisable via <code class="code">jotain-theme-light</code> / <code class="code">jotain-theme-dark</code>, with <code class="code">auto-dark-mode</code> flipping between them based on the system appearance. The themes come from the pin in <code class="code">nix/design-pin.nix</code>; if that package is unavailable, or a theme it names cannot be loaded, the module degrades to the built-in <code class="code">modus-operandi</code> / <code class="code">modus-vivendi</code> rather than failing the rest of startup. Installs <code class="code">doom-modeline</code>, picks the first available font from <code class="code">jotain-font-preferences</code> (BlexMono Nerd Font → JetBrains Mono Nerd Font → Iosevka Nerd Font → DejaVu Sans Mono), enables <code class="code">display-line-numbers</code>, <code class="code">pixel-scroll-precision-mode</code>, <code class="code">hl-line-mode</code>, <code class="code">show-paren-mode</code>, built-in <code class="code">which-key</code>, <code class="code">nerd-icons</code> integrations for dired/ibuffer/corfu/marginalia, <code class="code">hl-todo</code>, <code class="code">breadcrumb</code>, <code class="code">pulsar</code>, <code class="code">rainbow-delimiters</code>, <code class="code">indent-bars</code>.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dhelp">
+<h4 class="subsection"><span>6.3.4 <code class="code">init-help</code><a class="copiable-link" href="#init_002dhelp"> &para;</a></span></h4>
+<p>Built-in help tweaks (<code class="code">help-window-select</code>) plus <code class="code">helpful</code> for richer <code class="code">describe-*</code> buffers. See <a class="uref" href="/finding-information-in-emacs">Finding Information in Emacs</a> for day-to-day usage.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002ddocs">
+<h4 class="subsection"><span>6.3.5 <code class="code">init-docs</code><a class="copiable-link" href="#init_002ddocs"> &para;</a></span></h4>
+<p>Makes the bundled Jotain Info manual (<code class="code">jotain.info</code>, generated by <code class="code">nix build .#info</code>) discoverable from <code class="code">C-h i</code>. For NixOS / nix-darwin / Home Manager users this is already wired up at the Nix layer: the Emacs wrapper pre-sets <code class="code">INFOPATH</code>, so no Elisp is needed &mdash; this module is the source-checkout fallback. After <code class="code">just info</code>, <code class="code">result-info/share/info</code> is added to <code class="code">Info-directory-list</code>; <code class="code">C-h i d m Jotain RET</code> opens the manual. <code class="code">JOTAIN_INFO_DIR</code> overrides the search.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dediting">
+<h4 class="subsection"><span>6.3.6 <code class="code">init-editing</code><a class="copiable-link" href="#init_002dediting"> &para;</a></span></h4>
+<p>Baseline editing primitives: <code class="code">electric-pair-mode</code>, <code class="code">delete-selection-mode</code>, <code class="code">whitespace-mode</code>, undo settings, region tools.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dcompletion">
+<h4 class="subsection"><span>6.3.7 <code class="code">init-completion</code><a class="copiable-link" href="#init_002dcompletion"> &para;</a></span></h4>
+<p>The vertico stack on the minibuffer side, corfu + cape on the in-buffer side, plus the built-in <code class="code">minibuffer</code> tweaks they rely on. All configured in one file because touching one nearly always means touching the others. <code class="code">C-s</code> is deliberately left as <code class="code">isearch-forward</code>; use <code class="code">M-s l</code> for <code class="code">consult-line</code> when you want the consult UI.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dnavigation">
+<h4 class="subsection"><span>6.3.8 <code class="code">init-navigation</code><a class="copiable-link" href="#init_002dnavigation"> &para;</a></span></h4>
+<p><code class="code">dired</code> and <code class="code">dirvish</code> in the same file, along with <code class="code">project</code>, <code class="code">winner-mode</code>, and directional navigation.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dvc">
+<h4 class="subsection"><span>6.3.9 <code class="code">init-vc</code><a class="copiable-link" href="#init_002dvc"> &para;</a></span></h4>
+<p><code class="code">vc</code> pinned to Git + Jujutsu (other backends are a slow startup tax), <code class="code">vc-jj</code> for jj support through built-in <code class="code">vc</code>/<code class="code">project.el</code> (jj repos are typically colocated with git), <code class="code">magit</code> with refined hunks and worktrees in <code class="code">magit-status</code>, <code class="code">majutsu</code> as a magit-style jj porcelain (<code class="code">C-c j</code> status/log, <code class="code">C-c M-j</code> dispatch), <code class="code">magit-todos</code>, <code class="code">forge</code> (configured with the built-in sqlite backend, <code class="code">emacsql-sqlite-builtin</code>), <code class="code">diff-hl</code> (including <code class="code">diff-hl-flydiff-mode</code> for pre-save indicators), and <code class="code">ediff</code> with sane window setup (<code class="code">smerge-mode</code> needs no config &mdash; it self-activates on conflicts with its stock <code class="code">C-c ^</code> bindings). The <code class="code">N/M</code> modeline counter is backend-aware: a <code class="code">.jj</code> directory selects jj probes (<code class="code">jj diff --git</code>, an <code class="code">author_date</code> revset), otherwise git. For correct jj diff/conflict rendering set <code class="code">ui.diff-formatter = &quot;:git&quot;</code> and <code class="code">ui.conflict-marker-style = &quot;git&quot;</code> via <code class="code">jj config edit --user</code>.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dprog">
+<h4 class="subsection"><span>6.3.10 <code class="code">init-prog</code><a class="copiable-link" href="#init_002dprog"> &para;</a></span></h4>
+<p>The shared substrate for programming modes: <code class="code">prog-mode</code> hooks, <code class="code">treesit</code> setup, <code class="code">eglot</code>, <code class="code">flymake</code>, <code class="code">eldoc</code>, <code class="code">apheleia</code> for format-on-save, <code class="code">compile</code>. Per-language <code class="code">eglot-ensure</code> hooks live here so all LSP wiring is in one place, and beyond that curated list <code class="code">eglot</code> auto-starts for any project file whose language server is on the buffer&rsquo;s (envrc-applied) <code class="code">PATH</code> &mdash; so enabling a language in a project&rsquo;s devenv lights up its LSP with no per-language config. Per-language mode settings live in <code class="code">init-lang-*.el</code>. When the <code class="code">rass</code> binary (rassumfrassum, shipped in the devenv shell) is on <code class="code">PATH</code>, <code class="code">tsx-ts-mode</code> / <code class="code">typescript-ts-mode</code> / <code class="code">typescript-mode</code> buffers are routed through it to run <code class="code">typescript-language-server</code> alongside whichever of <code class="code">eslint-lsp</code> and <code class="code">tailwindcss-language-server</code> are also on <code class="code">PATH</code>, and Python buffers run the bundled <code class="code">rass python</code> preset (basedpyright + ruff) when both binaries are present; any missing prerequisite makes eglot fall back to its built-in single-server lookup, so projects using <code class="code">pylsp</code> / <code class="code">pyright</code> / unguarded tsserver keep working unchanged. Also provides <code class="code">jotain-sonarlint</code> for on-demand SonarLint analysis via the <code class="code">sonarlint-ls</code> language server &mdash; SonarCloud connected mode is configured per-project via <code class="code">eglot-workspace-configuration</code> in <code class="code">.dir-locals.el</code>. Debugging goes through <code class="code">dape</code> (Debug Adapter Protocol, <code class="code">C-x C-a</code> prefix); the adapter binaries (e.g. <code class="code">dlv</code> for Go, <code class="code">debugpy</code> for Python) come from the project/host PATH, same as the LSP servers.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dsnippets">
+<h4 class="subsection"><span>6.3.11 <code class="code">init-snippets</code><a class="copiable-link" href="#init_002dsnippets"> &para;</a></span></h4>
+<p>Template/snippet expansion via <code class="code">tempel</code>, chosen over the built-in <code class="code">skeleton</code>/<code class="code">abbrev</code> and the heavier <code class="code">yasnippet</code> because it shares an author with the corfu/cape/vertico stack and plugs straight into <code class="code">completion-at-point-functions</code> &mdash; snippet names surface in the corfu popup (added buffer-locally ahead of the cape capfs on <code class="code">prog-mode</code>/<code class="code">text-mode</code>), and <code class="code">M-+</code> (<code class="code">tempel-complete</code>) / <code class="code">M-*</code> (<code class="code">tempel-insert</code>) expand them, with <code class="code">TAB</code> / <code class="code">S-TAB</code> moving between fields. The curated templates themselves live in <code class="code">templates/jotain.eld</code> (keyed by major mode &mdash; basic for/while/if/function constructs for Emacs Lisp, Python, Rust, Go, C/C++, and TS/TSX/JS), so adding a snippet never touches Elisp. <code class="code">eglot-tempel</code> is configured here too, so Tempel also expands the snippets language servers return (e.g. function-argument placeholders); it is armed the moment eglot loads, before the first connection.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dproject">
+<h4 class="subsection"><span>6.3.12 <code class="code">init-project</code><a class="copiable-link" href="#init_002dproject"> &para;</a></span></h4>
+<p>Two complementary project command systems: <code class="code">projection</code> (<code class="code">.dir-locals.el</code>-backed commands exposed via <code class="code">C-x P</code>, auto-detected from Makefiles/justfiles/Cargo.toml/etc) and <code class="code">compile-multi</code> (per-major-mode named compile commands like &quot;go test&quot;, &quot;pytest file&quot;, &quot;nix flake check&quot;). They overlap but neither fully covers the other.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002ddevenv">
+<h4 class="subsection"><span>6.3.13 <code class="code">init-devenv</code><a class="copiable-link" href="#init_002ddevenv"> &para;</a></span></h4>
+<p>Wiring for the in-repo <a class="uref" href="https://devenv.sh">devenvsh</a> integration library <code class="code">lisp/devenv.el</code> &mdash; the one file under <code class="code">lisp/</code> that is <em class="emph">not</em> an <code class="code">init-*</code> module: it is a standalone, reusable package (own <code class="code">devenv-</code> namespace, no <code class="code">jotain-</code> dependencies) that this module merely binds into the configuration. <code class="code">C-c v</code> opens a transient with task and script runners (completing-read over <code class="code">devenv tasks list --json</code> / <code class="code">devenv eval scripts</code>), <code class="code">devenv test</code>/<code class="code">build</code>/<code class="code">update</code>/<code class="code">gc</code> through compilation-mode with Nix-trace error matching, a tabulated process dashboard over the devenv process manager (<code class="code">devenv up</code>/<code class="code">down</code>, per-process start/stop/restart/logs), environment introspection (<code class="code">devenv eval</code>/<code class="code">info</code>/<code class="code">search</code>), and <code class="code">devenv-reload</code> (invalidates caches, re-fetches the environment, offers <code class="code">eglot-reconnect</code>). <code class="code">devenv.nix</code> buffers are routed to the bundled <code class="code">devenv lsp</code> server while <code class="code">nil</code> keeps serving other Nix files. <code class="code">devenv-mcp-setup</code> registers the project&rsquo;s <code class="code">devenv mcp</code> stdio server with mcp.el for gptel tool use. Environment loading is the library&rsquo;s native loader (<code class="code">devenv-env-global-mode</code>), since direnv/envrc is disabled (see <code class="code">init-prog</code>): for a trusted project it sources <code class="code">devenv print-dev-env</code> in bash so the shellHook runs, layers <code class="code">PATH</code> over the login one, and drops the derivation-only variables the JSON form carries. It defers to envrc where <code class="code">devenv-env-defer-to-direnv</code> is left at <code class="code">t</code>. See <a class="uref" href="/usage/devenv">devenv integration</a> for the user guide.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dai">
+<h4 class="subsection"><span>6.3.14 <code class="code">init-ai</code><a class="copiable-link" href="#init_002dai"> &para;</a></span></h4>
+<p>AI assistants. <code class="code">claude-code-ide</code> on <code class="code">C-c q</code> for agentic multi-file edits via the Claude Code CLI. <code class="code">eca</code> on <code class="code">C-c e</code> is the Editor Code Assistant client (chat, inline completion, rewrite, MCP) talking to a Nix-provided server. <code class="code">gptel</code> on <code class="code">C-c s</code> (send) / <code class="code">C-c S</code> (menu) with four backends configured: OpenRouter (default, OpenAI-compatible aggregator, <code class="code">anthropic/claude-sonnet-4.6</code>), direct Anthropic, Google Gemini, and a local Ollama instance (no key needed). <code class="code">mcp</code> is loaded after <code class="code">gptel</code> for Model Context Protocol tool use. API keys resolve from the environment (<code class="code">OPENROUTER_API_KEY</code> / <code class="code">ANTHROPIC_API_KEY</code> / <code class="code">GEMINI_API_KEY</code>) first, then fall back to <code class="code">auth-source</code> &mdash; <code class="code">auth-source-1password</code> (see <code class="code">init-systems</code>) makes that transparent. The eca server&rsquo;s OpenRouter provider lives in <code class="code">config/eca/config.json</code>, installed by the Home Manager module when <code class="code">services.jotain.openrouter.enable = true</code>.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dshell">
+<h4 class="subsection"><span>6.3.15 <code class="code">init-shell</code><a class="copiable-link" href="#init_002dshell"> &para;</a></span></h4>
+<p><code class="code">eshell</code>, <code class="code">comint</code>, and <code class="code">ielm</code> together &mdash; shells and REPLs have their own input handling, history, prompts, and rendering, so grouping them lets the rules be coordinated in one place. The true PTY terminal emulator lives in <code class="code">init-terminal</code>.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dterminal">
+<h4 class="subsection"><span>6.3.16 <code class="code">init-terminal</code><a class="copiable-link" href="#init_002dterminal"> &para;</a></span></h4>
+<p>Both directions of terminal support. Inside Emacs: <code class="code">ghostel</code>, a terminal emulator powered by libghostty-vt (the VT engine behind Ghostty) through a native dynamic module &mdash; real PTY for tmux/ncurses programs, plus automatic shell integration (OSC 7 directory tracking, OSC 133 prompt navigation) and OSC 52 clipboard. The Nix package builds the module from source and ships it in the package directory; in a source checkout the module is downloaded into the writable <code class="code">elpa/</code> dir on first <code class="code">M-x ghostel</code>. Emacs inside a terminal: <code class="code">global-kkp-mode</code> (Kitty Keyboard Protocol), <code class="code">clipetty</code> (OSC 52 clipboard through SSH + tmux), <code class="code">xterm-mouse-mode</code>, and <code class="code">tty-tip-mode</code> on Emacs 31+ &mdash; all no-ops in GUI frames. Ghostel&rsquo;s buffers advertise <code class="code">TERM=xterm-ghostty</code>, the same dialect the outer Ghostty terminal uses; the <code class="code">xterm-ghostty → xterm-256color</code> alias that supports both lives in <code class="code">early-init.el</code> because terminal initialisation runs before <code class="code">init.el</code>.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dsystems">
+<h4 class="subsection"><span>6.3.17 <code class="code">init-systems</code><a class="copiable-link" href="#init_002dsystems"> &para;</a></span></h4>
+<p>Sysadmin tools: SOPS-encrypted file editing, <code class="code">logview</code> for log files, and <code class="code">auth-source-1password</code> as an <code class="code">auth-source</code> backend so <code class="code">magit</code>/<code class="code">forge</code>, <code class="code">gptel</code>, <code class="code">smtpmail</code>, etc. all resolve credentials against the 1Password vault transparently.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dtracking">
+<h4 class="subsection"><span>6.3.18 <code class="code">init-tracking</code><a class="copiable-link" href="#init_002dtracking"> &para;</a></span></h4>
+<p>Passive usage instrumentation. <code class="code">keyfreq</code> counts command frequency (<code class="code">M-x keyfreq-show</code>), <code class="code">wakatime-mode</code> reports heartbeats to a Wakatime/Wakapi server (guarded by <code class="code">:if</code> on <code class="code">wakatime-cli</code> + <code class="code">WAKATIME_API_KEY</code>, so it is a no-op if either is missing), and <code class="code">activity-watch-mode</code> is installed but off by default &mdash; enable with <code class="code">M-x global-activity-watch-mode</code>.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dwriting">
+<h4 class="subsection"><span>6.3.19 <code class="code">init-writing</code><a class="copiable-link" href="#init_002dwriting"> &para;</a></span></h4>
+<p>Prose editing: <code class="code">jinx</code> for spell-checking, <code class="code">markdown-mode</code>, <code class="code">denote</code> for notes, <code class="code">pdf-tools</code>. Org is big enough to earn its own file.
+</p>
+</div>
+<div class="subsection-level-extent" id="init_002dorg">
+<h4 class="subsection"><span>6.3.20 <code class="code">init-org</code><a class="copiable-link" href="#init_002dorg"> &para;</a></span></h4>
+<p><code class="code">org-mode</code>, <code class="code">org-modern</code>, capture templates, agenda, and friends. Binds <code class="code">C-c a</code> → <code class="code">org-agenda</code>, <code class="code">C-c c</code> → <code class="code">org-capture</code>, <code class="code">C-c l</code> → <code class="code">org-store-link</code>.
+</p>
+<p>Also holds the Org Babel layer that makes an <code class="code">.org</code> file usable as a notebook: <code class="code">jotain-org-babel-languages</code> (a curated set of languages, all backed by <code class="code">ob-*</code> libraries Org itself ships), a trust-aware <code class="code">org-confirm-babel-evaluate</code> predicate that skips the prompt for files under <code class="code">org-directory</code> or inside the current project, inline-image refresh after every run, source-block editing that preserves indentation, and a <code class="code">C-c b</code> notebook prefix (<code class="code">b</code> run buffer, <code class="code">e</code> run subtree, <code class="code">r</code> restart session and run buffer, <code class="code">s</code> switch to session, <code class="code">k</code> clear results, <code class="code">t</code> tangle). See <a class="uref" href="/usage/notebooks">Notebooks with Org Babel</a>.
+</p>
+</div>
+</div>
+<div class="section-level-extent" id="Language-modules">
+<h3 class="section"><span>6.4 Language modules<a class="copiable-link" href="#Language-modules"> &para;</a></span></h3>
+<p>Each <code class="code">init-lang-*.el</code> file pins <code class="code">:mode</code> regexes and provides font-lock for a group of related languages. Formatter configuration is centralised through <code class="code">apheleia</code> in <code class="code">init-prog.el</code>; LSP server hooks live in <code class="code">init-prog.el</code> too.
+</p>
+<ul class="itemize mark-bullet">
+<li><strong class="strong"><code class="code">init-lang-nix</code></strong> &mdash; <code class="code">nix-ts-mode</code>. Formatting via apheleia (which ships a <code class="code">nixfmt</code> entry).
+</li><li><strong class="strong"><code class="code">init-lang-rust</code></strong> &mdash; <code class="code">rust-ts-mode</code> (built-in) plus Cargo command wrappers.
+</li><li><strong class="strong"><code class="code">init-lang-python</code></strong> &mdash; <code class="code">python-ts-mode</code> (built-in), the interpreter set to <code class="code">python3</code>. The LSP server (pyright/basedpyright/ruff-lsp) comes from the project environment, not from this config.
+</li><li><strong class="strong"><code class="code">init-lang-go</code></strong> &mdash; <code class="code">go-ts-mode</code> / <code class="code">go-mod-ts-mode</code> / <code class="code">go-work-ts-mode</code> (built-in), with a buffer-local gopls workspace config that turns on inlay hints, staticcheck, and the <code class="code">unusedparams</code>/<code class="code">shadow</code>/<code class="code">nilness</code>/<code class="code">unusedwrite</code> analyses (eglot wired in <code class="code">init-prog</code>). A <code class="code">major-mode-remap-alist</code> entry routes the classic <code class="code">go-mode</code> to <code class="code">go-ts-mode</code>, so a stale autoload or missing grammar can never drop a <code class="code">.go</code> file into an unavailable classic mode. Adds <code class="code">go-tag</code> (struct-tag editing) and <code class="code">gotest</code> (point-aware test/benchmark/coverage runs) under the buffer-local <code class="code">C-c C-t</code> prefix. Formatting via apheleia → <code class="code">goimports</code>; debugging via dape → <code class="code">dlv</code>. All Go tooling (<code class="code">go</code>, <code class="code">gopls</code>, <code class="code">goimports</code>, <code class="code">dlv</code>, <code class="code">gomodifytags</code>) comes from the project/host PATH.
+</li><li><strong class="strong"><code class="code">init-lang-web</code></strong> &mdash; <code class="code">typescript-ts-mode</code>, <code class="code">tsx-ts-mode</code>, CSS, HTML, JSON, and related tree-sitter modes.
+</li><li><strong class="strong"><code class="code">init-lang-devops</code></strong> &mdash; Dockerfile, docker-compose, Terraform (<code class="code">*.tf</code>), gitlab-ci, justfile, Ansible, Bazel/Starlark (<code class="code">BUILD</code>, <code class="code">WORKSPACE</code>, <code class="code">MODULE.bazel</code>, <code class="code">*.bzl</code>, <code class="code">.bazelrc</code>, &hellip;). A <code class="code">jotain-docker-backend</code> defcustom (<code class="code">'podman</code> by default, set to <code class="code">'docker</code> for classic Docker) switches the runtime command used by <code class="code">dockerfile-mode</code>. Bazel buffers format on save via buildifier (centralised through apheleia in <code class="code">init-prog</code>).
+</li><li><strong class="strong"><code class="code">init-lang-data</code></strong> &mdash; YAML, CSV (with <code class="code">csv-align-mode</code>), SQL (<code class="code">sql-indent</code>), Jinja2, gnuplot.
+</li><li><strong class="strong"><code class="code">init-lang-systems</code></strong> &mdash; C/C++ (<code class="code">cc-mode</code>), CMake, Meson, Haskell, OCaml (<code class="code">tuareg</code> + <code class="code">dune</code>, eglot wires <code class="code">ocamllsp</code>), Zig (<code class="code">zig-ts-mode</code>, eglot wires <code class="code">zls</code>).
+</li></ul>
+
+</div>
+<div class="section-level-extent" id="Adding-a-new-module">
+<h3 class="section"><span>6.5 Adding a new module<a class="copiable-link" href="#Adding-a-new-module"> &para;</a></span></h3>
+<ol class="enumerate">
+<li> Create <code class="code">lisp/init-&lt;concern&gt;.el</code> with the usual Elisp headers and a <code class="code">lexical-binding: t</code> cookie.
+</li><li> End the file with <code class="code">(provide 'init-&lt;concern&gt;)</code>.
+</li><li> Add a <code class="code">(require 'init-&lt;concern&gt;)</code> line in <code class="code">init.el</code> at the appropriate point in the load order.
+</li><li> Run <code class="code">just check</code> &mdash; the <code class="code">elisp-lint</code> flake check confirms the parser is happy and <code class="code">elisp-compile</code> byte-compiles with warnings as errors.
+</li></ol>
+
+</div>
+</div>
+<hr>
+<div class="nav-panel">
+<p>
+Next: <a href="Init-File.html" accesskey="n" rel="next">Init File</a>, Previous: <a href="Nix-Build-Layer.html" accesskey="p" rel="prev">Nix Build Layer</a>, Up: <a href="index.html" accesskey="u" rel="up">Jotain</a> &nbsp; [<a href="index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>]</p>
+</div>
+
+
+
+</body>
+</html>

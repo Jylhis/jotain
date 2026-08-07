@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Jotain ��� Package Reference</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Jotain ��� Package Reference</h1>
+</header>
+<h1 id="package-reference">Package Reference</h1>
+<p>Auto-generated from <code>;;; @doc</code> markers immediately above each <code>(use-package …)</code> form in <code>lisp/init-*.el</code>. To change a description, edit the source file and run <code>just docs-refresh-packages</code>.</p>
+<p>See the module-level narrative under <a href="/architecture/modules">Architecture → Modules</a> for higher-level grouping.</p>
+<h2 id="init-coreel--core-baseline"><code>init-core.el</code> — Core baseline</h2>
+<h3 id="emacs-built-in--nix"><code>emacs</code> <em>(built-in / Nix)</em></h3>
+<p>Sane defaults for the bare editor — fill column, dialog/box use, lockfiles, recursive minibuffers, case-insensitive completion. Settings here are the ones that don't deserve their own module.</p>
+<h3 id="saveplace-built-in--nix"><code>saveplace</code> <em>(built-in / Nix)</em></h3>
+<p>Persist point per file across sessions. Built-in. The advice below recenters the buffer after restore so you don't reopen on the bottom line.</p>
+<h3 id="files-built-in--nix"><code>files</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in file-handling tweaks: no auto-save side files, no backup <code>~</code> files, no kill-process confirmation, plus a hook that auto-creates missing parent directories on find-file.</p>
+<h3 id="repeat-built-in--nix"><code>repeat</code> <em>(built-in / Nix)</em></h3>
+<p>Repeat-mode lets you press the trailing key alone after a prefix command (e.g. C-x o o o instead of C-x o C-x o). Built-in, enabled globally. <code>repeat-exit-timeout' clears the transient map after two idle seconds so the user doesn't have to think about exiting it — the ergonomic "one-shot modifier" pattern. The built-in maps cover window resizing too (</code>resize-window-repeat-map'), so <code>C-x ^ ^ v' just works; init-keys.el only adds a map for the Emacs 31 </code>window-layout-*' commands.</p>
+<h3 id="uniquify-built-in--nix"><code>uniquify</code> <em>(built-in / Nix)</em></h3>
+<p>Disambiguate same-name buffers by directory prefix instead of the default <code>&lt;2&gt;</code> suffix. <code>forward</code> style mirrors the path.</p>
+<h3 id="ibuffer-built-in--nix"><code>ibuffer</code> <em>(built-in / Nix)</em></h3>
+<p>Replace <code>list-buffers</code> (C-x C-b) with the more capable ibuffer: dired-style filter/mark/operate on buffers.</p>
+<h3 id="ffap-built-in--nix"><code>ffap</code> <em>(built-in / Nix)</em></h3>
+<p>Tame <code>find-file-at-point</code> so an unknown hostname doesn't block the editor on a DNS lookup — reject means "treat as not a host".</p>
+<h3 id="time-built-in--nix"><code>time</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in <code>world-clock</code> for cross-timezone scheduling. Loaded on demand only.</p>
+<h3 id="exec-path-from-shell"><code>exec-path-from-shell</code></h3>
+<p>Inherits PATH, MANPATH, and other shell-managed vars from the user's login shell so GUI / launchd / systemd-spawned Emacs matches what the terminal sees. module.nix prepends Nix-store binaries (rg, fd, git, jj, zoxide, coreutils) to the wrapper's PATH — this picks up ~/.nix-profile and user toolchains.</p>
+<h3 id="autorevert-built-in--nix"><code>autorevert</code> <em>(built-in / Nix)</em></h3>
+<p>Auto-revert buffers when the underlying file changes on disk — essential for branch switches and external edits. Also covers non-file buffers (dired, magit) so they refresh too.</p>
+<h3 id="recentf-built-in--nix"><code>recentf</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in recently-visited files list. Used by consult-recent-file and the bookmarks UI; state file lives under var/ to keep the repo root clean.</p>
+<h3 id="savehist-built-in--nix"><code>savehist</code> <em>(built-in / Nix)</em></h3>
+<p>Persist minibuffer history (M-p / M-n, vertico ordering, etc.) across sessions. Built-in, enabled globally.</p>
+<h3 id="bookmark-built-in--nix"><code>bookmark</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in bookmark store. State file is themed under var/ so it joins the rest of Jotain's persistent state. <code>save-flag 1</code> writes on every change so an Emacs crash never loses bookmarks; the fringe glyph is suppressed because it adds visual noise without info.</p>
+<h3 id="isearch-built-in--nix"><code>isearch</code> <em>(built-in / Nix)</em></h3>
+<p>Lazy-count isearch matches in the prompt — "(3/12)" tells you where you are without leaving the search.</p>
+<h3 id="shr-built-in--nix"><code>shr</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in HTML renderer used by eww, gnus, elfeed. Suppress page colours and proportional fonts so rendered HTML inherits the theme and the user's monospace face — better contrast, predictable layout.</p>
+<h2 id="init-keysel--global-keys"><code>init-keys.el</code> — Global keys</h2>
+<h3 id="emacs-built-in--nix-1"><code>emacs</code> <em>(built-in / Nix)</em></h3>
+<p>Top-level rebindings — disable accidental suspend (C-z and C-x C-z), put other-window on M-o for one-key window switching, bind C-x j to the two-window rotate helper above, and rebind C-g to the DWIM quit so it closes minibuffers from elsewhere.</p>
+<h3 id="windmove-built-in--nix"><code>windmove</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in directional window switching — <code>Shift-&lt;arrow&gt;</code> moves focus between split windows. Ships with Emacs; no reason not to turn it on globally.</p>
+<h2 id="init-uiel--ui-theme-modeline-fonts"><code>init-ui.el</code> — UI: theme, modeline, fonts</h2>
+<h3 id="auto-dark"><code>auto-dark</code></h3>
+<p>Flips between <code>jotain-theme-light</code> and <code>jotain-theme-dark</code> following the system appearance — works on macOS, GNOME, and anything that exposes a dark/light setting. C-c t toggles manually.</p>
+<h3 id="doom-modeline"><code>doom-modeline</code></h3>
+<p>A dense, IDE-style modeline with LSP/eglot status, project buffer info, and Nerd Font glyphs. Loaded after init so the primary frame doesn't redraw before fonts are ready.</p>
+<h3 id="emoji-built-in--nix"><code>emoji</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in emoji picker (Emacs 29+): <code>C-x 8 e e' inserts by name, </code>C-x 8 e s' searches, <code>C-x 8 e l' opens the full list, </code>C-x 8 e d' describes the emoji at point. `which-key' surfaces the prefix.</p>
+<h3 id="display-line-numbers-built-in--nix"><code>display-line-numbers</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in line numbers — only on programming and config buffers, never on prose or org files where they're noise. Honour the `jotain-line-numbers-in-prog' toggle so users can flip it off without editing this file.</p>
+<h3 id="pixel-scroll-built-in--nix"><code>pixel-scroll</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in pixel-precision smooth scrolling. Required for usable trackpad / smooth-mouse scrolling. `fast-but-imprecise-scrolling' lets large jumps skip exact intermediate fontification — a worthwhile redisplay win on this integrated-GPU Intel machine.</p>
+<h3 id="hl-line-built-in--nix"><code>hl-line</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in current-line highlight — on for code and prose, off in shells/dired where it would fight the cursor.</p>
+<h3 id="paren-built-in--nix"><code>paren</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in matching-paren highlight. Tuned to flash quickly and highlight even when point is just outside the pair.</p>
+<h3 id="which-key-built-in--nix"><code>which-key</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in keybinding cheatsheet. After a prefix key, displays a paged list of completions in the echo area. Discoverability multiplier — a Jotain staple.</p>
+<h3 id="calendar-built-in--nix"><code>calendar</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in calendar. Configured for ISO week numbering and a Monday week start so it agrees with how the rest of Europe thinks about dates.</p>
+<h3 id="nerd-icons"><code>nerd-icons</code></h3>
+<p>Provides the Nerd-Font glyph alphabet that the rest of the nerd-icons-* family draws on. Picks the font family from <code>jotain-font-preferences</code> so the icons match the editor face.</p>
+<h3 id="nerd-icons-corfu"><code>nerd-icons-corfu</code></h3>
+<p>Decorates corfu candidates with a kind-specific glyph in the margin, so completions are scannable at a glance.</p>
+<h3 id="nerd-icons-completion"><code>nerd-icons-completion</code></h3>
+<p>Adds Nerd-Font icons to marginalia annotations (file/buffer category icons in completion lists).</p>
+<h3 id="nerd-icons-ibuffer"><code>nerd-icons-ibuffer</code></h3>
+<p>Adds Nerd-Font glyphs to ibuffer rows so buffer types are visually distinguished at a glance.</p>
+<h3 id="hl-todo"><code>hl-todo</code></h3>
+<p>Highlights TODO / FIXME / HACK / NOTE / XXX keywords in code with a face that survives theme changes.</p>
+<h3 id="breadcrumb"><code>breadcrumb</code></h3>
+<p>Headerline showing project / file / nested function position — the missing "where am I in this file?" indicator built on imenu.</p>
+<h3 id="pulsar"><code>pulsar</code></h3>
+<p>Pulses a coloured highlight when point jumps a long distance (other-window, xref, consult-line). Tells the eye where the cursor went without staring.</p>
+<h3 id="rainbow-delimiters"><code>rainbow-delimiters</code></h3>
+<p>Colourises matching parens by depth in Lisp buffers — almost essential for navigating deeply nested forms.</p>
+<h3 id="indent-bars"><code>indent-bars</code></h3>
+<p>Vertical indent guides for code, treesit-aware so the bars follow real syntactic indentation. Toggle via `jotain-indent-bars-enabled'.</p>
+<h2 id="init-tabsel--workspace-tabs"><code>init-tabs.el</code> — Workspace tabs</h2>
+<h3 id="tab-bar-built-in--nix"><code>tab-bar</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in frame-local tab bar — used as a workspace switcher. Bar hides itself when only one tab exists, so single-window sessions are unaffected.</p>
+<h2 id="init-helpel--help-system"><code>init-help.el</code> — Help system</h2>
+<h3 id="help-built-in--nix"><code>help</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in help window. Auto-focus so you can scroll or dismiss with q/n/p without reaching for the mouse.</p>
+<h3 id="help-at-pt-built-in--nix"><code>help-at-pt</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in echo-area tooltips on buttons and links when point lingers — discoverability for the parts of Emacs that aren't plain text.</p>
+<h3 id="apropos-built-in--nix"><code>apropos</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in apropos. Bumped to "search everything" so it surfaces faces, classes, and customs alongside functions and variables.</p>
+<h3 id="helpful"><code>helpful</code></h3>
+<p>Replaces the default describe-* commands with richer buffers that include source, callers, examples, and active keybindings — the single biggest discoverability upgrade in Emacs.</p>
+<h2 id="init-editingel--editing-primitives"><code>init-editing.el</code> — Editing primitives</h2>
+<h3 id="elec-pair-built-in--nix"><code>elec-pair</code> <em>(built-in / Nix)</em></h3>
+<p>Auto-insert matching delimiters as you type. Built-in.</p>
+<h3 id="delsel-built-in--nix"><code>delsel</code> <em>(built-in / Nix)</em></h3>
+<p>When a region is active, typing replaces it instead of leaving the selection alone. Built-in, on by default in most modern editors — Emacs needs this opt-in.</p>
+<h3 id="simple-built-in--nix"><code>simple</code> <em>(built-in / Nix)</em></h3>
+<p>Two small built-in editing knobs. <code>kill-region-dwim' makes C-w with no active region kill a word backwards instead of erroring; </code>delete-pair-push-mark' leaves a mark on the former pair contents so C-x C-x re-selects them. Both are Emacs 31+, guarded so the config loads on Emacs 30. (The "diff this buffer against its file" action under <code>d' during </code>save-some-buffers' is already built in since Emacs 30, so it needs no config here.)</p>
+<h3 id="whitespace-built-in--nix"><code>whitespace</code> <em>(built-in / Nix)</em></h3>
+<p>Strip trailing whitespace and stray tabs on save without reformatting the rest of the buffer. Built-in. Skipped during super-save's automatic saves so its except-current-line handling keeps whitespace at point intact.</p>
+<h3 id="subword-built-in--nix"><code>subword</code> <em>(built-in / Nix)</em></h3>
+<p>Treats CamelCase / snake_case word parts as separate words for M-f / M-b / M-d. Built-in. Programming-mode only — prose still gets whole-word motion.</p>
+<h3 id="newcomment-built-in--nix"><code>newcomment</code> <em>(built-in / Nix)</em></h3>
+<p>Defaults for the built-in comment commands (M-;, C-x C-;, M-j). <code>comment-multi-line' makes M-j continue inside an open block comment instead of closing/reopening; </code>extra-line' style puts opening and closing delimiters on their own lines for <code>comment-region'; </code>comment-empty-lines' makes <code>comment-region' treat blank lines the same as content lines; </code>comment-auto-fill-only-comments' keeps automatic line wrapping (when <code>auto-fill-mode' is on) confined to comments. C-c ; is an ergonomic alias for </code>comment-line' — C-; is taken by embark-dwim. Deliberate tradeoff: org-mode shadows C-c ; with `org-toggle-comment', which is the org equivalent anyway. Per-mode overrides go in the language module via a named hook: (defun my-foo-mode-setup () (setq-local comment-multi-line nil)) (add-hook 'foo-mode-hook #'my-foo-mode-setup)</p>
+<h3 id="emacs-built-in--nix-2"><code>emacs</code> <em>(built-in / Nix)</em></h3>
+<p>Bindings for the two transpose commands Emacs ships without defaults, so the prose-level family (sentence, paragraph) is reachable alongside the built-in C-t (chars), M-t (words), C-x C-t (lines), and C-M-t (sexps, tree-sitter aware in Emacs 30+). Caveat: transpose-lines works on real newlines, so it gives surprising results under visual-line-mode where wrapped "lines" are visual only.</p>
+<h3 id="replace-built-in--nix"><code>replace</code> <em>(built-in / Nix)</em></h3>
+<p>Emacs 30 ships <code>replace-regexp-as-diff' and </code>multi-file-replace-regexp-as-diff' — run a regex replacement, but see the result as a unified diff first and either apply it as a patch or abort. Worth reaching for on any non-trivial refactor. The dired-marked variant is bound in `init-navigation.el'.</p>
+<h3 id="expreg"><code>expreg</code></h3>
+<p>Treesit-aware semantic region expansion. Smaller, faster successor to expand-region; produces better expansions with much less code now that treesit is everywhere.</p>
+<h3 id="multiple-cursors"><code>multiple-cursors</code></h3>
+<p>Visual multi-cursor editing. C-&gt; and C-&lt; select the next/prev occurrence; C-S-c C-S-c selects every occurrence in the buffer.</p>
+<h3 id="vundo"><code>vundo</code></h3>
+<p>Visual undo tree on C-x u. Stateless — no .undo-tree side files cluttering the filesystem like undo-tree.el used to leave behind.</p>
+<h3 id="super-save"><code>super-save</code></h3>
+<p>Auto-saves buffers when idle and on focus loss, writing the actual file rather than #foo# auto-save side files. Also strips trailing whitespace except on the current line so you don't fight your own cursor.</p>
+<h3 id="re-builder-built-in--nix"><code>re-builder</code> <em>(built-in / Nix)</em></h3>
+<p>Make <code>M-x re-builder' use string syntax — the same form you'd paste into </code>re-search-forward' — instead of the default `read' syntax that requires escaping every backslash twice.</p>
+<h2 id="init-completionel--minibuffer--in-buffer-completion"><code>init-completion.el</code> — Minibuffer + in-buffer completion</h2>
+<h3 id="minibuffer-built-in--nix"><code>minibuffer</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in minibuffer customisation: detailed annotations and historical sorting (Emacs 30) so frequent commands surface first.</p>
+<h3 id="orderless"><code>orderless</code></h3>
+<p>Fuzzy, space-separated, order-independent completion. Pairs with partial-completion (path globbing) so <code>/u/s/a</code> matches <code>/usr/share/applications</code>. The single most important UX win in the minibuffer.</p>
+<h3 id="vertico"><code>vertico</code></h3>
+<p>Vertical, performant minibuffer completion UI. Replaces the default <code>*Completions*</code> buffer with an inline list. The whole minibuffer experience hinges on this.</p>
+<h3 id="vertico-directory-built-in--nix"><code>vertico-directory</code> <em>(built-in / Nix)</em></h3>
+<p>Path-savvy editing in vertico — RET enters a candidate directory, DEL/M-DEL delete a path component instead of one character. Bundled with vertico.</p>
+<h3 id="vertico-multiform-built-in--nix"><code>vertico-multiform</code> <em>(built-in / Nix)</em></h3>
+<p>Per-category and per-command display modes (grid for files, buffer for line/grep so the preview window has room). Bundled with vertico.</p>
+<h3 id="vertico-buffer-built-in--nix"><code>vertico-buffer</code> <em>(built-in / Nix)</em></h3>
+<p>Lets vertico render in a regular buffer instead of the minibuffer — used by vertico-multiform for consult-line and the grep family so candidates have room to breathe.</p>
+<h3 id="marginalia"><code>marginalia</code></h3>
+<p>Adds annotation columns (file size, mode, docstring, …) to every completion list. Pairs with vertico to make minibuffer choices self-explanatory.</p>
+<h3 id="consult"><code>consult</code></h3>
+<p>Consult provides preview-as-you-go variants of nearly every Emacs lookup: buffer switch, line jump, grep, recent files, imenu, flymake, register store. The big binding table below replaces a dozen built-ins with a single, consistent UI.</p>
+<h3 id="embark"><code>embark</code></h3>
+<p>Right-click for the keyboard. <code>C-.' (embark-act) on any candidate — file, symbol, region, buffer, command name, URL — opens a menu of actions valid for that thing; </code>C-;' (embark-dwim) skips the menu and runs the default action (visit the file, browse the URL, jump to the definition). Press <code>C-h' after </code>C-.' to turn the menu into a searchable <code>completing-read' — the best way to discover what applies. Inside the menu </code>i'/<code>w' insert or copy the candidate, </code>A' (embark-act-all) acts on every candidate at once, and <code>B' (embark-become) re-runs the typed input through another command; </code>C-u C-.' keeps the minibuffer open for successive actions. `C-h B' replaces describe-bindings with a paged view.</p>
+<h3 id="embark-consult"><code>embark-consult</code></h3>
+<p>Glue between embark and consult — teaches <code>embark-export' to turn a consult result list into the right major mode: consult-grep and consult-ripgrep become a grep buffer, consult-line an occur buffer, file candidates a dired buffer, buffer candidates an ibuffer buffer. The grep/ripgrep export is the classic search → </code>C-c C-o' → wgrep (`C-x C-q') refactor flow that edits every match in place across all the matched files.</p>
+<h3 id="avy"><code>avy</code></h3>
+<p>Tree-style char/word/line jumping. Bound under M-g so it sits next to the goto family. Multi-frame aware.</p>
+<h3 id="zoxide"><code>zoxide</code></h3>
+<p>Frecency-ranked directory jump (like the shell zoxide). Adds visited files automatically; M-g z surfaces the most-recent matches first.</p>
+<h3 id="emacs-built-in--nix-3"><code>emacs</code> <em>(built-in / Nix)</em></h3>
+<p><code>tab-always-indent' = t is the stock Emacs default, restored here deliberately: TAB indents the line and does nothing else. </code>indent-for-tab-command's only call to <code>completion-at-point' is guarded by (eq tab-always-indent 'complete), so with t that branch is unreachable and TAB provably cannot summon a capf. Completion lives on </code>C-M-i' instead (<code>jotain-completion-key'). </code>tab-first-completion' is inert unless <code>tab-always-indent' is </code>complete', so it is irrelevant here and is never set.</p>
+<h3 id="corfu"><code>corfu</code></h3>
+<p>In-buffer completion popup — the corfu equivalent of company. The popup appears on its own only in the modes listed by <code>jotain-completion-auto-modes' (default: programming modes), so prose stays quiet and completes only when asked via </code>C-M-i'. RET and TAB are unbound in <code>corfu-map', so Enter always inserts a newline and TAB always indents, even while the popup is showing. </code>M-n'/<code>M-p' move, </code>C-g' dismisses, `C-M-i' accepts.</p>
+<h3 id="corfu-history-built-in--nix"><code>corfu-history</code> <em>(built-in / Nix)</em></h3>
+<p>Persists corfu's pick history into savehist so frequent completions float to the top across sessions. Bundled with corfu.</p>
+<h3 id="cape"><code>cape</code></h3>
+<p>Completion-at-point Extensions — extra capf functions (dabbrev, file path, keyword) that feed corfu when the major mode's own capf finds nothing useful. These three go on the <em>global</em> <code>completion-at-point-functions' so they act as fallbacks after the buffer-local, major-mode capfs run. </code>cape-elisp-symbol' is instead added buffer-locally in Elisp buffers, where it completes symbols even inside comments and docstrings (out there `elisp-completion-at-point' only fires in code), without polluting completion elsewhere.</p>
+<h2 id="init-navigationel--dired-project-windows"><code>init-navigation.el</code> — dired, project, windows</h2>
+<h3 id="dired-built-in--nix"><code>dired</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in directory editor — Jotain's primary file manager. The custom block below tames cross-platform ls quirks (BSD on macOS lacks <code>--group-directories-first</code> and <code>--dired</code>). <code>M-s R</code> previews a regex replacement across the contents of all marked files as a unified diff (Emacs 30's `dired-do-replace-regexp-as-diff').</p>
+<h3 id="dired-x-built-in--nix"><code>dired-x</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in dired extras — <code>dired-omit-mode</code> hides dotfiles and cache directories so dired listings show only the things you actually want to see.</p>
+<h3 id="dired-async"><code>dired-async</code></h3>
+<p>Async file ops for dired — wraps <code>dired-do-copy</code>, <code>dired-do-rename</code>, <code>dired-do-symlink</code>, <code>dired-do-hardlink</code> so they fork into a subprocess instead of blocking the main Emacs. Multi-GB copies no longer freeze the UI; the mode-line shows progress and a message fires on completion.</p>
+<h3 id="dired-rsync"><code>dired-rsync</code></h3>
+<p>rsync from dired — bound to <code>C-c C-r</code> in <code>dired-mode-map</code>. Best for very large transfers or TRAMP sources/destinations: hands marked files to <code>rsync</code> in an async shell buffer with live progress. Uses <code>--progress</code> (not <code>--info=progress2</code>) so stock macOS rsync 2.6.9 still works; noisier output, but portable.</p>
+<h3 id="ls-lisp-built-in--nix"><code>ls-lisp</code> <em>(built-in / Nix)</em></h3>
+<p>Pure-Lisp ls emulation. Fallback for macOS without GNU coreutils — gives us folders-first sorting that BSD ls cannot produce.</p>
+<h3 id="wdired-built-in--nix"><code>wdired</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in writable dired — C-c C-e turns the dired buffer into a regular text buffer where you can rename/chmod files with the usual editing commands. Save to commit changes.</p>
+<h3 id="diredfl"><code>diredfl</code></h3>
+<p>Pretty colours for dired (font-locks files by type, age, executability). Pure cosmetic, big readability win.</p>
+<h3 id="dired-narrow"><code>dired-narrow</code></h3>
+<p>Live filter dired buffers by typing a fragment after <code>/</code>. Faster than re-running ls with a glob.</p>
+<h3 id="dired-subtree"><code>dired-subtree</code></h3>
+<p>Inline tree expansion in dired — TAB on a directory expands its contents below it instead of opening a new buffer.</p>
+<h3 id="trashed"><code>trashed</code></h3>
+<p>Browse the system trash bin from inside Emacs. With <code>delete-by-moving-to-trash</code> set in init-core, every dired deletion is recoverable through <code>M-x trashed</code>.</p>
+<h3 id="pretty-sha-path"><code>pretty-sha-path</code></h3>
+<p>Shortens <code>/nix/store/abc123-foo-1.0</code> to <code>…foo-1.0</code> in dired and shell buffers — purely cosmetic, but transformative on a system that's mostly Nix store paths.</p>
+<h3 id="dirvish"><code>dirvish</code></h3>
+<p>Modern dired front-end with previews, side panels, and miller columns. Overrides plain dired so every <code>C-x d</code> benefits. <code>dirvish-side' (C-c D) already provides the docked side-tree that Emacs 31's new </code>speedbar-window' offers, so speedbar is intentionally not wired up here.</p>
+<h3 id="winner-built-in--nix"><code>winner</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in window-layout undo/redo — pairs with the toggle helper below so <code>C-x 1</code> becomes a reversible "expand this window" command.</p>
+<h2 id="init-vcel--version-control"><code>init-vc.el</code> — Version control</h2>
+<h3 id="vc-built-in--nix"><code>vc</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in version control. Pinned to Git + Jujutsu — every other backend is a slow startup tax (probes every visited file's parents) you almost never benefit from. JJ is supplied by <code>vc-jj' below; without it in this list the backend never gets consulted and project.el won't discover </code>.jj' roots.</p>
+<h3 id="vc-git-built-in--nix"><code>vc-git</code> <em>(built-in / Nix)</em></h3>
+<p>Quick jump to a file git status reports as changed. Runs <code>git status --porcelain=v1 -z -uall' (-z keeps spaces and non-ASCII paths intact; -uall forces untracked listing regardless of status.showUntrackedFiles) and offers M/A/R/C/U/T/?? entries through </code>completing-read'. Adapted from Rahul M. Juliato's emacs-solo/switch-git-status-buffer.</p>
+<h3 id="vc-jj"><code>vc-jj</code></h3>
+<p>Jujutsu (jj) backend for built-in <code>vc' and </code>project'. Adds the JJ entry pinned in <code>vc-handled-backends' above, so </code>C-x v …', the modeline VC state, and <code>project.el' all light up on jj repos (typically colocated with git). The jj side wants [ui] diff-formatter = ":git" conflict-marker-style = "git" set via </code>jj config edit --user' so vc/diff-hl/smerge read jj diffs and conflicts in the format they expect.</p>
+<p><code>jotain-switch-jj-status-buffer' (C-x J — not C-x C-j, which stays on its Emacs 28+ default </code>dired-jump') is the jj twin of the git status jump above: it parses <code>jj diff --summary -r @' and offers the changed files (deletions omitted — the file is gone) through </code>completing-read'. The richer interactive view is `majutsu' (C-c j).</p>
+<h3 id="magit-built-in--nix"><code>magit</code> <em>(built-in / Nix)</em></h3>
+<p>The Git porcelain. Bound C-x g for status, C-x M-g for global dispatch, C-c g for the file-specific menu. Refined hunks + whitespace-ignoring diffs are turned on globally.</p>
+<h3 id="majutsu-built-in--nix"><code>majutsu</code> <em>(built-in / Nix)</em></h3>
+<p>The Jujutsu porcelain — a magit-style interface for jj, sitting alongside magit (jj is normally colocated with git, so both apply). C-c j opens the status/log buffer (<code>majutsu-log', aliased </code>majutsu'); C-c M-j opens the top-level transient dispatcher. Provided by Nix (nix/extra-packages.nix), so `:ensure nil'.</p>
+<h3 id="magit-todos"><code>magit-todos</code></h3>
+<p>Surfaces TODO/FIXME/HACK comments as a section in magit-status. Scan depth pinned to 1 so it stays fast on large repos.</p>
+<h3 id="forge"><code>forge</code></h3>
+<p>PRs, issues, and reviews from GitHub/GitLab/Forgejo inside magit. Uses the Emacs-30 built-in sqlite so no external emacsql binary is needed. Auth via ~/.authinfo.gpg (machine api.github.com login USER^forge password ghp_…).</p>
+<h3 id="transient-built-in--nix"><code>transient</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in transient menu system that magit/forge are built on. Themed under var/ so its three state files don't drop at the repo root.</p>
+<h3 id="diff-hl"><code>diff-hl</code></h3>
+<p>Fringe indicators for added/changed/removed lines in the buffer you're editing. <code>diff-hl-flydiff-mode</code> updates pre-save so the indicators reflect uncommitted edits, not just the last save.</p>
+<h3 id="ediff-built-in--nix"><code>ediff</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in interactive diff. Configured with <code>plain</code> window setup so the control panel doesn't pop a separate frame, plus whitespace-ignoring diffs for less merge noise.</p>
+<h2 id="init-progel--prog-mode-treesit-eglot"><code>init-prog.el</code> — prog-mode, treesit, eglot</h2>
+<h3 id="prog-mode-built-in--nix"><code>prog-mode</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in <code>prog-mode</code> parent. Just turns on the fill-column indicator — hl-line and show-paren live in init-ui so they apply outside programming buffers too.</p>
+<h3 id="treesit-built-in--nix"><code>treesit</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in tree-sitter substrate. Bumped to font-lock level 4 to enable every available syntactic decoration.</p>
+<h3 id="jit-lock-built-in--nix"><code>jit-lock</code> <em>(built-in / Nix)</em></h3>
+<p>Defer fontification of newly exposed text by a few hundredths of a second so heavy treesit level-4 font-lock never blocks keystrokes or scrolling. Pairs with `redisplay-skip-fontification-on-input' (set in init-core) — matters more on this slower Intel CPU.</p>
+<h3 id="treesit-fold"><code>treesit-fold</code></h3>
+<p>Code folding driven by treesit syntax nodes — folds along functions/classes/blocks instead of indentation guesses. Fringe indicators show fold state.</p>
+<h3 id="combobulate-built-in--nix"><code>combobulate</code> <em>(built-in / Nix)</em></h3>
+<p>Structural editing via treesit (move/clone/raise nodes, transpose siblings). Heavy enough to be opt-in per buffer via M-x combobulate-mode or .dir-locals.el. Provided by Nix.</p>
+<h3 id="eglot-built-in--nix"><code>eglot</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in LSP client. Per-language <code>eglot-ensure</code> hooks live here so all LSP wiring is visible in one place; per-language mode regexes stay in their <code>init-lang-*</code> file. C-c r is the refactor prefix (rename/format/code-actions).</p>
+<p>Beyond the curated hook list, <code>jotain-prog--maybe-eglot-ensure' auto-starts eglot for ANY project file whose language server is on the buffer's (envrc-applied) PATH — so enabling </code>languages.X.enable' in a project's devenv lights up its LSP in Emacs with no per-language config.</p>
+<h3 id="consult-eglot"><code>consult-eglot</code></h3>
+<p>Consult-driven workspace symbol search — C-M-. opens an orderless-filtered list of symbols across the LSP workspace.</p>
+<h3 id="consult-eglot-embark"><code>consult-eglot-embark</code></h3>
+<p>Embark integration for consult-eglot — gives every workspace symbol an action menu (jump to def, find refs, rename, …).</p>
+<h3 id="dape"><code>dape</code></h3>
+<p>Debug Adapter Protocol client — the debugging counterpart to eglot. Ships adapter configs for dlv (Go), debugpy (Python), codelldb (Rust/C/C++), and more; the adapter binary (e.g. <code>dlv</code>) comes from the project/host PATH, same convention as the LSP servers. <code>C-x C-a</code> is the prefix (the gud convention); stepping commands carry repeat-maps, so <code>C-x C-a n n n</code> keeps stepping.</p>
+<h3 id="flymake-built-in--nix"><code>flymake</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in inline diagnostic display. Indicator chars (! ? ·) and end-of-line message rendering keep diagnostics legible without opening a side window: `short' shows only the most severe diagnostic per line, so a busy line stays readable. M-n / M-p navigate.</p>
+<h3 id="eldoc-built-in--nix"><code>eldoc</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in echo-area documentation. Single-line display plus small idle delay so it feels responsive without flashing while you type.</p>
+<h3 id="xref-built-in--nix"><code>xref</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in cross-reference engine. Pinned to ripgrep (in the devenv shell) for orders-of-magnitude faster project-wide lookups than default grep.</p>
+<h3 id="tagref-built-in--nix"><code>tagref</code> <em>(built-in / Nix)</em></h3>
+<p>Cross-reference checker for <code>[tag:x]'/</code>[ref:x]' directives. Adds completion, xref navigation (M-. jumps from a ref to its tag, M-? finds references), and <code>M-x tagref-check' (clickable compilation buffer). Needs the </code>tagref' CLI on PATH (dev shell / Home Manager wrapper). Provided by Nix (not on MELPA).</p>
+<h3 id="compile-built-in--nix"><code>compile</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in compile / recompile. Auto-scroll until the first error and skip the "save?" prompt — the annoying defaults that make people reach for projectile or compilation-multi alternatives.</p>
+<h3 id="editorconfig-built-in--nix"><code>editorconfig</code> <em>(built-in / Nix)</em></h3>
+<p>Honour <code>.editorconfig</code> files (indent style/width, line endings, trailing whitespace). Built-in since Emacs 30.</p>
+<h3 id="apheleia"><code>apheleia</code></h3>
+<p>Async format-on-save through external formatters (ruff, nixfmt, rustfmt, prettier, …). Replaces hand-rolled per-language hooks with one place to look. Per-buffer override safe-local-variable lets <code>.dir-locals.el</code> opt out.</p>
+<h3 id="wgrep"><code>wgrep</code></h3>
+<p>Edit grep / ripgrep result buffers in place; saving propagates edits to every matched file. Powers the project-wide refactor flow: consult-ripgrep → C-c C-o (embark-export) → C-x C-q (wgrep) → edit → C-c C-c.</p>
+<h3 id="dtrt-indent"><code>dtrt-indent</code></h3>
+<p>Detect indentation width from file contents — saves us from having to special-case every project's tab/space convention.</p>
+<h2 id="init-snippetsel--tempel-snippets"><code>init-snippets.el</code> — Tempel snippets</h2>
+<h3 id="tempel"><code>tempel</code></h3>
+<p>Lightweight template/snippet engine from the corfu/cape author. Templates are read from <code>templates/*.eld' (keyed by major mode); </code>M-+' completes a snippet by name, <code>M-*' inserts one interactively, and once fields are active </code>M-}'/<code>M-{' or </code>C-M-n'/<code>C-M-p' move between them, with </code>M-RET' to finish. TAB is deliberately not involved: in this configuration TAB indents and nothing else. Set <code>jotain-completion-snippets' to nil to keep snippet names out of the completion popup; </code>M-+' and `M-*' still work.</p>
+<h3 id="eglot-tempel"><code>eglot-tempel</code></h3>
+<p>Lets Tempel expand the snippets language servers send back (e.g. function-argument placeholders from rust-analyzer / pyright). `eglot-tempel-mode' must be enabled before eglot connects, so it is armed the moment eglot loads rather than after the first session.</p>
+<h2 id="init-projectel--per-project-commands"><code>init-project.el</code> — Per-project commands</h2>
+<h3 id="project-built-in--nix"><code>project</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in project tracker. Extra root markers below mean a project is recognised when any of these is present, not just on a VCS root. Project list lives under var/. <code>C-x p P' scans </code>jotain-repositories-roots' to add+open projects not yet in the known list.</p>
+<h3 id="projection"><code>projection</code></h3>
+<p><code>.dir-locals.el</code>-driven per-project commands (configure, build, test, run, package, install) auto-detected from Makefile/justfile/Cargo.toml/etc and exposed under C-x P.</p>
+<h3 id="projection-multi"><code>projection-multi</code></h3>
+<p>Bridges projection with compile-multi: project-prefix RET picks from every named compile command available in this project.</p>
+<h3 id="projection-multi-embark"><code>projection-multi-embark</code></h3>
+<p>Embark menu for projection-multi entries — pin a command, preview output, etc.</p>
+<h3 id="compile-multi"><code>compile-multi</code></h3>
+<p>Per-major-mode picker for named compile commands ("go test", "pytest file", "nix flake check", …). Complement to projection, kept side by side because neither system fully covers the other.</p>
+<h3 id="consult-compile-multi"><code>consult-compile-multi</code></h3>
+<p>Renders compile-multi pickers through consult — gives you orderless filtering and preview on every "what command should I run?" prompt.</p>
+<h3 id="compile-multi-nerd-icons"><code>compile-multi-nerd-icons</code></h3>
+<p>Decorates compile-multi entries with nerd-font glyphs for the command type — purely visual, but a useful at-a-glance hint.</p>
+<h3 id="compile-multi-embark"><code>compile-multi-embark</code></h3>
+<p>Embark actions on compile-multi entries (run, copy, edit command line). Mirrors the projection embark integration.</p>
+<h2 id="init-devenvel--devenvsh-integration"><code>init-devenv.el</code> — devenv.sh integration</h2>
+<h3 id="devenv-built-in--nix"><code>devenv</code> <em>(built-in / Nix)</em></h3>
+<p>Native devenv.sh integration (the in-repo <code>lisp/devenv.el</code> library). <code>C-c v</code> opens a transient with task and script runners, <code>devenv test</code>/<code>build</code> through compilation-mode with Nix error matching, a process-manager dashboard (start/stop/restart/logs), and environment introspection (<code>devenv eval</code>/<code>info</code>/<code>search</code>). <code>devenv-reload</code> re-runs <code>devenv print-dev-env</code> and re-applies the environment buffer-locally via the native loader (<code>devenv-env-global-mode</code>), and offers to reconnect eglot servers. devenv.nix buffers are routed to the bundled <code>devenv lsp</code> server while <code>nil</code> keeps serving other Nix files, and <code>devenv-mcp-setup</code> registers the project's <code>devenv mcp</code> server with mcp.el so gptel can call its tools. <code>devenv-allow</code>/<code>devenv-revoke</code> manage devenv 2.1's auto-activation trust database, which also gates the native env loader, and <code>devenv-modeline-mode</code> (enabled here) shows the per-buffer status — devenv[on]/[off]/[!] — in the mode line. Everything degrades to a clean error when the <code>devenv</code> binary is not on PATH.</p>
+<h2 id="init-aiel--ai-assistants"><code>init-ai.el</code> — AI assistants</h2>
+<h3 id="claude-code-ide-built-in--nix"><code>claude-code-ide</code> <em>(built-in / Nix)</em></h3>
+<p>Agentic multi-file editing through the Claude Code CLI. Bound to C-c q (user-reserved space, so no major mode shadows it) so the menu is one key away whenever a refactor needs more context than a single LSP rename can carry. Provided by Nix (manzaltu/claude-code-ide.el is not on MELPA).</p>
+<h3 id="eca"><code>eca</code></h3>
+<p>Editor Code Assistant — AI pair-programming client (chat, inline completion, rewrite, MCP) talking to an external `eca' server over JSONRPC. The server binary is provided by Nix and found on $PATH, so nothing is downloaded; provider keys come from the environment, same as gptel. C-c e starts a session and opens the chat.</p>
+<h3 id="gptel"><code>gptel</code></h3>
+<p>Conversational LLM front-end with multiple backends. OpenRouter — an OpenAI-compatible aggregator fronting Claude, GPT, Gemini, DeepSeek, Qwen, GLM and more behind one key — is the default; direct Anthropic, Gemini and local Ollama backends stay selectable from the C-c S menu. Bound to C-c s / C-c S for quick send and full menu — user-reserved space, so org-mode and friends can't shadow them. Keys come from the environment first, then auth-source via auth-source-1password.</p>
+<h3 id="mcp"><code>mcp</code></h3>
+<p>Model Context Protocol bridge — lets gptel call MCP tools so the LLM can read files, query databases, and act through registered servers. Loaded on demand via its autoloads (`devenv-mcp-setup', M-x mcp-connect-server) — nothing here forces a load.</p>
+<h2 id="init-shellel--shells"><code>init-shell.el</code> — Shells</h2>
+<h3 id="eshell-built-in--nix"><code>eshell</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in Lisp-driven shell — works the same on every platform and is the right tool for Emacs-flavoured pipelines (commands as Elisp functions, no subprocess for builtins).</p>
+<h3 id="comint-built-in--nix"><code>comint</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in REPL substrate (used by python, ielm, sql, etc.). The settings here apply to every comint-derived buffer.</p>
+<h3 id="ielm-built-in--nix"><code>ielm</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in Emacs Lisp REPL. Emacs 31+ can persist input history across sessions like comint/shell already do; point it at a file under `var/'. Guarded so the config loads on Emacs 30.</p>
+<h2 id="init-terminalel--terminal-support"><code>init-terminal.el</code> — Terminal support</h2>
+<h3 id="ghostel"><code>ghostel</code></h3>
+<p>Terminal emulator powered by libghostty-vt (the Ghostty VT engine) via a native dynamic module. Replaces vterm: real PTY for tmux/ncurses/TUI programs, plus shell integration (OSC 7 directory tracking, OSC 133 prompt jumping) injected automatically for bash/zsh/fish. The Nix package builds the module from source and ships it in the package directory; in a source checkout the module is downloaded into the writable elpa/ dir on first `M-x ghostel'.</p>
+<h3 id="kkp"><code>kkp</code></h3>
+<p>Kitty Keyboard Protocol — lets terminal Emacs distinguish C-i/TAB, C-m/RET, C-[/ESC, and pass Shift-modified function keys through. Only loaded in tty and daemon sessions — the daemon arm matters because a daemon can later serve `emacsclient -nw' frames; pure GUI sessions skip it entirely.</p>
+<h3 id="clipetty"><code>clipetty</code></h3>
+<p>OSC 52 clipboard integration. Yank/kill in terminal Emacs reaches the system clipboard even through ssh + tmux.</p>
+<h2 id="init-systemsel--sysadmin-tools"><code>init-systems.el</code> — Sysadmin tools</h2>
+<h3 id="auth-source-1password"><code>auth-source-1password</code></h3>
+<p>Pulls credentials from the 1Password CLI (<code>op</code>). Once enabled, every package that uses auth-source — magit/forge, gptel, smtpmail, circe — resolves credentials by host against the 1Password vault transparently.</p>
+<h3 id="sops"><code>sops</code></h3>
+<p>Transparent SOPS encrypt/decrypt for YAML/JSON/env files. C-c C-c saves an encrypted edit; C-c C-d toggles into the editing view; C-c C-k cancels.</p>
+<h3 id="logview"><code>logview</code></h3>
+<p>Major mode for log files — level filtering, timestamp parsing, thread highlighting. Configured for SLF4J (Java/Kotlin) and a custom ROS2 submode.</p>
+<h2 id="init-trackingel--activity-tracking"><code>init-tracking.el</code> — Activity tracking</h2>
+<h3 id="keyfreq"><code>keyfreq</code></h3>
+<p>Counts command invocations to disk; <code>M-x keyfreq-show</code> ranks the busiest commands so you can spot rebinding opportunities. Tiny, no daemon, no network.</p>
+<h3 id="wakatime-mode"><code>wakatime-mode</code></h3>
+<p>Heartbeats to a Wakatime / Wakapi server. The <code>:if</code> guard makes the whole block a no-op when <code>wakatime-cli</code> or WAKATIME_API_KEY is missing, so you can install Wakapi later without reconfiguring Emacs.</p>
+<h3 id="activity-watch-mode"><code>activity-watch-mode</code></h3>
+<p>ActivityWatch integration — correlates editor activity with the rest of the machine. Installed but OFF by default; enable with <code>M-x global-activity-watch-mode</code> once the AW server is running, or set the option in custom.el to persist.</p>
+<h2 id="init-writingel--prose--notes"><code>init-writing.el</code> — Prose &amp; notes</h2>
+<h3 id="text-mode-built-in--nix"><code>text-mode</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in text-mode tweaks for prose: visual line wrap and hanging indent on wrapped lines. Proportional fonts come from `mixed-pitch' (below); code modes stay monospaced.</p>
+<h3 id="mixed-pitch"><code>mixed-pitch</code></h3>
+<p>Proportional fonts for prose via the <code>variable-pitch' face, while code, tables, and verbatim spans stay monospaced (</code>fixed-pitch'). This keeps Org tables aligned, where a blanket `variable-pitch-mode' would leave them ragged. Enabled in every text-mode buffer and opted out of the column-sensitive ones: YAML (see init-lang-data), commit messages, and email.</p>
+<h3 id="jinx"><code>jinx</code></h3>
+<p>Just-in-time spell check using enchant — no on-save scan, no per-buffer flyspell setup. <code>global-jinx-mode' replaces both </code>flyspell-mode' and <code>flyspell-prog-mode' in one shot: jinx keys off faces, so in a code buffer it checks only comments and strings and leaves the code alone, no </code>flyspell-prog-mode' equivalent needed. Enabled from `emacs-startup' rather than a bag of per-mode hooks so prose <em>and</em> code get checked. M-$ corrects the word at point (C-u M-$ walks every misspelling); C-M-$ switches dictionaries. Data/config buffers that only look like prose opt back out in init-lang-data.</p>
+<h3 id="markdown-mode"><code>markdown-mode</code></h3>
+<p>Markdown major mode with native code-block fontification and heading scaling. README.md opens in gfm-mode for the GitHub dialect.</p>
+<h3 id="denote"><code>denote</code></h3>
+<p>Plain-text note system with strict file-naming rules so notes are findable years later. Stored under <code>jotain-notes-directory</code> (default <code>~/Documents/notes</code>), shared with Org (init-org.el).</p>
+<h3 id="pdf-tools"><code>pdf-tools</code></h3>
+<p>In-Emacs PDF viewing — search, annotate, follow links, outline. Needs libpoppler at build time, which the emacs-pgtk / emacs-mac variants in nixpkgs already provide.</p>
+<h2 id="init-orgel--org"><code>init-org.el</code> — Org</h2>
+<h3 id="org-built-in--nix"><code>org</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in Org — outline, agenda, capture, literate-programming. Treated as a "third-party" package despite being built-in because it's the size and surface area of one. Capture templates and a small bind table live below.</p>
+<h3 id="ob-core-built-in--nix"><code>ob-core</code> <em>(built-in / Nix)</em></h3>
+<p>Org Babel, configured as a notebook. Enables a curated set of Org-provided languages (see <code>jotain-org-babel-languages'), swaps the blanket evaluation prompt for a trust check — your notes and project files run on </code>C-c C-c', a <code>.org' from anywhere else still asks — and redisplays inline images after every run so </code>:file' plots refresh in place. Adds a <code>C-c b' notebook prefix in Org buffers: </code>b' run buffer, <code>e' run subtree, </code>r' restart session and run buffer, <code>s' switch to session, </code>k' clear results, <code>t' tangle. Blocks are not re-evaluated during export (</code>:eval never-export'); what you see in the buffer is what gets exported.</p>
+<h3 id="org-src-built-in--nix"><code>org-src</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in source-block editing (<code>C-c '</code>). Edits open in the current window rather than stealing the frame layout, and indentation is left exactly as written — Org's default of re-indenting on exit corrupts Python blocks, where leading whitespace is syntax.</p>
+<h3 id="org-tempo-built-in--nix"><code>org-tempo</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in <code>&lt;KEY TAB' block expansion, plus entries for the languages this config actually runs — </code>&lt;py', <code>&lt;sh', </code>&lt;el', <code>&lt;sql', </code>&lt;jp' (Python with a session, for notebook-style work). Org's own list covers the structural blocks (<code>&lt;s', </code>&lt;q', `&lt;e'); these add the source blocks worth two keystrokes.</p>
+<h3 id="org-clock-built-in--nix"><code>org-clock</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in time tracking with persistence across restarts. Lets you resume an interrupted clock without losing the entry.</p>
+<h3 id="org-appear"><code>org-appear</code></h3>
+<p>Reveal Org emphasis markers (<code>*</code> <code>_</code> <code>/</code> <code>~</code>) only when point is on them — best of both visual worlds: clean reading, easy editing.</p>
+<h3 id="org-modern"><code>org-modern</code></h3>
+<p>Modern visual styling for Org buffers and agenda — typographic bullets, faux-rendered blocks, agenda decorations.</p>
+<h3 id="org-roam"><code>org-roam</code></h3>
+<p>Zettelkasten-style note-linking on top of Org. SQLite database auto-syncs in the background; C-c n f / i / c are the three bindings you actually use day-to-day.</p>
+<h2 id="init-lang-nixel--nix"><code>init-lang-nix.el</code> — Nix</h2>
+<h3 id="nix-ts-mode-built-in--nix"><code>nix-ts-mode</code> <em>(built-in / Nix)</em></h3>
+<p>Tree-sitter Nix major mode. Nix is the package manager and dev-shell tool the whole config is built around, so it gets a dedicated module even though we don't write much of it daily. Provided by Nix; format-on-save flows through apheleia → nixfmt (configured in init-prog). A blank-line indent rule fills the gap where tree-sitter leaves an empty line at column 0.</p>
+<h2 id="init-lang-rustel--rust"><code>init-lang-rust.el</code> — Rust</h2>
+<h3 id="rust-ts-mode-built-in--nix"><code>rust-ts-mode</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in tree-sitter Rust mode. Eglot wires rust-analyzer in init-prog; format-on-save runs rustfmt through apheleia.</p>
+<h2 id="init-lang-pythonel--python"><code>init-lang-python.el</code> — Python</h2>
+<h3 id="python-built-in--nix"><code>python</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in Python mode pinned to its tree-sitter variant so we get the modern parser without any third-party package. The LSP server (pyright/basedpyright/ruff-lsp) comes from the project's own environment, not from this config. When IPython is on PATH it becomes the REPL — better completion, tracebacks and <code>%magic' for </code>run-python' and for Org Babel <code>:session' blocks alike — while one-shot (sessionless) Babel blocks stay on plain </code>python3'.</p>
+<h2 id="init-lang-goel--go"><code>init-lang-go.el</code> — Go</h2>
+<h3 id="go-ts-mode-built-in--nix"><code>go-ts-mode</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in tree-sitter Go modes: <code>go-ts-mode</code> for source files, <code>go-mod-ts-mode</code> for go.mod, <code>go-work-ts-mode</code> (Emacs 31) for go.work. Eglot wires gopls in init-prog; format-on-save runs goimports through apheleia; dape drives dlv for debugging. All Go tooling (go, gopls, goimports, dlv) comes from the project/host PATH, not from this config.</p>
+<h3 id="go-tag"><code>go-tag</code></h3>
+<p>Struct-tag editing (<code>json:"..."', </code>db:"..."', …). gopls has no equivalent; the underlying <code>gomodifytags' binary comes from the project environment. Bound under the buffer-local </code>C-c C-t' Go tooling prefix so it never shadows the global `C-c t' theme toggle.</p>
+<h3 id="gotest"><code>gotest</code></h3>
+<p>Run the Go test or benchmark at point, the current file's tests, or the whole project, with compilation-mode error jumping. Complements the project-wide compile-multi "go test" commands with single-test / single-file runs. Shares the mode-local `C-c C-t' Go tooling prefix with go-tag.</p>
+<h2 id="init-lang-webel--web-typescript-js-css-html"><code>init-lang-web.el</code> — Web (TypeScript, JS, CSS, HTML)</h2>
+<h3 id="typescript-ts-mode-built-in--nix"><code>typescript-ts-mode</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in tree-sitter TypeScript / TSX / JSX modes. Eglot wires typescript-language-server in init-prog.</p>
+<h3 id="js-built-in--nix"><code>js</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in JavaScript major mode pinned to its tree-sitter variant.</p>
+<h3 id="css-mode-built-in--nix"><code>css-mode</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in CSS / SCSS major mode pinned to the tree-sitter variant.</p>
+<h3 id="web-mode"><code>web-mode</code></h3>
+<p>One mode for every templating language that mixes HTML with something else: ERB, Mustache, Django, ASP, JSP, PHP. The M-o rebind below stops web-mode-map from shadowing our global other-window binding.</p>
+<h2 id="init-lang-devopsel--devops-ci-iac-containers"><code>init-lang-devops.el</code> — DevOps (CI, IaC, containers)</h2>
+<h3 id="dockerfile-mode"><code>dockerfile-mode</code></h3>
+<p>Dockerfile major mode — syntax highlighting plus build commands (<code>M-x dockerfile-build-buffer</code>). The runtime command name comes from <code>jotain-docker-backend</code>.</p>
+<h3 id="docker-compose-mode"><code>docker-compose-mode</code></h3>
+<p>YAML-flavoured docker-compose syntax with awareness of compose keywords and service references.</p>
+<h3 id="terraform-mode"><code>terraform-mode</code></h3>
+<p>HCL-aware Terraform mode for <code>.tf</code> files. Loaded by the mode regex; LSP comes from terraform-ls (configured in init-prog).</p>
+<h3 id="gitlab-ci-mode"><code>gitlab-ci-mode</code></h3>
+<p>YAML mode tuned for <code>.gitlab-ci.yml</code> keywords — includes, rules, jobs. Saves a lot of typo'd job names on CI debugging days.</p>
+<h3 id="just-mode"><code>just-mode</code></h3>
+<p>Major mode for <code>Justfile</code> — the project-aware command runner Jotain itself uses. Pairs with compile-multi for project commands.</p>
+<h3 id="ansible"><code>ansible</code></h3>
+<p>Ansible minor mode layered on top of yaml-mode for playbook files. Adds module-name completion and Jinja2 highlighting.</p>
+<h3 id="bazel"><code>bazel</code></h3>
+<p>Bazel/Starlark support — major modes for <code>BUILD</code>, <code>WORKSPACE</code>, <code>MODULE.bazel</code>, <code>REPO.bazel</code>, <code>*.bzl</code>, <code>.bazelrc</code>, <code>.bazelignore</code> and <code>.bazeliskrc</code> (auto-mode-alist comes from the package's own autoloads). <code>C-c C-f</code> runs buildifier; format-on-save for the Starlark-family buffers is wired through apheleia in init-prog.</p>
+<h2 id="init-lang-datael--data-formats"><code>init-lang-data.el</code> — Data formats</h2>
+<h3 id="yaml-mode"><code>yaml-mode</code></h3>
+<p>YAML major mode (MELPA). Loaded on demand for the dozens of YAML-shaped files in any modern repo (CI, k8s, helm). YAML derives from <code>text-mode' upstream, so we re-fire </code>prog-mode-hook' to get the full editor surface (line numbers, flymake, indent guides, …).</p>
+<h3 id="yaml-ts-mode-built-in--nix"><code>yaml-ts-mode</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in tree-sitter YAML mode (Emacs 29+). Same prog-mode hook tweak as <code>yaml-mode'; kept in its own use-package block so users running the built-in mode aren't forced to install the MELPA </code>yaml-mode' package by `use-package-always-ensure'.</p>
+<h3 id="csv-mode"><code>csv-mode</code></h3>
+<p>CSV major mode with column alignment. csv-align-mode renders separators visually so wide files become readable without reflowing the actual bytes.</p>
+<h3 id="sql-indent"><code>sql-indent</code></h3>
+<p>Smart indentation for SQL files — keeps SELECT lists, JOINs, and CTEs aligned without manual whitespace fiddling.</p>
+<h3 id="jinja2-mode"><code>jinja2-mode</code></h3>
+<p>Jinja2 / Ansible / Saltstack templating syntax. Mode regex covers <code>.j2</code>, <code>.jinja</code>, and <code>.jinja2</code>.</p>
+<h3 id="gnuplot"><code>gnuplot</code></h3>
+<p>Major mode for gnuplot script files (<code>.plt</code>). Useful when an analysis pipeline emits its own plotting scripts.</p>
+<h2 id="init-lang-systemsel--systems-cc-haskell-ocaml-zig"><code>init-lang-systems.el</code> — Systems (C/C++, Haskell, OCaml, Zig)</h2>
+<h3 id="cc-mode-built-in--nix"><code>cc-mode</code> <em>(built-in / Nix)</em></h3>
+<p>Built-in C/C++ mode with a Stroustrup style bias. The header extensions below default to C++ — Jotain assumes that's the more common case in modern repos. C/C++ deliberately stay on cc-mode rather than c-ts-mode/c++-ts-mode — the style setup below is not migrated — and `jotain-prog-warn-non-ts-exclude' (init-prog.el) records that choice so the tree-sitter gap detector stays quiet about it.</p>
+<h3 id="cmake-mode"><code>cmake-mode</code></h3>
+<p>CMake mode for CMakeLists.txt and <code>.cmake</code> files. Mode regex covers both file conventions.</p>
+<h3 id="meson-mode"><code>meson-mode</code></h3>
+<p>Meson mode for <code>meson.build</code>, <code>meson_options.txt</code>, and <code>meson.options</code> files. Formatting is configured centrally through apheleia, using the Meson CLI supplied by the dev shell.</p>
+<h3 id="haskell-mode"><code>haskell-mode</code></h3>
+<p>Haskell major mode. Loaded on demand only — keeps the rare Haskell editing session from costing every Emacs start.</p>
+<h3 id="tuareg"><code>tuareg</code></h3>
+<p>Tuareg — the standard OCaml major mode for <code>.ml</code>/<code>.mli</code> sources (OCaml has no built-in tree-sitter mode). Eglot already maps <code>tuareg-mode' to </code>ocamllsp' and apheleia maps it to `ocamlformat', so the generic eglot auto-start and format-on-save in init-prog pick OCaml up with no extra wiring. All OCaml tooling (ocamllsp, ocamlformat) comes from the project/host PATH, not this config.</p>
+<h3 id="dune"><code>dune</code></h3>
+<p>Dune major mode for the OCaml build system's <code>dune</code>, <code>dune-project</code>, and <code>dune-workspace</code> files — the OCaml counterpart to the CMake/Meson modes above.</p>
+<h3 id="zig-ts-mode"><code>zig-ts-mode</code></h3>
+<p>Tree-sitter Zig mode (MELPA). Eglot wires zls in init-prog; format-on-save runs `zig fmt' through apheleia.</p>
+</body>
+</html>
