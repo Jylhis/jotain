@@ -89,16 +89,31 @@ here would abort every later `emacs-startup-hook' entry."
   :bind (("M-$"   . jinx-correct)
          ("C-M-$" . jinx-languages)))
 
-;;; @doc Markdown major mode with native code-block fontification and
-;;; heading scaling. README.md opens in gfm-mode for the GitHub
-;;; dialect.
+;;; @doc Markdown major mode with native code-block fontification,
+;;; heading scaling, and nested imenu. README.md opens in gfm-mode for
+;;; the GitHub dialect. markdown-mode's own commands stay on their
+;;; `C-c C-...' defaults; a parallel `C-c m ...' prefix surfaces the
+;;; high-traffic ones: markup/image hiding, link and fenced-code
+;;; insertion, follow-link, heading promote/demote, and the live HTML
+;;; preview toggle. gfm-mode inherits every binding via its parent map.
 (use-package markdown-mode
   :mode (("README\\.md\\'" . gfm-mode)
          ("\\.md\\'"       . markdown-mode)
          ("\\.markdown\\'" . markdown-mode))
   :custom
   (markdown-fontify-code-blocks-natively t)
-  (markdown-header-scaling t))
+  (markdown-header-scaling t)
+  (markdown-nested-imenu-heading-index t)
+  :bind (:map markdown-mode-map
+              ("C-c m h" . markdown-toggle-markup-hiding)
+              ("C-c m i" . markdown-toggle-inline-images)
+              ("C-c m l" . markdown-insert-link)
+              ("C-c m c" . markdown-insert-gfm-code-block)
+              ("C-c m o" . markdown-follow-thing-at-point)
+              ("C-c m d" . markdown-do)
+              ("C-c m p" . markdown-live-preview-mode)
+              ("C-c m <left>"  . markdown-promote)
+              ("C-c m <right>" . markdown-demote)))
 
 ;;; @doc Plain-text note system with strict file-naming rules so notes
 ;;; are findable years later. Stored under `jotain-notes-directory`
