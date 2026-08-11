@@ -95,7 +95,7 @@
         ];
       },
 
-  # ── Source variant ────────────────────────────────────────────────
+  # Source variant
   #   "unstable"  — Emacs 31 release branch (currently the 31.0.90
   #                 pretest); the default here and for the distribution
   #                 (mk-overlay.nix passes variant = "unstable")
@@ -118,12 +118,11 @@
   # or the `igc` variant on Darwin (which nix-community.cachix.org does
   # not carry a prebuilt for, so `just build-igc` is a from-source build
   # on that platform even at the default rev — see plan.md §3). Swapping
-  # stdenv changes the
-  # derivation hash unconditionally, so this flag must stay `false` for
-  # every default-rev, no-patch build: turning it on for e.g. plain
-  # `variant = "unstable"` on Linux would trade an existing binary-cache
-  # hit for a slower, ALSO-uncached local build, the opposite of the
-  # point.
+  # stdenv changes the derivation hash unconditionally, so this flag must
+  # stay `false` for every default-rev, no-patch build: turning it on for
+  # e.g. plain `variant = "unstable"` on Linux would trade an existing
+  # binary-cache hit for a slower, ALSO-uncached local build, the
+  # opposite of the point.
   #
   # Requires one piece of machine setup before this has any effect: the
   # cache directory must be writable inside the build sandbox, e.g. in
@@ -140,7 +139,7 @@
   # entry above). Only read when useCcache = true.
   ccacheDir ? "/var/cache/ccache",
 
-  # ── GUI toolkit ──────────────────────────────────────────────────
+  # GUI toolkit
   # The matrix admits exactly one GUI per platform: pgtk on Linux, NS on
   # Darwin. The X11 toolkits (Lucid/GTK3-x11/Motif/Athena) are gone —
   # not arguments any more, and asserted unreachable below. GTK3 the
@@ -162,7 +161,7 @@
   # mirrored-default scheme, whose mirror expression could drift from
   # make-emacs.nix's own version-conditional default.
 
-  # ── Compilation ──────────────────────────────────────────────────
+  # Compilation
   withNativeCompilation ? (pkgs.stdenv.buildPlatform.canExecute pkgs.stdenv.hostPlatform),
   # --with-native-compilation (libgccjit AOT)
   withCompressInstall ? true, # --with-compress-install (gzip .el files)
@@ -174,17 +173,15 @@
   srcRepo ? true,
   # source is a git checkout (runs autoreconf)
 
-  # ── Image formats ────────────────────────────────────────────────
-  withWebP ? true, # --with-webp
+  # Image formats
+  withWebP ? true,
   withImageMagick ? false, # --with-imagemagick (off by default since Emacs 27)
 
-  # ── Libraries & features ─────────────────────────────────────────
-  withTreeSitter ? true, # --with-tree-sitter
-  withSQLite3 ? true, # --with-sqlite3
+  # Libraries & features
+  withTreeSitter ? true,
+  withSQLite3 ? true,
   withDbus ? pkgs.stdenv.hostPlatform.isLinux,
-  # --with-dbus
   withSelinux ? pkgs.stdenv.hostPlatform.isLinux,
-  # --with-selinux
   withGpm ? pkgs.stdenv.hostPlatform.isLinux,
   # --with-gpm (mouse in terminal, Linux)
   withAlsaLib ? false, # ALSA sound (Linux)
@@ -192,7 +189,7 @@
   withMailutils ? true, # --with-mailutils (GNU Mailutils movemail)
   withSystemd ? pkgs.lib.meta.availableOn pkgs.stdenv.hostPlatform pkgs.systemdLibs,
   # --with-systemd (journal support)
-  withSmallJaDic ? false, # --with-small-ja-dic
+  withSmallJaDic ? false,
   withGcMarkTrace ? false, # --with-gc-mark-trace (experimental in Emacs 30)
   withGlibNetworking ? withPgtk,
   # GLib networking / TLS for GIO. make-emacs.nix's own default is
@@ -200,7 +197,7 @@
   # toolkits gone and withGTK3 left to the base (whose default is
   # `withPgtk && !noGui`), the reachable part reduces to withPgtk.
 
-  # ── macOS patches (from nix-giant/nix-darwin-emacs) ──────────────
+  # macOS patches (from nix-giant/nix-darwin-emacs)
   # Originally from d12frosted/homebrew-emacs-plus. Only applied on
   # Darwin, and ON BY DEFAULT for the NS GUI build — the matrix's Darwin
   # GUI is "modern macOS, patched", accepting that this puts every
@@ -251,7 +248,7 @@ let
     "igc"
   ];
 
-  # ── Git-based source metadata ────────────────────────────────────
+  # Git-based source metadata
   # Only used when a custom rev is pinned via --argstr rev. Without it,
   # git/unstable/igc build the revision already pinned (with a real
   # hash) inside emacs-overlay, so no hash dance is needed.
@@ -267,7 +264,7 @@ let
     hash = if hash != null then hash else lib.fakeHash;
   };
 
-  # ── Base package per variant ─────────────────────────────────────
+  # Base package per variant
   #   * mainline — nixpkgs default emacs attr (Hydra-cached)
   #   * git/unstable/igc — emacs-overlay's prebuilt attrs (cached on
   #     nix-community.cachix.org; emacs-igc already carries
@@ -296,7 +293,7 @@ let
     else
       (if withPgtk then pkgs.emacs-pgtk or pkgs.emacs else pkgs.emacs);
 
-  # ── Forward all boolean flags to make-emacs.nix ──────────────────
+  # Forward all boolean flags to make-emacs.nix
   #
   # CACHE-PARITY INVARIANT (Linux and noGui builds): every default in
   # this file's argument list must match the corresponding default in
@@ -331,7 +328,7 @@ let
   #             mainline-pgtk = (import ./emacs.nix { variant = "mainline"; }).outPath == pkgs.emacs-pgtk.outPath;
   #           }'
   #
-  # ── nixpkgs-version-portable override ────────────────────────────
+  # nixpkgs-version-portable override
   #
   # `make-emacs.nix` has grown arguments over nixpkgs releases. Passing
   # an argument the base derivation does not define makes `.override`
@@ -405,7 +402,7 @@ let
     lib.intersectAttrs (lib.functionArgs basePackage.override) overrideArgs
   );
 
-  # ── Darwin patches (fetched from nix-giant/nix-darwin-emacs) ─────
+  # Darwin patches (fetched from nix-giant/nix-darwin-emacs)
   # Patch directory: "unstable" for master/32+; otherwise keyed on what
   # the base package actually is, not on the variant name — "30" for
   # Emacs 30.x (mainline while nixpkgs' default attr is 30.x), "31" for
@@ -467,7 +464,7 @@ let
       darwinPatch "adjust-ns-init-colors.patch"
     );
 
-  # ── Determine if overrideAttrs is needed ─────────────────────────
+  # Determine if overrideAttrs is needed
   # Skip overrideAttrs unless a custom rev is pinned or Darwin patches
   # apply (they do by default on the Darwin NS GUI) — every default-rev
   # Linux/noGui variant is then a pure basePackage.override and stays a

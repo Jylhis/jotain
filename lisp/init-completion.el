@@ -125,7 +125,6 @@ leaves the capf exactly as eglot installs it."
   :custom
   (completions-detailed t)
   (completions-format 'one-column)
-  ;; Emacs 30: sort candidates by minibuffer history frequency.
   (completions-sort 'historical))
 
 ;;; @doc Fuzzy, space-separated, order-independent completion. Pairs with

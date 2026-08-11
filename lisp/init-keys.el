@@ -11,7 +11,6 @@
 
 ;;; Code:
 
-;; Swap a two-window layout between horizontal and vertical. Bound below.
 (defun jotain-toggle-window-split ()
   "Toggle between horizontal and vertical window split.
 Only works when there are exactly two windows — buffers, point

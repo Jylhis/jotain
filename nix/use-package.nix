@@ -47,7 +47,7 @@ let
     trace
     ;
 
-  # ── Shared low-level helpers ──────────────────────────────────────
+  # Shared low-level helpers
   #
   # `builtins.split` with a capturing pattern returns an alternating
   # list of [pre-text, [capture1], mid-text, [capture2], post-text, …].
@@ -118,7 +118,7 @@ let
     else
       headName;
 
-  # ── ;;; @doc extractor ────────────────────────────────────────────
+  # ;;; @doc extractor
 
   # Match a triple-semicolon comment line, accepting both ";;;" alone
   # and ";;; <anything>". Excludes ";;;;" (section headers) and
@@ -212,7 +212,7 @@ let
     in
     lib.concatStringsSep "\n" (collectDocLines lines);
 
-  # ── Parsers built on the shared helpers ──────────────────────────
+  # Parsers built on the shared helpers
 
   parsePackagesFromContent =
     content:
@@ -258,7 +258,7 @@ let
     in
     filter (x: x != null) (lib.imap0 processCapture parts);
 
-  # ── File / directory helpers ──────────────────────────────────────
+  # File / directory helpers
 
   parsePackagesFromFile = file: parsePackagesFromContent (readFile file);
   parsePackagesWithDocFromFile = file: parsePackagesWithDocFromContent (readFile file);
@@ -288,7 +288,7 @@ let
       entries = parsePackagesWithDocFromFile f;
     }) sortedFiles;
 
-  # ── Name mapping ──────────────────────────────────────────────────
+  # Name mapping
   #
   # Only the `emacs` pseudo-package needs to be excluded in this repo
   # (used for global `(use-package emacs :ensure nil ...)` blocks that
@@ -301,7 +301,7 @@ let
 
   mapName = extraMap: name: (extraMap // defaultNameMap).${name} or name;
 
-  # ── epkgs lookup ─────────────────────────────────────────────────
+  # epkgs lookup
 
   toEmacsPackage =
     {
@@ -335,7 +335,7 @@ let
     in
     filter (p: p != null) resolved;
 
-  # ── High-level wrapper (mirrors emacs-overlay's public API) ───────
+  # High-level wrapper (mirrors emacs-overlay's public API)
 
   emacsWithPackagesFromUsePackage =
     {
@@ -385,7 +385,7 @@ let
     in
     scope.withPackages collect;
 
-  # ── Debug helpers ─────────────────────────────────────────────────
+  # Debug helpers
 
   listPackageNames =
     {
