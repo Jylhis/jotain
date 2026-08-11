@@ -11,7 +11,7 @@ let
   inherit (pkgs) lib;
   inherit (lib) fileset;
 
-  # ── Narrowed check sources ───────────────────────────────────────
+  # Narrowed check sources
   #
   # `src' is the flake source (string-like) and lib.fileset needs a real
   # path, so the narrowed sources are built from ../. — the same tree,
@@ -46,20 +46,13 @@ let
 
   # Toolchain for the Elisp checks: the *inner* emacsWithPackages result
   # (nix/mk-overlay.nix `passthru.core'), not the outer jotain-emacs-full
-  # wrapper.  The wrapper adds exactly three things over `core' — a
-  # runtime PATH (nix/runtime-deps.nix), INFOPATH (→ jotainInfo) and
-  # ASPELL_CONF — and none of them is read by a batch byte-compile or by
-  # the ERT suite: there is no `eval-when-compile' anywhere in the
-  # config, no `executable-find' in test/, and the two PATH-sensitive
-  # devenv tests bind `devenv-nix-lsp-servers' to nil explicitly.
-  # Depending on the wrapper instead pulled in jotainInfo →
-  # packages-doc + options-doc, so every `;;; @doc' block in lisp/, every
-  # docs/*.mdx page and every option `description' in module.nix
-  # invalidated these checks for nothing.
-  #
+  # wrapper. The wrapper only adds a runtime PATH, INFOPATH (→ jotainInfo)
+  # and ASPELL_CONF, none of which a batch byte-compile or the ERT suite
+  # reads; depending on it would instead pull in jotainInfo → packages-doc
+  # + options-doc, invalidating these checks on unrelated docs/@doc edits.
   # `core' is also invariant under ordinary Elisp edits:
-  # emacsWithPackagesFromUsePackage reads lisp/ only as an eval-time
-  # *name* scan, so its store path moves only when the package set does.
+  # emacsWithPackagesFromUsePackage scans lisp/ only for package *names*,
+  # so its store path moves only when the package set does.
   elispEmacs = pkgs.jotainEmacsPackages.core;
 
   hmStubModule = {
@@ -167,18 +160,15 @@ let
   nixOnDroidModule = evalNixOnDroidModule { };
 in
 {
-  # ── Package builds ────────────────────────────────────────────────
   packages-default = pkgs.jotainEmacsPackages;
   packages-emacs = pkgs.jotainEmacs;
   packages-info = pkgs.jotainInfo;
 
-  # ── Option documentation ─────────────────────────────────────────
   options-doc = import ./options-doc.nix { inherit pkgs src; };
 
-  # ── Package reference documentation ──────────────────────────────
   packages-doc = import ./packages-doc.nix { inherit pkgs src; };
 
-  # ── Checked-in Mintlify .mdx must match the generator ────────────
+  # Checked-in Mintlify .mdx must match the generator
   #
   # docs/configuration/package-reference.mdx is checked in so the
   # Mintlify site can serve it without running Nix. The generator in
@@ -204,7 +194,7 @@ in
         touch $out
       '';
 
-  # ── Vendored design system must match the pinned upstream rev ────
+  # Vendored design system must match the pinned upstream rev
   #
   # website/public/ds is committed so website/public stays a no-build
   # shell, which is exactly how it drifted a whole major version behind
@@ -230,7 +220,7 @@ in
         touch $out
       '';
 
-  # ── flake.lock and devenv.lock must pin the same shared revs ─────
+  # flake.lock and devenv.lock must pin the same shared revs
   #
   # nix flake check never reads devenv.lock, so without this check the
   # only gate on lock drift is PR CI's `just verify` step — and nothing
@@ -261,7 +251,6 @@ in
         touch $out
       '';
 
-  # ── Home Manager module evaluation ───────────────────────────────
   module-eval =
     pkgs.runCommandLocal "check-module-eval"
       {
@@ -276,7 +265,7 @@ in
         touch $out
       '';
 
-  # ── nix-on-droid module evaluation ───────────────────────────────
+  # nix-on-droid module evaluation
   # Eval-only: the terminal Jotain Emacs the module selects builds on
   # aarch64 (on-device), but here we only assert the module evaluates
   # and wires EDITOR through environment.sessionVariables.
@@ -332,10 +321,8 @@ in
         touch $out
       '';
 
-  # ── Nix formatting (via shared treefmt config) ────────────────────
   formatting = treefmtCheck;
 
-  # ── Nix static analysis ──────────────────────────────────────────
   statix =
     pkgs.runCommandLocal "check-statix"
       {
@@ -348,7 +335,6 @@ in
         touch $out
       '';
 
-  # ── Nix dead code detection ──────────────────────────────────────
   deadnix =
     pkgs.runCommandLocal "check-deadnix"
       {
@@ -361,20 +347,17 @@ in
         touch $out
       '';
 
-  # ── Elisp syntax (balanced parens) ───────────────────────────────
+  # Elisp syntax (balanced parens)
   #
-  # `runCommand', not `runCommandLocal', for the three Elisp checks: the
-  # usual runCommandLocal calculus (allowSubstitutes = false, because
-  # fetching a trivial output costs more than rebuilding it) inverts when
-  # rebuilding the output requires a multi-hundred-MB Emacs closure.
-  # Substituting a ~0-byte marker (lint/test) or the small
-  # compiled-config tree (compile) from jylhis.cachix.org is strictly
-  # cheaper than substituting the toolchain in order to recreate it.
-  # deploy.yml pushes these on main, so a PR that touches neither lisp/
-  # nor test/ gets them for free and never pulls Emacs at all.  The cheap
-  # checks below stay runCommandLocal.  (This also drops preferLocalBuild,
-  # so with remote builders configured they may be scheduled remotely —
-  # harmless: none reads /proc, host HOME, host PATH or the network.)
+  # `runCommand', not `runCommandLocal', for the three Elisp checks:
+  # runCommandLocal sets allowSubstitutes = false, which only wins when
+  # rebuilding is cheaper than fetching, untrue once the rebuild needs a
+  # multi-hundred-MB Emacs closure. Substituting the cached marker
+  # (lint/test) or compiled-config tree (compile) from jylhis.cachix.org
+  # is cheaper, and deploy.yml pushes them on main, so a PR touching
+  # neither lisp/ nor test/ never pulls Emacs. The cheap checks below stay
+  # runCommandLocal. (Dropping preferLocalBuild lets these run on remote
+  # builders; harmless: none reads /proc, HOME, PATH or the network.)
   elisp-lint =
     pkgs.runCommand "check-elisp-lint"
       {
@@ -410,7 +393,7 @@ in
         touch $out
       '';
 
-  # ── Elisp byte-compilation (warnings as errors) ─────────────────
+  # Elisp byte-compilation (warnings as errors)
   #
   # Shared with module.nix' `compiledConfig': on the default HM config
   # this is literally the same store path, so `home-manager switch'
@@ -421,7 +404,7 @@ in
     emacs = elispEmacs;
   };
 
-  # ── Elisp unit tests (ERT, batch) ────────────────────────────────
+  # Elisp unit tests (ERT, batch)
   # Pure-function tests only: no devenv binary, no network, no
   # subprocesses — safe inside the Nix sandbox.
   elisp-test =

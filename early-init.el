@@ -27,24 +27,17 @@
 ;; where stale .elc files cause hard-to-debug surprises.
 (setq load-prefer-newer noninteractive)
 
-;; package.el stays on. Nix (and, in dev, the devenv shell) provides most
-;; packages via load-path, so they load instantly without touching the
-;; network. Anything Nix doesn't ship falls through to MELPA at install
-;; time — see init.el for the archive list.
+;; package.el stays on. Nix (and the devenv shell in dev) puts most
+;; packages on load-path; the rest fall through to MELPA at install time
+;; (archive list in init.el).
 ;;
-;; `package-quickstart-file' must be pinned HERE, before `startup.el' runs
-;; its automatic `package-activate-all'. Without this pin the file ends up
-;; at its default `<user-emacs-directory>/package-quickstart.el' path,
-;; which is outside `var/' and never gets loaded — quickstart then pays
-;; its refresh + byte-compile cost on every `package-install' without
-;; providing any startup speedup.
-;;
-;; The quickstart file caches absolute load-path entries — under the Nix
-;; distribution those are /nix/store paths that go stale whenever the
-;; closure changes, while var/ persists across deployments. Invalidate
-;; the cache when the Nix load-path generation (EMACSLOADPATH already
-;; encodes the deps derivation store path) changes, so a redeploy never
-;; silently activates old package versions from a stale quickstart.
+;; `package-quickstart-file' must be pinned HERE, before `startup.el'
+;; runs `package-activate-all': its default path is outside `var/', so
+;; without the pin quickstart is never loaded yet still pays its refresh
+;; cost on every `package-install'. The file also caches absolute
+;; /nix/store load-path entries, so invalidate it whenever the Nix
+;; generation (hashed from EMACSLOADPATH) changes; otherwise a redeploy
+;; could silently activate stale package versions.
 (let* ((qs (expand-file-name "var/package-quickstart.el" user-emacs-directory))
        (stamp (expand-file-name "var/package-quickstart.gen" user-emacs-directory))
        (gen (secure-hash 'sha256 (or (getenv "EMACSLOADPATH") "")))
@@ -112,13 +105,9 @@
 (defvar native-comp-async-report-warnings-errors nil)
 (defvar native-comp-speed nil)
 (defvar native-comp-async-jobs-number 0)
-;; Emacs 31+ option (a defcustom in comp-run.el). comp-run.el is NOT
-;; preloaded, so the symbol is unbound here at early-init time on *every*
-;; Emacs version — a `boundp' guard would therefore no-op even on Emacs
-;; 31. Pre-declaring with `defvar' both silences the byte-compiler on
-;; Emacs 30 and seeds the value so it survives until comp-run.el loads
-;; (its defcustom won't clobber an already-set value). Mirrors the
-;; `native-comp-speed' / `native-comp-async-jobs-number' handling above.
+;; Emacs 31+ defcustom living in the not-yet-preloaded comp-run.el, so
+;; pre-declare it to silence the byte-compiler and seed a value its later
+;; defcustom won't clobber. Mirrors the two vars above.
 (defvar native-comp-async-on-battery-power nil)
 (when (and (fboundp 'native-comp-available-p)
            (native-comp-available-p))

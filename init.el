@@ -38,24 +38,16 @@
 ;; `M-x customize' has somewhere to scribble without touching init.el.
 (setq custom-file (locate-user-emacs-file "var/custom.el"))
 
-;; Package archives are registered above but never fetched on the startup
-;; path.  Nix (and, in dev, the devenv shell) provides every package this
-;; config `:ensure's, so a launch-time archive download buys nothing: it
-;; slows startup and, on a flaky network, risks taking a daemon with it.
+;; Archives are registered above but never fetched on the startup path:
+;; Nix (and the devenv shell in dev) provides every `:ensure'd package,
+;; so a launch-time download only slows startup and can take a daemon
+;; down on a flaky network. Refreshes stay package.el's own job:
+;; `package-install' downloads only when the on-disk cache is empty, and
+;; `M-x package-refresh-contents' / `list-packages' refresh on demand.
 ;;
-;; Refreshes happen exactly where they are needed, all of it package.el's
-;; own behaviour:
-;;
-;;   * `package-install' (including the `:ensure t' path) calls
-;;     `package--archives-initialize', which reads the on-disk cache and
-;;     downloads only when that cache is genuinely empty.
-;;   * `M-x package-refresh-contents' / `M-x list-packages' refresh on
-;;     demand, when the user asks for it.
-;;
-;; There was a staleness-gated background warm-up here.  It fired on every
-;; fresh host (an empty `elpa/archives/' counts as stale) and every 7 days
-;; after — i.e. on exactly the Nix deployments where nothing was missing.
-;; Don't add it back.
+;; There was a staleness-gated background warm-up here. It fired on every
+;; fresh host and every 7 days after, i.e. exactly the Nix deployments
+;; where nothing was missing. Don't add it back.
 
 (require 'init-core)         ; GC, encoding, var/ paths, sane defaults
 (require 'init-keys)         ; Global keymap and leader-key setup

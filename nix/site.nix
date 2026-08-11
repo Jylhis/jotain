@@ -33,7 +33,7 @@ let
   # /info, so the site documents the exact revision users get.
   emacs = pkgs.jotainEmacs;
 
-  # ── docs navigation, from the same docs.json Mintlify uses ─────
+  # docs navigation, from the same docs.json Mintlify uses
   docsNav = builtins.fromJSON (builtins.readFile (src + "/docs/docs.json"));
   navGroups = (builtins.head docsNav.navigation.tabs).groups;
   pagesFlat = lib.concatMap (
@@ -131,7 +131,7 @@ pkgs.runCommand "jotain-site"
     chmod -R u+w "$out/public"
     cp "$webSrc/website/wrangler.jsonc" "$out/wrangler.jsonc"
 
-    # ── shared page chrome ─────────────────────────────────────────
+    # shared page chrome
     # write_page OUT TITLE BUFNAME MODE CONTENT_FILE NAV_HTML
     # Emits the Emacs-frame chrome (tab bar, modeline, echo area)
     # around a rendered HTML fragment.
@@ -201,7 +201,7 @@ pkgs.runCommand "jotain-site"
       sed -i 's|</head>|<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script src="/js/theme-init.js"></script></head>|' "$@"
     }
 
-    # ── /docs/ — rendered MDX pages ────────────────────────────────
+    # /docs/ — rendered MDX pages
     # Preprocess one MDX file to plain GFM: strip YAML frontmatter,
     # keep the leading H1, turn <Note> blocks into blockquotes (styled
     # as callouts by docs.css).
@@ -287,7 +287,7 @@ pkgs.runCommand "jotain-site"
     write_page "$out/public/docs/index.html" "Documentation" "*docs dired*" "(Dired)" index_body.html \
       '<a href="/#man">← JOTAIN(7)</a><a href="/manual/">the manual →</a>'
 
-    # ── /manual/ — the Jotain manual as HTML + Info ────────────────
+    # /manual/ — the Jotain manual as HTML + Info
     mkdir -p "$out/public/manual"
     cp -r "${infoManual}/share/doc/jotain/html/." "$out/public/manual/"
     chmod -R u+w "$out/public/manual"
@@ -295,7 +295,7 @@ pkgs.runCommand "jotain-site"
     cp "$out/public/css/manual.css" "$out/public/manual/manual.css"
     inject_head "$out/public/manual/"*.html
 
-    # ── /options/ and /help/packages/ — pandoc standalone pages ────
+    # /options/ and /help/packages/ — pandoc standalone pages
     mkdir -p "$out/public/options" "$out/public/help/packages"
     cp "${optionsDoc}/index.html" "$out/public/options/index.html"
     cp "${packagesDoc}/index.html" "$out/public/help/packages/index.html"
@@ -319,7 +319,7 @@ pkgs.runCommand "jotain-site"
     write_page "$out/public/help/index.html" "Help" "*Help*" "(Help)" help_body.html \
       '<a href="/#readme">← README.org</a><a href="/docs/">documentation →</a>'
 
-    # ── /man/ — man pages via mandoc ───────────────────────────────
+    # /man/ — man pages via mandoc
     mkdir -p "$out/public/man"
     man_index_body="$(mktemp)"
 
@@ -355,7 +355,7 @@ pkgs.runCommand "jotain-site"
     write_page "$out/public/man/index.html" "Man pages" "*Man apropos*" "(Man)" man_body.html \
       '<a href="/#man">← JOTAIN(7)</a><a href="/info/">info manuals →</a>'
 
-    # ── /info/ — the GNU Emacs + Elisp manuals ─────────────────────
+    # /info/ — the GNU Emacs + Elisp manuals
     mkdir -p "$out/public/info"
     cp -r "${emacsManualsHtml}/emacs" "$out/public/info/emacs"
     cp -r "${emacsManualsHtml}/elisp" "$out/public/info/elisp"
