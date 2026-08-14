@@ -217,14 +217,13 @@ working-tree file no longer exists to open."
 ;;; @doc Built-in transient menu system that magit/forge are built on.
 ;;; Themed under var/ so its three state files don't drop at the
 ;;; repo root.
-;;
-;; Deferred: loading transient eagerly just to set three path variables
-;; pulled a non-trivial library onto the startup path before magit/forge
-;; ever needed it. The paths are applied via `with-eval-after-load' the
-;; moment transient actually loads (on the first magit/forge
-;; invocation), before any state file is read.
 (use-package transient
   :ensure nil
+  ;; Deferred: loading transient eagerly just to set three path
+  ;; variables pulled a non-trivial library onto the startup path before
+  ;; magit/forge ever needed it. The paths are applied via
+  ;; `with-eval-after-load' the moment transient actually loads (on the
+  ;; first magit/forge invocation), before any state file is read.
   :defer t
   :init
   (with-eval-after-load 'transient
