@@ -14,11 +14,15 @@
 ;;; Tiny, no daemon, no network.
 (use-package keyfreq
   :functions (keyfreq-mode keyfreq-autosave-mode)
+  ;; Deferred to `after-init': command counting has no value during
+  ;; startup itself, so keep keyfreq off the module-load path. The hook
+  ;; loads the package and enables counting; `:config' turns on autosave
+  ;; once it is loaded.
+  :hook (after-init . keyfreq-mode)
   :custom
   (keyfreq-file (jotain-var-file "keyfreq.el"))
   (keyfreq-file-lock (jotain-var-file "keyfreq.lock"))
   :config
-  (keyfreq-mode 1)
   (keyfreq-autosave-mode 1))
 
 ;;; @doc Heartbeats to a Wakatime / Wakapi server. The `:if` guard makes

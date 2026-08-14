@@ -73,6 +73,15 @@
 (setq use-package-enable-imenu-support t
       use-package-always-ensure t)
 
+;; Opt-in startup profiling: set JOTAIN_PROFILE_STARTUP=1 in the
+;; environment to have use-package record per-block load/config timings,
+;; then inspect them after launch with `M-x use-package-report'. Off by
+;; default — collecting the statistics has a small per-block cost that a
+;; normal launch should not pay. The `bench/' harness sets this itself.
+(defvar use-package-compute-statistics nil)
+(when (getenv "JOTAIN_PROFILE_STARTUP")
+  (setq use-package-compute-statistics t))
+
 ;; Disable UI chrome before the first frame is drawn — much faster than
 ;; toggling the modes off after the fact.
 (push '(menu-bar-lines . 0) default-frame-alist)
@@ -81,6 +90,13 @@
 (when (featurep 'ns)
   (push '(ns-transparent-titlebar . t) default-frame-alist)
   (push '(ns-appearance . dark) default-frame-alist))
+
+;; Don't let Emacs resize the frame when internal elements (menu/tool
+;; bar, font, fringes) change during startup. Each implied resize is a
+;; round-trip to the window system; suppressing them removes a chunk of
+;; first-frame latency. Safe because the chrome above is already off
+;; before the first frame, so there is nothing to resize around.
+(setq frame-inhibit-implied-resize t)
 
 (setq inhibit-startup-screen t
       inhibit-startup-message t

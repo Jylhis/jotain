@@ -142,6 +142,19 @@
         ds-assets = import ./nix/ds-assets.nix {
           pkgs = pkgsFor system;
         };
+        # AOT-compiled config (byte + native .eln in the store), for
+        # `just run-built-fast`. Built against jotainEmacsPackages.core —
+        # the same inner emacsWithPackages wrapper the daemon
+        # (module.nix) and the byte-compile check compile against, so the
+        # store .eln matches the full distribution `just build` launches.
+        # `.core` (not the outer wrapper) keeps jotainInfo and every
+        # @doc/docs page out of the derivation's inputs; no `src = self`
+        # for the same lib.fileset reason documented on `site` above.
+        config-compiled = import ./nix/config-compiled.nix {
+          pkgs = pkgsFor system;
+          emacs = (pkgsFor system).jotainEmacsPackages.core;
+          nativeCompile = true;
+        };
       });
 
       formatter = forAllSystems (system: (treefmtEval system).config.build.wrapper);

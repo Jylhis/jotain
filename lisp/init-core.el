@@ -299,12 +299,16 @@ freezes — start, reproduce, stop."
 (use-package exec-path-from-shell
   :if (or (daemonp)
           (memq window-system '(mac ns x pgtk)))
-  :demand t
   :functions (exec-path-from-shell-initialize)
+  ;; Import the environment on `after-init-hook' rather than eagerly:
+  ;; `exec-path-from-shell-initialize' forks the login shell, the single
+  ;; largest cost on the critical init path. Deferring it lets the first
+  ;; frame draw before the fork; PATH/MANPATH resolve a moment later,
+  ;; before the command loop hands control to the user. The
+  ;; non-interactive-shell arg below keeps even that fork cheap.
+  :hook (after-init . exec-path-from-shell-initialize)
   :custom
-  (exec-path-from-shell-arguments nil) ; faster: skip -i
-  :config
-  (exec-path-from-shell-initialize))
+  (exec-path-from-shell-arguments nil)) ; faster: skip -i
 
 ;;; @doc Auto-revert buffers when the underlying file changes on disk —
 ;;; essential for branch switches and external edits. Also covers

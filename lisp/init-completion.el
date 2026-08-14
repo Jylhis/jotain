@@ -206,8 +206,13 @@ leaves the capf exactly as eglot installs it."
 ;;; completion list. Pairs with vertico to make minibuffer choices
 ;;; self-explanatory.
 (use-package marginalia
-  :demand t
-  :config (marginalia-mode 1))
+  ;; Deferred to `after-init': marginalia only decorates completion
+  ;; candidates, and no `completing-read' fires before `after-init-hook'
+  ;; runs, so it need not sit on the module-load path. vertico and
+  ;; orderless stay eager — vertico-mode must be live and
+  ;; `completion-styles' must name orderless before the first minibuffer
+  ;; session, which can happen the instant startup finishes.
+  :hook (after-init . marginalia-mode))
 
 ;;;; Consult — the big binding table
 
