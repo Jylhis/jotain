@@ -83,6 +83,30 @@ REASON is reported so the downgrade is visible in *Messages*."
   :config
   (auto-dark-mode 1))
 
+(defun jotain-ui--ensure-tty-theme (&optional frame)
+  "Enable a theme on terminal FRAME when `auto-dark' left none active.
+In a bare terminal `auto-dark' has no system appearance source (no
+macOS/GNOME/D-Bus), so its detection fails and no theme is enabled,
+leaving default faces -- the \"themes broken in the terminal\" symptom.
+Pick the configured dark/light theme by the frame's background mode.
+Runs on `server-after-make-frame-hook' so daemon tty clients are covered
+too.  `load-theme' is frame-global, so a mixed GUI+tty daemon keeps one
+theme across frames; a single-surface session is always correct."
+  (let ((frame (or frame (selected-frame))))
+    (when (and (not (display-graphic-p frame))
+               (null custom-enabled-themes))
+      (with-selected-frame frame
+        (ignore-errors
+          (load-theme (if (eq (frame-parameter frame 'background-mode) 'light)
+                          jotain-theme-light
+                        jotain-theme-dark)
+                      t))))))
+
+(add-hook 'server-after-make-frame-hook #'jotain-ui--ensure-tty-theme)
+;; Non-daemon `emacs -nw': apply once now; the daemon path is the hook.
+(unless (or noninteractive (daemonp) (display-graphic-p))
+  (jotain-ui--ensure-tty-theme))
+
 ;;;; Modeline
 
 (defun jotain-ui--apply-modeline-icons (&optional frame)
