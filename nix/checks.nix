@@ -194,6 +194,50 @@ in
         touch $out
       '';
 
+  # eca and gptel must offer the same OpenRouter model catalogue
+  #
+  # config/eca/config.json (providers.openrouter.models) and the gptel
+  # OpenRouter backend in lisp/init-ai.el (:models) are two hand-kept
+  # copies of one list, tied together only by cross-reference comments.
+  # This makes the drift fatal. The elisp list is read with Emacs' own
+  # reader (so a reformat can't fool a regex) and anchored on the
+  # OpenRouter form, not the Ollama :models further down the file.
+  eca-models-in-sync =
+    pkgs.runCommand "check-eca-models-in-sync"
+      {
+        nativeBuildInputs = [
+          pkgs.jq
+          elispEmacs
+        ];
+        ecaConfig = repoRoot + "/config/eca/config.json";
+        initAi = repoRoot + "/lisp/init-ai.el";
+      }
+      ''
+        jsonModels=$(jq -r '.providers.openrouter.models | keys[]' "$ecaConfig" | sort)
+
+        cat > extract.el <<'EOF'
+        ;;; extract.el --- read gptel :models -*- lexical-binding: t; -*-
+        (with-temp-buffer
+          (insert-file-contents (getenv "INIT_AI"))
+          (goto-char (point-min))
+          (re-search-forward "gptel-make-openai")
+          (re-search-forward ":models[[:space:]]*'")
+          (dolist (m (read (current-buffer)))
+            (princ (format "%s\n" m))))
+        EOF
+        elispModels=$(INIT_AI="$initAi" emacs -Q --batch -l extract.el | sort)
+
+        if [ "$jsonModels" != "$elispModels" ]; then
+          echo "" >&2
+          echo "config/eca/config.json and lisp/init-ai.el disagree on the" >&2
+          echo "OpenRouter model list (they are hand-kept copies of one" >&2
+          echo "catalogue). Reconcile both. Diff (< json, > elisp):" >&2
+          diff <(echo "$jsonModels") <(echo "$elispModels") >&2 || true
+          exit 1
+        fi
+        touch $out
+      '';
+
   # Vendored design system must match the pinned upstream rev
   #
   # website/public/ds is committed so website/public stays a no-build
