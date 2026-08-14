@@ -437,6 +437,74 @@ in
         touch $out
       '';
 
+  # Regex scanner fidelity vs the Emacs reader
+  #
+  # nix/use-package.nix finds `(use-package NAME' by regex over file
+  # text, so a commented-out, quoted, or string-embedded occurrence would
+  # be miscounted as a real package (or a genuine form missed). This
+  # reads lisp/*.el with Emacs' own reader, collects the use-package
+  # heads that appear as actual code, and diffs them against the
+  # scanner's output. A divergence means the regex is over- or
+  # under-matching. Implements deferred review Finding 48(c).
+  scanner-fidelity =
+    let
+      usePackage = import ./use-package.nix { inherit lib; };
+      scannerNames = lib.sort (a: b: a < b) (
+        lib.unique (lib.concatMap (f: map (e: e.name) f.entries) (usePackage.scanDirectoryWithDoc ../lisp))
+      );
+      scannerList = pkgs.writeText "scanner-use-package-names" (
+        lib.concatStringsSep "\n" scannerNames + "\n"
+      );
+    in
+    pkgs.runCommand "check-scanner-fidelity"
+      {
+        nativeBuildInputs = [ elispEmacs ];
+        src = elispSrc;
+        inherit scannerList;
+      }
+      ''
+        # Stay in the writable build dir; $src is a read-only store path.
+        cat > collect.el <<'EOF'
+        ;;; collect.el --- reader-truth use-package heads -*- lexical-binding: t; -*-
+        (require 'cl-lib)
+        (let ((names '())
+              (dir (expand-file-name "lisp" (getenv "SRC"))))
+          (cl-labels ((walk (form)
+                        (when (consp form)
+                          (when (and (eq (car form) 'use-package)
+                                     (symbolp (car-safe (cdr form)))
+                                     (cadr form)
+                                     (not (memq :disabled form)))
+                            (push (symbol-name (cadr form)) names))
+                          ;; cdr-walk (not dolist): forms contain dotted
+                          ;; pairs (alist entries like ("k" . cmd)).
+                          (let ((tail form))
+                            (while (consp tail)
+                              (walk (car tail))
+                              (setq tail (cdr tail)))))))
+            (dolist (file (directory-files-recursively dir "\\.el\\'"))
+              (with-temp-buffer
+                (insert-file-contents file)
+                (goto-char (point-min))
+                (condition-case nil
+                    (while t (walk (read (current-buffer))))
+                  (end-of-file nil)))))
+          (dolist (n (sort (delete-dups names) #'string<))
+            (princ (format "%s\n" n))))
+        EOF
+        SRC="$src" emacs -Q --batch -l collect.el > reader-names.txt
+
+        if ! diff -u "$scannerList" reader-names.txt; then
+          echo "" >&2
+          echo "nix/use-package.nix regex scanner disagrees with the Emacs" >&2
+          echo "reader on the use-package heads in lisp/ (< scanner, > reader)." >&2
+          echo "A commented-out, quoted, or string-embedded '(use-package X'" >&2
+          echo "is the usual cause. Reconcile the source or the scanner." >&2
+          exit 1
+        fi
+        touch $out
+      '';
+
   # Elisp byte-compilation (warnings as errors)
   #
   # Shared with module.nix' `compiledConfig': on the default HM config
