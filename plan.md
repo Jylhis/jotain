@@ -35,6 +35,47 @@ no CLAUDE.md exception is needed. Remaining operational check (on the Darwin
 host itself): confirm `jylhis.cachix.org` is in the host's substituters and
 carries the x86_64-darwin Emacs + full distribution.
 
+## Done — §6 startup latency (measure, cut eager surface, compiled launch)
+
+Shipped. Paren-checked; byte-compile gate deferred to CI (Nix can't build in a
+proxied agent container — the emacs-overlay tarball 403s).
+
+- **Measurement re-enabled.** `just bench-built` replaces the disabled `just
+  bench` stub: it builds Emacs via nix (like `run-built`) and runs the `bench/`
+  harness. The harness now also reports `emacs-init-time` (the authoritative
+  number, spanning all of `startup.el`), a sorted `features` dump, and an
+  **AUTOLOAD / NON-REQUIRE LOADS** section from a new depth-guarded `load`
+  advice — the concrete fix for review Finding 52 (the require-only harness was
+  blind to autoload-driven loads). `early-init.el` gains an opt-in
+  `use-package-compute-statistics` gate (`JOTAIN_PROFILE_STARTUP=1` →
+  `M-x use-package-report`), off by default so a normal launch pays nothing.
+  **Next: capture a baseline** (`just bench-built bench-before.txt`) on the dev
+  machine — no numeric target is documented yet.
+- **First-frame.** `early-init.el` now sets `frame-inhibit-implied-resize t`
+  (each implied resize is a window-system round-trip; chrome is already off
+  before the first frame, so nothing needs resizing).
+- **Eager surface cut** (off the module-load path, into `after-init` /
+  lazy triggers): `exec-path-from-shell` (the login-shell fork — the single
+  largest eager cost — deferred so the frame draws before it), `transient`
+  (was loaded eagerly just to set three `var/` path vars; now
+  `with-eval-after-load`), `keyfreq`, and `marginalia`. `vertico`/`orderless`
+  kept eager (must be live before the first `completing-read`); `auto-dark`
+  kept eager (the two eager `load-theme` calls use `NO-ENABLE=t`, so
+  `auto-dark-mode` is what enables the theme — deferring it would flash).
+- **Compiled fast-launch.** New `config-compiled` flake output (byte + native
+  `.eln` in the store, built against `jotainEmacsPackages.core`) + `just
+  run-built-fast`: assembles a writable init-dir under `var/fast-home` that
+  symlinks the store `.el/.elc/lisp` (realpath → the store path the `.eln` was
+  hashed against, so store `.eln` loads) while `var/`/`elpa/`/`templates/`
+  symlink back to the repo. Mirrors the HM daemon layout; `run-built` (plain,
+  interpreted) is unchanged for active editing. **Daemon equivalent already
+  exists** — recommend enabling `services.jotain.nativeCompile.enable` (off
+  only for closure size) so daemon boot loads store `.eln` too.
+- **Held for on-hardware measurement** (behavior-changing, post-first-frame,
+  can't be justified without Phase 0 numbers): pushing the `after-init` *global*
+  modes (`apheleia`, `treesit-fold`, `sops`) to buffer-local / file-visit
+  triggers. Use `just bench-built` before/after to decide.
+
 ---
 
 ## Open points

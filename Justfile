@@ -142,14 +142,31 @@ test:
     nix build .#checks.{{system}}.elisp-test --no-link --print-build-logs
 
 
-# Wrapper init files live in bench/ — kept on disk for when re-enabled.
-# [DISABLED] Benchmark startup: launch Emacs, collect metrics, print results.
+# Benchmark startup against the Nix-built Emacs. The dev shell has no
+# emacs, so — like run-built — this builds one via nix, then runs the
+# bench/ harness (which resets user-emacs-directory back to the repo
+# root, so it measures the real INTERPRETED startup: the honest
+# run-built baseline). Writes a report to OUTPUT and prints it. The
+# harness self-terminates via kill-emacs on emacs-startup-hook.
 [group('check')]
-bench output="":
-    @echo "just bench is disabled — emacs is not in the devenv shell."
-    @exit 1
-# Original:
-#   JOTAIN_BENCH_OUTPUT=... emacs --init-directory={{config_dir}}/bench
+bench-built output="var/bench/startup.txt":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{config_dir}}"
+    platform="$(uname -s)-$(uname -m)"
+    case "$platform" in
+        Linux-aarch64) target=build-nox-full ;;
+        *)             target=build          ;;
+    esac
+    echo "Platform: $platform → just $target"
+    just "$target"
+    out="{{output}}"; case "$out" in /*) ;; *) out="{{config_dir}}/$out" ;; esac
+    mkdir -p "$(dirname "$out")"
+    echo "Benchmarking → $out"
+    JOTAIN_BENCH_OUTPUT="$out" \
+        ./result/bin/emacs --init-directory="{{config_dir}}/bench"
+    echo
+    cat "$out"
 
 # [DISABLED] Benchmark file-open: open representative files and time each hook.
 [group('check')]
@@ -228,6 +245,42 @@ run-built *ARGS:
     echo "Build output: $(readlink result)"
     echo "Launching Emacs from result/bin/emacs..."
     ./result/bin/emacs --init-directory="{{config_dir}}" {{ARGS}}
+
+# Launch the FRESH instance from the AOT-compiled config (.elc + store
+# .eln) instead of interpreted .el — the fastest cold start. Assembles a
+# writable init-directory under var/fast-home whose entry files and lisp/
+# symlink into the .#config-compiled store derivation: realpath resolves
+# each symlink to the store path the .eln was hashed against, so the
+# store .eln loads (same mechanism as the HM daemon). var/, elpa/ and
+# templates/ symlink back to the repo so state and installed packages
+# stay warm and writable. early-init still loads from .elc (its .eln is
+# structurally unreachable); the win is init.el + every lisp/init-*.el
+# loading as native code. NOTE: reflects the LAST build — after editing
+# config, re-run to recompile; use plain run-built while actively editing.
+[group('build')]
+run-built-fast *ARGS:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{config_dir}}"
+    just build
+    echo "Emacs:           $(readlink result)"
+    store=$(nix build --no-link --print-out-paths .#config-compiled)
+    echo "Compiled config: $store"
+    home="{{config_dir}}/var/fast-home"
+    mkdir -p "$home" "{{config_dir}}/var"
+    # Compiled entry files + lisp/ from the store (symlinks; realpath →
+    # store path → store .eln hits).
+    for f in early-init.el early-init.elc init.el init.elc lisp; do
+        ln -sfn "$store/$f" "$home/$f"
+    done
+    # Writable, shared state — reuse the repo's warm caches and packages.
+    ln -sfn "{{config_dir}}/var" "$home/var"
+    ln -sfn "{{config_dir}}/templates" "$home/templates"
+    [ -e "{{config_dir}}/elpa" ] && ln -sfn "{{config_dir}}/elpa" "$home/elpa" || true
+    # Store AOT .eln for init.el + lisp/ (appended to the eln load path
+    # by early-init.el).
+    export JOTAIN_ELN_PATH="$store/share/emacs/native-lisp"
+    exec ./result/bin/emacs --init-directory="$home" {{ARGS}}
 
 # Same, with init debugging enabled.
 [group('build')]
