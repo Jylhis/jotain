@@ -142,14 +142,27 @@
         ds-assets = import ./nix/ds-assets.nix {
           pkgs = pkgsFor system;
         };
-        # AOT-compiled config (byte + native .eln in the store), for
-        # `just run-built-fast`. Built against jotainEmacsPackages.core —
-        # the same inner emacsWithPackages wrapper the daemon
-        # (module.nix) and the byte-compile check compile against, so the
-        # store .eln matches the full distribution `just build` launches.
-        # `.core` (not the outer wrapper) keeps jotainInfo and every
-        # @doc/docs page out of the derivation's inputs; no `src = self`
-        # for the same lib.fileset reason documented on `site` above.
+      });
+
+      # AOT-compiled config (byte + native .eln in the store), for `just
+      # run-built-fast`. Built against jotainEmacsPackages.core — the same
+      # inner emacsWithPackages wrapper the daemon (module.nix) and the
+      # byte-compile check compile against, so the store .eln matches the
+      # full distribution `just build` launches. `.core` (not the outer
+      # wrapper) keeps jotainInfo and every @doc/docs page out of the
+      # derivation's inputs; no `src = self` for the same lib.fileset
+      # reason documented on `site` above.
+      #
+      # Kept in `legacyPackages`, NOT `packages`: with nativeCompile=true
+      # it is a heavy AOT native-comp pass (~50-150 MB of .eln) that only
+      # the local `just run-built-fast` consumes — nothing in CI or the
+      # deployed artifacts does (module.nix builds its own compiledConfig;
+      # nix/checks.nix' elisp-compile uses nativeCompile=false). `nix flake
+      # check' builds every `packages` output but skips `legacyPackages',
+      # so this stays off the main/next deploy gate while `nix build
+      # .#config-compiled' still resolves it (packages → legacyPackages
+      # fallback).
+      legacyPackages = forAllSystems (system: {
         config-compiled = import ./nix/config-compiled.nix {
           pkgs = pkgsFor system;
           emacs = (pkgsFor system).jotainEmacsPackages.core;

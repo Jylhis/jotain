@@ -99,10 +99,6 @@ let
       title = "Sysadmin tools";
     }
     {
-      file = "init-tracking.el";
-      title = "Activity tracking";
-    }
-    {
       file = "init-writing.el";
       title = "Prose & notes";
     }

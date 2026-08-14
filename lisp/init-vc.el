@@ -222,8 +222,11 @@ working-tree file no longer exists to open."
   ;; Deferred: loading transient eagerly just to set three path
   ;; variables pulled a non-trivial library onto the startup path before
   ;; magit/forge ever needed it. The paths are applied via
-  ;; `with-eval-after-load' the moment transient actually loads (on the
-  ;; first magit/forge invocation), before any state file is read.
+  ;; `with-eval-after-load' when transient actually loads — at
+  ;; `after-init' (init-devenv.el's `after-init' modes autoload devenv.el,
+  ;; which `require's transient), or on first magit/forge use, whichever
+  ;; comes first — always before any state file is read. Either way it is
+  ;; off the pre-first-frame module-load path, which is the win.
   :defer t
   :init
   (with-eval-after-load 'transient

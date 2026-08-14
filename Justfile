@@ -148,6 +148,11 @@ test:
 # root, so it measures the real INTERPRETED startup: the honest
 # run-built baseline). Writes a report to OUTPUT and prints it. The
 # harness self-terminates via kill-emacs on emacs-startup-hook.
+#
+# Needs a display on x86_64: like run-built it launches the pgtk GUI
+# build, which aborts with no Wayland/X display (the aarch64 branch uses
+# the -nox build). For a headless run, prefix with `xvfb-run` (in the dev
+# shell on Linux, as `just screenshot` does) — pgtk runs under X via GDK.
 [group('check')]
 bench-built output="var/bench/startup.txt":
     #!/usr/bin/env bash
