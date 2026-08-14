@@ -5,38 +5,6 @@ an x86_64 CPU, **x86_64-darwin**; Emacs 31 NS
 daemon). Priority order: **performance → stability → startup → feel**.
 Build-variant preference: **release > proven fork (macport) > experimental (igc)**.
 
-## Done — §1 runtime tuning (release build, low risk)
-
-Shipped; verified clean by the `elisp-compile` flake check.
-
-- `early-init.el` — `native-comp-async-jobs-number 3` (leave a physical core
-  free for redisplay/input during background JIT).
-- `lisp/init-ui.el` — `fast-but-imprecise-scrolling t` in the pixel-scroll block.
-- `lisp/init-prog.el` — `jit-lock-defer-time 0.05` (treesit font-lock level 4
-  is heavy on this CPU).
-- `Justfile` — `compile-native` disabled stub (matches the convention that
-  emacs recipes are stubs while emacs is out of the devenv shell).
-
-**Already optimal — do not regress:** GC ramp (early-init `most-positive-fixnum`
-→ init-core 16 MB + minibuffer pause + 5 s idle GC), `read-process-output-max`
-4 MB, `eglot-events-buffer :size 0`, bidi off, `inhibit-compacting-font-caches`,
-native-comp speed 2, and the `treesit-auto` alist-only routing (NOT
-`global-treesit-auto-mode`, which costs ~3.6 s/find-file).
-
-## Done — §5 x86_64-darwin binary-cache EOL
-
-Shipped. `flake.nix` adds the dedicated `nixpkgs-x86_64-darwin` input pinned to
-`nixpkgs-26.05-darwin` and selects it only for `x86_64-darwin` via `nixpkgsFor`
-(every other system stays on `nixpkgs-unstable`); `emacs.nix` reads the same
-per-system node out of `flake.lock`'s root input map. Because the pin is its
-own flake input — not a divergence of the shared `nixpkgs` input — `just
-verify` and the `devenv.yaml`/`devenv.lock` sync invariant are unaffected, and
-no CLAUDE.md exception is needed. Remaining operational check (on the Darwin
-host itself): confirm `jylhis.cachix.org` is in the host's substituters and
-carries the x86_64-darwin Emacs + full distribution.
-
----
-
 ## Open points
 
 ### §2 — `-march=icelake-client` from-source perf build (opt-in)
