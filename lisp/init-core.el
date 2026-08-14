@@ -16,7 +16,7 @@
 ;; into `var/'. The actual set of paths *this* config writes is small
 ;; and stable, so we theme the relevant vars by hand from each module.
 ;; `jotain-var-file' is the single helper they share (used across
-;; init-core, init-vc, init-project, init-systems, init-tracking).
+;; init-core, init-vc, init-project, init-systems, init-editing).
 
 (defconst jotain-var-dir
   (expand-file-name "var/" user-emacs-directory)
@@ -303,9 +303,17 @@ freezes — start, reproduce, stop."
   ;; Import the environment on `after-init-hook' rather than eagerly:
   ;; `exec-path-from-shell-initialize' forks the login shell, the single
   ;; largest cost on the critical init path. Deferring it lets the first
-  ;; frame draw before the fork; PATH/MANPATH resolve a moment later,
+  ;; frame draw before the fork; PATH/MANPATH resolve at `after-init',
   ;; before the command loop hands control to the user. The
   ;; non-interactive-shell arg below keeps even that fork cheap.
+  ;;
+  ;; Because this now runs *after* every module has loaded, any load-time
+  ;; `executable-find' guard in a later module sees the pre-import PATH.
+  ;; That is safe here only because the tools so probed come from the Nix
+  ;; wrapper PATH, not the login shell: zoxide (init-completion.el) and,
+  ;; on Darwin, gls (init-navigation.el) are both in nix/runtime-deps.nix.
+  ;; Keep it that way — a login-shell-only tool probed at load time would
+  ;; silently fail on a GUI-launcher launch (no inherited PATH yet).
   :hook (after-init . exec-path-from-shell-initialize)
   :custom
   (exec-path-from-shell-arguments nil)) ; faster: skip -i

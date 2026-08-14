@@ -67,7 +67,6 @@
 (require 'init-shell)        ; eshell, comint, ielm
 (require 'init-terminal)     ; ghostel terminal + tty integration (kkp, clipetty)
 (require 'init-systems)      ; sops, logview, auth-source-1password
-(require 'init-tracking)     ; keyfreq, wakatime, activity-watch
 (require 'init-writing)      ; jinx, markdown-mode, denote, pdf-tools
 (require 'init-org)          ; org, org-modern, capture templates
 
