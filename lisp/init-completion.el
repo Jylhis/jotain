@@ -355,6 +355,17 @@ leaves the capf exactly as eglot installs it."
    ("M-g w" . avy-goto-word-1))
   :custom (avy-all-windows 'all-frames))
 
+(defun jotain-completion--zoxide-quiet-sentinel (fn &rest args)
+  "Silence the async \"zoxide add\" process spawned by `zoxide-run'.
+FN is the advised `zoxide-run'; ARGS are its arguments.  The async
+branch starts a process with no sentinel, so Emacs' default sentinel
+echoes \"Process zoxide finished\" once per `find-file'.  Attach an
+ignoring sentinel to just that process."
+  (let ((proc (apply fn args)))
+    (when (processp proc)
+      (set-process-sentinel proc #'ignore))
+    proc))
+
 ;;; @doc Frecency-ranked directory jump (like the shell zoxide). Adds
 ;;; visited files automatically; M-g z surfaces the most-recent
 ;;; matches first.
@@ -375,7 +386,9 @@ leaves the capf exactly as eglot installs it."
   :bind
   (("M-g z"   . zoxide-find-file)
    ("M-g M-z" . zoxide-find-file))
-  :hook (find-file . zoxide-add))
+  :hook (find-file . zoxide-add)
+  :config
+  (advice-add 'zoxide-run :around #'jotain-completion--zoxide-quiet-sentinel))
 
 ;;;; In-buffer completion
 

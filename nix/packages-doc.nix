@@ -63,6 +63,10 @@ let
       title = "dired, project, windows";
     }
     {
+      file = "init-casual.el";
+      title = "Transient menus (casual)";
+    }
+    {
       file = "init-vc.el";
       title = "Version control";
     }
@@ -105,6 +109,10 @@ let
     {
       file = "init-org.el";
       title = "Org";
+    }
+    {
+      file = "init-http.el";
+      title = "HTTP / REST client";
     }
     {
       file = "init-lang-nix.el";

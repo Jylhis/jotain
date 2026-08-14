@@ -27,32 +27,5 @@
 
 ## Investigate
 
-- https://github.com/kickingvegas/casual
-- https://github.com/emacs-vs/line-reminder
-- https://github.com/sulami/literate-calc-mode.el
-- https://github.com/benma/visual-regexp.el
-- https://www.emacswiki.org/emacs/AlignCommands
-- https://github.com/universal-ctags/citre
-- https://www.gnu.org/software/emacs/manual/html_node/ebrowse/index.html
-- https://github.com/pythonic-emacs/anaconda-mode
-- https://github.com/emacs-elsa/Elsa
-- https://github.com/elisp-lsp/ellsp
-- https://github.com/Wilfred/suggest.el
-- https://www.erlang.org/doc/apps/tools/erlang_mode_chapter.html
-- https://github.com/elixir-editors/emacs-elixir
-- https://github.com/swift-emacs/swift-mode
-- https://github.com/Emacs-Kotlin-Mode-Maintainers/kotlin-mode
-- https://github.com/hlissner/emacs-mips-mode
-- https://github.com/AdamNiederer/riscv-mode
-- https://github.com/kubernetes-el/kubernetes-el
-- https://github.com/lastquestion/explain-pause-mode
-- https://github.com/syl20bnr/spacemacs
-- https://github.com/purcell/emacs.d
-- https://github.com/bbatsov/prelude
-- https://github.com/doomemacs/doomemacs
-- https://github.com/seagle0128/.emacs.d
-- https://github.com/thefrontside/frontmacs
-- https://github.com/overtone/emacs-live
-- https://github.com/daviwil/emacs-from-scratch
-- https://codeberg.org/ashton314/emacs-bedrock
-- https://github.com/LionyxML/emacs-solo
+All prior candidates triaged 2026-08-14; decisions captured out of band. Add
+new candidates here.

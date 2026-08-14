@@ -421,11 +421,11 @@ let
   darwinPatchHashes = {
     "31" = {
       "system-appearance.patch" = "sha256-4+2U+4+2tpuaThNJfZOjy1JPnneGcsoge9r+WpgNDko=";
-      "round-undecorated-frame.patch" = "sha256-WWLg7xUqSa656JnzyUJTfxqyYB/4MCAiiiZUjMOqjuY=";
+      "round-undecorated-frame.patch" = "sha256-KCMEvJzN1OkwFYoMLpZghvdeoO1Ckcxk3Mo19YAf850=";
     };
     "unstable" = {
       "system-appearance.patch" = "sha256-4+2U+4+2tpuaThNJfZOjy1JPnneGcsoge9r+WpgNDko=";
-      "round-undecorated-frame.patch" = "sha256-WWLg7xUqSa656JnzyUJTfxqyYB/4MCAiiiZUjMOqjuY=";
+      "round-undecorated-frame.patch" = "sha256-KCMEvJzN1OkwFYoMLpZghvdeoO1Ckcxk3Mo19YAf850=";
       "adjust-ns-init-colors.patch" = "sha256-Pqq1FA7caSLk4R5YsKKqh5WzttQ2BWGvAvKAEaOZIJI=";
     };
     "30" = {
