@@ -58,6 +58,7 @@
 (require 'init-editing)      ; Electric pairs, delsel, whitespace, region tools
 (require 'init-completion)   ; Vertico, marginalia, orderless, consult, corfu
 (require 'init-navigation)   ; Dired + dirvish, project, windmove, winner
+(require 'init-casual)       ; Transient menus for dired/calc/isearch/ibuffer/Info
 (require 'init-vc)           ; vc + magit + diff-hl + forge
 (require 'init-prog)         ; prog-mode, treesit, eglot, flymake, eldoc, compile
 (require 'init-snippets)     ; tempel snippets + eglot-tempel LSP expansion
@@ -69,6 +70,7 @@
 (require 'init-systems)      ; sops, logview, auth-source-1password
 (require 'init-writing)      ; jinx, markdown-mode, denote, pdf-tools
 (require 'init-org)          ; org, org-modern, capture templates
+(require 'init-http)         ; verb HTTP/REST client (org-based)
 
 ;; Languages. The well-supported ones (Nix, Rust, Python, Go) each have
 ;; their own file; less-used modes are grouped by concern so init.el

@@ -602,7 +602,7 @@ invalidation after `magit-post-refresh-hook'."
             (user-position . t)
             (vertical-scroll-bars . nil)
             (scrollbar-width . 0)
-            (menu-bar-lines . 0)
+            ;; (menu-bar-lines . 0)
             (tool-bar-lines . 0))))
 
 (provide 'init-vc)

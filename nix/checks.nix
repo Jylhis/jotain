@@ -194,6 +194,50 @@ in
         touch $out
       '';
 
+  # eca and gptel must offer the same OpenRouter model catalogue
+  #
+  # config/eca/config.json (providers.openrouter.models) and the gptel
+  # OpenRouter backend in lisp/init-ai.el (:models) are two hand-kept
+  # copies of one list, tied together only by cross-reference comments.
+  # This makes the drift fatal. The elisp list is read with Emacs' own
+  # reader (so a reformat can't fool a regex) and anchored on the
+  # OpenRouter form, not the Ollama :models further down the file.
+  eca-models-in-sync =
+    pkgs.runCommand "check-eca-models-in-sync"
+      {
+        nativeBuildInputs = [
+          pkgs.jq
+          elispEmacs
+        ];
+        ecaConfig = repoRoot + "/config/eca/config.json";
+        initAi = repoRoot + "/lisp/init-ai.el";
+      }
+      ''
+        jsonModels=$(jq -r '.providers.openrouter.models | keys[]' "$ecaConfig" | sort)
+
+        cat > extract.el <<'EOF'
+        ;;; extract.el --- read gptel :models -*- lexical-binding: t; -*-
+        (with-temp-buffer
+          (insert-file-contents (getenv "INIT_AI"))
+          (goto-char (point-min))
+          (re-search-forward "gptel-make-openai")
+          (re-search-forward ":models[[:space:]]*'")
+          (dolist (m (read (current-buffer)))
+            (princ (format "%s\n" m))))
+        EOF
+        elispModels=$(INIT_AI="$initAi" emacs -Q --batch -l extract.el | sort)
+
+        if [ "$jsonModels" != "$elispModels" ]; then
+          echo "" >&2
+          echo "config/eca/config.json and lisp/init-ai.el disagree on the" >&2
+          echo "OpenRouter model list (they are hand-kept copies of one" >&2
+          echo "catalogue). Reconcile both. Diff (< json, > elisp):" >&2
+          diff <(echo "$jsonModels") <(echo "$elispModels") >&2 || true
+          exit 1
+        fi
+        touch $out
+      '';
+
   # Vendored design system must match the pinned upstream rev
   #
   # website/public/ds is committed so website/public stays a no-build
@@ -390,6 +434,74 @@ in
                  (message "FAIL %s: %S" (file-name-nondirectory f) err)
                  (setq failed t))))
             (when failed (kill-emacs 1)))'
+        touch $out
+      '';
+
+  # Regex scanner fidelity vs the Emacs reader
+  #
+  # nix/use-package.nix finds `(use-package NAME' by regex over file
+  # text, so a commented-out, quoted, or string-embedded occurrence would
+  # be miscounted as a real package (or a genuine form missed). This
+  # reads lisp/*.el with Emacs' own reader, collects the use-package
+  # heads that appear as actual code, and diffs them against the
+  # scanner's output. A divergence means the regex is over- or
+  # under-matching. Implements deferred review Finding 48(c).
+  scanner-fidelity =
+    let
+      usePackage = import ./use-package.nix { inherit lib; };
+      scannerNames = lib.sort (a: b: a < b) (
+        lib.unique (lib.concatMap (f: map (e: e.name) f.entries) (usePackage.scanDirectoryWithDoc ../lisp))
+      );
+      scannerList = pkgs.writeText "scanner-use-package-names" (
+        lib.concatStringsSep "\n" scannerNames + "\n"
+      );
+    in
+    pkgs.runCommand "check-scanner-fidelity"
+      {
+        nativeBuildInputs = [ elispEmacs ];
+        src = elispSrc;
+        inherit scannerList;
+      }
+      ''
+        # Stay in the writable build dir; $src is a read-only store path.
+        cat > collect.el <<'EOF'
+        ;;; collect.el --- reader-truth use-package heads -*- lexical-binding: t; -*-
+        (require 'cl-lib)
+        (let ((names '())
+              (dir (expand-file-name "lisp" (getenv "SRC"))))
+          (cl-labels ((walk (form)
+                        (when (consp form)
+                          (when (and (eq (car form) 'use-package)
+                                     (symbolp (car-safe (cdr form)))
+                                     (cadr form)
+                                     (not (memq :disabled form)))
+                            (push (symbol-name (cadr form)) names))
+                          ;; cdr-walk (not dolist): forms contain dotted
+                          ;; pairs (alist entries like ("k" . cmd)).
+                          (let ((tail form))
+                            (while (consp tail)
+                              (walk (car tail))
+                              (setq tail (cdr tail)))))))
+            (dolist (file (directory-files-recursively dir "\\.el\\'"))
+              (with-temp-buffer
+                (insert-file-contents file)
+                (goto-char (point-min))
+                (condition-case nil
+                    (while t (walk (read (current-buffer))))
+                  (end-of-file nil)))))
+          (dolist (n (sort (delete-dups names) #'string<))
+            (princ (format "%s\n" n))))
+        EOF
+        SRC="$src" emacs -Q --batch -l collect.el > reader-names.txt
+
+        if ! diff -u "$scannerList" reader-names.txt; then
+          echo "" >&2
+          echo "nix/use-package.nix regex scanner disagrees with the Emacs" >&2
+          echo "reader on the use-package heads in lisp/ (< scanner, > reader)." >&2
+          echo "A commented-out, quoted, or string-embedded '(use-package X'" >&2
+          echo "is the usual cause. Reconcile the source or the scanner." >&2
+          exit 1
+        fi
         touch $out
       '';
 
