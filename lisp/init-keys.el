@@ -72,6 +72,25 @@ Region active → deactivate it.  Otherwise call regular
    ("M-o" . other-window)
    ("C-x j" . jotain-toggle-window-split)))
 
+;;; @doc Trim unwanted stock menu-bar entries and disable the commands
+;;; behind them: Read Mail, Read Net News, all Games (including the Emacs
+;;; Psychotherapist), and Help > Getting New Versions. The bar itself is
+;;; hidden (early-init.el sets `menu-bar-lines' to 0), but these entries
+;;; stay in the `menu-bar' keymap and remain reachable via F10 /
+;;; `tmm-menubar' until removed here.
+(dolist (key '("<menu-bar> <tools> <rmail>"          ; Read Mail
+               "<menu-bar> <tools> <gnus>"           ; Read Net News
+               "<menu-bar> <tools> <games>"          ; Games (incl. doctor)
+               "<menu-bar> <help-menu> <describe-distribution>")) ; Getting New Versions
+  (keymap-global-unset key))
+
+;; Disable the commands so invoking them via M-x prompts first.
+(dolist (cmd '(rmail gnus describe-distribution
+               ;; Games submenu commands.
+               doctor 5x5 blackbox bubbles dunnet gomoku hanoi life
+               mpuz pong snake solitaire tetris zone))
+  (put cmd 'disabled t))
+
 ;;; @doc Built-in directional window switching — `Shift-<arrow>` moves
 ;;; focus between split windows. Ships with Emacs; no reason not
 ;;; to turn it on globally.
