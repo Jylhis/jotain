@@ -119,6 +119,10 @@
         # grammars) — same attribute the nix-on-droid module ships.
         # `just run-built` launches this on aarch64-linux.
         emacs-nox = (pkgsFor system).jotainEmacsPackagesNoGui;
+        # LikeC4 language server (@likec4/lsp), bundled onto every
+        # distribution wrapper via nix/runtime-deps.nix. Exposed here so it
+        # can be built and checked directly with `nix build .#likec4-lsp`.
+        likec4-lsp = (pkgsFor system).likec4Lsp;
         info = (pkgsFor system).jotainInfo;
         docs = import ./nix/options-doc.nix {
           pkgs = pkgsFor system;

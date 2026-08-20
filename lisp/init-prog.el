@@ -287,6 +287,15 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
           ((executable-find "basedpyright") '("basedpyright-langserver" "--stdio"))
           ((executable-find "pyright-langserver") '("pyright-langserver" "--stdio"))
           (t '("pylsp"))))
+
+  (defun jotain-prog--likec4-server (&optional _interactive)
+    "Resolve the LikeC4 server contact against the buffer's PATH.
+Prefers the standalone `likec4-lsp' (bundled on the distribution wrapper),
+falling back to the main `likec4' CLI's `lsp' subcommand.  Resolved at eglot
+connect time, so it sees the project's devenv env — not Jotain's own shell."
+    (if (executable-find "likec4-lsp")
+        '("likec4-lsp" "--stdio")
+      '("likec4" "lsp" "--stdio")))
   :init
   ;; Single devenv-aware auto-start for every project language.  It runs on
   ;; `prog-mode-hook' but defers the actual `eglot-ensure' to an idle timer,
@@ -377,7 +386,12 @@ basedpyright/pyright, then pylsp.  Resolved at connect time in the project env."
                      #'jotain-prog--ts-server))
   (add-to-list 'eglot-server-programs
                (cons '(python-mode python-ts-mode)
-                     #'jotain-prog--python-server)))
+                     #'jotain-prog--python-server))
+  ;; LikeC4 architecture models (init-lang-devops).  Function-valued so it
+  ;; picks the standalone `likec4-lsp' (bundled on the wrapper PATH) or the
+  ;; main `likec4' CLI, whichever the buffer's env provides.
+  (add-to-list 'eglot-server-programs
+               (cons '(likec4-mode) #'jotain-prog--likec4-server)))
 
 ;;; @doc Consult-driven workspace symbol search — C-M-. opens an
 ;;; orderless-filtered list of symbols across the LSP workspace.

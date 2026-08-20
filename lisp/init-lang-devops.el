@@ -7,10 +7,11 @@
 ;; justfile, ansible. None of these are huge — they mostly exist to
 ;; pin a `:mode' regex and provide font-lock.
 ;;
-;; Also here: a small hand-rolled major mode for Structurizr DSL
-;; (architecture-as-code, the C4 model). It is not a package, so it
-;; needs no MELPA entry and is invisible to the use-package scanner in
-;; nix/use-package.nix.
+;; Also here: two small hand-rolled major modes for the architecture-as-
+;; code C4-model DSLs — Structurizr (`.dsl') and LikeC4 (`.c4'/`.likec4').
+;; Neither is a package, so they need no MELPA entry and are invisible to
+;; the use-package scanner in nix/use-package.nix. LikeC4 additionally
+;; gets an eglot LSP (the `likec4-lsp' server) wired in init-prog.el.
 
 ;;; Code:
 
@@ -159,6 +160,76 @@ name used by `dockerfile-mode'."
 
 ;; Win over the built-in `.dsl' -> `dsssl-mode' entry by prepending.
 (add-to-list 'auto-mode-alist '("\\.dsl\\'" . jotain-structurizr-mode))
+
+;;; LikeC4 -----------------------------------------------------------
+;;
+;; LikeC4 (https://likec4.dev) is the other architecture-as-code C4-model
+;; DSL, sibling to Structurizr above.  Files are `.c4'/`.likec4' and have
+;; no built-in major mode.  Like Structurizr this is a hand-rolled mode
+;; (not a package), so it needs no MELPA entry and is invisible to the
+;; use-package scanner.  It indents purely by `{'/`}' nesting and knows the
+;; C-style `//' and `/* */' comment forms.  LSP (via the bundled
+;; `likec4-lsp' server) is wired in init-prog.el, keyed on `likec4-mode'.
+
+(defcustom jotain-likec4-indent-offset 2
+  "Columns of indentation per `{'/`}' nesting level in LikeC4 DSL."
+  :type 'natnum
+  :group 'jotain-devops)
+
+(defvar jotain-likec4-mode-syntax-table
+  (let ((table (make-syntax-table)))
+    ;; Braces delimit blocks — make them paren pairs so sexp motion,
+    ;; `show-paren-mode', and depth-based indentation all work.
+    (modify-syntax-entry ?{ "(}" table)
+    (modify-syntax-entry ?} "){" table)
+    (modify-syntax-entry ?\" "\"" table)
+    ;; `//' and `/* */' are the only comment forms (no `#' unlike
+    ;; Structurizr).
+    (modify-syntax-entry ?/  ". 124b" table)
+    (modify-syntax-entry ?*  ". 23"   table)
+    (modify-syntax-entry ?\n "> b"    table)
+    ;; Identifiers and relationship arrows keep `-' and `_' together.
+    (modify-syntax-entry ?_ "_" table)
+    (modify-syntax-entry ?- "_" table)
+    table)
+  "Syntax table for `likec4-mode'.")
+
+(defvar jotain-likec4-font-lock-keywords
+  (let ((keywords '("specification" "model" "views" "view" "element" "tag"
+                    "relationship" "color" "technology" "style" "styles"
+                    "extend" "extends" "link" "icon" "title" "description"
+                    "of" "include" "exclude" "group" "with" "dynamic"
+                    "navigateTo" "autoLayout" "autolayout" "this" "it"
+                    "person" "system" "container" "component" "actor")))
+    `((,(regexp-opt keywords 'symbols) . font-lock-keyword-face)
+      ("->" . font-lock-function-name-face)
+      (,(rx symbol-start (group (+ (any word "_"))) (* space) (any "=:"))
+       (1 font-lock-variable-name-face))))
+  "Font-lock rules for `likec4-mode'.")
+
+(defun jotain-likec4-indent-line ()
+  "Indent the current LikeC4 line by its `{'/`}' nesting depth."
+  (let ((depth (save-excursion
+                 (back-to-indentation)
+                 (let ((open (car (syntax-ppss))))
+                   ;; A line that leads with `}' closes the block above,
+                   ;; so it belongs one level out.
+                   (if (looking-at-p "}") (1- open) open)))))
+    (indent-line-to (* jotain-likec4-indent-offset (max depth 0)))))
+
+(define-derived-mode likec4-mode prog-mode "LikeC4"
+  "Major mode for editing LikeC4 architecture models."
+  :syntax-table jotain-likec4-mode-syntax-table
+  (setq-local comment-start "// "
+              comment-end ""
+              comment-start-skip "\\(?://+\\|/\\*+\\)[ \t]*"
+              indent-line-function #'jotain-likec4-indent-line
+              font-lock-defaults '(jotain-likec4-font-lock-keywords nil t))
+  ;; Dedent the line when the block-closing brace is typed.
+  (setq-local electric-indent-chars (cons ?} electric-indent-chars)))
+
+(add-to-list 'auto-mode-alist '("\\.c4\\'" . likec4-mode))
+(add-to-list 'auto-mode-alist '("\\.likec4\\'" . likec4-mode))
 
 (provide 'init-lang-devops)
 ;;; init-lang-devops.el ends here

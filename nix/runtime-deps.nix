@@ -19,6 +19,7 @@ with pkgs;
   jujutsu # vc-jj, majutsu, jotain-vc-stats (jj binary)
   zoxide # zoxide-add on find-file-hook, zoxide-find-file (M-g z)
   pkgsWithOverlay.eca # eca-emacs server; prevents runtime download fallback
+  pkgsWithOverlay.likec4Lsp # LikeC4 LSP for likec4-mode eglot (init-lang-devops)
   rsync # dired-rsync (C-c C-r)
   nixd # shipped Nix LSP fallback (devenv--nix-lsp-program) when a devenv
   # project's own env provides no nixd/nil for eglot
