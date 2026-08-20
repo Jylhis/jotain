@@ -164,6 +164,11 @@ in
   # it on the wrapper PATH.
   eca = import ./eca-server.nix { pkgs = final; };
 
+  # LikeC4 language server for `likec4-mode' (lisp/init-lang-devops.el).
+  # Surfaced on the overlay for the same reason as `eca'; bundled onto every
+  # distribution wrapper's PATH via nix/runtime-deps.nix.
+  likec4Lsp = import ./likec4-lsp.nix { pkgs = final; };
+
   jotainInfo = import ./info-manual.nix {
     pkgs = final;
     src = ../.;
