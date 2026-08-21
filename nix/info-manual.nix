@@ -38,7 +38,6 @@ let
 
   optionsDoc = import ./options-doc.nix { inherit pkgs src; };
   packagesDoc = import ./packages-doc.nix { inherit pkgs src; };
-  emacsApiDoc = import ./emacs-api-doc.nix { inherit pkgs src; };
 
   # Pages that flow into @chapter sections of jotain.texi.  Order and
   # grouping mirror docs/docs.json.  Each entry is { src, out }: the
@@ -142,7 +141,6 @@ pkgs.runCommand "jotain-info"
     src = docsSrc;
     optionsFragment = "${optionsDoc}/jotain-options.texi";
     packagesFragment = "${packagesDoc}/jotain-packages.texi";
-    apiFragment = "${emacsApiDoc}/jotain-elisp-api.texi";
     meta = {
       description = "Jotain Info manual (generated from docs/)";
     };
@@ -240,7 +238,6 @@ pkgs.runCommand "jotain-info"
         # the include search path.
         cp "$optionsFragment"  docs/jotain-options.texi
         cp "$packagesFragment" docs/jotain-packages.texi
-        cp "$apiFragment"      docs/jotain-elisp-api.texi
 
         # Emit the final .info.  Jotain is a short manual — one node per
         # chapter is enough, no need for --split-size gymnastics.
