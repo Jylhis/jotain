@@ -27,6 +27,14 @@
 let
   optionsDoc = import ./options-doc.nix { inherit pkgs src; };
   packagesDoc = import ./packages-doc.nix { inherit pkgs src; };
+  # Generated docstring-level API reference for the bundled packages
+  # (etc/elisp-doc). Its html/ tree is mounted at /help/api/; the mount
+  # path is baked into the pages' absolute stylesheet links, so keep the
+  # two in sync.
+  emacsApiDoc = import ./emacs-api-doc.nix {
+    inherit pkgs src;
+    mountPath = "/help/api";
+  };
   infoManual = import ./info-manual.nix { inherit pkgs src; };
   # The Emacs Jotain actually ships (emacs-unstable base since the 31
   # pretest switch) — its man pages and manual sources feed /man and
@@ -306,11 +314,20 @@ pkgs.runCommand "jotain-site"
     cp "$out/public/css/pandoc-page.css" "$out/public/help/packages/style.css"
     inject_head "$out/public/options/index.html" "$out/public/help/packages/index.html"
 
+    # /help/api/ — generated per-package API reference (etc/elisp-doc).
+    # The pages are self-contained and theme-aware via their own CSS
+    # (style.css + emacs.css, shipped inside the tree), so they are copied
+    # verbatim rather than run through inject_head over thousands of files.
+    mkdir -p "$out/public/help/api"
+    cp -r "${emacsApiDoc}/html/." "$out/public/help/api/"
+    chmod -R u+w "$out/public/help/api"
+
     # /help/ index — C-h, as a directory listing.
     cat > help_body.html <<'HELP'
     <h1 class="h1"><span class="star">*</span> Help</h1>
     <p class="docs-index-lede">The <code>C-h</code> map, rendered for the web.</p>
     <div class="man-entry"><a href="/help/packages/">C-h P — package reference</a><span class="man-dots">·····································································</span><span class="man-desc">every package Jotain ships, and why</span></div>
+    <div class="man-entry"><a href="/help/api/">C-h S — elisp API reference</a><span class="man-dots">·····································································</span><span class="man-desc">docstrings for every bundled package</span></div>
     <div class="man-entry"><a href="/options/">nix options</a><span class="man-dots">·····································································</span><span class="man-desc">Home Manager · NixOS/nix-darwin · devenv</span></div>
     <div class="man-entry"><a href="/manual/">C-h i d m Jotain RET — the manual</a><span class="man-dots">·····································································</span><span class="man-desc">HTML, one page per chapter</span></div>
     <div class="man-entry"><a href="/info/">C-h i — info directory</a><span class="man-dots">·····································································</span><span class="man-desc">GNU Emacs + Elisp manuals</span></div>

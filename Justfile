@@ -362,6 +362,16 @@ build-packages-doc:
     nix build .#packages-doc -o result-packages-doc
     @echo "Packages doc → result-packages-doc/index.html"
 
+# Build the generated docstring-level API reference for every bundled
+# package (etc/elisp-doc). Heavy: realizes the config package closure and
+# runs a batch Emacs over it. Output feeds the site's /help/api/ and the
+# Info manual's Emacs API Reference appendix.
+[group('build')]
+build-api-doc:
+    nix build .#emacs-api-doc -o result-api-doc
+    @echo "API reference → result-api-doc/html/index.html"
+    @echo "Load log      → result-api-doc/generate.log (check the skipped list)"
+
 # Regenerate docs/configuration/package-reference.mdx from the
 # `;;; @doc` markers in lisp/init-*.el. Run after editing any
 # `;;; @doc` block; CI's `packages-doc-in-sync` check will fail

@@ -168,6 +168,13 @@ in
 
   packages-doc = import ./packages-doc.nix { inherit pkgs src; };
 
+  # Generated docstring-level API reference (etc/elisp-doc). A build check
+  # only — the output is not checked into git, so there is no in-sync
+  # gate. Heavy: realizes the config package closure and runs a batch
+  # Emacs, so it lives with the deploy-only checks rather than PR CI's
+  # lightweight subset (PR CI still exercises it transitively via `site`).
+  emacs-api-doc = import ./emacs-api-doc.nix { inherit pkgs src; };
+
   # Checked-in Mintlify .mdx must match the generator
   #
   # docs/configuration/package-reference.mdx is checked in so the
