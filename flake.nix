@@ -144,6 +144,14 @@
         site = import ./nix/site.nix {
           pkgs = pkgsFor system;
         };
+        # Light site for PR CI: same assembly minus the heavy
+        # /help/api/ generated API reference (emacs-api-doc), which is
+        # built only on the deploy path. Keeps PR CI's `site` job within
+        # its time budget while still validating docs/manuals/man/options.
+        site-preview = import ./nix/site.nix {
+          pkgs = pkgsFor system;
+          withApiDoc = false;
+        };
         # Design-system CSS + fonts at the pinned jylhis/design rev, as
         # website/public/ds is expected to contain them. `just ds-sync`
         # copies from here; the ds-in-sync check diffs against it.

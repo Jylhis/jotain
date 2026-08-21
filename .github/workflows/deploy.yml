@@ -40,7 +40,12 @@ permissions:
 jobs:
   check:
     name: Check
-    timeout-minutes: 30
+    # 90 (not 30): the full `nix flake check` now includes the
+    # emacs-api-doc check, whose first uncached build (a batch Emacs over
+    # ~100 packages) is slow. This job pushes results to the jylhis cache,
+    # so once it builds emacs-api-doc, deploy-site's `.#site` reuses it as
+    # a cache hit and later runs with unchanged inputs are fast.
+    timeout-minutes: 90
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -90,7 +95,11 @@ jobs:
     name: Site branch
     if: github.ref == 'refs/heads/main'
     needs: check
-    timeout-minutes: 30
+    # 60 (not 30): builds the full `.#site` including the /help/api/
+    # reference. `needs: check` runs after the Check job has built and
+    # pushed emacs-api-doc to the jylhis cache, so this normally pulls it
+    # as a cache hit; the extra headroom covers a cold cache.
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     permissions:
       contents: write
