@@ -251,11 +251,23 @@ working-tree file no longer exists to open."
   ;; obsoleted `diff-hl-magit-pre-refresh' (aliased to `ignore');
   ;; only the post-refresh half is needed on Magit 2.4+.
   ((after-init . global-diff-hl-mode)
-   (dired-mode . diff-hl-dired-mode)
    (magit-post-refresh . diff-hl-magit-post-refresh))
   :config
   ;; Live, pre-save diff indicators.
   (diff-hl-flydiff-mode 1))
+
+;;; @doc Dired integration for diff-hl — shows VC change indicators next
+;;; to files in dired listings.  Kept in its own block rather than the
+;;; `diff-hl' :hook above because `diff-hl-dired-mode' lives in
+;;; `diff-hl-dired.el', not the package's main file: hooking it from the
+;;; `diff-hl' block makes use-package autoload it from "diff-hl", which
+;;; does not define it, so with stale package autoloads (e.g. a
+;;; `var/package-quickstart.el' caching old /nix/store paths) the hook
+;;; errors and empties every dired buffer.  Naming the correct feature
+;;; here pins the autoload to the right file.
+(use-package diff-hl-dired
+  :ensure nil
+  :hook (dired-mode . diff-hl-dired-mode))
 
 ;;; @doc Adds `N/M` counters to the doom-modeline showing
 ;;; uncommitted line-level changes and commits made today (since
