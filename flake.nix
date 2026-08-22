@@ -132,6 +132,14 @@
           pkgs = pkgsFor system;
           src = self;
         };
+        # Generated docstring-level API reference for every bundled
+        # package (nix/emacs-api-doc.nix, forking etc/elisp-doc). Heavy:
+        # realizes the config package closure and runs a batch Emacs.
+        # Mounted into the site under /help/api/ by nix/site.nix.
+        emacs-api-doc = import ./nix/emacs-api-doc.nix {
+          pkgs = pkgsFor system;
+          src = self;
+        };
         # No `src = self` here: site.nix (via info-manual.nix) selects
         # files with lib.fileset, which requires a real path — the
         # string-like flake source is rejected. The default src (../.
@@ -139,6 +147,14 @@
         # mk-overlay.nix wires jotainInfo.
         site = import ./nix/site.nix {
           pkgs = pkgsFor system;
+        };
+        # Light site for PR CI: same assembly minus the heavy
+        # /help/api/ generated API reference (emacs-api-doc), which is
+        # built only on the deploy path. Keeps PR CI's `site` job within
+        # its time budget while still validating docs/manuals/man/options.
+        site-preview = import ./nix/site.nix {
+          pkgs = pkgsFor system;
+          withApiDoc = false;
         };
         # Design-system CSS + fonts at the pinned jylhis/design rev, as
         # website/public/ds is expected to contain them. `just ds-sync`
