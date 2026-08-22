@@ -283,13 +283,45 @@ let
   # is a no-op. `or`-guarded so a downstream consumer on an older
   # nixpkgs that lacks a given sibling falls back to overriding the
   # non-pgtk base (correct, from source).
+  # The git/unstable/igc base attrs exist ONLY when nix-community/emacs-
+  # overlay is composed into `pkgs`. Prefer the prebuilt `-pgtk` sibling
+  # (with the `or` fallback documented above), but if even the non-pgtk
+  # base is absent — an overlay-less `pkgs` — throw a message pointing at
+  # overlays.default / variant = "mainline" instead of Nix's opaque
+  # "attribute 'emacs-unstable' missing". The throw is fully lazy: on the
+  # cached happy path the sibling resolves and `base` is never forced, so
+  # cache parity is untouched.
+  overlayBase =
+    {
+      pgtkAttr,
+      baseAttr,
+    }:
+    let
+      base =
+        pkgs.${baseAttr} or (throw (
+          "jotain emacs.nix: variant \"${variant}\" needs nix-community/emacs-overlay "
+          + "composed into `pkgs` (this flake's overlays.default provides `${baseAttr}`). "
+          + "For stock nixpkgs Emacs use variant = \"mainline\"."
+        ));
+    in
+    if withPgtk then pkgs.${pgtkAttr} or base else base;
+
   basePackage =
     if variant == "git" then
-      (if withPgtk then pkgs.emacs-git-pgtk or pkgs.emacs-git else pkgs.emacs-git)
+      overlayBase {
+        pgtkAttr = "emacs-git-pgtk";
+        baseAttr = "emacs-git";
+      }
     else if variant == "unstable" then
-      (if withPgtk then pkgs.emacs-unstable-pgtk or pkgs.emacs-unstable else pkgs.emacs-unstable)
+      overlayBase {
+        pgtkAttr = "emacs-unstable-pgtk";
+        baseAttr = "emacs-unstable";
+      }
     else if variant == "igc" then
-      (if withPgtk then pkgs.emacs-igc-pgtk or pkgs.emacs-igc else pkgs.emacs-igc)
+      overlayBase {
+        pgtkAttr = "emacs-igc-pgtk";
+        baseAttr = "emacs-igc";
+      }
     else
       (if withPgtk then pkgs.emacs-pgtk or pkgs.emacs else pkgs.emacs);
 

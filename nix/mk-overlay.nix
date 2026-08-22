@@ -10,6 +10,11 @@ let
   usePackage = import ./use-package.nix { inherit (final) lib; };
   extraPackages = import ./extra-packages.nix { pkgs = final; };
 
+  # Emacs packages the config gets from Nix (nix/extra-packages.nix or the
+  # base scope) rather than the lisp/ use-package scan — the single source
+  # of truth shared with nix/emacs-api-doc.nix. See that file's header.
+  nixProvidedPackages = import ./nix-provided-packages.nix;
+
   # Runtime binaries the Elisp config shells out to (nix/runtime-deps.nix).
   # Bundled onto every distribution wrapper's PATH below with `--suffix', so
   # a bare `just run-built' is self-contained (carries the shipped nixd LSP
@@ -57,27 +62,30 @@ let
         inherit package;
         inherit (final) emacsPackagesFor;
         override = extraPackages;
-        # `nix-ts-mode` is referenced directly (not guarded): init-lang-nix.el
-        # declares it `:ensure nil`, so if a nixpkgs snapshot ever lacks it we
-        # want a loud build failure rather than silently shipping a broken
-        # autoload for `.nix' files. Every nixpkgs in [24.05, unstable] ships
-        # it, so the 24.05+ override path is unaffected.
-        extraEmacsPackages = epkgs: [
-          epkgs.claude-code-ide
-          epkgs.combobulate
-          epkgs.jylhis-emacs-themes
-          epkgs.majutsu
-          epkgs.nix-ts-mode
-          epkgs.tagref
-          # Full grammar set. Every grammar is its own upstream
-          # derivation and this is a linkFarm over their store paths, so
-          # the set costs closure size (~200 MB over a curated subset,
-          # measured 2026-08-01), never build time. The curated-subset
-          # variant (`emacs-lite`) was removed with the build-matrix
-          # narrowing; the full set keeps the `jotain-emacs-full` hash
-          # cache-stable.
-          epkgs.treesit-grammars.with-all-grammars
-        ];
+        # Fail the build (listing every miss) if a use-package-declared
+        # package is absent from the emacs package set, rather than
+        # silently dropping it and shipping a broken editor. This is what
+        # makes the older nixpkgs snapshot a safe source to build against.
+        strict = true;
+        # The Nix-provided packages (shared list; see nix-provided-packages.nix).
+        # Each is a flat `epkgs.<name>` lookup, unguarded on purpose: e.g.
+        # `nix-ts-mode` is declared `:ensure nil` in init-lang-nix.el, so the
+        # lisp/ scan skips it — a missing attr here should be a loud failure,
+        # not a silently broken `.nix' autoload. Every nixpkgs in
+        # [24.05, unstable] ships these, so the 24.05+ override path is fine.
+        extraEmacsPackages =
+          epkgs:
+          map (n: epkgs.${n}) nixProvidedPackages
+          ++ [
+            # Full grammar set. Every grammar is its own upstream
+            # derivation and this is a linkFarm over their store paths, so
+            # the set costs closure size (~200 MB over a curated subset,
+            # measured 2026-08-01), never build time. The curated-subset
+            # variant (`emacs-lite`) was removed with the build-matrix
+            # narrowing; the full set keeps the `jotain-emacs-full` hash
+            # cache-stable.
+            epkgs.treesit-grammars.with-all-grammars
+          ];
       };
     in
     final.runCommand name
