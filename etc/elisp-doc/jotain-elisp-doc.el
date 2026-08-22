@@ -26,13 +26,29 @@
 ;; `elisp-doc-index', `elisp-doc-shortdoc') without modifying it, and
 ;; drives it from `load-history' provenance so the corpus stays scoped.
 ;;
+;; It runs in one of two modes so the per-package doc derivations stay
+;; independently cacheable (see nix/emacs-api-doc.nix):
+;;
+;;   • package mode (default) — document exactly one feature in a minimal
+;;     Emacs (only that package + its deps + the engine tooling), writing
+;;     its per-symbol/per-package HTML and markdown plus an enriched
+;;     `listing.eld' (summary column + stylized name captured while the
+;;     symbols are live) for the aggregate pass to consume.
+;;   • aggregate mode — load the engine + tooling only (no packages) and
+;;     build the cross-package global indexes (symbols.json, the fun/var/
+;;     face type indexes, shortdoc.html) and the top index.html from the
+;;     merged listings.
+;;
 ;; Invocation (see nix/emacs-api-doc.nix):
 ;;
 ;;   emacs --batch -L etc/elisp-doc -l jotain-elisp-doc
 ;;
 ;; Environment:
-;;   ELISP_DOC_OUTPUT_DIR   destination directory (required)
-;;   JOTAIN_PKG_FEATURES    newline-separated feature names to document
+;;   ELISP_DOC_OUTPUT_DIR   destination html directory (required; listing.eld
+;;                          is written to its parent in package mode)
+;;   JOTAIN_DOC_MODE        "package" (default) or "aggregate"
+;;   JOTAIN_PKG_FEATURES    newline-separated feature names (package mode)
+;;   JOTAIN_DOC_LISTINGS    newline-separated listing.eld paths (aggregate mode)
 ;;   JOTAIN_DOC_QUICK       if set, only export this many symbols per kind
 ;;                          (fast smoke test)
 
@@ -113,14 +129,18 @@
   "List of (FEATURE . REASON) that failed to load.")
 
 (defun jotain-doc--register-feature (feature)
-  "`require' FEATURE and record its install directory for scoping."
+  "`require' FEATURE and record its install directory for scoping.
+On failure, record the actual error message in `jotain-doc--skipped' so
+the \"Not documented\" list explains why the package could not load."
   (let ((inhibit-message t))
-    (if (jotain-doc--ignoring (require feature) t)
-        (when-let* ((lib (locate-library (symbol-name feature)))
-                    (dir (file-name-directory (file-truename lib))))
-          (puthash (directory-file-name dir) (symbol-name feature)
-                   jotain-doc--pkg-dirs))
-      (push (cons feature "require failed") jotain-doc--skipped))))
+    (condition-case err
+        (progn
+          (require feature)
+          (when-let* ((lib (locate-library (symbol-name feature)))
+                      (dir (file-name-directory (file-truename lib))))
+            (puthash (directory-file-name dir) (symbol-name feature)
+                     jotain-doc--pkg-dirs)))
+      (error (push (cons feature (error-message-string err)) jotain-doc--skipped)))))
 
 (defun jotain-doc--file-pkg (file)
   "Return the package name owning FILE, or nil if out of scope."
@@ -284,8 +304,8 @@
               "</code></a></td></tr>"))
     (insert "</tbody></table></div>")
     (when jotain-doc--skipped
-      (insert (format "<h2>Not documented (%d)</h2>\n<p>These packages "
-                      "failed to load headless and were skipped:</p>\n<p>"
+      (insert (format (concat "<h2>Not documented (%d)</h2>\n<p>These packages "
+                              "failed to load headless and were skipped:</p>\n<p>")
                       (length jotain-doc--skipped)))
       (insert (string-join
                (mapcar (lambda (c) (concat "<code>" (htmlize-protect-string
@@ -321,8 +341,150 @@ upstream behaviour for core Emacs paths."
 (advice-add 'elisp-doc--info-url-for-node :filter-return
             #'jotain-doc--info-under-info)
 
-(defun jotain-doc-generate ()
-  "Top-level generation entry point."
+;;;; Enriched per-package listing (package mode) → aggregate mode input
+
+;; Each per-package derivation runs in its own minimal Emacs (only that
+;; package, its declared deps and the engine tooling), so the whole set of
+;; packages is never loaded at once — that is what makes each fragment
+;; independently cacheable.  The cross-package global indexes therefore
+;; cannot be built in a package process; instead every package process
+;; serializes an enriched listing of the symbols it documented (with the
+;; summary column and stylized name computed *while the symbols are live*),
+;; and the aggregate pass builds the global indexes from the merged
+;; listings without loading any package.
+
+(defun jotain-doc--listing-path ()
+  "Path of this package's listing file, a sibling of the html output dir."
+  (file-name-concat
+   (file-name-directory (directory-file-name elisp-doc-output-dir))
+   "listing.eld"))
+
+(defun jotain-doc--collect-listing-rows ()
+  "Return listing plists for every symbol in `elisp-doc--source-files'.
+Must run while the package's symbols are still live: the summary column
+and (for faces) the stylized name are rendered from the live symbol."
+  (let (rows)
+    (maphash
+     (lambda (file items)
+       (dolist (pair items)
+         (let* ((type (car pair))
+                (sym (cdr pair))
+                (kind (elisp-doc-entry-type-short type))
+                (summary (or (ignore-error error
+                               (htmlize-protect-string
+                                (pcase type
+                                  ('helpful-variable (elisp-get-var-docstring sym))
+                                  ('helpful-function (elisp-get-fnsym-args-string sym))
+                                  ('describe-face (face-documentation sym)))))
+                             ""))
+                (stylized (or (ignore-error error
+                                (elisp-doc--stylized-name sym type))
+                              (symbol-name sym)))
+                (href (and file (elisp-doc--get-source-file file))))
+           (push (list :kind kind
+                       :name (symbol-name sym)
+                       :file (and file (file-name-nondirectory file))
+                       :summary (or summary "")
+                       :stylized stylized
+                       :href href)
+                 rows))))
+     elisp-doc--source-files)
+    rows))
+
+(defun jotain-doc--write-listing (package)
+  "Serialize the enriched listing for PACKAGE to `jotain-doc--listing-path'."
+  (let ((data (list :package package
+                    :skipped jotain-doc--skipped
+                    :symbols (jotain-doc--collect-listing-rows)))
+        (print-length nil)
+        (print-level nil))
+    (with-temp-file (jotain-doc--listing-path)
+      (prin1 data (current-buffer))
+      (insert "\n"))))
+
+(defconst jotain-doc--kind-helpful
+  '(("fun" . helpful-function)
+    ("var" . helpful-variable)
+    ("face" . describe-face))
+  "Map the short kind string back to the helpful/describe function symbol.")
+
+(defun jotain-doc--read-listings ()
+  "Read every listing named in JOTAIN_DOC_LISTINGS.
+Return (SYMBOLS PACKAGES SKIPPED): the merged symbol plists, the sorted
+list of packages that documented at least one symbol, and the merged
+skipped alist."
+  (let ((raw (jotain-doc--env "JOTAIN_DOC_LISTINGS"))
+        symbols packages skipped)
+    (dolist (path (and raw (split-string raw "[\n\r]+" t "[ \t]+")))
+      (when (file-exists-p path)
+        (jotain-doc--ignoring
+         (let* ((data (with-temp-buffer
+                        (insert-file-contents path)
+                        (goto-char (point-min))
+                        (read (current-buffer))))
+                (syms (plist-get data :symbols))
+                (pkg (plist-get data :package))
+                (skip (plist-get data :skipped)))
+           (setq symbols (nconc symbols (copy-sequence syms)))
+           (when (and pkg syms) (cl-pushnew pkg packages :test #'equal))
+           (setq skipped (nconc skipped (copy-sequence skip)))))))
+    (list symbols (sort packages #'string-lessp) skipped)))
+
+;;;; Aggregate-mode global indexes (from merged listings, no live packages)
+
+(defun jotain-doc--agg-json-index (symbols)
+  "Write symbols.json from the merged listing SYMBOLS.
+Same shape as `elisp-doc--create-json-index'."
+  (let (fun var face)
+    (dolist (s symbols)
+      (pcase (plist-get s :kind)
+        ("fun" (push (plist-get s :name) fun))
+        ("var" (push (plist-get s :name) var))
+        ("face" (push (plist-get s :name) face))))
+    (with-temp-file (file-name-concat elisp-doc-output-dir "symbols.json")
+      (json-insert `(fun ,(vconcat (sort fun #'string-lessp))
+                         var ,(vconcat (sort var #'string-lessp))
+                         face ,(vconcat (sort face #'string-lessp)))))))
+
+(defun jotain-doc--agg-type-index (kind symbols)
+  "Write KIND.html (a global type index) from the merged listing SYMBOLS.
+Reproduces `elisp-doc--create-type-index' markup from the precomputed
+listing rows — the summary/stylized name are read, not recomputed, so no
+package needs to be loaded."
+  (let* ((type (cdr (assoc kind jotain-doc--kind-helpful)))
+         (title (elisp-doc-entry-type-desc type))
+         (name (elisp-doc-entry-type-short type))
+         (rows (sort (seq-filter (lambda (s) (equal kind (plist-get s :kind))) symbols)
+                     (lambda (a b) (string-lessp (plist-get a :name)
+                                                 (plist-get b :name))))))
+    (with-temp-buffer
+      (insert "<div class=\"table\"><table id=\"index\"><tbody>")
+      (dolist (s rows)
+        (let ((sym (plist-get s :name))
+              (file (plist-get s :file))
+              (href (plist-get s :href))
+              (stylized (plist-get s :stylized)))
+          (insert "<tr><td><a href=\"./" name
+                  "/" (url-hexify-string (elisp-doc--encode-url-part sym t))
+                  ".html\"><code>" stylized
+                  "</code></a></td><td><a href=\""
+                  (let ((url (htmlize-attr-escape (string-trim-left (or href "#") "\\.+"))))
+                    (if (string-prefix-p "/" url) (concat "." url) url))
+                  "\"><code>" (if file (htmlize-protect-string file) "/")
+                  "</code></a></td></tr>")))
+      (insert "</tbody></table></div>")
+      (elisp-doc-wrap-page-body
+       (concat (capitalize title) " Index")
+       (format "%s Index (%d)" (capitalize title) (length rows))
+       (format "Index page: all %d %s symbols from Emacs, documentation links, and source file locations."
+               (length rows) title))
+      (write-region (point-min) (point-max)
+                    (file-name-concat elisp-doc-output-dir (concat name ".html"))))))
+
+;;;; The two generation modes
+
+(defun jotain-doc--generate-package ()
+  "Package mode: document one feature and serialize its enriched listing."
   (let ((features (jotain-doc--features)))
     (message "jotain-elisp-doc: loading %d package features" (length features))
     (dolist (feature features)
@@ -356,25 +518,43 @@ upstream behaviour for core Emacs paths."
     (message "jotain-elisp-doc: faces exported")
     (elisp-doc--export-reset)
 
-    ;; Global indexes (from the vendored engine).
-    (jotain-doc--ignoring (elisp-doc--create-json-index))
-    (jotain-doc--ignoring (elisp-doc--create-type-index #'helpful-function))
-    (jotain-doc--ignoring (elisp-doc--create-type-index #'helpful-variable))
-    (jotain-doc--ignoring (elisp-doc--create-type-index #'describe-face))
-    (jotain-doc--ignoring (elisp-doc-export-shortdoc))
-
-    ;; jotain per-package HTML + top index.
-    (let ((packages (jotain-doc--documented-packages)))
-      (dolist (pkg packages)
-        (jotain-doc--ignoring (jotain-doc--create-package-index pkg)))
-      (jotain-doc--create-top-index packages))
+    ;; jotain per-package HTML index (global indexes + top index are the
+    ;; aggregate pass's job).
+    (dolist (pkg (jotain-doc--documented-packages))
+      (jotain-doc--ignoring (jotain-doc--create-package-index pkg)))
 
     ;; Plaintext markdown, per package, for the Info manual.
     (let ((by-pkg (jotain-doc--collect-package-symbols)))
       (maphash (lambda (pkg syms)
                  (jotain-doc--ignoring (jotain-doc--write-package-md pkg syms)))
                by-pkg))
-    (message "jotain-elisp-doc: done")))
+
+    ;; Enriched listing for the aggregate pass.
+    (jotain-doc--write-listing (symbol-name (car features)))
+    (message "jotain-elisp-doc: package done")))
+
+(defun jotain-doc--generate-aggregate ()
+  "Aggregate mode: build the global indexes from the merged listings.
+No package is loaded here — only the engine and its tooling — so this
+pass is independent of any package bump."
+  (pcase-let ((`(,symbols ,packages ,skipped) (jotain-doc--read-listings)))
+    (message "jotain-elisp-doc: aggregate — %d symbols, %d packages, %d skipped"
+             (length symbols) (length packages) (length skipped))
+    (jotain-doc--ignoring (jotain-doc--agg-json-index symbols))
+    (dolist (kind '("fun" "var" "face"))
+      (jotain-doc--ignoring (jotain-doc--agg-type-index kind symbols)))
+    (jotain-doc--ignoring (elisp-doc-export-shortdoc))
+    (setq jotain-doc--skipped skipped)
+    (jotain-doc--create-top-index packages)
+    (message "jotain-elisp-doc: aggregate done")))
+
+(defun jotain-doc-generate ()
+  "Top-level generation entry point, dispatching on JOTAIN_DOC_MODE."
+  (let ((mode (or (jotain-doc--env "JOTAIN_DOC_MODE") "package")))
+    (message "jotain-elisp-doc: mode=%s" mode)
+    (if (equal mode "aggregate")
+        (jotain-doc--generate-aggregate)
+      (jotain-doc--generate-package))))
 
 (jotain-doc-generate)
 (kill-emacs 0)
