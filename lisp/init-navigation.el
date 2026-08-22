@@ -118,16 +118,6 @@
   :after dired
   :bind (:map dired-mode-map ("/" . dired-narrow)))
 
-;;; @doc Inline tree expansion in dired — TAB on a directory expands its
-;;; contents below it instead of opening a new buffer.
-(use-package dired-subtree
-  :after dired
-  :custom
-  (dired-subtree-use-backgrounds nil)
-  :bind (:map dired-mode-map
-              ("TAB" . dired-subtree-toggle)
-              ("<backtab>" . dired-subtree-cycle)))
-
 ;;; @doc Browse the system trash bin from inside Emacs. With
 ;;; `delete-by-moving-to-trash` set in init-core, every dired
 ;;; deletion is recoverable through `M-x trashed`.
@@ -146,6 +136,13 @@
 
 ;;; @doc Modern dired front-end with previews, side panels, and miller
 ;;; columns. Overrides plain dired so every `C-x d` benefits.
+;;; `TAB' on a directory expands its contents inline as a subtree
+;;; (`dirvish-subtree-toggle'); `<backtab>' opens the subtree management
+;;; transient (`dirvish-subtree-menu'). This uses dirvish's own subtree
+;;; engine — the standalone `dired-subtree' package is deliberately not
+;;; loaded, because dirvish's `subtree-state' attribute and revert
+;;; pipeline are built around `dirvish-subtree' and the two engines
+;;; corrupt each other's overlays when combined.
 ;;; `dirvish-side' (C-c D) already provides the docked side-tree that
 ;;; Emacs 31's new `speedbar-window' offers, so speedbar is intentionally
 ;;; not wired up here.
@@ -160,7 +157,10 @@
   (dirvish-preview-dispatchers '(image gif video audio epub archive pdf))
   (dirvish-side-width 30)
   :bind (("C-c d" . dirvish)
-         ("C-c D" . dirvish-side))
+         ("C-c D" . dirvish-side)
+         :map dired-mode-map
+         ("TAB" . dirvish-subtree-toggle)
+         ("<backtab>" . dirvish-subtree-menu))
   :config
   (dirvish-override-dired-mode 1))
 
