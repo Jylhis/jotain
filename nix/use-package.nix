@@ -27,6 +27,29 @@
 #
 # The legacy form where every line is `;;; @doc <text>` still works.
 #
+# Dual-source scope contract
+# --------------------------
+# This module (and every consumer: nix/mk-overlay.nix, nix/emacs-api-doc.nix)
+# resolves packages ONLY through the portable Emacs-package-scope surface
+# that plain nixpkgs and nix-community/emacs-overlay expose identically:
+#
+#   • `pkgs.emacsPackagesFor <emacs>`   — build the scope (`epkgs`).
+#   • `epkgs.overrideScope (self: super: …)` — layer extra packages
+#     (nix/extra-packages.nix) onto it.
+#   • `epkgs.withPackages (epkgs: [ … ])` — wrap Emacs with a package list.
+#   • flat `epkgs.<name>` lookup for each package (NOT the grouped
+#     `epkgs.melpaPackages`/`elpaPackages`/`manualPackages` sub-attrsets).
+#   • `epkgs.trivialBuild` and `epkgs.treesit-grammars.with-all-grammars`.
+#
+# emacs-overlay's `emacsPackagesFor` is `(super.emacsPackagesFor emacs)
+# .overrideScope (…)` — it reuses nixpkgs' scope machinery and only swaps
+# in fresher generated melpa/elpa/nongnu data, so this surface is byte-for-
+# byte the same on both sources; only the resolved package VERSIONS differ.
+# Keep edits within this surface: the overlay-only top-level helpers
+# (`pkgs.emacsWithPackagesFromUsePackage`, the `emacs-git`/`emacs-unstable`/
+# `emacs-igc` base attrs) are deliberately not depended on here — that is
+# why this pure-Nix reimplementation exists.
+#
 # Public API:
 #
 #     let up = import ./nix/use-package.nix { inherit lib; };
@@ -93,6 +116,19 @@ let
   # (ambiguous with the `[ ]` opener).
   wordChar = "[A-Za-z0-9+_-]";
   endSym = "[^A-Za-z0-9_-]";
+
+  # `getNextText` returns everything up to the *next* `(use-package …)`,
+  # which includes the following form's leading `;;; @doc` comment. That
+  # comment can mention `:ensure nil` / `:disabled` in prose (e.g. "…so
+  # `:ensure nil'."), which would be misread as this form's keyword. Drop
+  # whole comment lines before keyword detection so only real code is
+  # inspected. Only applied to the keyword-scan block, never to the doc
+  # block (which needs its comments).
+  stripCommentLines =
+    block:
+    lib.concatStringsSep "\n" (
+      filter (line: match "[[:space:]]*;.*" line == null) (lib.splitString "\n" block)
+    );
 
   isEnsureNil = block: match (".*:ensure[[:space:]]+nil(" + endSym + ".*)?") block != null;
 
@@ -224,7 +260,7 @@ let
         if isList item && item != [ ] then
           let
             headName = head item;
-            block = getNextText parts idx;
+            block = stripCommentLines (getNextText parts idx);
           in
           if isDisabled block then null else resolveEnsureName headName block
         else
@@ -242,7 +278,7 @@ let
         if isList item && item != [ ] then
           let
             headName = head item;
-            block = getNextText parts idx;
+            block = stripCommentLines (getNextText parts idx);
             prevBlock = getPrevText parts idx;
           in
           if isDisabled block then
@@ -250,6 +286,11 @@ let
           else
             {
               name = headName;
+              # The resolved `:ensure` name — the epkgs attribute to look up
+              # (e.g. `dired-async` with `:ensure async` resolves to `async`).
+              # null for `:ensure nil`. `name` stays the head/feature symbol
+              # (what `require` and package-provenance keying use).
+              ename = resolveEnsureName headName block;
               doc = extractDocFromPrev prevBlock;
               ensureNil = isEnsureNil block;
             }
@@ -328,12 +369,44 @@ let
       epkgs,
       extraMap ? { },
       warnMissing ? true,
+      # When true, throw (listing every unresolved name) instead of
+      # silently dropping a package that is declared in the config but
+      # absent from the emacs package set. The distribution build sets
+      # this (nix/mk-overlay.nix) so a missing package fails the build
+      # loudly rather than shipping a broken editor — this is what makes
+      # the older nixpkgs snapshot a safe source to build against. The
+      # docs generator leaves it false (best-effort). Matches the intent
+      # of emacs-overlay's `mkPackageError`.
+      strict ? false,
+      # Names allowed to be absent even under `strict` (e.g. a package
+      # intentionally fetched from an archive at runtime). Each such name
+      # is dropped rather than thrown.
+      allowMissing ? [ ],
     }:
     let
       names = scanDirectory dir;
-      resolved = map (toEmacsPackage { inherit extraMap warnMissing; } epkgs) names;
+      # A name is a genuine miss when it maps to a non-null attribute name
+      # (so it is not the `emacs` pseudo-package exclusion) that the scope
+      # does not provide. `:ensure nil` / `:disabled` never reach here —
+      # they are already dropped in parsePackagesFromContent.
+      isMissing =
+        name:
+        let
+          mapped = mapName extraMap name;
+        in
+        mapped != null && !(builtins.hasAttr mapped epkgs) && !(builtins.elem name allowMissing);
+      missing = filter isMissing names;
     in
-    filter (p: p != null) resolved;
+    if strict && missing != [ ] then
+      throw (
+        "use-package: ${toString (length missing)} package(s) declared under ${toString dir} "
+        + "are absent from the emacs package set:\n  "
+        + lib.concatMapStringsSep "\n  " (n: "${n} (→ ${mapName extraMap n})") missing
+        + "\nAdd them via nix/extra-packages.nix, fix the name, or pass them in `allowMissing` "
+        + "if fetched from an archive at runtime."
+      )
+    else
+      filter (p: p != null) (map (toEmacsPackage { inherit extraMap warnMissing; } epkgs) names);
 
   # High-level wrapper (mirrors emacs-overlay's public API)
 
@@ -363,6 +436,15 @@ let
 
       # If true, missing packages trace-warn; if false they fail silently.
       warnMissing ? true,
+
+      # If true, a package declared in the config but absent from the
+      # emacs package set throws (listing every miss) instead of being
+      # dropped. The distribution build passes this; see the `strict`
+      # doc on `packagesForDirectory`.
+      strict ? false,
+
+      # Names allowed to be absent even under `strict`.
+      allowMissing ? [ ],
     }:
     let
       scope = (emacsPackagesFor package).overrideScope override;
@@ -376,7 +458,13 @@ let
             p:
             packagesForDirectory {
               dir = p;
-              inherit epkgs extraMap warnMissing;
+              inherit
+                epkgs
+                extraMap
+                warnMissing
+                strict
+                allowMissing
+                ;
             }
           ) pathsToScan;
           extras = extraEmacsPackages epkgs;
