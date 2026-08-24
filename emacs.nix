@@ -26,7 +26,7 @@
 # overlays attr is derived from flake.lock).
 #
 # Usage:
-#   nix-build emacs.nix                                            # unstable variant (Emacs 31 pretest);
+#   nix-build emacs.nix                                            # unstable variant (Emacs 31.1);
 #                                                                  #   pgtk GUI on Linux, NS+patches on Darwin
 #   nix-build emacs.nix --arg noGui true                           # terminal-only
 #   nix-build emacs.nix --arg withNativeCompilation false          # disable native-comp
@@ -96,8 +96,8 @@
       },
 
   # Source variant
-  #   "unstable"  — Emacs 31 release branch (currently the 31.0.90
-  #                 pretest); the default here and for the distribution
+  #   "unstable"  — Emacs 31 release branch (currently the 31.1-rc1
+  #                 release candidate); the default here and for the distribution
   #                 (mk-overlay.nix passes variant = "unstable")
   #   "git"       — bleeding-edge master from git.savannah.gnu.org
   #   "igc"       — feature/igc3 incremental garbage collector branch

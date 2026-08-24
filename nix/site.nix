@@ -45,8 +45,8 @@ let
   # reference is actually mounted (see withApiDoc).
   apiHelpRow = ''<div class="man-entry"><a href="/help/api/">C-h S — elisp API reference</a><span class="man-dots">·····································································</span><span class="man-desc">docstrings for every bundled package</span></div>'';
   infoManual = import ./info-manual.nix { inherit pkgs src; };
-  # The Emacs Jotain actually ships (emacs-unstable base since the 31
-  # pretest switch) — its man pages and manual sources feed /man and
+  # The Emacs Jotain actually ships (emacs-unstable base, now the 31.1
+  # release branch) — its man pages and manual sources feed /man and
   # /info, so the site documents the exact revision users get.
   emacs = pkgs.jotainEmacs;
 
