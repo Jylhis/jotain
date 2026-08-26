@@ -7,7 +7,7 @@
 
 ;;; Code:
 
-;; jinx is configured elsewhere (init-editing.el) and never loaded by
+;; jinx is configured elsewhere (init-writing.el) and never loaded by
 ;; this file; the call below is bound-and-true-p-guarded, so only the
 ;; compile-time declaration is needed (clean-session per-file compile).
 (declare-function jinx-mode "jinx" (&optional arg))
