@@ -464,6 +464,7 @@ Setting `corfu-auto' from `corfu-mode-hook' would be too late, since
 (use-package corfu-history
   :ensure nil
   :after corfu
+  :functions (corfu-history-mode)
   :config (corfu-history-mode 1))
 
 ;;; @doc Completion-at-point Extensions — extra capf functions (dabbrev,

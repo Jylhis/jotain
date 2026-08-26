@@ -434,6 +434,7 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
 ;;; commands carry repeat-maps, so `C-x C-a n n n` keeps stepping.
 (use-package dape
   :bind-keymap ("C-x C-a" . dape-global-map)
+  :functions (dape-breakpoint-load dape-breakpoint-save)
   :custom
   (dape-buffer-window-arrangement 'right)
   (dape-default-breakpoints-file (jotain-var-file "dape-breakpoints"))

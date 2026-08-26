@@ -71,6 +71,7 @@
 (use-package dired-async
   :ensure async
   :after dired
+  :functions (dired-async-mode)
   :config (dired-async-mode 1))
 
 ;;; @doc rsync from dired — bound to `C-c C-r` in `dired-mode-map`. Best

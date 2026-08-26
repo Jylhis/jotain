@@ -295,12 +295,14 @@ working-tree file no longer exists to open."
   :group 'jotain-vc)
 
 (defcustom jotain-git-stats-warning-threshold 250
-  "Uncommitted-change count above which the counter uses `jotain-git-stats-warning'."
+  "Uncommitted-change count above which the counter switches to
+`jotain-git-stats-warning'."
   :type 'integer
   :group 'jotain-vc)
 
 (defcustom jotain-git-stats-urgent-threshold 500
-  "Uncommitted-change count above which the counter uses `jotain-git-stats-urgent'."
+  "Uncommitted-change count above which the counter switches to
+`jotain-git-stats-urgent'."
   :type 'integer
   :group 'jotain-vc)
 

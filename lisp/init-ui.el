@@ -342,6 +342,7 @@ frame exists yet, so a load-time-only probe would never fire."
 (use-package nerd-icons-corfu
   :after (nerd-icons corfu)
   :functions (nerd-icons-corfu-formatter)
+  :defines (corfu-margin-formatters)
   :config
   (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
 
