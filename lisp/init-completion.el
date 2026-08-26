@@ -13,6 +13,10 @@
 
 ;;; Code:
 
+;; Defined inside a `use-package' :config block below; declared for the
+;; clean-session per-file compile (nix/config-compiled-split.nix).
+(declare-function jotain-cape-setup-elisp nil)
+
 ;;;; User options
 ;;
 ;; Every knob below is read once, at load time, and needs a restart to take

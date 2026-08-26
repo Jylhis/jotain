@@ -42,6 +42,10 @@
 
 (declare-function x-export-frames "xfns.c" (&optional frames type))
 (declare-function jotain-var-file "init-core" (name))
+;; Loaded transitively by gptel before the :key lambda below can run;
+;; declared so a clean-session byte-compile (the per-file split) doesn't
+;; flag it — the monolith's shared batch session masked this one.
+(declare-function auth-source-pick-first-password "auth-source" (&rest spec))
 
 (defun jotain-screenshot (&optional file format)
   "Capture the selected frame to FILE; return the absolute path.

@@ -10,6 +10,13 @@
 
 ;;; Code:
 
+;; Defined inside `use-package' :config blocks below (so not top-level
+;; at compile time); declared for the clean-session per-file compile,
+;; same as `jotain-core--auto-create-missing-dirs' further down.
+(declare-function jotain-core--recenter-buffer-window nil)
+(declare-function jotain-core--recenter-after-save-place nil)
+(declare-function ansi-color-apply-on-region "ansi-color" (begin end &optional preserve-sequences))
+
 ;;;; Persistent-state directory
 ;;
 ;; Jotain used to pull in `no-littering' to shepherd 200-odd variables

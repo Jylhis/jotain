@@ -22,6 +22,11 @@
 
 ;;; Code:
 
+;; Defined inside `use-package' :config blocks below; declared for the
+;; clean-session per-file compile (nix/config-compiled-split.nix).
+(declare-function jotain-tempel-setup-capf nil)
+(declare-function jotain-tempel-eglot-capf nil)
+
 ;; Buffer-local guard for the merged tempel+eglot capf (see
 ;; `jotain-tempel-eglot-capf' below).  Declared at top level so the
 ;; byte-compiler sees the `make-variable-buffer-local' call `defvar-local'
