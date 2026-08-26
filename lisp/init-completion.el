@@ -154,6 +154,7 @@ leaves the capf exactly as eglot installs it."
 ;;; minibuffer experience hinges on this.
 (use-package vertico
   :demand t
+  :functions (vertico-mode)
   :config (vertico-mode 1))
 
 ;;; @doc Path-savvy editing in vertico — RET enters a candidate
@@ -192,6 +193,7 @@ leaves the capf exactly as eglot installs it."
      (consult-imenu      buffer)
      (consult-flymake    buffer)
      (consult-fd         grid)))
+  :functions (vertico-multiform-mode)
   :config (vertico-multiform-mode 1))
 
 ;;; @doc Lets vertico render in a regular buffer instead of the
