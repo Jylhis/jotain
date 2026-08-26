@@ -350,6 +350,7 @@ frame exists yet, so a load-time-only probe would never fire."
 ;;; category icons in completion lists).
 (use-package nerd-icons-completion
   :after (nerd-icons marginalia)
+  :functions (nerd-icons-completion-mode nerd-icons-completion-marginalia-setup)
   :config
   (nerd-icons-completion-mode)
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))

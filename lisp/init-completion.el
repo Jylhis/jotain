@@ -318,6 +318,7 @@ leaves the capf exactly as eglot installs it."
 ;;; command; `C-u C-.' keeps the minibuffer open for successive
 ;;; actions. `C-h B' replaces describe-bindings with a paged view.
 (use-package embark
+  :functions (embark-prefix-help-command)
   :bind
   (("C-."   . embark-act)
    ("C-;"   . embark-dwim)
