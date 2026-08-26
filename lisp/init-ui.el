@@ -77,6 +77,7 @@ REASON is reported so the downgrade is visible in *Messages*."
 (use-package auto-dark
   :demand t
   :bind ("C-c t" . auto-dark-toggle-appearance)
+  :functions (auto-dark-mode)
   :custom
   (auto-dark-allow-osascript t)
   (auto-dark-themes `((,jotain-theme-dark) (,jotain-theme-light)))

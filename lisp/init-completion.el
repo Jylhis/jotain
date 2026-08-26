@@ -226,7 +226,7 @@ leaves the capf exactly as eglot installs it."
 ;;; replaces a dozen built-ins with a single, consistent UI.
 (use-package consult
   :hook (completion-list-mode . consult-preview-at-point-mode)
-  :functions (consult-xref consult-register-window)
+  :functions (consult-xref consult-register-window consult--customize-put)
   :bind
   (;; C-c bindings in `mode-specific-map'
    ("C-c M-x" . consult-mode-command)
