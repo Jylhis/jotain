@@ -188,6 +188,26 @@
           emacs = (pkgsFor system).jotainEmacsPackages.core;
           nativeCompile = true;
         };
+        # Per-file twin (nix/config-compiled-split.nix): same artifact
+        # layout, one derivation per source file. Kept out of `packages`
+        # for the same reason as config-compiled above.
+        config-compiled-split = import ./nix/config-compiled-split.nix {
+          pkgs = pkgsFor system;
+          emacs = (pkgsFor system).jotainEmacsPackages.core;
+          nativeCompile = true;
+        };
+        # Diagnostic byte-diff of monolith vs split (`just elc-parity`);
+        # deliberately not a check — see nix/elc-parity.nix.
+        elc-parity = import ./nix/elc-parity.nix {
+          pkgs = pkgsFor system;
+          emacs = (pkgsFor system).jotainEmacsPackages.core;
+        };
+        # Experimental two-stage from-source Emacs build (temacs stage
+        # cached separately from the Lisp stage); `just build-staged`.
+        # See nix/emacs-staged.nix — not a check, never CI.
+        emacs-staged = import ./nix/emacs-staged.nix {
+          pkgs = pkgsFor system;
+        };
       });
 
       formatter = forAllSystems (system: (treefmtEval system).config.build.wrapper);

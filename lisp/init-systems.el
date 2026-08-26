@@ -9,6 +9,11 @@
 
 ;;; Code:
 
+;; Defined in init-core.el, which init.el loads first; declared here so
+;; this file also byte-compiles warning-clean in a clean session (the
+;; per-file split compile in nix/config-compiled-split.nix).
+(declare-function jotain-var-file "init-core" (name))
+
 ;;;; auth-source-1password
 
 ;;; @doc Pulls credentials from the 1Password CLI (`op`). Once enabled,

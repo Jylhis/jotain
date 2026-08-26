@@ -233,6 +233,22 @@ build-android:
 build-nox-full:
     nix build .#emacs-nox -o result
 
+# EXPERIMENTAL: two-stage from-source Emacs build — the C half (temacs)
+# and the Lisp half as separate derivations, so lisp-side patches never
+# re-pay the C compile. Terminal-only, non-native-comp by design; see
+# nix/emacs-staged.nix. Not cache-parity, never CI.
+[group('build')]
+build-staged:
+    nix build .#emacs-staged -o result-staged
+
+# Diagnostic: byte-diff the monolithic and per-file config compiles.
+# A DIFFERS line is a bug report against lisp/ (usually a missing
+# defvar/declare-function stub) — see nix/elc-parity.nix. Needs the
+# distribution Emacs (cachix reachable, or patience).
+[group('check')]
+elc-parity:
+    nix build .#elc-parity --no-link --print-build-logs
+
 # Auto-detect platform, build, then launch Emacs with this configuration.
 [group('build')]
 run-built *ARGS:
