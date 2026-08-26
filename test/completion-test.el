@@ -193,19 +193,31 @@ This is why `init-snippets.el' wraps its eglot merge."
 (require 'tempel)
 (require 'init-completion)
 (require 'init-snippets)
+;; Loaded after `init-completion' so the `with-eval-after-load' body its
+;; `completion-preview' block registers (the R2 keymap edits) fires on this
+;; require, letting the assertions below observe the real map state.
+(require 'completion-preview)
 
 (ert-deftest completion-test-defcustom-defaults ()
   "The opt-out knobs carry their documented defaults."
   (should (equal jotain-completion-auto-modes '(prog-mode-hook)))
-  (should (equal jotain-completion-auto-delay 0.1))
-  (should (equal jotain-completion-auto-prefix 2))
+  (should (equal jotain-completion-auto-delay 0.2))
+  (should (equal jotain-completion-auto-prefix 3))
   (should (equal jotain-completion-key "C-M-i"))
   (should (eq jotain-completion-free-return t))
   (should (eq jotain-completion-free-tab t))
   (should (eq jotain-completion-fallbacks t))
   (should (eq jotain-completion-snippets t))
   (should (eq jotain-completion-eglot-nonexclusive t))
+  (should (eq jotain-completion-doc-popup t))
+  (should (eq jotain-completion-inline-preview t))
   (should (key-valid-p jotain-completion-key)))
+
+(ert-deftest completion-test-corfu-preview-current-off ()
+  "The popup inserts nothing until asked: `corfu-preview-current' is nil.
+corfu's own default is `insert', which commits the selected candidate on
+further input -- exactly the accidental-accept this config avoids."
+  (should (eq corfu-preview-current nil)))
 
 (ert-deftest completion-test-tab-indents-only ()
   "TAB is on the stock default, so `indent-for-tab-command' cannot complete."
@@ -230,6 +242,28 @@ This is why `init-snippets.el' wraps its eglot merge."
   (should-not (lookup-key corfu-map [tab]))
   (should (eq (lookup-key corfu-map (kbd "M-n")) #'corfu-next))
   (should (eq (lookup-key corfu-map (kbd "M-p")) #'corfu-previous)))
+
+(ert-deftest completion-test-inline-preview-tab-is-freed ()
+  "The inline preview never lets TAB (or RET) accept a candidate.
+`completion-preview-active-mode-map' ships `C-i' -> `completion-preview-insert',
+and `C-i' IS the TAB event, so leaving it bound would let TAB accept the
+preview -- violating the TAB-indents-only rule.  This config removes it and
+puts the whole-candidate accept on `M-RET' instead; RET is never bound by
+the mode, so Enter stays a newline."
+  (should-not (lookup-key completion-preview-active-mode-map (kbd "C-i")))
+  (should-not (lookup-key completion-preview-active-mode-map (kbd "TAB")))
+  (should-not (lookup-key completion-preview-active-mode-map [tab]))
+  (should-not (lookup-key completion-preview-active-mode-map (kbd "RET")))
+  (should-not (lookup-key completion-preview-active-mode-map [return]))
+  (should (eq (lookup-key completion-preview-active-mode-map (kbd "M-RET"))
+              #'completion-preview-insert)))
+
+(ert-deftest completion-test-inline-preview-is-per-mode-like-auto ()
+  "Inline preview rides the same mode list as the auto-popup, so prose stays quiet.
+`completion-preview-mode' is enabled in `jotain-completion-auto-modes'
+buffers (prog-mode) and nowhere prose lives (text-mode)."
+  (should (memq #'completion-preview-mode prog-mode-hook))
+  (should-not (memq #'completion-preview-mode text-mode-hook)))
 
 (ert-deftest completion-test-one-key-opens-and-accepts ()
   "`C-M-i' resolves to `completion-at-point', which `corfu-map' remaps.

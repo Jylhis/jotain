@@ -6,9 +6,12 @@
 
 ## Deferred review findings (docs/reviews/2026-07-emacs-nix-deep-review.md)
 
-- **Finding 12, option (b)** — adopt `completion-preview` alongside corfu in
+- ~~**Finding 12, option (b)** — adopt `completion-preview` alongside corfu in
   `init-completion.el` (with the Emacs 31 `completion-preview-sort-function`
-  pairing). Feature decision; the docs-only fix (option a) shipped instead.
+  pairing).~~ **Done 2026-08-26** — `completion-preview-mode` in
+  `init-completion.el`, gated by `jotain-completion-inline-preview`, with the
+  sort pairing, the R2 `C-i` unbind, and a comment/string inhibit. See
+  `docs/design/completion.md` §6 and `docs/reviews/2026-08-completion-ux-research.md`.
 - **Finding 21** — make `devenv-env--turn-on` subprocess-free: consult only
   `devenv-modeline--cached-trust` and replay via the async
   `devenv-modeline--probe-trust` callback (the long-TTL trust cache shipped;
