@@ -31,8 +31,13 @@ let
   selectedPackage = if cfg.package != null then cfg.package else pkgsWithOverlay.jotainEmacsPackages;
 
   # Runtime binaries the Elisp config invokes unconditionally (shared
-  # list, see nix/runtime-deps.nix).
-  runtimeDeps = import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; };
+  # list, see nix/runtime-deps.nix), plus the opt-in language servers /
+  # tools mirrored from the Home Manager module (module.nix).
+  runtimeDeps =
+    import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; }
+    ++ lib.optional cfg.devenv.enable pkgs.devenv
+    ++ lib.optional cfg.sonarlint.enable pkgs.sonarlint-ls
+    ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server;
 
   # Re-wrap the selected package's binaries so the runtime tools ride
   # the Emacs PATH without entering the global environment: appending
@@ -113,6 +118,40 @@ in
         environment variables.
       '';
     };
+
+    sonarlint = {
+      enable = lib.mkEnableOption "SonarLint language server ({command}`M-x jotain-sonarlint`)";
+    };
+
+    devenv = {
+      enable = lib.mkEnableOption ''
+        the {command}`devenv` CLI on the wrapper PATH, for the native
+        environment loader (`devenv-env-global-mode`, lisp/devenv.el)
+        under launchd/systemd daemons whose login shell does not export
+        it. Opt-in because exec-path-from-shell normally finds the
+        user's own devenv, and `pkgs.devenv` bundles its own nix and
+        can version-skew against per-project devenv installs
+      '';
+    };
+
+    spell = {
+      dictionaries = lib.mkOption {
+        type = with lib.types; listOf package;
+        default = [ pkgs.aspellDicts.en ];
+        defaultText = lib.literalExpression "[ pkgs.aspellDicts.en ]";
+        example = lib.literalExpression "[ pkgs.aspellDicts.en pkgs.aspellDicts.fi ]";
+        description = ''
+          Aspell dictionary packages for jinx spell-checking
+          (lisp/init-writing.el). Installed into the system profile, where
+          libaspell's NIX_PROFILES patch finds them at runtime and
+          enchant's aspell backend hands them to jinx.
+        '';
+      };
+    };
+
+    dockerfileLsp = {
+      enable = lib.mkEnableOption "Dockerfile language server ({command}`docker-langserver`), auto-attached by Eglot in {command}`dockerfile-mode`";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -122,11 +161,11 @@ in
       editorScript
       visualScript
       pkgsWithOverlay.eca
-      # Base dictionary for jinx spell-checking (lisp/init-writing.el).
-      # Must be in the profile — not on PATH — because libaspell finds
-      # $profile/lib/aspell via its NIX_PROFILES patch at runtime.
-      pkgs.aspellDicts.en
-    ];
+    ]
+    # Dictionaries for jinx spell-checking (lisp/init-writing.el). Must be
+    # in the profile — not on PATH — because libaspell finds
+    # $profile/lib/aspell via its NIX_PROFILES patch at runtime.
+    ++ cfg.spell.dictionaries;
     # Colour-emoji fallback for the `emoji' / `symbol' fontsets wired
     # in lisp/init-ui.el.  Skipped on Darwin: macOS provides Apple
     # Color Emoji system-wide, and nix-darwin's `fonts.packages' has a
