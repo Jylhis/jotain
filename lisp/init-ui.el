@@ -260,13 +260,27 @@ availability on the right display."
   :ensure nil
   :hook ((prog-mode conf-mode) . jotain-ui--maybe-line-numbers))
 
-;;; @doc Built-in pixel-precision smooth scrolling. Required for usable
-;;; trackpad / smooth-mouse scrolling. `fast-but-imprecise-scrolling'
+;;; @doc Built-in pixel-precision smooth scrolling, plus the scrolling
+;;; behaviour tuning from James Cherti's "Enhancing Emacs Scrolling"
+;;; (jamescherti.com). `pixel-scroll-precision-mode' is required for
+;;; usable trackpad / smooth-mouse scrolling; `fast-but-imprecise-scrolling'
 ;;; lets large jumps skip exact intermediate fontification — a worthwhile
-;;; redisplay win on this integrated-GPU Intel machine.
+;;; redisplay win on this integrated-GPU Intel machine. `scroll-conservatively'
+;;; 20 scrolls just enough to keep point visible instead of eagerly
+;;; recentering (0, the default, is too eager); `auto-window-vscroll' nil
+;;; avoids random half-screen jumps on long lines; `scroll-error-top-bottom'
+;;; moves point to the buffer edge before signalling; and the `hscroll-*'
+;;; pair steps horizontal scrolling one column at a time.
+;;; (`scroll-preserve-screen-position' is set in init-core.el.)
 (use-package pixel-scroll
   :ensure nil
-  :custom (fast-but-imprecise-scrolling t)
+  :custom
+  (fast-but-imprecise-scrolling t)
+  (scroll-conservatively 20)
+  (scroll-error-top-bottom t)
+  (auto-window-vscroll nil)
+  (hscroll-margin 2)
+  (hscroll-step 1)
   :config (pixel-scroll-precision-mode 1))
 
 ;;; @doc Built-in current-line highlight — on for code and prose, off
