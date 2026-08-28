@@ -369,6 +369,12 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
   ;; `dockerfile-mode' too so a build without the grammar still matches.
   (add-to-list 'eglot-server-programs
                '((dockerfile-ts-mode dockerfile-mode) . ("docker-langserver" "--stdio")))
+  ;; QML (init-lang-qml).  `-E' makes qmlls honor QML_IMPORT_PATH from the
+  ;; project env; it also auto-reads a `.qmlls.ini' from the source root.
+  ;; qmlls rides the distribution wrapper PATH (nix/runtime-deps.nix), so a
+  ;; project/devenv-provided qmlls still wins via the `--suffix' ordering.
+  (add-to-list 'eglot-server-programs
+               '((qml-ts-mode) . ("qmlls" "-E")))
 
   ;; gopls workspace configuration is set buffer-locally in init-lang-go
   ;; (`jotain-go--eglot-workspace-config') rather than globally here, so
@@ -606,6 +612,11 @@ hard-error on every prog-mode buffer)."
   ;; nixfmt formatter so format-on-save stays quiet and keeps working when
   ;; the deprecation becomes a hard error.
   (add-to-list 'apheleia-formatters '(nixfmt . ("nixfmt" "-")))
+  ;; qmlformat edits files in place (`-i') rather than reading stdin, so
+  ;; hand it a temp copy via apheleia's `inplace' and read the result back.
+  ;; Binary comes from the project/host PATH (bundled on the wrapper).
+  (add-to-list 'apheleia-formatters '(qmlformat . ("qmlformat" "-i" inplace)))
+  (add-to-list 'apheleia-mode-alist '(qml-ts-mode . qmlformat))
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
 ;;; @doc Edit grep / ripgrep result buffers in place; saving propagates

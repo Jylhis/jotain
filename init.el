@@ -83,6 +83,7 @@
 (require 'init-lang-devops)    ; Dockerfile, terraform, just, ansible
 (require 'init-lang-data)      ; yaml, csv, sql, jinja2, gnuplot
 (require 'init-lang-systems)   ; C/C++, CMake, Meson, Haskell, Zig
+(require 'init-lang-qml)        ; QML (Quickshell / Qt Quick)
 
 (provide 'init)
 ;;; init.el ends here

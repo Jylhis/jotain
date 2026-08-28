@@ -23,6 +23,9 @@ with pkgs;
   rsync # dired-rsync (C-c C-r)
   nixd # shipped Nix LSP fallback (devenv--nix-lsp-program) when a devenv
   # project's own env provides no nixd/nil for eglot
+  qt6.qtdeclarative # qmlls (LSP) + qmlformat (apheleia) for qml-ts-mode
+  # (init-lang-qml). Large Qt closure, accepted so QML support is
+  # launch-context-independent; a project/devenv qmlls still wins.
 ]
 # GNU userland for the wrapper only. On darwin the g-prefixed variant is
 # load-bearing twice over: init-navigation.el probes `gls' by that name
