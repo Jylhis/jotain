@@ -75,6 +75,22 @@ efinal: eprev: {
     };
   };
 
+  # Tree-sitter QML major mode (lisp/init-lang-qml.el), for editing
+  # Quickshell / Qt Quick `.qml' files.  Not on MELPA.  Uses the `qmljs'
+  # grammar, which the distribution already ships via
+  # treesit-grammars.with-all-grammars.  Depends only on Emacs built-ins
+  # (treesit, c-ts-common, js), so no packageRequires.
+  qml-ts-mode = efinal.trivialBuild {
+    pname = "qml-ts-mode";
+    version = "0.1";
+    src = pkgs.fetchFromGitHub {
+      owner = "xhcoding";
+      repo = "qml-ts-mode";
+      rev = "b80c6663521b4d0083e416e6712ebc02d37b7aec";
+      sha256 = "079fj4vm8pyjfm62yba8r089rlhy725qm27b3fj4vx25s44vywjr";
+    };
+  };
+
   # Magit-style porcelain for Jujutsu (jj), wired in lisp/init-vc.el.  Not on
   # MELPA.  `evil' is listed even though Jotain doesn't use it: trivialBuild
   # byte-compiles every .el in the source, including majutsu-evil.el whose
