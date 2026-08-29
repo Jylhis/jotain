@@ -37,7 +37,10 @@ let
     import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; }
     ++ lib.optional cfg.devenv.enable pkgs.devenv
     ++ lib.optional cfg.sonarlint.enable pkgs.sonarlint-ls
-    ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server;
+    ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server
+    ++ lib.optional cfg.onePassword.enable pkgs._1password-cli
+    ++ lib.optional cfg.sops.enable pkgs.sops
+    ++ lib.optional cfg.claudeCode.enable pkgs.claude-code;
 
   # Re-wrap the selected package's binaries so the runtime tools ride
   # the Emacs PATH without entering the global environment: appending
@@ -151,6 +154,32 @@ in
 
     dockerfileLsp = {
       enable = lib.mkEnableOption "Dockerfile language server ({command}`docker-langserver`), auto-attached by Eglot in {command}`dockerfile-mode`";
+    };
+
+    onePassword = {
+      enable = lib.mkEnableOption ''
+        the 1Password CLI ({command}`op`) on the wrapper PATH, the backend
+        for {command}`auth-source-1password` (lisp/init-systems.el) that
+        resolves credentials for gptel, {command}`forge`, smtpmail, etc.
+        from the vault. Pulls the unfree `_1password-cli` package, so it
+        needs `allowUnfree`
+      '';
+    };
+
+    sops = {
+      enable = lib.mkEnableOption ''
+        the {command}`sops` CLI on the wrapper PATH, required by
+        {command}`sops.el` (lisp/init-systems.el) for transparent
+        encrypt/decrypt of SOPS-managed files
+      '';
+    };
+
+    claudeCode = {
+      enable = lib.mkEnableOption ''
+        the Claude Code CLI ({command}`claude`) on the wrapper PATH, the
+        external agent {command}`claude-code-ide` (lisp/init-ai.el) drives.
+        Pulls the unfree `claude-code` package, so it needs `allowUnfree`
+      '';
     };
   };
 

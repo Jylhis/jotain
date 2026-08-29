@@ -9,7 +9,7 @@
 #     defaultEditor = true;
 #     client.enable = true;
 #     eca.openrouter.enable = true;   # eca OpenRouter provider (config.json)
-#     eca.environmentFile = "/run/secrets/eca-env";  # OPENROUTER_API_KEY=…
+#     environmentFile = "/run/secrets/jotain-env";  # OPENROUTER_API_KEY=… etc.
 #   };
 #
 # Modelled after the home-manager services.emacs module, but uses the
@@ -103,7 +103,10 @@ let
     import ./nix/runtime-deps.nix { inherit pkgs pkgsWithOverlay; }
     ++ lib.optional cfg.devenv.enable pkgs.devenv
     ++ lib.optional cfg.sonarlint.enable pkgs.sonarlint-ls
-    ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server;
+    ++ lib.optional cfg.dockerfileLsp.enable pkgs.dockerfile-language-server
+    ++ lib.optional cfg.onePassword.enable pkgs._1password-cli
+    ++ lib.optional cfg.sops.enable pkgs.sops
+    ++ lib.optional cfg.claudeCode.enable pkgs.claude-code;
 
   # Colour-emoji fallback for the `emoji' / `symbol' fontsets wired in
   # lisp/init-ui.el.  macOS ships Apple Color Emoji system-wide, so the
@@ -207,13 +210,20 @@ let
   };
 in
 {
-  # Back-compat: services.jotain.openrouter.enable was the old spelling of
-  # the eca OpenRouter toggle. Redirect it (with a deprecation warning) to
-  # the eca submodule.
+  # Back-compat aliases.
   imports = [
+    # services.jotain.openrouter.enable was the old spelling of the eca
+    # OpenRouter toggle. Redirect it (with a deprecation warning).
     (lib.mkRenamedOptionModule
       [ "services" "jotain" "openrouter" "enable" ]
       [ "services" "jotain" "eca" "openrouter" "enable" ]
+    )
+    # The secrets env file is daemon-wide (it reaches every env-var-reading
+    # integration, not just eca), so it now lives at the top level. Keep
+    # eca.environmentFile working as an alias.
+    (lib.mkAliasOptionModule
+      [ "services" "jotain" "eca" "environmentFile" ]
+      [ "services" "jotain" "environmentFile" ]
     )
   ];
 
@@ -307,6 +317,56 @@ in
       '';
     };
 
+    environmentFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      example = "/run/secrets/jotain-env";
+      description = ''
+        Path to a {manpage}`systemd.exec(5)`-style environment file
+        (`VAR=value` lines) loaded into the Jotain daemon's environment.
+        Every subprocess Emacs spawns inherits it, so this is the single
+        place to supply credentials for all external-system integrations
+        that read the environment — among them gptel's
+        {env}`OPENROUTER_API_KEY` / {env}`ANTHROPIC_API_KEY` /
+        {env}`GEMINI_API_KEY` (lisp/init-ai.el), the {command}`eca` server's
+        provider keys, and any token a tool reads from the environment.
+        Point it at a runtime secret path (sops-nix, agenix, …); the file is
+        read at daemon start and never copied into the Nix store. On Linux
+        it becomes the service's {var}`EnvironmentFile`; on macOS the launchd
+        agent sources it before exec. Secrets that instead live in a
+        password manager can be resolved through auth-source — see
+        {option}`services.jotain.onePassword.enable`.
+      '';
+    };
+
+    onePassword = {
+      enable = lib.mkEnableOption ''
+        the 1Password CLI ({command}`op`) on the wrapper PATH, the backend
+        for {command}`auth-source-1password` (lisp/init-systems.el) that
+        resolves credentials for gptel, {command}`forge`, smtpmail, etc.
+        from the vault when they are not supplied through
+        {option}`services.jotain.environmentFile`. Pulls the unfree
+        `_1password-cli` package, so it needs `allowUnfree`
+      '';
+    };
+
+    sops = {
+      enable = lib.mkEnableOption ''
+        the {command}`sops` CLI on the wrapper PATH, required by
+        {command}`sops.el` (lisp/init-systems.el) for transparent
+        encrypt/decrypt of SOPS-managed files
+      '';
+    };
+
+    claudeCode = {
+      enable = lib.mkEnableOption ''
+        the Claude Code CLI ({command}`claude`) on the wrapper PATH, the
+        external agent {command}`claude-code-ide` (lisp/init-ai.el, `C-c q`)
+        drives. Pulls the unfree `claude-code` package, so it needs
+        `allowUnfree`
+      '';
+    };
+
     sonarlint = {
       enable = lib.mkEnableOption "SonarLint language server ({command}`M-x jotain-sonarlint`)";
     };
@@ -359,7 +419,7 @@ in
         lisp/init-ai.el); the API key is read at runtime from
         {env}`OPENROUTER_API_KEY` via eca's `''${env:…}` interpolation, so
         no secret is written to the Nix store. Supply the key through
-        {option}`services.jotain.eca.environmentFile`. gptel defaults to
+        {option}`services.jotain.environmentFile`. gptel defaults to
         OpenRouter regardless of this option
       '';
 
@@ -382,24 +442,7 @@ in
           (`providers`, `models`, `rules`, `mcpServers`, `behavior`, …). Use
           eca's `''${env:VAR}` syntax for secrets so nothing sensitive lands
           in the Nix store; provide the referenced variables through
-          {option}`services.jotain.eca.environmentFile`.
-        '';
-      };
-
-      environmentFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        default = null;
-        example = "/run/secrets/eca-env";
-        description = ''
-          Path to a {manpage}`systemd.exec(5)`-style environment file
-          (`VAR=value` lines) loaded into the Jotain daemon's environment,
-          where the {command}`eca` server (a child of Emacs) reads the API
-          keys its config references — e.g.
-          {env}`OPENROUTER_API_KEY`. Point this at a runtime secret path
-          (sops-nix, agenix, …); the file is read at daemon start and never
-          copied into the Nix store. On Linux it becomes the service's
-          {var}`EnvironmentFile`; on macOS the launchd agent sources it
-          before exec.
+          {option}`services.jotain.environmentFile`.
         '';
       };
     };
@@ -533,10 +576,11 @@ in
           ExecStartPost = "${pkgs.coreutils}/bin/chmod --changes -w ${socketDir}";
           ExecStopPost = "${pkgs.coreutils}/bin/chmod --changes +w ${socketDir}";
         }
-        # API keys for the eca server (a child of the daemon) — read at
-        # start from a runtime secret path, never copied into the store.
-        // lib.optionalAttrs (cfg.eca.environmentFile != null) {
-          EnvironmentFile = cfg.eca.environmentFile;
+        # Secrets for every env-var-reading integration (gptel keys, the
+        # eca server, tokens) — read at start from a runtime secret path,
+        # never copied into the store.
+        // lib.optionalAttrs (cfg.environmentFile != null) {
+          EnvironmentFile = cfg.environmentFile;
         };
       }
       // lib.optionalAttrs startWithSession {
@@ -573,15 +617,15 @@ in
       enable = true;
       config = {
         # launchd has no EnvironmentFile; when a secret env file is set,
-        # source it in a shell before exec so the eca server (a child of
-        # Emacs) sees OPENROUTER_API_KEY etc. The file is read at launch
-        # from a runtime path and never copied into the store.
+        # source it in a shell before exec so Emacs and its children (the
+        # eca server, gptel's curl, …) see the API keys. The file is read at
+        # launch from a runtime path and never copied into the store.
         ProgramArguments =
-          if cfg.eca.environmentFile != null then
+          if cfg.environmentFile != null then
             [
               pkgs.runtimeShell
               "-c"
-              "set -a; . ${lib.escapeShellArg (toString cfg.eca.environmentFile)}; set +a; exec ${emacsWrapper}/bin/emacs --fg-daemon ${lib.escapeShellArgs cfg.extraOptions}"
+              "set -a; . ${lib.escapeShellArg (toString cfg.environmentFile)}; set +a; exec ${emacsWrapper}/bin/emacs --fg-daemon ${lib.escapeShellArgs cfg.extraOptions}"
             ]
           else
             [
