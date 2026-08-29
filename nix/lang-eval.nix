@@ -28,7 +28,6 @@
 # via the elisp-test check).
 {
   pkgs,
-  src ? ../.,
 }:
 let
   inherit (pkgs) lib;
@@ -58,7 +57,7 @@ let
   # The interpreted config tree for `--init-directory` (copied writable at
   # build time, the same shape `just run-built` launches).
   configSrc = fs.toSource {
-    root = root;
+    inherit root;
     fileset = fs.unions [
       (root + "/early-init.el")
       (root + "/init.el")

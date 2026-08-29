@@ -187,7 +187,6 @@
         let
           langEval = import ./nix/lang-eval.nix {
             pkgs = pkgsFor system;
-            src = self;
           };
         in
         {
