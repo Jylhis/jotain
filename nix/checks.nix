@@ -201,6 +201,16 @@ in
         touch $out
       '';
 
+  # Checked-in language-support reference must match the registry
+  #
+  # docs/reference/language-support.mdx is generated from the declarative
+  # per-language feature standard in etc/lang-eval/jotain-lang-registry.el.
+  # This gate makes drift fatal, mirroring packages-doc-in-sync. Cheap: it
+  # only re-renders the registry (no config, no toolchains). The live matrix
+  # and end-to-end LSP probe (lang-eval-matrix / lang-eval-live) are heavier
+  # legacyPackages, buildable on demand and never part of nix flake check.
+  lang-eval-doc-in-sync = (import ./lang-eval.nix { inherit pkgs src; }).lang-eval-doc-in-sync;
+
   # eca and gptel must offer the same OpenRouter model catalogue
   #
   # config/eca/config.json (providers.openrouter.models) and the gptel

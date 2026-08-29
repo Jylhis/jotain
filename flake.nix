@@ -182,13 +182,33 @@
       # so this stays off the main/next deploy gate while `nix build
       # .#config-compiled' still resolves it (packages → legacyPackages
       # fallback).
-      legacyPackages = forAllSystems (system: {
-        config-compiled = import ./nix/config-compiled.nix {
-          pkgs = pkgsFor system;
-          emacs = (pkgsFor system).jotainEmacsPackages.core;
-          nativeCompile = true;
-        };
-      });
+      legacyPackages = forAllSystems (
+        system:
+        let
+          langEval = import ./nix/lang-eval.nix {
+            pkgs = pkgsFor system;
+            src = self;
+          };
+        in
+        {
+          config-compiled = import ./nix/config-compiled.nix {
+            pkgs = pkgsFor system;
+            emacs = (pkgsFor system).jotainEmacsPackages.core;
+            nativeCompile = true;
+          };
+
+          # Per-language IDE-feature evaluation (nix/lang-eval.nix). Kept in
+          # legacyPackages, NOT packages: lang-eval-matrix loads the full config
+          # in batch and lang-eval-live bundles heavy language servers, so
+          # `nix flake check` (which builds every packages output) must not run
+          # them. The cheap, deterministic gate is checks.lang-eval-doc-in-sync;
+          # these are buildable on demand:
+          #   nix build .#lang-eval-doc      (registry -> language-support.mdx)
+          #   nix build .#lang-eval-matrix   (live config-introspection matrix)
+          #   nix build .#lang-eval-live     (end-to-end LSP probe subset)
+          inherit (langEval) lang-eval-doc lang-eval-matrix lang-eval-live;
+        }
+      );
 
       formatter = forAllSystems (system: (treefmtEval system).config.build.wrapper);
 
