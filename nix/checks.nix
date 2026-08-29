@@ -209,7 +209,7 @@ in
   # only re-renders the registry (no config, no toolchains). The live matrix
   # and end-to-end LSP probe (lang-eval-matrix / lang-eval-live) are heavier
   # legacyPackages, buildable on demand and never part of nix flake check.
-  lang-eval-doc-in-sync = (import ./lang-eval.nix { inherit pkgs src; }).lang-eval-doc-in-sync;
+  inherit ((import ./lang-eval.nix { inherit pkgs; })) lang-eval-doc-in-sync;
 
   # eca and gptel must offer the same OpenRouter model catalogue
   #
