@@ -9,12 +9,21 @@
 
 ;;; Code:
 
+;; Forward declaration: `auth-sources' is a defcustom in the built-in
+;; auth-source library, referenced below inside `with-eval-after-load'.
+(defvar auth-sources)
+
 ;;;; auth-source-1password
 
 ;;; @doc Pulls credentials from the 1Password CLI (`op`). Once enabled,
 ;;; every package that uses auth-source — magit/forge, gptel,
 ;;; smtpmail, circe — resolves credentials by host against the
 ;;; 1Password vault transparently.
+;;
+;; Additional authinfo files (e.g. a sops-nix/agenix secret decrypted to a
+;; runtime path) are handed in through the JOTAIN_AUTH_SOURCES env var, set
+;; by the module option `services.jotain.authSources', and searched ahead of
+;; the defaults.
 (use-package auth-source-1password
   :defer t
   :functions (auth-source-1password-enable)
@@ -24,8 +33,12 @@
   (auth-source-1password-cache-ttl 3600)
   :init
   ;; Credentials are only looked up when a consumer (gptel, forge, …)
-  ;; loads auth-source, so register the backend lazily at that point.
+  ;; loads auth-source, so register everything lazily at that point.
   (with-eval-after-load 'auth-source
+    ;; Prepend any module-declared authinfo files (colon-separated paths in
+    ;; JOTAIN_AUTH_SOURCES) so they take priority over ~/.authinfo(.gpg).
+    (when-let* ((paths (getenv "JOTAIN_AUTH_SOURCES")))
+      (setopt auth-sources (append (split-string paths ":" t) auth-sources)))
     (require 'auth-source-1password)
     (auth-source-1password-enable))
   :config
