@@ -29,9 +29,13 @@
 ;; Auth: API keys come from the environment first (OPENROUTER_API_KEY /
 ;; ANTHROPIC_API_KEY / GEMINI_API_KEY) and fall back to auth-source —
 ;; auth-source-1password (configured in init-systems.el) makes that
-;; transparent.  The eca server reads the same provider keys from the
-;; environment; its OpenRouter provider is defined in config/eca/config.json
-;; (opt-in via services.jotain.openrouter.enable in the Home Manager module).
+;; transparent, as does any authinfo file wired through the module's
+;; `services.jotain.authSources'.  The eca server reads the same provider
+;; keys only from its process environment, so `jotain-ai-export-api-keys'
+;; (run before a session starts) resolves any missing key from auth-source
+;; and `setenv's it, letting eca work from an authinfo file or 1Password too.
+;; Its OpenRouter provider is defined in config/eca/config.json (opt-in via
+;; services.jotain.eca.openrouter.enable in the Home Manager module).
 
 ;;; Code:
 
@@ -42,6 +46,7 @@
 
 (declare-function x-export-frames "xfns.c" (&optional frames type))
 (declare-function jotain-var-file "init-core" (name))
+(declare-function auth-source-pick-first-password "auth-source" (&rest spec))
 
 (defun jotain-screenshot (&optional file format)
   "Capture the selected frame to FILE; return the absolute path.
@@ -97,6 +102,30 @@ Interactively, echo the path and push it onto the kill ring."
      :function (lambda (&optional format)
                  (jotain-screenshot nil (and format (intern format)))))))
 
+(defvar jotain-ai-provider-auth-keys
+  '(("OPENROUTER_API_KEY" "openrouter.ai" "apikey")
+    ("ANTHROPIC_API_KEY" "api.anthropic.com" "apikey")
+    ("GEMINI_API_KEY" "generativelanguage.googleapis.com" "apikey"))
+  "Provider API-key env vars and their auth-source (VAR HOST USER) lookup.
+`jotain-ai-export-api-keys' consults this to feed keys to subprocesses —
+notably the eca server — that read credentials only from the environment.")
+
+(defun jotain-ai-export-api-keys ()
+  "Export any missing provider API key from auth-source into the environment.
+For each entry of `jotain-ai-provider-auth-keys' whose env var is unset,
+resolve the secret via auth-source (by host/user) and `setenv' it, so a
+subprocess that reads credentials only from its environment — the eca
+server especially — inherits it.  Variables already set (e.g. from the
+module's `services.jotain.environmentFile') are left untouched, and a
+missing secret is skipped silently."
+  (require 'auth-source)
+  (dolist (entry jotain-ai-provider-auth-keys)
+    (pcase-let ((`(,var ,host ,user) entry))
+      (unless (getenv var)
+        (when-let* ((secret (auth-source-pick-first-password
+                             :host host :user user)))
+          (setenv var secret))))))
+
 ;;; @doc Editor Code Assistant — AI pair-programming client (chat, inline
 ;;; completion, rewrite, MCP) talking to an external `eca' server over
 ;;; JSONRPC. The server binary is provided by Nix and found on $PATH, so
@@ -104,7 +133,12 @@ Interactively, echo the path and push it onto the kill ring."
 ;;; gptel. C-c e starts a session and opens the chat.
 (use-package eca
   :defer t
-  :bind ("C-c e" . eca))
+  :bind ("C-c e" . eca)
+  :init
+  ;; The server reads provider keys only from its environment, so fill any
+  ;; missing key from auth-source (authinfo file or 1Password) before a
+  ;; session starts.
+  (advice-add 'eca :before #'jotain-ai-export-api-keys))
 
 ;;; @doc Conversational LLM front-end with multiple backends. OpenRouter
 ;;; — an OpenAI-compatible aggregator fronting Claude, GPT, Gemini,

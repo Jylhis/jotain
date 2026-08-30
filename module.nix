@@ -335,7 +335,27 @@ in
         it becomes the service's {var}`EnvironmentFile`; on macOS the launchd
         agent sources it before exec. Secrets that instead live in a
         password manager can be resolved through auth-source — see
-        {option}`services.jotain.onePassword.enable`.
+        {option}`services.jotain.onePassword.enable` and
+        {option}`services.jotain.authSources`.
+      '';
+    };
+
+    authSources = lib.mkOption {
+      type = with lib.types; listOf str;
+      default = [ ];
+      example = [ "/run/secrets/authinfo" ];
+      description = ''
+        Extra authinfo/netrc file paths to hand to Emacs's
+        {var}`auth-sources`, searched ahead of {file}`~/.authinfo(.gpg)` and
+        the 1Password backend. Point these at runtime secret files a secret
+        manager produces (sops-nix, agenix, …) — the entries are file
+        *paths*, not the secrets themselves, and are passed to the daemon
+        through the {env}`JOTAIN_AUTH_SOURCES` environment variable that
+        lisp/init-systems.el reads. Every package that consults auth-source
+        (gptel, {command}`forge`, smtpmail, circe) then resolves credentials
+        from them; the {command}`eca` server, which reads only its
+        environment, additionally has its provider keys exported from
+        auth-source before each session (see {file}`lisp/init-ai.el`).
       '';
     };
 
@@ -579,6 +599,11 @@ in
         # never copied into the store.
         // lib.optionalAttrs (cfg.environmentFile != null) {
           EnvironmentFile = cfg.environmentFile;
+        }
+        # Non-secret authinfo file paths for Emacs auth-source
+        # (services.jotain.authSources); read by lisp/init-systems.el.
+        // lib.optionalAttrs (cfg.authSources != [ ]) {
+          Environment = [ "JOTAIN_AUTH_SOURCES=${lib.concatStringsSep ":" cfg.authSources}" ];
         };
       }
       // lib.optionalAttrs startWithSession {
@@ -636,6 +661,11 @@ in
           Crashed = true;
           SuccessfulExit = false;
         };
+      }
+      # Non-secret authinfo file paths for Emacs auth-source
+      # (services.jotain.authSources); read by lisp/init-systems.el.
+      // lib.optionalAttrs (cfg.authSources != [ ]) {
+        EnvironmentVariables.JOTAIN_AUTH_SOURCES = lib.concatStringsSep ":" cfg.authSources;
       };
     };
   };
