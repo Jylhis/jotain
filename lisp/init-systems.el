@@ -19,11 +19,6 @@
 ;;; every package that uses auth-source — magit/forge, gptel,
 ;;; smtpmail, circe — resolves credentials by host against the
 ;;; 1Password vault transparently.
-;;
-;; Additional authinfo files (e.g. a sops-nix/agenix secret decrypted to a
-;; runtime path) are handed in through the JOTAIN_AUTH_SOURCES env var, set
-;; by the module option `services.jotain.authSources', and searched ahead of
-;; the defaults.
 (use-package auth-source-1password
   :defer t
   :functions (auth-source-1password-enable)
