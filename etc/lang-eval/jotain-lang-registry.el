@@ -97,13 +97,18 @@
      :servers ("vscode-css-language-server") :formatter "prettier")
 
     (:id c          :name "C"              :file "init-lang-systems.el"
-     :sample "eval.c"              :mode c-mode :grammar nil
-     :servers ("clangd") :formatter "clang-format" :dape "codelldb"
+     :sample "eval.c"              :mode c-ts-mode :classic c-mode :grammar c
+     :servers ("clangd") :override t :formatter "clang-format" :dape "codelldb"
      :snippets t :inlay t)
 
     (:id c++        :name "C++"            :file "init-lang-systems.el"
-     :sample "eval.cpp"            :mode c++-mode :grammar nil
-     :servers ("clangd") :formatter "clang-format" :dape "codelldb"
+     :sample "eval.cpp"            :mode c++-ts-mode :classic c++-mode :grammar cpp
+     :servers ("clangd") :override t :formatter "clang-format" :dape "codelldb"
+     :snippets t :inlay t)
+
+    (:id cuda       :name "CUDA"           :file "init-lang-systems.el"
+     :sample "eval.cu"             :mode c++-ts-mode :classic c++-mode :grammar cpp
+     :servers ("clangd") :override t :formatter "clang-format" :dape "codelldb"
      :snippets t :inlay t)
 
     (:id bash       :name "Bash / shell"   :file "init-prog.el"

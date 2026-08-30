@@ -73,7 +73,13 @@
     (rust        rust-ts-mode        rust-mode)
     (css         css-ts-mode         css-mode scss-mode)
     (javascript  js-ts-mode          js-mode javascript-mode js2-mode)
-    (typescript  typescript-ts-mode  typescript-mode))
+    (typescript  typescript-ts-mode  typescript-mode)
+    ;; C/C++ (init-lang-systems).  `.cu'/`.cuh' (CUDA) map to `c++-mode'
+    ;; there, so the `cpp' entry sends them to `c++-ts-mode' too — CUDA has
+    ;; no tree-sitter major mode of its own (Emacs bug#72388), and the cpp
+    ;; grammar covers ordinary CUDA code (only `<<<…>>>' launches error).
+    (c           c-ts-mode           c-mode)
+    (cpp         c++-ts-mode         c++-mode))
   "Tree-sitter routing table: entries (LANG TS-MODE CLASSIC-MODE...).
 For each entry whose grammar LANG is loadable, every CLASSIC-MODE is
 remapped to TS-MODE through `major-mode-remap-alist'.  Go is handled in
@@ -124,12 +130,12 @@ Modes in `jotain-prog-warn-non-ts-exclude' are never reported."
   :type 'boolean
   :group 'jotain)
 
-(defcustom jotain-prog-warn-non-ts-exclude '(c-mode c++-mode)
+(defcustom jotain-prog-warn-non-ts-exclude nil
   "Classic major modes the non-ts diagnostic deliberately skips.
-C/C++ stay on cc-mode on purpose (see `init-lang-systems.el': the
-invested `c-default-style'/`c-basic-offset' setup has no migrated
-tree-sitter equivalent), so the detector would otherwise nag on
-every C buffer forever."
+Empty by default: C/C++ now route to `c-ts-mode'/`c++-ts-mode' (see
+`jotain-prog-ts-remaps' and `init-lang-systems.el'), so no language is a
+deliberate classic-mode choice any more.  Add a mode here if you ever want
+to silence the detector for a specific one."
   :type '(repeat symbol)
   :group 'jotain)
 
@@ -376,6 +382,14 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
   (add-to-list 'eglot-server-programs
                '((qml-ts-mode) . ("qmlls" "-E")))
 
+  ;; C/C++/CUDA (init-lang-systems).  clangd serves all three — it treats a
+  ;; `.cu' buffer as CUDA by extension.  Keyed on the tree-sitter modes with
+  ;; the classic modes kept so a grammarless build still resolves a server.
+  ;; (`.cuh' and a full index need a project `compile_commands.json' with
+  ;; clang commands and, on Nix, `--cuda-path'; that is project config.)
+  (add-to-list 'eglot-server-programs
+               '((c-ts-mode c++-ts-mode c-mode c++-mode) . ("clangd")))
+
   ;; gopls workspace configuration is set buffer-locally in init-lang-go
   ;; (`jotain-go--eglot-workspace-config') rather than globally here, so
   ;; it never leaks into other languages' eglot sessions.
@@ -617,6 +631,12 @@ hard-error on every prog-mode buffer)."
   ;; Binary comes from the project/host PATH (bundled on the wrapper).
   (add-to-list 'apheleia-formatters '(qmlformat . ("qmlformat" "-i" inplace)))
   (add-to-list 'apheleia-mode-alist '(qml-ts-mode . qmlformat))
+  ;; C/C++/CUDA format-on-save via clang-format for the tree-sitter modes
+  ;; (apheleia's built-ins key clang-format on the classic cc-mode modes).
+  ;; Covers `.cu' too, since CUDA routes to c++-ts-mode.  Binary from the
+  ;; project/host PATH, like the other formatters.
+  (add-to-list 'apheleia-mode-alist '(c-ts-mode . clang-format))
+  (add-to-list 'apheleia-mode-alist '(c++-ts-mode . clang-format))
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
 ;;; @doc Edit grep / ripgrep result buffers in place; saving propagates
