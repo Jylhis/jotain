@@ -2,10 +2,16 @@
 
 ;;; Commentary:
 
-;; Compiled/systems-programming modes. cc-mode is built in (ensure nil);
-;; cmake-mode, meson-mode, haskell-mode, tuareg, dune, and zig-ts-mode
-;; come from MELPA. Go graduated to its own file (`init-lang-go') once it
-;; grew workspace config, helpers, and debugging.
+;; Compiled/systems-programming modes. C/C++ use the built-in tree-sitter
+;; modes (`c-ts-mode'/`c++-ts-mode'), routed via `jotain-prog-ts-remaps'
+;; in `init-prog.el'; cc-mode is still built in (ensure nil) and owns the
+;; `auto-mode-alist' decisions (which extensions are C vs C++) plus the
+;; style used by the remaining cc-mode buffers. CUDA (`.cu'/`.cuh') has no
+;; tree-sitter mode of its own, so it routes to `c++-ts-mode' (cpp grammar)
+;; and picks up the whole C++ tool stack. cmake-mode, meson-mode,
+;; haskell-mode, tuareg, dune, and zig-ts-mode come from MELPA. Go
+;; graduated to its own file (`init-lang-go') once it grew workspace
+;; config, helpers, and debugging.
 ;;
 ;; eglot wiring for zig (and rust/go, in their own files) is in
 ;; `init-prog.el'. If you add hooks for more servers, keep them there so
@@ -16,13 +22,14 @@
 
 ;;; Code:
 
-;;; @doc Built-in C/C++ mode with a Stroustrup style bias. The header
-;;; extensions below default to C++ — Jotain assumes that's the
-;;; more common case in modern repos. C/C++ deliberately stay on
-;;; cc-mode rather than c-ts-mode/c++-ts-mode — the style setup below
-;;; is not migrated — and `jotain-prog-warn-non-ts-exclude'
-;;; (init-prog.el) records that choice so the tree-sitter gap
-;;; detector stays quiet about it.
+;;; @doc Built-in cc-mode, kept for its `auto-mode-alist' decisions and as
+;;; the grammarless fallback. The `:mode' list is the source of truth for
+;;; which extensions are C vs C++ (headers and `.cu'/`.cuh' default to
+;;; C++); `jotain-prog-ts-remaps' (init-prog.el) then remaps the chosen
+;;; `c-mode'/`c++-mode' to `c-ts-mode'/`c++-ts-mode' whenever the grammar
+;;; is loadable, so buffers actually open in tree-sitter. The
+;;; `c-basic-offset'/`c-default-style' below still apply to the remaining
+;;; cc-mode buffers (java/awk/other) and when a build lacks the C grammar.
 (use-package cc-mode
   :ensure nil
   :custom
@@ -40,7 +47,27 @@
          ("\\.cpp\\'" . c++-mode)
          ("\\.cxx\\'" . c++-mode)
          ("\\.tpp\\'" . c++-mode)
-         ("\\.txx\\'" . c++-mode)))
+         ("\\.txx\\'" . c++-mode)
+         ;; CUDA — no tree-sitter major mode exists (Emacs bug#72388), so
+         ;; treat `.cu'/`.cuh' as C++; the `cpp' remap sends them to
+         ;; `c++-ts-mode' and the C++ tool stack (clangd, clang-format,
+         ;; codelldb) applies. clangd reads `.cu' as CUDA by extension.
+         ("\\.cu\\'"  . c++-mode)
+         ("\\.cuh\\'" . c++-mode)))
+
+;;; @doc Built-in tree-sitter C/C++ modes. C/C++ buffers land here via the
+;;; `c'/`cpp' entries in `jotain-prog-ts-remaps' (init-prog.el); this block
+;;; carries the shared indentation. `c-ts-mode-indent-offset' is 4 (matching
+;;; the old cc-mode `c-basic-offset'); the style is `k&r' — the closest
+;;; built-in tree-sitter style, since the previous Stroustrup style has no
+;;; tree-sitter equivalent. eglot wires clangd and apheleia wires
+;;; clang-format for both modes in init-prog.el.
+(use-package c-ts-mode
+  :ensure nil
+  :defer t
+  :custom
+  (c-ts-mode-indent-offset 4)
+  (c-ts-mode-indent-style 'k&r))
 
 ;;; @doc CMake mode for CMakeLists.txt and `.cmake` files. Mode regex
 ;;; covers both file conventions.
