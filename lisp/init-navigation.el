@@ -13,7 +13,10 @@
 ;;; macOS lacks `--group-directories-first` and `--dired`). `M-s R`
 ;;; previews a regex replacement across the contents of all marked
 ;;; files as a unified diff (Emacs 30's
-;;; `dired-do-replace-regexp-as-diff').
+;;; `dired-do-replace-regexp-as-diff'). `!'/`&' hand the file under
+;;; point to the OS default application (`open'/`xdg-open'/`start')
+;;; via `dired-guess-shell-alist-user'; files can also be dragged out
+;;; to desktop apps with the mouse.
 (use-package dired
   :ensure nil
   :custom
@@ -25,19 +28,29 @@
                                 "ls"))
   (dired-use-ls-dired (or (not (eq system-type 'darwin))
                           (and (executable-find "gls") t)))
+  ;; `v' sorts numbers naturally (foo2 before foo10) instead of lexically.
   (dired-listing-switches (if (and (eq system-type 'darwin)
                                    (not (executable-find "gls")))
-                              "-alh"
-                            "-alh --group-directories-first"))
+                              "-alhv"
+                            "-alhv --group-directories-first"))
   (dired-dwim-target t)
   (dired-kill-when-opening-new-dired-buffer t)
   (dired-recursive-copies 'always)
   (dired-recursive-deletes 'top)
+  (dired-deletion-confirmer #'y-or-n-p)
   (dired-auto-revert-buffer #'dired-buffer-stale-p)
+  ;; Auto-refresh a destination buffer after copy/rename, but never a
+  ;; remote one — a TRAMP round-trip per file op would stall the UI.
+  (dired-do-revert-buffer (lambda (dir) (not (file-remote-p dir))))
   (dired-clean-confirm-killing-deleted-buffers nil)
   (dired-create-destination-dirs 'ask)
   (dired-free-space nil)
   (dired-vc-rename-file t)
+  ;; Stop point at the first/last file line instead of drifting onto
+  ;; the header or trailing blank lines.
+  (dired-movement-style 'bounded-files)
+  ;; Drag files out of dired into external desktop applications.
+  (dired-mouse-drag-files t)
   :hook (dired-mode . dired-hide-details-mode)
   :bind (:map dired-mode-map
               ("M-s R" . dired-do-replace-regexp-as-diff))
@@ -45,7 +58,24 @@
   ;; Emacs 31+: also hide the absolute directory path in the header line
   ;; under `dired-hide-details-mode'. Guarded for Emacs 30.
   (when (boundp 'dired-hide-details-hide-absolute-location)
-    (setopt dired-hide-details-hide-absolute-location t)))
+    (setopt dired-hide-details-hide-absolute-location t))
+  ;; `!'/`&' guess the OS default handler for common document, image,
+  ;; and media types, so RET opens them in the desktop application.
+  (when-let* ((opener (cond
+                       ((eq system-type 'darwin) "open")
+                       ((memq system-type '(gnu gnu/linux gnu/kfreebsd
+                                                berkeley-unix))
+                        "xdg-open")
+                       ((memq system-type '(cygwin windows-nt ms-dos))
+                        "start"))))
+    (setopt dired-guess-shell-alist-user
+            `(("\\.\\(?:docx\\|pdf\\|odt\\|odg\\|ods\\|djvu\\|eps\\)\\'" ,opener)
+              ("\\.\\(?:jpe?g\\|webp\\|png\\|gif\\|xpm\\)\\'" ,opener)
+              ("\\.xcf\\'" ,opener)
+              ("\\.tex\\'" ,opener)
+              ("\\.\\(?:mp4\\|mkv\\|m4a\\|avi\\|flv\\|rm\\|rmvb\\|ogv\\)\\(?:\\.part\\)?\\'"
+               ,opener)
+              ("\\.\\(?:mp3\\|flac\\)\\'" ,opener)))))
 
 ;;; @doc Built-in dired extras — `dired-omit-mode` hides dotfiles and
 ;;; cache directories so dired listings show only the things you
@@ -60,9 +90,12 @@
    (concat "\\`[.]?#\\|\\`[.][.]?\\'"
            "\\|^[a-zA-Z0-9]\\.syncthing-enc\\'"
            "\\|^\\.git\\'"
+           "\\|^\\.DS_Store\\'"
            "\\|^\\.stfolder\\'"
            "\\|^\\.stversions\\'"
-           "\\|^__pycache__\\'")))
+           "\\|^__pycache__\\'"
+           "\\|^flycheck_.*"
+           "\\|^flymake_.*")))
 
 ;;; @doc Async file ops for dired — wraps `dired-do-copy`, `dired-do-rename`,
 ;;; `dired-do-symlink`, `dired-do-hardlink` so they fork into a subprocess
