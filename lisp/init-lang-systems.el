@@ -96,9 +96,9 @@ grammar (a superset of C++); otherwise it falls back to the C++ grammar,
 where the `<<<...>>>' launch syntax parses as an error node."
   :group 'c
   :after-hook (c-ts-mode-set-modeline)
-  (when (treesit-ready-p 'cpp)
+  (when (treesit-ready-p 'cpp t)
     (let ((cuda-p (and (boundp 'treesit-language-remap-alist)
-                       (treesit-ready-p 'cuda))))
+                       (treesit-ready-p 'cuda t))))
       ;; Must be set BEFORE the parser is created or any query compiled: it
       ;; resolves every `cpp'/`c' grammar request to `cuda' while keeping the
       ;; parser/query language labelled `cpp' (so c-ts-mode's cpp rules match).
