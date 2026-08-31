@@ -7,8 +7,9 @@
 ;; in `init-prog.el'; cc-mode is still built in (ensure nil) and owns the
 ;; `auto-mode-alist' decisions (which extensions are C vs C++) plus the
 ;; style used by the remaining cc-mode buffers. CUDA (`.cu'/`.cuh') has no
-;; tree-sitter mode of its own, so it routes to `c++-ts-mode' (cpp grammar)
-;; and picks up the whole C++ tool stack. cmake-mode, meson-mode,
+;; upstream tree-sitter mode, so this file defines `cuda-ts-mode' on the
+;; `cuda' grammar (a C++ superset) and, via `derived-mode-add-parents', it
+;; inherits the whole C++ tool stack. cmake-mode, meson-mode,
 ;; haskell-mode, tuareg, dune, and zig-ts-mode come from MELPA. Go
 ;; graduated to its own file (`init-lang-go') once it grew workspace
 ;; config, helpers, and debugging.
@@ -24,8 +25,8 @@
 
 ;;; @doc Built-in cc-mode, kept for its `auto-mode-alist' decisions and as
 ;;; the grammarless fallback. The `:mode' list is the source of truth for
-;;; which extensions are C vs C++ (headers and `.cu'/`.cuh' default to
-;;; C++); `jotain-prog-ts-remaps' (init-prog.el) then remaps the chosen
+;;; which extensions are C vs C++ (headers default to C++);
+;;; `jotain-prog-ts-remaps' (init-prog.el) then remaps the chosen
 ;;; `c-mode'/`c++-mode' to `c-ts-mode'/`c++-ts-mode' whenever the grammar
 ;;; is loadable, so buffers actually open in tree-sitter. The
 ;;; `c-basic-offset'/`c-default-style' below still apply to the remaining
@@ -47,13 +48,7 @@
          ("\\.cpp\\'" . c++-mode)
          ("\\.cxx\\'" . c++-mode)
          ("\\.tpp\\'" . c++-mode)
-         ("\\.txx\\'" . c++-mode)
-         ;; CUDA — no tree-sitter major mode exists (Emacs bug#72388), so
-         ;; treat `.cu'/`.cuh' as C++; the `cpp' remap sends them to
-         ;; `c++-ts-mode' and the C++ tool stack (clangd, clang-format,
-         ;; codelldb) applies. clangd reads `.cu' as CUDA by extension.
-         ("\\.cu\\'"  . c++-mode)
-         ("\\.cuh\\'" . c++-mode)))
+         ("\\.txx\\'" . c++-mode)))
 
 ;;; @doc Built-in tree-sitter C/C++ modes. C/C++ buffers land here via the
 ;;; `c'/`cpp' entries in `jotain-prog-ts-remaps' (init-prog.el); this block
@@ -68,6 +63,83 @@
   :custom
   (c-ts-mode-indent-offset 4)
   (c-ts-mode-indent-style 'k&r))
+
+;;;; CUDA
+
+;; `cuda-ts-mode' is built on `c-ts-mode' internals, so load the library
+;; here (the mode derives from `c-ts-base-mode' and reuses its font-lock /
+;; indent builders).  Forward-declare `treesit-language-remap-alist' so the
+;; byte-compiler stays quiet on the Emacs 30 floor where it does not exist
+;; (same idiom as the `treesit-extra-load-path' declaration in init-prog).
+(require 'c-ts-mode)
+(defvar treesit-language-remap-alist)
+
+;; Tree-sitter CUDA mode, built on the `cuda' grammar (shipped with the
+;; distribution). CUDA has no upstream tree-sitter major mode (Emacs
+;; bug#72388), so this derives from `c-ts-base-mode' and, on Emacs 31,
+;; aliases the `cpp'/`c' grammars to `cuda' via `treesit-language-remap-alist'
+;; — that makes every one of `c-ts-mode's cpp-tagged font-lock and indent
+;; rules parse and highlight real CUDA (kernel launches, `__global__', …)
+;; while staying labelled `cpp'. Kernel launches parse as `call_expression',
+;; so they inherit the C++ rules; the extra rules only colour the CUDA-only
+;; `<<<'/`>>>' and `__device__'/`__shared__'-family tokens. On Emacs 30 or a
+;; build without the `cuda' grammar it degrades to plain C++ behaviour. Via
+;; `derived-mode-add-parents' the mode counts as `c++-ts-mode', so the C++
+;; tool stack (clangd, clang-format, codelldb, inlay hints, tempel snippets,
+;; folding) applies with no extra per-mode wiring. clangd reads a `.cu'
+;; buffer as CUDA by extension.
+(define-derived-mode cuda-ts-mode c-ts-base-mode "CUDA"
+  "Major mode for editing CUDA, powered by tree-sitter.
+
+On Emacs 31 with the `cuda' grammar available this parses with the CUDA
+grammar (a superset of C++); otherwise it falls back to the C++ grammar,
+where the `<<<...>>>' launch syntax parses as an error node."
+  :group 'c
+  :after-hook (c-ts-mode-set-modeline)
+  (when (treesit-ready-p 'cpp)
+    (let ((cuda-p (and (boundp 'treesit-language-remap-alist)
+                       (treesit-ready-p 'cuda))))
+      ;; Must be set BEFORE the parser is created or any query compiled: it
+      ;; resolves every `cpp'/`c' grammar request to `cuda' while keeping the
+      ;; parser/query language labelled `cpp' (so c-ts-mode's cpp rules match).
+      (when cuda-p
+        (setq-local treesit-language-remap-alist '((cpp . cuda) (c . cuda))))
+      (treesit-parser-create 'cpp)
+      (setq-local syntax-propertize-function #'c-ts-mode--syntax-propertize)
+      (setq-local treesit-simple-indent-rules (c-ts-mode--get-indent-style 'cpp))
+      (setq-local treesit-font-lock-settings
+                  (append
+                   (c-ts-mode--font-lock-settings 'cpp)
+                   ;; Compiled here, under the remap, so `:language cpp' resolves
+                   ;; to the cuda grammar and these cuda-only anonymous tokens
+                   ;; exist; skipped on the fallback path where they would not.
+                   (when cuda-p
+                     (treesit-font-lock-rules
+                      :language 'cpp
+                      :feature 'cuda-keyword
+                      :override t
+                      '(["__host__" "__device__" "__global__" "__managed__"
+                         "__forceinline__" "__noinline__" "__launch_bounds__"
+                         "__shared__" "__constant__" "__grid_constant__" "__local__"]
+                        @font-lock-keyword-face)
+                      :language 'cpp
+                      :feature 'cuda-operator
+                      :override t
+                      '(["<<<" ">>>"] @font-lock-operator-face)))))
+      ;; Enable the two extra features at level 4 (the config's font-lock
+      ;; level) by appending them to c-ts-mode's last feature-list level.
+      (when cuda-p
+        (setq-local treesit-font-lock-feature-list
+                    (append (butlast c-ts-mode--feature-list)
+                            (list (append (car (last c-ts-mode--feature-list))
+                                          '(cuda-keyword cuda-operator))))))
+      (treesit-major-mode-setup))))
+
+;; Treat `cuda-ts-mode' as a `c++-ts-mode' for `derived-mode-p', so eglot,
+;; apheleia, dape and tempel entries keyed on `c++-ts-mode' all match it.
+(derived-mode-add-parents 'cuda-ts-mode '(c++-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.cu\\'"  . cuda-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.cuh\\'" . cuda-ts-mode))
 
 ;;; @doc CMake mode for CMakeLists.txt and `.cmake` files. Mode regex
 ;;; covers both file conventions.
