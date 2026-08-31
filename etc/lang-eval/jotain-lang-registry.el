@@ -107,7 +107,7 @@
      :snippets t :inlay t)
 
     (:id cuda       :name "CUDA"           :file "init-lang-systems.el"
-     :sample "eval.cu"             :mode c++-ts-mode :classic c++-mode :grammar cpp
+     :sample "eval.cu"             :mode cuda-ts-mode :classic c++-mode :grammar cuda
      :servers ("clangd") :override t :formatter "clang-format" :dape "codelldb"
      :snippets t :inlay t)
 

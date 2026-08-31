@@ -360,7 +360,7 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
                    python-mode python-ts-mode
                    tuareg-mode
                    zig-ts-mode
-                   c-mode c++-mode c-ts-mode c++-ts-mode
+                   c-mode c++-mode c-ts-mode c++-ts-mode cuda-ts-mode
                    nix-ts-mode
                    haskell-mode))
       (eglot-inlay-hints-mode 1)))
@@ -388,7 +388,7 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
   ;; (`.cuh' and a full index need a project `compile_commands.json' with
   ;; clang commands and, on Nix, `--cuda-path'; that is project config.)
   (add-to-list 'eglot-server-programs
-               '((c-ts-mode c++-ts-mode c-mode c++-mode) . ("clangd")))
+               '((cuda-ts-mode c-ts-mode c++-ts-mode c-mode c++-mode) . ("clangd")))
 
   ;; gopls workspace configuration is set buffer-locally in init-lang-go
   ;; (`jotain-go--eglot-workspace-config') rather than globally here, so

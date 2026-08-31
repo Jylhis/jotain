@@ -71,6 +71,13 @@ c++-mode c++-ts-mode
 (fn p " " p "(" p ") {" n> r> n "}" >)
 (class "class " p " {" n> "public:" n> r> n "};" >)
 
+cuda-ts-mode
+
+(kernel "__global__ void " p "(" p ") {" n> r> n "}" >)
+(device "__device__ " p " " p "(" p ") {" n> r> n "}" >)
+(launch p "<<<" p ", " p ">>>(" p ");" >)
+(shared "__shared__ " p " " p ";" >)
+
 typescript-mode typescript-ts-mode tsx-ts-mode js-mode js-ts-mode
 
 (for "for (const " p " of " p ") {" n> r> n "}" >)
