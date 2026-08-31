@@ -90,59 +90,63 @@ templates) rather than depending on tempel's internal state."
 
 ;;;; Per-language evaluation
 
-(defun jotain-lang-eval--one (entry)
-  "Evaluate one registry ENTRY, returning a result plist."
-  (let ((snippet-modes (jotain-lang-eval--snippet-modes)))
-    (condition-case err
-        (with-temp-buffer
-          (let ((buffer-file-name
-                 (expand-file-name (plist-get entry :sample) temporary-file-directory)))
-            ;; Mode routing (auto-mode-alist + major-mode-remap-alist) and the
-            ;; globals we read (eglot-server-programs, apheleia-mode-alist,
-            ;; dape-configs) do not depend on mode hooks, so suppress them:
-            ;; running every prog-mode hook in batch for 30 throwaway buffers is
-            ;; just noise and a source of spurious per-language errors.
-            (delay-mode-hooks (set-auto-mode))
-            (let* ((expected (plist-get entry :mode))
-                   (classic (jotain-lang-get entry :classic))
-                   (grammar (jotain-lang-get entry :grammar))
-                   (servers (jotain-lang-get entry :servers))
-                   (formatter (jotain-lang-get entry :formatter))
-                   (dape (jotain-lang-get entry :dape))
-                   (mode-ok (or (eq major-mode expected)
-                                (and classic (eq major-mode classic))
-                                (provided-mode-derived-p major-mode expected)))
-                   (guessed (ignore-errors (jotain-prog--eglot-guess-program))))
-              (list :id (plist-get entry :id)
-                    :name (plist-get entry :name)
-                    :expected-mode expected
-                    :actual-mode major-mode
-                    :mode-ok mode-ok
-                    :skip-mode (jotain-lang-get entry :skip-mode)
-                    :grammar grammar
-                    :grammar-ready (and grammar
-                                        (fboundp 'treesit-ready-p)
-                                        (treesit-ready-p grammar t))
-                    :servers servers
-                    :override (jotain-lang-get entry :override)
-                    :server-wired (and guessed t)
-                    :server-guessed guessed
-                    :server-avail (and servers (jotain-lang-eval--any-executable servers))
-                    :formatter formatter
-                    :formatter-mapped (and (jotain-lang-eval--formatter-symbol) t)
-                    :formatter-avail (and formatter (executable-find formatter))
-                    :dape dape
-                    :dape-configured (jotain-lang-eval--dape-configured-p)
-                    :snippets (and (memq expected snippet-modes) t)
-                    :inlay (and (jotain-lang-get entry :inlay) t)
-                    :live (and (jotain-lang-get entry :live) t)))))
-      (error (list :id (plist-get entry :id)
-                   :name (plist-get entry :name)
-                   :error (error-message-string err))))))
+(defun jotain-lang-eval--one (entry snippet-modes)
+  "Evaluate one registry ENTRY, returning a result plist.
+SNIPPET-MODES is the set of modes with a tempel section (computed once by
+the caller, since it re-reads templates/jotain.eld)."
+  (condition-case err
+      (with-temp-buffer
+        (let ((buffer-file-name
+               (expand-file-name (plist-get entry :sample) temporary-file-directory)))
+          ;; Mode routing (auto-mode-alist + major-mode-remap-alist) and the
+          ;; globals we read (eglot-server-programs, apheleia-mode-alist,
+          ;; dape-configs) do not depend on mode hooks, so suppress them:
+          ;; running every prog-mode hook in batch for 30 throwaway buffers is
+          ;; just noise and a source of spurious per-language errors.
+          (delay-mode-hooks (set-auto-mode))
+          (let* ((expected (plist-get entry :mode))
+                 (classic (jotain-lang-get entry :classic))
+                 (grammar (jotain-lang-get entry :grammar))
+                 (servers (jotain-lang-get entry :servers))
+                 (formatter (jotain-lang-get entry :formatter))
+                 (dape (jotain-lang-get entry :dape))
+                 (mode-ok (or (eq major-mode expected)
+                              (and classic (eq major-mode classic))
+                              (provided-mode-derived-p major-mode expected)))
+                 (guessed (ignore-errors (jotain-prog--eglot-guess-program))))
+            (list :id (plist-get entry :id)
+                  :name (plist-get entry :name)
+                  :expected-mode expected
+                  :actual-mode major-mode
+                  :mode-ok mode-ok
+                  :skip-mode (jotain-lang-get entry :skip-mode)
+                  :grammar grammar
+                  :grammar-ready (and grammar
+                                      (fboundp 'treesit-ready-p)
+                                      (treesit-ready-p grammar t))
+                  :servers servers
+                  :override (jotain-lang-get entry :override)
+                  :server-wired (and guessed t)
+                  :server-guessed guessed
+                  :server-avail (and servers (jotain-lang-eval--any-executable servers))
+                  :formatter formatter
+                  :formatter-mapped (and (jotain-lang-eval--formatter-symbol) t)
+                  :formatter-avail (and formatter (executable-find formatter))
+                  :dape dape
+                  :dape-configured (jotain-lang-eval--dape-configured-p)
+                  :snippets (and (memq expected snippet-modes) t)
+                  :inlay (and (jotain-lang-get entry :inlay) t)
+                  :live (and (jotain-lang-get entry :live) t)))))
+    (error (list :id (plist-get entry :id)
+                 :name (plist-get entry :name)
+                 :error (error-message-string err)))))
 
 (defun jotain-lang-eval-run ()
-  "Evaluate every registry entry, returning a list of result plists."
-  (mapcar #'jotain-lang-eval--one jotain-lang-registry))
+  "Evaluate every registry entry, returning a list of result plists.
+Computes the tempel snippet-mode set once and shares it across entries."
+  (let ((snippet-modes (jotain-lang-eval--snippet-modes)))
+    (mapcar (lambda (e) (jotain-lang-eval--one e snippet-modes))
+            jotain-lang-registry)))
 
 ;;;; Rendering
 
