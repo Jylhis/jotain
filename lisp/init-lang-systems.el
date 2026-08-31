@@ -106,7 +106,19 @@ where the `<<<...>>>' launch syntax parses as an error node."
         (setq-local treesit-language-remap-alist '((cpp . cuda) (c . cuda))))
       (treesit-parser-create 'cpp)
       (setq-local syntax-propertize-function #'c-ts-mode--syntax-propertize)
-      (setq-local treesit-simple-indent-rules (c-ts-mode--get-indent-style 'cpp))
+      ;; The indent-rules builder was renamed between Emacs 30
+      ;; (`c-ts-mode--get-indent-style', MODE only) and Emacs 31
+      ;; (`c-ts-mode--simple-indent-rules', MODE + STYLE). Dispatch on
+      ;; `fboundp' and call via a quoted symbol so byte-compilation stays
+      ;; clean on whichever version lacks the other.
+      (setq-local treesit-simple-indent-rules
+                  (cond
+                   ((functionp c-ts-mode-indent-style)
+                    (funcall c-ts-mode-indent-style))
+                   ((fboundp 'c-ts-mode--simple-indent-rules)
+                    (funcall 'c-ts-mode--simple-indent-rules 'cpp c-ts-mode-indent-style))
+                   ((fboundp 'c-ts-mode--get-indent-style)
+                    (funcall 'c-ts-mode--get-indent-style 'cpp))))
       (setq-local treesit-font-lock-settings
                   (append
                    (c-ts-mode--font-lock-settings 'cpp)
