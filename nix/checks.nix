@@ -37,6 +37,21 @@ let
     root = repoRoot;
     fileset = fileset.union configFiles (elIn "/test");
   };
+  # elisp-test additionally loads test/lang-eval-test.el, which locates files
+  # relative to the repo root: it `require's jotain-lang-registry from
+  # etc/lang-eval/ (adding it to load-path itself) and reads templates/jotain.eld.
+  # Both trees are kept outside lisp/ and test/ by design, so ship them in $src.
+  # The paren-only elisp-lint and reader-only scanner-fidelity checks never load
+  # the test, so they keep the narrower elispSrc and its cache key.
+  elispTestSrc = fileset.toSource {
+    root = repoRoot;
+    fileset = fileset.unions [
+      configFiles
+      (elIn "/test")
+      (elIn "/etc/lang-eval")
+      (repoRoot + "/templates")
+    ];
+  };
   nixSrc = fileset.toSource {
     root = repoRoot;
     fileset = fileset.union (fileset.fileFilter (f: lib.hasSuffix ".nix" f.name) repoRoot) (
@@ -540,7 +555,7 @@ in
     pkgs.runCommand "check-elisp-test"
       {
         nativeBuildInputs = [ elispEmacs ];
-        src = elispSrc;
+        src = elispTestSrc;
       }
       ''
         cd $src
