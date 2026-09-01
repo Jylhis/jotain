@@ -358,11 +358,11 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
                    rust-mode rust-ts-mode
                    typescript-mode typescript-ts-mode
                    python-mode python-ts-mode
-                   tuareg-mode
+                   neocaml-mode neocaml-interface-mode
                    zig-ts-mode
                    c-mode c++-mode c-ts-mode c++-ts-mode cuda-ts-mode
                    nix-ts-mode
-                   haskell-mode))
+                   haskell-ts-mode))
       (eglot-inlay-hints-mode 1)))
   (add-hook 'eglot-managed-mode-hook #'jotain-prog--maybe-enable-inlay-hints)
 
@@ -389,6 +389,12 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
   ;; clang commands and, on Nix, `--cuda-path'; that is project config.)
   (add-to-list 'eglot-server-programs
                '((cuda-ts-mode c-ts-mode c++-ts-mode c-mode c++-mode) . ("clangd")))
+
+  ;; OCaml via neocaml (init-lang-systems).  ocamllsp serves both the
+  ;; implementation and interface modes.  (neocaml also self-registers this,
+  ;; but LSP wiring is centralised here; the duplicate add-to-list is a no-op.)
+  (add-to-list 'eglot-server-programs
+               '((neocaml-mode neocaml-interface-mode) . ("ocamllsp")))
 
   ;; gopls workspace configuration is set buffer-locally in init-lang-go
   ;; (`jotain-go--eglot-workspace-config') rather than globally here, so
@@ -637,6 +643,10 @@ hard-error on every prog-mode buffer)."
   ;; project/host PATH, like the other formatters.
   (add-to-list 'apheleia-mode-alist '(c-ts-mode . clang-format))
   (add-to-list 'apheleia-mode-alist '(c++-ts-mode . clang-format))
+  ;; OCaml via neocaml (init-lang-systems): format both modes with
+  ;; ocamlformat (apheleia's built-in formatter keys on tuareg/caml modes).
+  (add-to-list 'apheleia-mode-alist '(neocaml-mode . ocamlformat))
+  (add-to-list 'apheleia-mode-alist '(neocaml-interface-mode . ocamlformat))
   (put 'apheleia-mode 'safe-local-variable #'booleanp))
 
 ;;; @doc Edit grep / ripgrep result buffers in place; saving propagates
