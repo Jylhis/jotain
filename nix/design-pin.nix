@@ -25,7 +25,7 @@
 {
   owner = "Jylhis";
   repo = "design";
-  rev = "464012a3d84e113492962f7cfc7cc02d768a8e1b";
+  rev = "ec1bf783b229810e04d53830a810a6da95a3ec44";
   sha256 = "1ann8fzvfxfy2xl748czx4m087qhikzzch3r68dz23cra1bc36cl";
   version = "2.0.0-unstable-2026-09-01";
 }
