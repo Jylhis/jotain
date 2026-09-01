@@ -398,6 +398,35 @@ docs-refresh-packages: build-packages-doc
        docs/configuration/package-reference.mdx
     @echo "Refreshed docs/configuration/package-reference.mdx"
 
+# Build the Tier-1 live language capability matrix: load the full config and
+# introspect what each language is wired for (actual mode routing, tree-sitter
+# readiness, resolved eglot server, formatter, on-PATH markers). Fails on a
+# routing/override regression (JOTAIN_LANG_EVAL_STRICT).
+[group('build')]
+lang-matrix:
+    nix build .#lang-eval-matrix -o result-lang-matrix
+    @echo "Language matrix → result-lang-matrix/matrix.md (+ matrix.json, index.html)"
+
+# Run the Tier-2 end-to-end live LSP probe over the curated language subset.
+# Heavy: the derivation bundles the language servers. Answers "does the LSP
+# actually respond", not just "is it wired".
+[group('build')]
+lang-eval-live:
+    nix build .#lang-eval-live -o result-lang-live
+    @echo "Live LSP probe → result-lang-live/live.md (+ live.json)"
+
+# Regenerate docs/reference/language-support.mdx from the language registry
+# (etc/lang-eval/jotain-lang-registry.el). Run after editing the registry;
+# CI's `lang-eval-doc-in-sync` check will fail otherwise.
+[group('build')]
+docs-refresh-lang-matrix:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ config_dir }}"
+    out=$(nix build --no-link --print-out-paths .#lang-eval-doc)
+    cp "$out/language-support.mdx" docs/reference/language-support.mdx
+    echo "Refreshed docs/reference/language-support.mdx"
+
 # Build both HTML docs and the Info manual.
 [group('build')]
 docs-all: docs info

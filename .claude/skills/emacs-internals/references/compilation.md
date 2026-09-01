@@ -3,7 +3,7 @@
 Sources: GNU Elisp Reference Manual (Emacs 30.2) Byte Compilation & Native
 Compilation chapters; `src/comp.c`, `lisp/emacs-lisp/comp*.el`; Corallo et
 al., "Bringing GNU Emacs to Native Code" (ELS'20). This repo's default
-build is the Emacs 31 pretest (emacs-overlay `unstable` variant) with
+build is Emacs 31.1 (emacs-overlay `unstable` variant) with
 native-comp on by default; Emacs 30 remains the `mainline` escape hatch.
 
 ## Byte compilation

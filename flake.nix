@@ -182,33 +182,55 @@
       # so this stays off the main/next deploy gate while `nix build
       # .#config-compiled' still resolves it (packages → legacyPackages
       # fallback).
-      legacyPackages = forAllSystems (system: {
-        config-compiled = import ./nix/config-compiled.nix {
-          pkgs = pkgsFor system;
-          emacs = (pkgsFor system).jotainEmacsPackages.core;
-          nativeCompile = true;
-        };
-        # Per-file twin (nix/config-compiled-split.nix): same artifact
-        # layout, one derivation per source file. Kept out of `packages`
-        # for the same reason as config-compiled above.
-        config-compiled-split = import ./nix/config-compiled-split.nix {
-          pkgs = pkgsFor system;
-          emacs = (pkgsFor system).jotainEmacsPackages.core;
-          nativeCompile = true;
-        };
-        # Diagnostic byte-diff of monolith vs split (`just elc-parity`);
-        # deliberately not a check — see nix/elc-parity.nix.
-        elc-parity = import ./nix/elc-parity.nix {
-          pkgs = pkgsFor system;
-          emacs = (pkgsFor system).jotainEmacsPackages.core;
-        };
-        # Experimental two-stage from-source Emacs build (temacs stage
-        # cached separately from the Lisp stage); `just build-staged`.
-        # See nix/emacs-staged.nix — not a check, never CI.
-        emacs-staged = import ./nix/emacs-staged.nix {
-          pkgs = pkgsFor system;
-        };
-      });
+      legacyPackages = forAllSystems (
+        system:
+        let
+          langEval = import ./nix/lang-eval.nix {
+            pkgs = pkgsFor system;
+          };
+        in
+        {
+          config-compiled = import ./nix/config-compiled.nix {
+            pkgs = pkgsFor system;
+            emacs = (pkgsFor system).jotainEmacsPackages.core;
+            nativeCompile = true;
+          };
+
+          # Per-file twin (nix/config-compiled-split.nix): same artifact
+          # layout, one derivation per source file. Kept out of `packages`
+          # for the same reason as config-compiled above.
+          config-compiled-split = import ./nix/config-compiled-split.nix {
+            pkgs = pkgsFor system;
+            emacs = (pkgsFor system).jotainEmacsPackages.core;
+            nativeCompile = true;
+          };
+
+          # Diagnostic byte-diff of monolith vs split (`just elc-parity`);
+          # deliberately not a check — see nix/elc-parity.nix.
+          elc-parity = import ./nix/elc-parity.nix {
+            pkgs = pkgsFor system;
+            emacs = (pkgsFor system).jotainEmacsPackages.core;
+          };
+
+          # Experimental two-stage from-source Emacs build (temacs stage
+          # cached separately from the Lisp stage); `just build-staged`.
+          # See nix/emacs-staged.nix — not a check, never CI.
+          emacs-staged = import ./nix/emacs-staged.nix {
+            pkgs = pkgsFor system;
+          };
+
+          # Per-language IDE-feature evaluation (nix/lang-eval.nix). Kept in
+          # legacyPackages, NOT packages: lang-eval-matrix loads the full config
+          # in batch and lang-eval-live bundles heavy language servers, so
+          # `nix flake check` (which builds every packages output) must not run
+          # them. The cheap, deterministic gate is checks.lang-eval-doc-in-sync;
+          # these are buildable on demand:
+          #   nix build .#lang-eval-doc      (registry -> language-support.mdx)
+          #   nix build .#lang-eval-matrix   (live config-introspection matrix)
+          #   nix build .#lang-eval-live     (end-to-end LSP probe subset)
+          inherit (langEval) lang-eval-doc lang-eval-matrix lang-eval-live;
+        }
+      );
 
       formatter = forAllSystems (system: (treefmtEval system).config.build.wrapper);
 

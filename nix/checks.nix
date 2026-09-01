@@ -37,6 +37,21 @@ let
     root = repoRoot;
     fileset = fileset.union configFiles (elIn "/test");
   };
+  # elisp-test additionally loads test/lang-eval-test.el, which locates files
+  # relative to the repo root: it `require's jotain-lang-registry from
+  # etc/lang-eval/ (adding it to load-path itself) and reads templates/jotain.eld.
+  # Both trees are kept outside lisp/ and test/ by design, so ship them in $src.
+  # The paren-only elisp-lint and reader-only scanner-fidelity checks never load
+  # the test, so they keep the narrower elispSrc and its cache key.
+  elispTestSrc = fileset.toSource {
+    root = repoRoot;
+    fileset = fileset.unions [
+      configFiles
+      (elIn "/test")
+      (elIn "/etc/lang-eval")
+      (repoRoot + "/templates")
+    ];
+  };
   nixSrc = fileset.toSource {
     root = repoRoot;
     fileset = fileset.union (fileset.fileFilter (f: lib.hasSuffix ".nix" f.name) repoRoot) (
@@ -200,6 +215,16 @@ in
         fi
         touch $out
       '';
+
+  # Checked-in language-support reference must match the registry
+  #
+  # docs/reference/language-support.mdx is generated from the declarative
+  # per-language feature standard in etc/lang-eval/jotain-lang-registry.el.
+  # This gate makes drift fatal, mirroring packages-doc-in-sync. Cheap: it
+  # only re-renders the registry (no config, no toolchains). The live matrix
+  # and end-to-end LSP probe (lang-eval-matrix / lang-eval-live) are heavier
+  # legacyPackages, buildable on demand and never part of nix flake check.
+  inherit ((import ./lang-eval.nix { inherit pkgs; })) lang-eval-doc-in-sync;
 
   # eca and gptel must offer the same OpenRouter model catalogue
   #
@@ -542,7 +567,7 @@ in
     pkgs.runCommand "check-elisp-test"
       {
         nativeBuildInputs = [ elispEmacs ];
-        src = elispSrc;
+        src = elispTestSrc;
       }
       ''
         cd $src

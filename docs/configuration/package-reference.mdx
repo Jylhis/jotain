@@ -156,10 +156,18 @@ without editing this file.
 
 ### `pixel-scroll` *(built-in / Nix)*
 
-Built-in pixel-precision smooth scrolling. Required for usable
-trackpad / smooth-mouse scrolling. `fast-but-imprecise-scrolling'
+Built-in pixel-precision smooth scrolling, plus the scrolling
+behaviour tuning from James Cherti's "Enhancing Emacs Scrolling"
+(jamescherti.com). `pixel-scroll-precision-mode' is required for
+usable trackpad / smooth-mouse scrolling; `fast-but-imprecise-scrolling'
 lets large jumps skip exact intermediate fontification — a worthwhile
-redisplay win on this integrated-GPU Intel machine.
+redisplay win on this integrated-GPU Intel machine. `scroll-conservatively'
+20 scrolls just enough to keep point visible instead of eagerly
+recentering (0, the default, is too eager); `auto-window-vscroll' nil
+avoids random half-screen jumps on long lines; `scroll-error-top-bottom'
+moves point to the buffer edge before signalling; and the `hscroll-*'
+pair steps horizontal scrolling one column at a time.
+(`scroll-preserve-screen-position' is set in init-core.el.)
 
 ### `hl-line` *(built-in / Nix)*
 
@@ -484,6 +492,17 @@ Persists corfu's pick history into savehist so frequent
 completions float to the top across sessions. Bundled with
 corfu.
 
+### `corfu-popupinfo` *(built-in / Nix)*
+
+Documentation panel beside the popup — a child frame that shows
+the selected candidate's docstring or source location, the way an IDE
+shows a detail pane. Off unless `jotain-completion-doc-popup' is
+non-nil. The delay is a cons (INITIAL . SUBSEQUENT): it waits a beat
+before first appearing so it does not flash on every pause, then
+refreshes quickly as you move between candidates. Bundled with corfu;
+binds only `M-t'/`M-h'/`M-g'/`C-M-v', so it never touches the freed
+RET/TAB or the `M-n'/`M-p' navigation keys.
+
 ### `cape`
 
 Completion-at-point Extensions — extra capf functions (dabbrev,
@@ -495,6 +514,22 @@ added buffer-locally in Elisp buffers, where it completes symbols
 even inside comments and docstrings (out there `elisp-completion-at-point'
 only fires in code), without polluting completion elsewhere.
 
+### `completion-preview` *(built-in / Nix)*
+
+Inline completion preview — the built-in `completion-preview-mode'
+(Emacs 30, extended in 31). It greys out the most likely completion
+after point as you type, the way a modern editor does, drawing its
+candidate from the same `completion-at-point-functions' the corfu
+popup uses. Enabled only in `jotain-completion-auto-modes' buffers (so
+prose stays quiet), and only when `jotain-completion-inline-preview'
+is non-nil. Two things keep it inside this config's rules: it binds
+`C-i' — which is the TAB event — to accept the preview, so that entry
+is removed and TAB still only indents; and it never binds RET, so
+Enter stays a newline. Accept the whole preview with `M-RET', or just
+the common prefix with `M-i'. The preview is suppressed inside
+comments and strings, and its sort is paired with corfu's so the ghost
+text matches the popup's top row.
+
 ## `init-navigation.el` — dired, project, windows
 
 ### `dired` *(built-in / Nix)*
@@ -504,7 +539,10 @@ The custom block below tames cross-platform ls quirks (BSD on
 macOS lacks `--group-directories-first` and `--dired`). `M-s R`
 previews a regex replacement across the contents of all marked
 files as a unified diff (Emacs 30's
-`dired-do-replace-regexp-as-diff').
+`dired-do-replace-regexp-as-diff'). `!'/`&' hand the file under
+point to the OS default application (`open'/`xdg-open'/`start')
+via `dired-guess-shell-alist-user'; files can also be dragged out
+to desktop apps with the mouse.
 
 ### `dired-x` *(built-in / Nix)*
 
@@ -1283,13 +1321,24 @@ analysis pipeline emits its own plotting scripts.
 
 ### `cc-mode` *(built-in / Nix)*
 
-Built-in C/C++ mode with a Stroustrup style bias. The header
-extensions below default to C++ — Jotain assumes that's the
-more common case in modern repos. C/C++ deliberately stay on
-cc-mode rather than c-ts-mode/c++-ts-mode — the style setup below
-is not migrated — and `jotain-prog-warn-non-ts-exclude'
-(init-prog.el) records that choice so the tree-sitter gap
-detector stays quiet about it.
+Built-in cc-mode, kept for its `auto-mode-alist' decisions and as
+the grammarless fallback. The `:mode' list is the source of truth for
+which extensions are C vs C++ (headers default to C++);
+`jotain-prog-ts-remaps' (init-prog.el) then remaps the chosen
+`c-mode'/`c++-mode' to `c-ts-mode'/`c++-ts-mode' whenever the grammar
+is loadable, so buffers actually open in tree-sitter. The
+`c-basic-offset'/`c-default-style' below still apply to the remaining
+cc-mode buffers (java/awk/other) and when a build lacks the C grammar.
+
+### `c-ts-mode` *(built-in / Nix)*
+
+Built-in tree-sitter C/C++ modes. C/C++ buffers land here via the
+`c'/`cpp' entries in `jotain-prog-ts-remaps' (init-prog.el); this block
+carries the shared indentation. `c-ts-mode-indent-offset' is 4 (matching
+the old cc-mode `c-basic-offset'); the style is `k&r' — the closest
+built-in tree-sitter style, since the previous Stroustrup style has no
+tree-sitter equivalent. eglot wires clangd and apheleia wires
+clang-format for both modes in init-prog.el.
 
 ### `cmake-mode`
 
@@ -1326,3 +1375,14 @@ the CMake/Meson modes above.
 
 Tree-sitter Zig mode (MELPA). Eglot wires zls in init-prog;
 format-on-save runs `zig fmt' through apheleia.
+
+## `init-lang-qml.el` — QML (Quickshell / Qt Quick)
+
+### `qml-ts-mode` *(built-in / Nix)*
+
+Tree-sitter QML major mode (xhcoding/qml-ts-mode), for editing
+Quickshell / Qt Quick `.qml' files.  Provided by Nix; its `qmljs'
+grammar ships via treesit-grammars.with-all-grammars.  LSP through
+eglot → qmlls and format-on-save through apheleia → qmlformat are
+both configured in init-prog.  The Qt tooling (qmlls/qmlformat) rides
+the distribution wrapper PATH (nix/runtime-deps.nix).

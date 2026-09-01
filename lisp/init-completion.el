@@ -45,16 +45,28 @@ Buffers already open when corfu first starts keep their old value."
   :type '(repeat symbol)
   :group 'jotain-completion)
 
-(defcustom jotain-completion-auto-delay 0.1
+(defcustom jotain-completion-auto-delay 0.2
   "Idle seconds before the automatic popup appears.
-Applies only in `jotain-completion-auto-modes' buffers.  This value is
-not tuned -- no measurement backs it."
+Applies only in `jotain-completion-auto-modes' buffers, and also drives
+`completion-preview-idle-delay' when `jotain-completion-inline-preview'
+is on, so the inline ghost text and the popup wait the same beat.
+
+`0.2' is corfu's own shipped default.  corfu's docstrings explicitly
+caution against very short delays -- they \"create high load for Emacs,
+in particular if executing the completion backend is costly\" -- so the
+previous `0.1' sat below the default in the direction upstream warns
+about, which is the setting most likely to feel like the popup fires
+while you are still typing."
   :type 'number
   :group 'jotain-completion)
 
-(defcustom jotain-completion-auto-prefix 2
+(defcustom jotain-completion-auto-prefix 3
   "Characters typed before the automatic popup appears.
-Applies only in `jotain-completion-auto-modes' buffers."
+Applies only in `jotain-completion-auto-modes' buffers.  `3' is corfu's
+shipped default; it also matches `completion-preview-minimum-symbol-length'
+so the inline preview and the popup start suggesting at the same point.
+Lower values pop up on one- or two-character fragments, which is the
+main source of \"it keeps interrupting me\" noise."
   :type 'integer
   :group 'jotain-completion)
 
@@ -117,6 +129,41 @@ run when the server offers nothing for the text at point.
 
 Both halves of that are measured in `test/completion-test.el'.  nil
 leaves the capf exactly as eglot installs it."
+  :type 'boolean
+  :group 'jotain-completion)
+
+(defcustom jotain-completion-doc-popup t
+  "When non-nil, show a documentation panel beside the corfu popup.
+Enables `corfu-popupinfo-mode' -- a child-frame panel next to the
+candidate list that renders the selected candidate's docstring or source
+location, the way an IDE shows a detail pane.  The delay is a cons
+\(INITIAL . SUBSEQUENT): a longer wait before it first appears so it does
+not flash on every brief pause, and a short refresh as you move between
+candidates so it keeps up.  It binds only `M-t' / `M-h' / `M-g' /
+`C-M-v', so it never collides with the freed RET and TAB or with
+`M-n' / `M-p'.
+
+Read at load time; nil skips `corfu-popupinfo-mode' entirely."
+  :type 'boolean
+  :group 'jotain-completion)
+
+(defcustom jotain-completion-inline-preview t
+  "When non-nil, show inline \"ghost text\" of the top candidate as you type.
+Enables the built-in `completion-preview-mode' in
+`jotain-completion-auto-modes' buffers -- the same modes that get the
+auto-popup -- so prose stays quiet (it inherits nothing) while code gains
+a greyed-out preview of the most likely completion after point, the way a
+modern editor does.  The popup still lists the alternatives; this is the
+single inline hint beside it.
+
+TAB is kept safe: `completion-preview-active-mode-map' binds `C-i' (which
+IS the TAB event) to accept the preview, so this config unbinds it -- TAB
+still only indents while a preview shows.  RET is untouched by the mode
+and stays a newline.  Accept the whole preview with `M-RET'; `M-i'
+completes just the common prefix.
+
+Read at load time; nil adds no preview mode.  `completion-preview-mode'
+also toggles it per-buffer on demand."
   :type 'boolean
   :group 'jotain-completion)
 
@@ -452,6 +499,14 @@ Setting `corfu-auto' from `corfu-mode-hook' would be too late, since
   (corfu-auto nil)
   (corfu-auto-prefix jotain-completion-auto-prefix)
   (corfu-auto-delay jotain-completion-auto-delay)
+  ;; corfu's default is `insert', which previews the selected candidate
+  ;; inline AND commits it on further input -- so typing past an open popup
+  ;; can silently accept a candidate you never chose.  `nil' shows the
+  ;; menu with no inline text and inserts nothing until an explicit
+  ;; `corfu-complete' (`C-M-i'), which is the "never accept unless I ask"
+  ;; behaviour the freed RET/TAB already aim for -- and it leaves the one
+  ;; inline surface to `completion-preview-mode's ghost text.
+  (corfu-preview-current nil)
   :config
   ;; REMOVE = t genuinely deletes the entry rather than binding it to nil,
   ;; so the key falls through to the buffer and global maps.
@@ -469,6 +524,23 @@ Setting `corfu-auto' from `corfu-mode-hook' would be too late, since
   :after corfu
   :functions (corfu-history-mode)
   :config (corfu-history-mode 1))
+
+;;; @doc Documentation panel beside the popup — a child frame that shows
+;;; the selected candidate's docstring or source location, the way an IDE
+;;; shows a detail pane. Off unless `jotain-completion-doc-popup' is
+;;; non-nil. The delay is a cons (INITIAL . SUBSEQUENT): it waits a beat
+;;; before first appearing so it does not flash on every pause, then
+;;; refreshes quickly as you move between candidates. Bundled with corfu;
+;;; binds only `M-t'/`M-h'/`M-g'/`C-M-v', so it never touches the freed
+;;; RET/TAB or the `M-n'/`M-p' navigation keys.
+(use-package corfu-popupinfo
+  :ensure nil
+  :when jotain-completion-doc-popup
+  :after corfu
+  :functions (corfu-popupinfo-mode)
+  :custom
+  (corfu-popupinfo-delay '(1.0 . 0.5))
+  :config (corfu-popupinfo-mode 1))
 
 ;;; @doc Completion-at-point Extensions — extra capf functions (dabbrev,
 ;;; file path, keyword) that feed corfu when the major mode's own
@@ -500,6 +572,66 @@ comments and docstrings."
     (add-hook 'completion-at-point-functions #'cape-elisp-symbol 90 t))
   (add-hook 'emacs-lisp-mode-hook #'jotain-cape-setup-elisp)
   (add-hook 'lisp-interaction-mode-hook #'jotain-cape-setup-elisp))
+
+;;; @doc Inline completion preview — the built-in `completion-preview-mode'
+;;; (Emacs 30, extended in 31). It greys out the most likely completion
+;;; after point as you type, the way a modern editor does, drawing its
+;;; candidate from the same `completion-at-point-functions' the corfu
+;;; popup uses. Enabled only in `jotain-completion-auto-modes' buffers (so
+;;; prose stays quiet), and only when `jotain-completion-inline-preview'
+;;; is non-nil. Two things keep it inside this config's rules: it binds
+;;; `C-i' — which is the TAB event — to accept the preview, so that entry
+;;; is removed and TAB still only indents; and it never binds RET, so
+;;; Enter stays a newline. Accept the whole preview with `M-RET', or just
+;;; the common prefix with `M-i'. The preview is suppressed inside
+;;; comments and strings, and its sort is paired with corfu's so the ghost
+;;; text matches the popup's top row.
+(use-package completion-preview
+  :ensure nil
+  :when jotain-completion-inline-preview
+  :defer t
+  :functions (completion-preview-insert)
+  :preface
+  ;; Defined in completion-preview.el / corfu.el, neither loaded at
+  ;; byte-compile time; declare them so the `:config' edits below compile
+  ;; clean under `byte-compile-error-on-warn'.
+  (defvar completion-preview-active-mode-map)
+  (defvar completion-preview-idle-delay)
+  (defvar completion-preview-inhibit-functions)
+  (defvar corfu-sort-function)
+  (defun jotain-completion--preview-inhibit-in-comment ()
+    "Return non-nil inside a comment or string.
+Added to `completion-preview-inhibit-functions' (Emacs 31) so the ghost
+text does not appear where symbol completion is meaningless."
+    (nth 8 (syntax-ppss)))
+  :init
+  (dolist (hook jotain-completion-auto-modes)
+    (add-hook hook #'completion-preview-mode))
+  :config
+  ;; Match the popup's debounce so the inline preview and corfu wait the
+  ;; same beat, and one keystroke does not fire two capf passes at
+  ;; different times (relevant for a costly LSP capf).  Set in `:config'
+  ;; (after load) rather than `:custom' so touching this deferred built-in
+  ;; never forces it to load at startup.
+  (setopt completion-preview-idle-delay jotain-completion-auto-delay)
+  ;; R2: `C-i' is the TAB event, and the active-mode map binds it to
+  ;; `completion-preview-insert'.  REMOVE = t drops it so TAB falls
+  ;; through to `indent-for-tab-command' while a preview shows.
+  (keymap-unset completion-preview-active-mode-map "C-i" t)
+  ;; A non-TAB, non-RET accept gesture for the whole candidate; `M-i'
+  ;; (common-prefix complete) is left as upstream ships it.
+  (keymap-set completion-preview-active-mode-map "M-RET"
+              #'completion-preview-insert)
+  ;; Pair the previewed candidate with corfu's top row.  In Emacs 31
+  ;; `completion-preview-sort-function' is a user option added for exactly
+  ;; this; guard on its custom type so Emacs 30 is left untouched.
+  (when (and (get 'completion-preview-sort-function 'custom-type)
+             (boundp 'corfu-sort-function))
+    (setopt completion-preview-sort-function corfu-sort-function))
+  ;; Suppress in comments/strings (Emacs 31 hook; absent on 30).
+  (when (boundp 'completion-preview-inhibit-functions)
+    (add-hook 'completion-preview-inhibit-functions
+              #'jotain-completion--preview-inhibit-in-comment)))
 
 (provide 'init-completion)
 ;;; init-completion.el ends here

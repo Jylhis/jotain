@@ -416,3 +416,72 @@ at all (§2.1).
   covers the in-buffer side only.
 - **Performance tuning** — no evidence base exists (research §6.6). Any future
   tuning should start by measuring, not by copying numbers.
+
+---
+
+## 6. Addendum — "less annoying, more natural" round (2026-08-26)
+
+A second, narrow round on the in-buffer side, prompted by the request to make
+the popup "less annoying and more natural." It does not revisit the trigger
+model, the freed RET/TAB, or the capf chain — those stand. Evidence base:
+[`../reviews/2026-08-completion-ux-research.md`](../reviews/2026-08-completion-ux-research.md).
+Everything here is opt-out-gated per R6 and validated in `test/completion-test.el`.
+
+**6.1 The popup no longer commits candidates you did not choose.**
+`corfu-preview-current` ships as `insert`, which auto-inserts the selected
+candidate on *continued typing* — quietly undercutting the "never accept unless
+asked" intent that R4 and the freed keys were built for. Set to `nil`: the menu
+shows, nothing enters the buffer until an explicit `corfu-complete` (`C-M-i`).
+This is also what makes room for 6.4 — with corfu contributing no inline text,
+the ghost text is the sole inline surface.
+
+**6.2 The auto-popup timing moved onto corfu's documented defaults.**
+`jotain-completion-auto-delay` `0.1 → 0.2` and `jotain-completion-auto-prefix`
+`2 → 3`. §2.1 flagged the old `0.1`/`2` as unmeasured folklore; corfu's own
+defaults are `0.2`/`3`, and its docstrings caution against sitting *below* them
+(load/flicker). With no measurement either way, the documented resting point is
+the better-justified one, and `3` now matches
+`completion-preview-minimum-symbol-length` so both surfaces start at the same
+keystroke. Still not "tuned" — just no longer below the values upstream warns
+about.
+
+**6.3 A documentation panel (`corfu-popupinfo`).** New knob
+`jotain-completion-doc-popup` (default `t`) enables `corfu-popupinfo-mode`, the
+bundled IDE-style detail panel, delay `(1.0 . 0.5)`. It binds only
+`M-t`/`M-h`/`M-g`/`C-M-v` — no collision with the freed RET/TAB or `M-n`/`M-p`.
+`corfu-echo` is the documented lighter fallback.
+
+**6.4 Inline ghost text (`completion-preview-mode`) — Finding 12(b), adopted.**
+New knob `jotain-completion-inline-preview` (default `t`) enables the built-in
+inline preview in `jotain-completion-auto-modes` — the *same* mode list as the
+auto-popup, so prose stays quiet (R1) and the minibuffer is never touched. It
+draws the top capf candidate as ghost text after point, the modern-editor feel.
+
+Two rule-preserving specifics, both measured in the test file:
+
+- **R2 landmine, fixed.** `completion-preview-active-mode-map` binds `C-i` →
+  `completion-preview-insert`, and `C-i` *is* the TAB event — so the shipped
+  binding is "TAB accepts the preview." `(keymap-unset … "C-i" t)` removes it;
+  TAB still only indents while a preview shows. The whole-candidate accept moves
+  to `M-RET` (R4-safe — R4 governs bare RET), and `M-i` (common-prefix) is left
+  as upstream ships it.
+- **R4 is safe out of the box** — the map binds no RET; the only obligation is
+  not to add one.
+
+The previewed candidate's sort is paired with `corfu-sort-function` (Emacs 31
+user option, guarded), and the preview is inhibited inside comments/strings
+(Emacs 31 hook, guarded), so nothing appears where symbol completion is
+meaningless.
+
+**6.5 What still needs eyes on a GUI.** As §4 already noted for `corfu-complete`,
+two things batch tests cannot settle: whether ghost + popup together reads as
+integrated or busy, and whether the prefix-only ghost (preview keeps its own
+`'(basic)` style) ever disagrees jarringly with an orderless popup row. Both are
+structurally mitigated (`corfu-preview-current nil`, matched sorts) and behind a
+one-line opt-out (`jotain-completion-inline-preview`).
+
+**6.6 Considered, not taken this round:** `corfu-preselect 'prompt` (marginal
+once auto-insert is gone), a buffer-local `orderless-literal-only`/`basic` style
+for the corfu popup (a real predictability lever, but it changes matching
+semantics and is orthogonal to "annoying popup" — deferred as its own decision),
+and cosmetic width-pinning. See research §6.

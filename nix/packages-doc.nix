@@ -146,6 +146,10 @@ let
       file = "init-lang-systems.el";
       title = "Systems (C/C++, Haskell, OCaml, Zig)";
     }
+    {
+      file = "init-lang-qml.el";
+      title = "QML (Quickshell / Qt Quick)";
+    }
   ];
 
   # { file = entries } map.

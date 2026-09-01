@@ -24,5 +24,6 @@
   "jylhis-emacs-themes"
   "majutsu"
   "nix-ts-mode"
+  "qml-ts-mode"
   "tagref"
 ]
