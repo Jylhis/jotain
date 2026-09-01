@@ -136,12 +136,12 @@
      :servers ("zls") :formatter "zig" :inlay t)
 
     (:id ocaml      :name "OCaml"          :file "init-lang-systems.el"
-     :sample "eval.ml"             :mode tuareg-mode :grammar nil
-     :servers ("ocamllsp") :formatter "ocamlformat" :inlay t)
+     :sample "eval.ml"             :mode neocaml-mode :classic tuareg-mode :grammar ocaml
+     :servers ("ocamllsp") :override t :formatter "ocamlformat" :inlay t)
 
     (:id haskell    :name "Haskell"        :file "init-lang-systems.el"
-     :sample "eval.hs"             :mode haskell-mode :grammar nil
-     :servers ("haskell-language-server-wrapper") :inlay t :skip-mode t)
+     :sample "eval.hs"             :mode haskell-ts-mode :classic haskell-mode :grammar haskell
+     :servers ("haskell-language-server-wrapper") :inlay t)
 
     (:id terraform  :name "Terraform"      :file "init-lang-devops.el"
      :sample "eval.tf"             :mode terraform-mode :grammar nil
@@ -163,8 +163,8 @@
      :sample "eval.c4"             :mode likec4-mode :grammar nil
      :servers ("likec4-lsp" "likec4") :override t)
 
-    (:id html       :name "HTML (web-mode)" :file "init-lang-web.el"
-     :sample "eval.html"           :mode web-mode :grammar nil)
+    (:id html       :name "HTML"           :file "init-lang-web.el"
+     :sample "eval.html"           :mode mhtml-ts-mode :classic web-mode :grammar html)
 
     (:id csv        :name "CSV"            :file "init-lang-data.el"
      :sample "eval.csv"            :mode csv-mode :grammar nil)
@@ -183,7 +183,10 @@
      :sample "eval.dsl"            :mode jotain-structurizr-mode :grammar nil)
 
     (:id jinja2     :name "Jinja2"         :file "init-lang-data.el"
-     :sample "eval.j2"             :mode jinja2-mode :grammar nil))
+     :sample "eval.j2"             :mode jinja2-mode :grammar nil)
+
+    (:id just       :name "Just"           :file "init-lang-devops.el"
+     :sample "justfile"            :mode just-ts-mode :grammar just :skip-mode t))
   "The per-language feature standard read by the Jotain language evaluation.
 See the Commentary and the inline key documentation for the plist shape.")
 

@@ -69,14 +69,14 @@ name used by `dockerfile-mode'."
 (use-package gitlab-ci-mode
   :defer t)
 
-;;; @doc Major mode for `Justfile` — the project-aware command runner
-;;; Jotain itself uses. Pairs with compile-multi for project
-;;; commands.
-(use-package just-mode
-  :defer t
-  ;; The package's own autoload only matches files named `justfile';
-  ;; also map the `.just' extension used for included/modular recipes.
-  :mode "\\.just\\'")
+;;; @doc Tree-sitter major mode for `Justfile` — the project-aware command
+;;; runner Jotain itself uses (the `just` grammar). Pairs with
+;;; compile-multi for project commands. just-ts-mode also self-registers a
+;;; Justfile auto-mode entry; the `:mode' regexes here are belt-and-suspenders
+;;; and also map the `.just' extension used for included/modular recipes.
+(use-package just-ts-mode
+  :mode (("/[Jj]ustfile\\'" . just-ts-mode)
+         ("\\.just\\'" . just-ts-mode)))
 
 ;;; @doc Ansible minor mode layered on top of yaml-mode for playbook
 ;;; files. Adds module-name completion and Jinja2 highlighting.

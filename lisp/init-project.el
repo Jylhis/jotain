@@ -141,6 +141,13 @@ projects sharing a basename across different roots stay distinct."
                       ("dune test"      . "dune test")
                       ("dune runtest"   . "dune runtest")
                       ("dune fmt"       . "dune build @fmt")))
+     ;; neocaml-mode/neocaml-interface-mode (the tree-sitter OCaml modes)
+     ;; derive from neocaml-base-mode, not tuareg-mode, so key the same dune
+     ;; commands on it too.
+     (neocaml-base-mode . (("dune build"   . "dune build")
+                           ("dune test"    . "dune test")
+                           ("dune runtest" . "dune runtest")
+                           ("dune fmt"     . "dune build @fmt")))
      (meson-mode   . (("meson setup"    . "meson setup builddir")
                       ("meson compile"  . "meson compile -C builddir")
                       ("meson test"     . "meson test -C builddir")))
