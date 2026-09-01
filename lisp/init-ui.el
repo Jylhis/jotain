@@ -13,21 +13,23 @@
   "User-facing UI knobs for the Jotain configuration."
   :group 'convenience)
 
-;;;; Theme — Jylhis sheet/field, switched by system appearance
+;;;; Theme — Jylhis survey light/dark, switched by system appearance
 
-(defcustom jotain-theme-light 'jylhis-sheet
+(defcustom jotain-theme-light 'jylhis-survey-light
   "Theme to use when the system is in light mode.
-Renamed in v2 of the Jylhis design system: `jylhis-paper' became
-`jylhis-sheet'.  A machine-local config still setting the old symbol
-will fail to load a theme."
+Renamed in v2.0.0 of the Jylhis design system (the theming
+framework): the `jylhis-sheet' theme became `jylhis-survey-light'
+— the survey theme's light mode.  A machine-local config still
+setting the old symbol will fail to load a theme."
   :type 'symbol
   :group 'jotain-ui)
 
-(defcustom jotain-theme-dark 'jylhis-field
+(defcustom jotain-theme-dark 'jylhis-survey-dark
   "Theme to use when the system is in dark mode.
-Renamed in v2 of the Jylhis design system: `jylhis-roast' became
-`jylhis-field'.  A machine-local config still setting the old symbol
-will fail to load a theme."
+Renamed in v2.0.0 of the Jylhis design system (the theming
+framework): the `jylhis-field' theme became `jylhis-survey-dark'
+— the survey theme's dark mode.  A machine-local config still
+setting the old symbol will fail to load a theme."
   :type 'symbol
   :group 'jotain-ui)
 
@@ -60,9 +62,9 @@ REASON is reported so the downgrade is visible in *Messages*."
   ;; against batch mode where custom-theme-load-path may be incomplete.
   ;;
   ;; `load-theme' signals if the theme file is missing, and init.el
-  ;; requires this module unguarded — so an upstream rename (v1's
-  ;; paper/roast became v2's sheet/field) would otherwise take out every
-  ;; module loaded after init-ui.  Degrade to Modus instead.
+  ;; requires this module unguarded — so an upstream rename (v2.0.0's
+  ;; sheet/field became survey/mono light/dark) would otherwise take out
+  ;; every module loaded after init-ui.  Degrade to Modus instead.
   (unless noninteractive
     (condition-case err
         (progn
