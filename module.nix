@@ -383,7 +383,9 @@ in
     ++ cfg.spell.dictionaries
     ++ emojiFontPackages
     ++ iconFontPackages
-    ++ lib.optional (cfg.client.enable && pkgs.stdenv.isLinux) (lib.hiPrio clientDesktopItem);
+    ++ lib.optional (cfg.client.enable && pkgs.stdenv.hostPlatform.isLinux) (
+      lib.hiPrio clientDesktopItem
+    );
 
     # Install the Jotain Emacs configuration into ~/.config/emacs so the
     # daemon picks up early-init.el, init.el, the lisp/ modules, and the
