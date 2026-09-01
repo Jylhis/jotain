@@ -16,120 +16,12 @@ default:
     @just --list --justfile "{{justfile()}}"
 
 
-# ── Run ─────────────────────────────────────────────────────────────
-#
-# All recipes in this section depend on `emacs` / `emacsclient` being
-# on PATH. Emacs is temporarily not installed into the devenv shell
-# (see top-of-file note in devenv.nix), so they print a notice and
-# exit 1 — a stub must never look like a passing run to a script or
-# an agent. Use `just run-built` to build Emacs via Nix and launch it
-# with this configuration.
-
-# [DISABLED] Launch Emacs with this config in isolation (--init-directory).
-[group('run')]
-run *ARGS:
-    @echo "just run is disabled — emacs is not in the devenv shell."
-    @echo "Try: just run-built  (builds Emacs via Nix, then launches it)"
-    @exit 1
-# Original:
-#   emacs --init-directory={{config_dir}} {{ARGS}}
-
-# [DISABLED] Launch with --debug-init and debug-on-error.
-[group('run')]
-debug *ARGS:
-    @echo "just debug is disabled — emacs is not in the devenv shell."
-    @echo "Try: just run-built-debug  (builds Emacs via Nix, --debug-init)"
-    @exit 1
-# Original:
-#   emacs --init-directory={{config_dir}} --debug-init \
-#         --eval '(setq debug-on-error t)' {{ARGS}}
-
-# [DISABLED] Launch in the terminal (-nw) — exercises kkp + clipetty.
-[group('run')]
-tty *ARGS:
-    @echo "just tty is disabled — emacs is not in the devenv shell."
-    @exit 1
-# Original:
-#   emacs -nw --init-directory={{config_dir}} {{ARGS}}
-
-# [DISABLED] Run a foreground Emacs daemon with this config.
-[group('run')]
-daemon *ARGS:
-    @echo "just daemon is disabled — emacs is not in the devenv shell."
-    @exit 1
-# Original:
-#   emacs --fg-daemon --init-directory={{config_dir}} {{ARGS}}
-
-# [DISABLED] Connect a graphical emacsclient frame to the running daemon.
-[group('run')]
-client *ARGS:
-    @echo "just client is disabled — emacsclient is not in the devenv shell."
-    @exit 1
-# Original:
-#   emacsclient -c --alternate-editor='emacs --init-directory={{config_dir}}' {{ARGS}}
-
-# [DISABLED] Connect a terminal emacsclient frame to the running daemon.
-[group('run')]
-client-tty *ARGS:
-    @echo "just client-tty is disabled — emacsclient is not in the devenv shell."
-    @exit 1
-# Original:
-#   emacsclient -t --alternate-editor='emacs -nw --init-directory={{config_dir}}' {{ARGS}}
-
-# [DISABLED] Lightweight `emacs -Q -nw` for quick edits.
-[group('run')]
-quick *ARGS:
-    @echo "just quick is disabled — emacs is not in the devenv shell."
-    @exit 1
-# Original:
-#   emacs -Q -nw --eval "(load-theme 'wombat t)" {{ARGS}}
-
-
 # ── Check / compile ─────────────────────────────────────────────────
 
 # Run all checks: eval, flake, devenv, linting.
 [group('check')]
 check:
     nix flake check
-
-# Equivalent coverage lives in the `elisp-lint` flake check; `just check`
-# runs it via `nix flake check`.
-# [DISABLED] Parse every .el file (no compile, no package install).
-[group('check')]
-check-elisp:
-    @echo "just check-elisp is disabled — emacs is not in the devenv shell."
-    @echo "Equivalent: just check  (runs the elisp-lint flake check)"
-    @exit 1
-# Original:
-#   emacs -Q --batch --eval '(check-parens for early-init.el init.el lisp/init-*.el)'
-
-# Equivalent coverage lives in the `elisp-compile` flake check.
-# [DISABLED] Byte-compile everything; requires packages installed.
-[group('check')]
-compile:
-    @echo "just compile is disabled — emacs is not in the devenv shell."
-    @echo "Equivalent: just check  (runs the elisp-compile flake check)"
-    @exit 1
-# Original:
-#   emacs --batch --init-directory={{config_dir}} \
-#       --eval '(setq byte-compile-error-on-warn t)' \
-#       --eval '(byte-recompile-directory "{{config_dir}}/lisp" 0 t)' \
-#       -f batch-byte-compile early-init.el init.el
-
-# [DISABLED] Native-compile every config module ahead of time.
-#
-# This recipe's premise — that AOT coverage "belongs in the Nix /
-# home-manager deploy of the config" — is now implemented, so there is
-# nothing interim left to warm in-tree. nix/config-compiled.nix takes a
-# `nativeCompile' flag that emits .eln into the store, and module.nix
-# exposes it as `services.jotain.nativeCompile.enable'. Read the gate
-# comment in nix/config-compiled.nix before turning it on.
-[group('check')]
-compile-native:
-    @echo "just compile-native is disabled — AOT now happens in the Nix build."
-    @echo "Enable it with: services.jotain.nativeCompile.enable = true;"
-    @echo "See the gate command in nix/config-compiled.nix first."
-    @exit 1
 
 # Run the ERT tests under test/ via the flake check (the dev shell has
 # no emacs; the check builds one). Direct equivalent once Emacs is back
@@ -172,14 +64,6 @@ bench-built output="var/bench/startup.txt":
         ./result/bin/emacs --init-directory="{{config_dir}}/bench"
     echo
     cat "$out"
-
-# [DISABLED] Benchmark file-open: open representative files and time each hook.
-[group('check')]
-bench-open output="":
-    @echo "just bench-open is disabled — emacs is not in the devenv shell."
-    @exit 1
-# Original:
-#   JOTAIN_BENCH_OPEN_OUTPUT=... emacs --init-directory={{config_dir}}/bench
 
 
 # ── Build (nix) ─────────────────────────────────────────────────────

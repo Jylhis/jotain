@@ -6,7 +6,7 @@ Jotain is an Emacs 31 configuration (floor: Emacs 30.1) with a Nix build layer. 
 
 ## Build, Test, and Development Commands
 
-Use the devenv shell: `devenv shell`, or prefix commands with `devenv shell --` (no `.envrc` is tracked; direnv users create their own). In an environment with no Nix at all, run `scripts/bootstrap-agent-env.sh` first. The shell provides tooling only — Emacs itself is **not** in it, so the direct-launch and in-shell compile recipes (`just run`, `debug`, `tty`, `check-elisp`, `compile`, `bench`, …) are disabled stubs that print a notice and exit 1.
+Use the devenv shell: `devenv shell`, or prefix commands with `devenv shell --` (no `.envrc` is tracked; direnv users create their own). In an environment with no Nix at all, run `scripts/bootstrap-agent-env.sh` first. The shell provides tooling only — Emacs itself is **not** in it, so the direct-launch and in-shell compile recipes (`just run`, `debug`, `tty`, `check-elisp`, `compile`, …) were removed; build and launch Emacs with `just run-built`, and rely on the `elisp-lint`/`elisp-compile`/`elisp-test` flake checks for paren/compile/test coverage.
 
 - `just run-built [ARGS]`: build Emacs via Nix for this platform, then launch `result/bin/emacs` using this repo as `--init-directory`.
 - `just run-built-debug [ARGS]`: same, with `--debug-init` and `debug-on-error`.

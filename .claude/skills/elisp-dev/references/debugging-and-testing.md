@@ -67,6 +67,7 @@ manual, this repo's workflow (`just test`, every `test/*.el`).
 - Lint gauntlet before considering Elisp done: the `elisp-lint` flake
   check (parens) and `elisp-compile` (byte-compile, warnings-as-errors)
   — both run under `just check` — plus `M-x checkdoc` and `relint` for
-  regexps. (`just check-elisp` / `just compile` are disabled stubs.)
+  regexps (there is no `emacs` in the dev shell, so validation goes
+  through these flake checks, not an in-shell recipe).
   Emacs 30's `package-isolate` runs a subprocess with only named
   packages for clean-environment reproduction.

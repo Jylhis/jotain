@@ -1,18 +1,12 @@
 { pkgs, ... }:
 
 let
-  # Emacs is temporarily NOT installed into the devenv shell — the
+  # Emacs is deliberately NOT installed into the devenv shell — the
   # ~1 GB jotainEmacsPackages closure dominated `direnv allow` time.
   # The Nix-side builds (flake `packages.<system>.{default,emacs,…}`,
   # `just build*`, `nix flake check`) are unaffected; flake checks
   # still verify Emacs binaries via `checks.<system>.emacs-binaries`
-  # (see nix/checks.nix). To re-enable, restore the bindings below,
-  # the `imports` entry, the `languages.emacs-lisp` block, the
-  # emacs-smoke/emacs-run scripts, and the Emacs-checking enterTest.
-  #
-  # emacsOverlay = import inputs.emacs-overlay;
-  # pkgsWithOverlay = (pkgs.extend emacsOverlay).extend (import ./overlay.nix);
-  # jotainEmacs = pkgsWithOverlay.jotainEmacsPackages;
+  # (see nix/checks.nix).
 
   # rassumfrassum (`rass`) — LSP multiplexer by João Távora that lets eglot
   # drive multiple real language servers per buffer. Pure-Python, zero
@@ -42,11 +36,6 @@ let
   eca = import ./nix/eca-server.nix { inherit pkgs; };
 in
 {
-  # The custom emacs-lisp language module lives in nix/. Importing it
-  # adds `languages.emacs-lisp` to the option tree below. Disabled
-  # while Emacs is removed from the dev shell (see top-of-file note).
-  # imports = [ ./nix/devenv-emacs-lisp.nix ];
-
   # https://devenv.sh/packages/
   packages =
     with pkgs;
@@ -120,17 +109,6 @@ in
   # https://devenv.sh/languages/
   languages = {
     nix.enable = true;
-
-    # emacs-lisp language support is temporarily disabled — see
-    # top-of-file note. Re-enabling: uncomment, restore the
-    # `imports` entry, and the `jotainEmacs` let-binding.
-    #
-    # emacs-lisp = {
-    #   enable = true;
-    #   package = jotainEmacs;
-    #   lsp.enable = false;
-    #   elsa.enable = false;
-    # };
   };
 
   # https://devenv.sh/binary-caching/
@@ -157,30 +135,6 @@ in
     enable = true;
     config.programs = import ./nix/treefmt.nix;
   };
-
-  # https://devenv.sh/scripts/
-  # emacs-smoke and emacs-run are disabled while Emacs is out of the
-  # dev shell. Re-enable alongside the languages.emacs-lisp block.
-  #
-  # scripts = {
-  #   emacs-smoke = {
-  #     description = "Byte-compile the whole configuration, error on any warning.";
-  #     exec = ''
-  #       set -euo pipefail
-  #       emacs --batch \
-  #         --eval "(setq byte-compile-error-on-warn t)" \
-  #         -f batch-byte-compile early-init.el init.el lisp/*.el
-  #     '';
-  #   };
-  #
-  #   emacs-run = {
-  #     description = "Launch this configuration in isolation (ignores ~/.emacs.d).";
-  #     exec = ''
-  #       set -euo pipefail
-  #       emacs --init-directory="$DEVENV_ROOT" "$@"
-  #     '';
-  #   };
-  # };
 
   # https://devenv.sh/tests/
   # Emacs is no longer installed into the dev shell, so the previous
