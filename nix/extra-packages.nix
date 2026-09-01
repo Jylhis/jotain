@@ -29,7 +29,9 @@ efinal: eprev: {
 
   # Pinned in nix/design-pin.nix, shared with the website's vendored CSS so
   # the editor and jotain.j10s.io can never sit on different versions of the
-  # design system.  v2 renamed the themes: jylhis-sheet / jylhis-field.
+  # design system.  v2.0.0 renamed the themes to
+  # jylhis-{survey,mono}-{light,dark}; trivialBuild globs every *.el under
+  # platforms/emacs, so the rename needs no change here.
   jylhis-emacs-themes =
     let
       pin = import ./design-pin.nix;
