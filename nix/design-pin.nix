@@ -7,15 +7,17 @@
 #   Justfile                → just ds-sync
 #
 # Both halves of the design system must move together: the Emacs themes and
-# the website CSS are generated from the same tokens.json, so pinning them
+# the website CSS are generated from the same token sources, so pinning them
 # separately is how website/public/ds silently sat on v1 for months while the
 # Emacs themes were bumped.
 #
-# v2 "The Survey" — CHANGELOG 1.0.0 (2026-07-25), a breaking retheme: Paper/
-# Roast become Sheet/Field, copper becomes bronze, and the Literata +
-# JetBrains Mono pairing gives way to Zilla Slab + Hanken Grotesk + IBM Plex
-# Mono.  Upstream has not cut a v1.0.0 tag yet (newest is v0.4.0), so the rev
-# is the pin.
+# CHANGELOG 2.0.0 (2026-09-01), the theming framework: a theme-independent
+# core (`tokens.core.json`) plus swappable themes (`themes/<slug>.json`), each
+# with a first-class light and dark mode selected by `data-theme` × `data-mode`.
+# `tokens.json` is retired.  The Emacs themes move from `jylhis-{sheet,field}`
+# to `jylhis-{survey,mono}-{light,dark}` — jotain loads the survey pair
+# (survey/light is "Sheet", survey/dark is "Field"); see lisp/init-ui.el.
+# Upstream has not cut a v2.0.0 tag yet, so the rev is the pin.
 #
 # Bumping: change rev + version here, then run `just ds-sync` to re-vendor the
 # website assets.  The sha256 is the NAR hash of the unpacked tarball —
@@ -23,7 +25,7 @@
 {
   owner = "Jylhis";
   repo = "design";
-  rev = "452789cf0c6328280f4e33cb2d12929a23c69d36";
-  sha256 = "0xg5jyb7xvvlzp62czp9c3d8fird6vgi690kzjsnhb1klf1m20sr";
-  version = "1.0.0-unstable-2026-07-26";
+  rev = "464012a3d84e113492962f7cfc7cc02d768a8e1b";
+  sha256 = "1ann8fzvfxfy2xl748czx4m087qhikzzch3r68dz23cra1bc36cl";
+  version = "2.0.0-unstable-2026-09-01";
 }
