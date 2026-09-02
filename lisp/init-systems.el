@@ -13,6 +13,9 @@
 ;; this file also byte-compiles warning-clean in a clean session (the
 ;; per-file split compile in nix/config-compiled-split.nix).
 (declare-function jotain-var-file "init-core" (name))
+;; Forward declaration: `auth-sources' is a defcustom in the built-in
+;; auth-source library, referenced below inside `with-eval-after-load'.
+(defvar auth-sources)
 
 ;;;; auth-source-1password
 
@@ -29,8 +32,12 @@
   (auth-source-1password-cache-ttl 3600)
   :init
   ;; Credentials are only looked up when a consumer (gptel, forge, …)
-  ;; loads auth-source, so register the backend lazily at that point.
+  ;; loads auth-source, so register everything lazily at that point.
   (with-eval-after-load 'auth-source
+    ;; Prepend any module-declared authinfo files (colon-separated paths in
+    ;; JOTAIN_AUTH_SOURCES) so they take priority over ~/.authinfo(.gpg).
+    (when-let* ((paths (getenv "JOTAIN_AUTH_SOURCES")))
+      (setopt auth-sources (append (split-string paths ":" t) auth-sources)))
     (require 'auth-source-1password)
     (auth-source-1password-enable))
   :config

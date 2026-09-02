@@ -32,13 +32,19 @@
   :mode (("\\.css\\'"  . css-ts-mode)
          ("\\.scss\\'" . css-ts-mode)))
 
+;;; @doc Built-in tree-sitter HTML mode for plain `.html`/`.htm` (parses
+;;; HTML + embedded JS + CSS). Templating dialects still go to web-mode
+;;; below, which mhtml-ts-mode does not handle.
+(use-package mhtml-ts-mode
+  :ensure nil
+  :mode "\\.html?\\'")
+
 ;;; @doc One mode for every templating language that mixes HTML with
-;;; something else: ERB, Mustache, Django, ASP, JSP, PHP. The
-;;; M-o rebind below stops web-mode-map from shadowing our global
-;;; other-window binding.
+;;; something else: ERB, Mustache, Django, ASP, JSP, PHP. Plain `.html`
+;;; goes to mhtml-ts-mode above. The M-o rebind below stops web-mode-map
+;;; from shadowing our global other-window binding.
 (use-package web-mode
-  :mode (("\\.html?\\'"   . web-mode)
-         ("\\.phtml\\'"   . web-mode)
+  :mode (("\\.phtml\\'"   . web-mode)
          ("\\.tpl\\.php\\'" . web-mode)
          ("\\.[agj]sp\\'" . web-mode)
          ("\\.as[cp]x\\'" . web-mode)

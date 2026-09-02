@@ -174,19 +174,33 @@ where the `<<<...>>>' launch syntax parses as an error node."
          ("/meson\\.options\\'" . meson-mode)))
 
 ;;; @doc Haskell major mode. Loaded on demand only — keeps the rare
-;;; Haskell editing session from costing every Emacs start.
+;;; Haskell editing session from costing every Emacs start. Kept as the
+;;; dependency of `haskell-ts-mode' below and for `.cabal'/`.lhs' files.
 (use-package haskell-mode
   :defer t)
 
-;;; @doc Tuareg — the standard OCaml major mode for `.ml`/`.mli` sources
-;;; (OCaml has no built-in tree-sitter mode). Eglot already maps
-;;; `tuareg-mode' to `ocamllsp' and apheleia maps it to `ocamlformat',
-;;; so the generic eglot auto-start and format-on-save in init-prog pick
-;;; OCaml up with no extra wiring. All OCaml tooling (ocamllsp,
-;;; ocamlformat) comes from the project/host PATH, not this config.
+;;; @doc Tree-sitter Haskell mode (NonGNU ELPA). `.hs' files route here.
+;;; It derives from `haskell-mode', so eglot's built-in
+;;; `haskell-mode' → `haskell-language-server' entry matches it by
+;;; derivation with no extra wiring; HLS comes from the project/host PATH.
+(use-package haskell-ts-mode
+  :mode ("\\.hs\\'" . haskell-ts-mode))
+
+;;; @doc Tuareg — kept for OCaml lexer/parser sources (`.mll'/`.mly'),
+;;; which the tree-sitter `neocaml' modes below do not cover. Regular
+;;; OCaml `.ml'/`.mli' now use neocaml. ocamllsp/ocamlformat come from the
+;;; project/host PATH, not this config.
 (use-package tuareg
-  :mode (("\\.mli?\\'" . tuareg-mode)
-         ("\\.ml[ly]\\'" . tuareg-mode)))
+  :mode ("\\.ml[ly]\\'" . tuareg-mode))
+
+;;; @doc Tree-sitter OCaml via neocaml (MELPA): `neocaml-mode' for `.ml'
+;;; (the `ocaml' grammar) and `neocaml-interface-mode' for `.mli' (the
+;;; `ocaml-interface' grammar). eglot (ocamllsp) and apheleia (ocamlformat)
+;;; are wired for both in init-prog; neocaml also self-registers with eglot
+;;; and dape. All OCaml tooling comes from the project/host PATH.
+(use-package neocaml
+  :mode (("\\.ml\\'"  . neocaml-mode)
+         ("\\.mli\\'" . neocaml-interface-mode)))
 
 ;;; @doc Dune major mode for the OCaml build system's `dune`,
 ;;; `dune-project`, and `dune-workspace` files — the OCaml counterpart to

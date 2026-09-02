@@ -45,8 +45,7 @@ Read the one(s) relevant to the task:
 
 - New module: create `lisp/init-<concern>.el` with the file shape above, add
   `(require 'init-<concern>)` to `init.el` at the right load point.
-- Validate (the in-shell recipes `just check-elisp`/`just compile` are
-  disabled stubs — no Emacs in the dev shell): `just check` runs every
+- Validate (no Emacs in the dev shell): `just check` runs every
   flake check; individually, `elisp-lint` is the paren/syntax check,
   `elisp-compile` the warnings-as-errors byte-compile, and `just test`
   builds `elisp-test` — ERT over every `*.el` under `test/` (any name,
