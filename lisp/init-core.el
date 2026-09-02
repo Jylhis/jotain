@@ -391,5 +391,26 @@ freezes — start, reproduce, stop."
   (shr-use-colors nil)
   (shr-use-fonts nil))
 
+;;; @doc Built-in GnuTLS. Harden TLS connections: verify server
+;;; certificates and raise an error instead of silently continuing
+;;; when verification fails (`gnutls-verify-error`), and require a
+;;; strong Diffie-Hellman prime so weak key exchanges are rejected
+;;; (`gnutls-min-prime-bits`).
+(use-package gnutls
+  :ensure nil
+  :custom
+  (gnutls-verify-error t)
+  (gnutls-min-prime-bits 3072))
+
+;;; @doc Built-in Network Security Manager. `network-security-level`
+;;; 'high applies the strictest connection checks (certificate
+;;; changes, weak ciphers, downgrades); the settings file is themed
+;;; under var/ to keep the repo root clean.
+(use-package nsm
+  :ensure nil
+  :custom
+  (network-security-level 'high)
+  (nsm-settings-file (jotain-var-file "network-security.data")))
+
 (provide 'init-core)
 ;;; init-core.el ends here
