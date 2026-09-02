@@ -269,12 +269,22 @@ buffers (prog-mode) and nowhere prose lives (text-mode)."
   "`C-M-i' resolves to `completion-at-point', which `corfu-map' remaps.
 Binding the command rather than leaving the stock `complete-symbol' is
 what makes the same key accept inside the popup -- a remap only fires
-for the command the key actually resolves to.  This is why no separate
-accept key is needed."
+for the command the key actually resolves to.  The remap is repointed
+from corfu's default `corfu-complete' (extends the common prefix, does
+not run a capf `:exit-function') to `corfu-insert' (inserts the selected
+candidate with status `finished', so it commits and expands snippets).
+This is why no separate accept key is needed."
   (should (eq (keymap-global-lookup jotain-completion-key)
               #'completion-at-point))
   (should (eq (lookup-key corfu-map [remap completion-at-point])
-              #'corfu-complete)))
+              #'corfu-insert)))
+
+(ert-deftest completion-test-corfu-preselects-first ()
+  "The top candidate is always selected, so `C-M-i' has something to insert.
+`corfu-insert' quits without inserting when nothing is selected; `first'
+guarantees a selection (and the `corfu-current' highlight that shows it).
+Safe because RET/TAB are freed -- only the explicit `C-M-i' commits."
+  (should (eq corfu-preselect 'first)))
 
 (ert-deftest completion-test-tempel-fields-are-off-tab ()
   "Snippet fields move on tempel's own keys and on `C-M-n'/`C-M-p', never TAB.

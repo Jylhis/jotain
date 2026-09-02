@@ -129,7 +129,7 @@ TAB, `c-tab-always-indent`, and the minibuffer.
 
 | Key | Role |
 | --- | --- |
-| `C-M-i` | **The chain key.** Opens completion; inside the popup, completes. |
+| `C-M-i` | **The chain key.** Opens completion; inside the popup, inserts the selected candidate. |
 | `TAB` | Indent. Only. (Plus tempel field navigation during a live snippet.) |
 | `RET` | Newline. Only. Never accepts a candidate. |
 | `M-n` / `M-p` | Navigate candidates. |
@@ -158,20 +158,32 @@ need RET to send input, upstream's `menu-item` `:filter` form is the sanctioned
 pattern.
 
 **Resolved — and it turned on a mechanism, not a preference.** `corfu-map`
-contains a `<remap> <completion-at-point>` entry pointing at `corfu-complete`,
-and a remap fires only for the command the key actually *resolves to*. Binding
-`C-M-i` to `completion-at-point` — rather than leaving the stock global
-`complete-symbol`, which is not remapped — is therefore what makes the same key
-both open the popup and accept inside it. No second accept key is needed, and
-the choice of `completion-at-point` is load-bearing rather than cosmetic.
+contains a `<remap> <completion-at-point>` entry, and a remap fires only for the
+command the key actually *resolves to*. Binding `C-M-i` to `completion-at-point`
+— rather than leaving the stock global `complete-symbol`, which is not remapped —
+is therefore what makes the same key both open the popup and accept inside it. No
+second accept key is needed, and the choice of `completion-at-point` is
+load-bearing rather than cosmetic.
+
+The remap is repointed from corfu's default `corfu-complete` to **`corfu-insert`**.
+`corfu-complete` only extends the common prefix (insert status `exact`), so it
+neither commits the highlighted candidate nor runs a capf's `:exit-function` —
+so a tempel snippet name accepted with `C-M-i` would not expand. `corfu-insert`
+inserts the selected candidate with status `finished`: it commits the candidate
+and expands snippets, which is the "finish the completion" gesture R3 wants.
 
 Asserted in `completion-test-one-key-opens-and-accepts`.
 
-One thing this does *not* settle: whether `corfu-complete`'s behaviour after
-navigating with `M-n` (it extends the common prefix, and inserts when the
-selection is unambiguous) feels right in practice. That needs a live Emacs. If
-it disappoints, the lever is `corfu-preselect` / `corfu-on-exact-match`, not a
-second accept key.
+This also settled the open question about how the accept gesture *feels*: with
+`corfu-preview-current nil` and the default `corfu-preselect` (`valid`), nothing
+is selected until you navigate with `M-n`, so `C-M-i` extended the prefix and
+appeared to do nothing. The lever named here is now pulled — **`corfu-preselect`
+is set to `first`** so the top candidate is always selected and highlighted (via
+the `corfu-current` face), giving `corfu-insert` something to commit and showing
+the user what `C-M-i` will insert. `first` is safe precisely because RET/TAB are
+freed: only the explicit `C-M-i` commits, so it cannot cause the accidental
+accept `first` risks when RET/TAB accept. Asserted in
+`completion-test-corfu-preselects-first`.
 
 ### 2.4 The chain (R3)
 
@@ -400,9 +412,9 @@ are both directly assertable. The lesson worth keeping: "needs a running Emacs"
 is not the same as "needs a human at a GUI".
 
 What still genuinely needs eyes on a screen is narrower than the original list:
-how `corfu-complete` *feels* as an accept gesture after `M-n` (§2.3), and
-whether the auto-popup delay is comfortable — the latter having no evidence base
-at all (§2.1).
+whether the auto-popup delay is comfortable — which has no evidence base at all
+(§2.1). The accept gesture itself is settled: `C-M-i` now runs `corfu-insert`
+against a `first`-preselected candidate (§2.3).
 
 ---
 
@@ -431,7 +443,7 @@ Everything here is opt-out-gated per R6 and validated in `test/completion-test.e
 `corfu-preview-current` ships as `insert`, which auto-inserts the selected
 candidate on *continued typing* — quietly undercutting the "never accept unless
 asked" intent that R4 and the freed keys were built for. Set to `nil`: the menu
-shows, nothing enters the buffer until an explicit `corfu-complete` (`C-M-i`).
+shows, nothing enters the buffer until an explicit `corfu-insert` (`C-M-i`).
 This is also what makes room for 6.4 — with corfu contributing no inline text,
 the ghost text is the sole inline surface.
 

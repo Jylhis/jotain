@@ -457,17 +457,24 @@ ignoring sentinel to just that process."
 ;; `<remap> <completion-at-point>' entry, and a remap only fires for the
 ;; command the key actually resolves to.  Binding the command itself is
 ;; therefore what makes the same key accept the selected candidate while the
-;; popup is open, so no second accept key is needed.
+;; popup is open (the `:config' below repoints that remap at `corfu-insert'),
+;; so no second accept key is needed.
 (when jotain-completion-key
   (keymap-global-set jotain-completion-key #'completion-at-point))
 
 ;;; @doc In-buffer completion popup — the corfu equivalent of company.
 ;;; The popup appears on its own only in the modes listed by
 ;;; `jotain-completion-auto-modes' (default: programming modes), so prose
-;;; stays quiet and completes only when asked via `C-M-i'. RET and TAB are
+;;; stays quiet. `C-M-i' is the whole gesture, used twice: with no popup it
+;;; runs the global `completion-at-point' and opens the popup; with the popup
+;;; showing the same key inserts the selected candidate. RET and TAB are
 ;;; unbound in `corfu-map', so Enter always inserts a newline and TAB
-;;; always indents, even while the popup is showing. `M-n'/`M-p' move,
-;;; `C-g' dismisses, `C-M-i' accepts.
+;;; always indents, even while the popup is showing. The top candidate is
+;;; always preselected (`corfu-preselect' `first'), so it is highlighted and
+;;; ready the instant the popup opens; the second `C-M-i' commits it (the
+;;; map's `<remap> <completion-at-point>' is repointed from `corfu-complete'
+;;; to `corfu-insert', which finishes the completion and expands a snippet).
+;;; `M-n'/`M-p' move, `C-g' dismisses.
 (use-package corfu
   :hook (after-init . global-corfu-mode)
   :preface
@@ -500,6 +507,12 @@ Setting `corfu-auto' from `corfu-mode-hook' would be too late, since
   ;; behaviour the freed RET/TAB already aim for -- and it leaves the one
   ;; inline surface to `completion-preview-mode's ghost text.
   (corfu-preview-current nil)
+  ;; Always preselect (and highlight, via the `corfu-current' face) the top
+  ;; candidate, so `C-M-i' has something to insert and the user sees what it
+  ;; will insert.  Safe here because RET/TAB are freed -- only the explicit
+  ;; `C-M-i' commits, so `first' cannot cause the accidental accept it can
+  ;; when RET/TAB accept.
+  (corfu-preselect 'first)
   :config
   ;; REMOVE = t genuinely deletes the entry rather than binding it to nil,
   ;; so the key falls through to the buffer and global maps.
@@ -507,7 +520,15 @@ Setting `corfu-auto' from `corfu-mode-hook' would be too late, since
     (keymap-unset corfu-map "RET" t))
   (when jotain-completion-free-tab
     (keymap-unset corfu-map "TAB" t)
-    (keymap-unset corfu-map "<tab>" t)))
+    (keymap-unset corfu-map "<tab>" t))
+  ;; `C-M-i' reaches the popup via corfu-map's `<remap> <completion-at-point>'.
+  ;; corfu's default target, `corfu-complete', only extends the common prefix
+  ;; (status `exact'), so it neither commits the highlighted candidate nor runs
+  ;; a capf's `:exit-function' (tempel snippets would not expand).  Repoint it
+  ;; at `corfu-insert', which inserts the selected candidate with status
+  ;; `finished' -- the actual "finish the completion" gesture, and the one that
+  ;; expands snippets.  Set with the same `<remap>' string corfu ships.
+  (keymap-set corfu-map "<remap> <completion-at-point>" #'corfu-insert))
 
 ;;; @doc Persists corfu's pick history into savehist so frequent
 ;;; completions float to the top across sessions. Bundled with
