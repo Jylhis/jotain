@@ -71,6 +71,27 @@ projects sharing a basename across different roots stay distinct."
    '(".project" "package.json" "Cargo.toml" "pyproject.toml" "flake.nix"
      "devenv.nix")))
 
+;;; @doc `project.el' backend for the Nix (and Guix) store: each
+;;; `/nix/store' path that is a directory becomes a project root, so
+;;; `project-find-file' jumps between files under the same store path
+;;; while reading a dependency's source. `project-nix-store-try' is
+;;; registered ahead of the built-in `project-try-vc' (upstream's
+;;; performance advice), and store paths are kept out of the saved
+;;; project list.
+(use-package project-nix-store
+  :ensure nil ; Provided by Nix
+  :after project
+  :init
+  ;; `add-hook' without APPEND prepends, so this runs before the default
+  ;; `project-try-vc' member of `project-find-functions' — the ordering
+  ;; upstream recommends for good performance.
+  (add-hook 'project-find-functions #'project-nix-store-try)
+  :config
+  ;; Keep store paths out of the remembered project list. The option is
+  ;; newer than this config's Emacs 30.1 floor, so guard the reference.
+  (when (boundp 'project-list-exclude)
+    (add-to-list 'project-list-exclude #'project-nix-store-p)))
+
 ;;;; projection — per-project commands keyed off .dir-locals.el
 
 ;;; @doc `.dir-locals.el`-driven per-project commands (configure, build,
