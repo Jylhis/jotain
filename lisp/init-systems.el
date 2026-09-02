@@ -9,6 +9,10 @@
 
 ;;; Code:
 
+;; Defined in init-core.el, which init.el loads first; declared here so
+;; this file also byte-compiles warning-clean in a clean session (the
+;; per-file split compile in nix/config-compiled-split.nix).
+(declare-function jotain-var-file "init-core" (name))
 ;; Forward declaration: `auth-sources' is a defcustom in the built-in
 ;; auth-source library, referenced below inside `with-eval-after-load'.
 (defvar auth-sources)

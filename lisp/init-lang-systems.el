@@ -68,9 +68,16 @@
 
 ;; `cuda-ts-mode' is built on `c-ts-mode' internals, so load the library
 ;; here (the mode derives from `c-ts-base-mode' and reuses its font-lock /
-;; indent builders).  Forward-declare `treesit-language-remap-alist' so the
+;; indent builders).  `treesit' is required directly, not just transitively
+;; through `c-ts-mode': the mode calls the autoloaded
+;; `treesit-major-mode-setup' at runtime, and the byte-compiler's
+;; "might not be defined at runtime" check only credits a direct top-level
+;; require of the defining file (a clean per-file compile — the
+;; `elisp-compile-split' check — surfaces this; the monolith's shared batch
+;; session masks it).  Forward-declare `treesit-language-remap-alist' so the
 ;; byte-compiler stays quiet on the Emacs 30 floor where it does not exist
 ;; (same idiom as the `treesit-extra-load-path' declaration in init-prog).
+(require 'treesit)
 (require 'c-ts-mode)
 (defvar treesit-language-remap-alist)
 

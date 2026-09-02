@@ -13,6 +13,10 @@
 
 ;;; Code:
 
+;; Defined inside a `use-package' :config block below; declared for the
+;; clean-session per-file compile (nix/config-compiled-split.nix).
+(declare-function jotain-cape-setup-elisp nil)
+
 ;;;; User options
 ;;
 ;; Every knob below is read once, at load time, and needs a restart to take
@@ -197,6 +201,7 @@ also toggles it per-buffer on demand."
 ;;; minibuffer experience hinges on this.
 (use-package vertico
   :demand t
+  :functions (vertico-mode)
   :config (vertico-mode 1))
 
 ;;; @doc Path-savvy editing in vertico — RET enters a candidate
@@ -235,6 +240,7 @@ also toggles it per-buffer on demand."
      (consult-imenu      buffer)
      (consult-flymake    buffer)
      (consult-fd         grid)))
+  :functions (vertico-multiform-mode)
   :config (vertico-multiform-mode 1))
 
 ;;; @doc Lets vertico render in a regular buffer instead of the
@@ -269,7 +275,7 @@ also toggles it per-buffer on demand."
 ;;; replaces a dozen built-ins with a single, consistent UI.
 (use-package consult
   :hook (completion-list-mode . consult-preview-at-point-mode)
-  :functions (consult-xref consult-register-window)
+  :functions (consult-xref consult-register-window consult--customize-put)
   :bind
   (;; C-c bindings in `mode-specific-map'
    ("C-c M-x" . consult-mode-command)
@@ -361,6 +367,7 @@ also toggles it per-buffer on demand."
 ;;; command; `C-u C-.' keeps the minibuffer open for successive
 ;;; actions. `C-h B' replaces describe-bindings with a paged view.
 (use-package embark
+  :functions (embark-prefix-help-command)
   :bind
   (("C-."   . embark-act)
    ("C-;"   . embark-dwim)
@@ -482,6 +489,11 @@ ignoring sentinel to just that process."
   ;; when this file is byte-compiled; declare it so the `:config' keymap
   ;; edits below compile clean under `byte-compile-error-on-warn'.
   (defvar corfu-map)
+  ;; `corfu-insert' is likewise defined in corfu.el; the `:config' remap
+  ;; below sharp-quotes it, so declare it too (a clean per-file compile —
+  ;; the `elisp-compile-split' check — flags it "might not be defined at
+  ;; runtime"; the monolith's shared batch session has corfu loaded).
+  (declare-function corfu-insert "corfu" ())
   (defun jotain-completion--enable-auto ()
     "Turn on corfu's auto-popup in the current buffer.
 Must run before `corfu-mode' is enabled: `corfu-auto' is read exactly
@@ -536,6 +548,7 @@ Setting `corfu-auto' from `corfu-mode-hook' would be too late, since
 (use-package corfu-history
   :ensure nil
   :after corfu
+  :functions (corfu-history-mode)
   :config (corfu-history-mode 1))
 
 ;;; @doc Documentation panel beside the popup — a child frame that shows

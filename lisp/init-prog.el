@@ -13,6 +13,21 @@
 
 ;;; Code:
 
+;; Defined in init-core.el, which init.el loads first; declared here so
+;; this file also byte-compiles warning-clean in a clean session (the
+;; per-file split compile in nix/config-compiled-split.nix).
+(declare-function jotain-var-file "init-core" (name))
+
+;; Defined inside `use-package' :config blocks below; declared for the
+;; clean-session per-file compile (nix/config-compiled-split.nix).
+(declare-function jotain-prog--eldoc-compose-eagerly nil)
+(declare-function jotain-prog--maybe-enable-inlay-hints nil)
+(declare-function jotain-prog--disable-flymake-byte-compile nil)
+(declare-function eglot-inlay-hints-mode "eglot" (&optional arg))
+;; `string-remove-suffix' is a subr-x defsubst; compile-time require
+;; inlines it so there is no runtime dependency to warn about.
+(eval-when-compile (require 'subr-x))
+
 ;;;; prog-mode
 
 ;;; @doc Built-in `prog-mode` parent. Just turns on the fill-column
@@ -445,6 +460,7 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
 ;;; commands carry repeat-maps, so `C-x C-a n n n` keeps stepping.
 (use-package dape
   :bind-keymap ("C-x C-a" . dape-global-map)
+  :functions (dape-breakpoint-load dape-breakpoint-save)
   :custom
   (dape-buffer-window-arrangement 'right)
   (dape-default-breakpoints-file (jotain-var-file "dape-breakpoints"))

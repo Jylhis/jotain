@@ -548,6 +548,18 @@ in
     emacs = elispEmacs;
   };
 
+  # Per-file twin of elisp-compile (nix/config-compiled-split.nix): one
+  # derivation per source file, warnings as errors.  Gates only that the
+  # split stays warning-clean in *clean per-file sessions* — which the
+  # monolith's single shared session can mask (a feature loaded by an
+  # earlier file hides a missing declare-function/defvar stub in a later
+  # one).  Byte-for-byte comparison against the monolith is deliberately
+  # NOT a check — see nix/elc-parity.nix (run via `just elc-parity`).
+  elisp-compile-split = import ./config-compiled-split.nix {
+    inherit pkgs;
+    emacs = elispEmacs;
+  };
+
   # Elisp unit tests (ERT, batch)
   # Pure-function tests only: no devenv binary, no network, no
   # subprocesses — safe inside the Nix sandbox.

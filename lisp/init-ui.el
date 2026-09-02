@@ -79,6 +79,7 @@ REASON is reported so the downgrade is visible in *Messages*."
 (use-package auto-dark
   :demand t
   :bind ("C-c t" . auto-dark-toggle-appearance)
+  :functions (auto-dark-mode)
   :custom
   (auto-dark-allow-osascript t)
   (auto-dark-themes `((,jotain-theme-dark) (,jotain-theme-light)))
@@ -358,6 +359,7 @@ frame exists yet, so a load-time-only probe would never fire."
 (use-package nerd-icons-corfu
   :after (nerd-icons corfu)
   :functions (nerd-icons-corfu-formatter)
+  :defines (corfu-margin-formatters)
   :config
   (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
 
@@ -365,6 +367,7 @@ frame exists yet, so a load-time-only probe would never fire."
 ;;; category icons in completion lists).
 (use-package nerd-icons-completion
   :after (nerd-icons marginalia)
+  :functions (nerd-icons-completion-mode nerd-icons-completion-marginalia-setup)
   :config
   (nerd-icons-completion-mode)
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))

@@ -16,6 +16,15 @@
 
 ;;; Code:
 
+;; Keymaps referenced inside the `with-eval-after-load' forms below;
+;; none of these libraries is loaded in a clean per-file compile
+;; session (nix/config-compiled-split.nix), so declare the variables.
+;; isearch-mode-map needs no stub — isearch.el is preloaded.
+(defvar dired-mode-map)
+(defvar calc-mode-map)
+(defvar Info-mode-map)
+(defvar ibuffer-mode-map)
+
 ;;; @doc Discoverable Transient menus over built-in tools: dired, calc,
 ;;; isearch, ibuffer, and Info.  Each menu is bound to `C-o' in its own
 ;;; mode map (`<f2>' for isearch, whose `C-o' is already meaningful), so

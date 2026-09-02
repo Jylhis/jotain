@@ -11,9 +11,9 @@
 #
 #   check — formatting, statix, deadnix, module-eval,
 #           packages-doc-in-sync, ds-in-sync, packages-doc, options-doc, elisp-lint
-#           (paren check), elisp-compile (both transitively build the
-#           bare jotainEmacs from cache).  Skips the full grammar
-#           distribution — that runs in deploy.yml.
+#           (paren check), elisp-compile and elisp-compile-split (all
+#           three transitively build the bare jotainEmacs from cache).
+#           Skips the full grammar distribution — that runs in deploy.yml.
 #   test  — devenv test (dev environment assertions from devenv.nix).
 #
 # The jylhis cachix cache is pull-only here: PR runs (including from
@@ -107,6 +107,12 @@ jobs:
 
       - name: Check — elisp-compile
         run: nix build --no-link --print-build-logs --show-trace .#checks.x86_64-linux.elisp-compile
+
+      - name: Check — elisp-compile-split
+        # --keep-going: the split fans out to ~33 per-file derivations;
+        # keep building past the first failure so one run reports every
+        # file that needs a stub instead of one per push.
+        run: nix build --no-link --keep-going --print-build-logs --show-trace .#checks.x86_64-linux.elisp-compile-split
 
   site:
     name: Site

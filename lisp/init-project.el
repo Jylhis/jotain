@@ -18,6 +18,11 @@
 
 ;;; Code:
 
+;; Defined in init-core.el, which init.el loads first; declared here so
+;; this file also byte-compiles warning-clean in a clean session (the
+;; per-file split compile in nix/config-compiled-split.nix).
+(declare-function jotain-var-file "init-core" (name))
+
 ;;;; project.el (built-in)
 
 (defcustom jotain-repositories-roots
