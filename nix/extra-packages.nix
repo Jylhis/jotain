@@ -75,6 +75,26 @@ efinal: eprev: {
     };
   };
 
+  # `project.el' backend for the Nix (and Guix) store, wired in
+  # lisp/init-project.el: each /nix/store path that is a directory becomes a
+  # project root, so `project-find-file' works while visiting store files.
+  # Published on NonGNU ELPA as `project-nix-store', but the pinned
+  # emacs-overlay snapshot (2026-08-24) predates the upstream
+  # `project-store' -> `project-nix-store' rename (0.10.0), so the base epkgs
+  # scope does not carry this name yet; build it from the tagged release.
+  # Package-Requires is ((emacs "29.1")) — only built-ins — so no
+  # packageRequires.
+  project-nix-store = efinal.trivialBuild {
+    pname = "project-nix-store";
+    version = "0.10.0";
+    src = pkgs.fetchFromGitHub {
+      owner = "jian-lin";
+      repo = "project-nix-store";
+      rev = "ae6c743f98f2f46222cec670d96b1d125db1c7c5"; # tag 0.10.0
+      sha256 = "184hy7jy1zq97xr4ddgxi2mppj25gv53j0k692mx74lwlbxic5cd";
+    };
+  };
+
   # Tree-sitter QML major mode (lisp/init-lang-qml.el), for editing
   # Quickshell / Qt Quick `.qml' files.  Not on MELPA.  Uses the `qmljs'
   # grammar, which the distribution already ships via
