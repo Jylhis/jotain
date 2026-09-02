@@ -489,6 +489,11 @@ ignoring sentinel to just that process."
   ;; when this file is byte-compiled; declare it so the `:config' keymap
   ;; edits below compile clean under `byte-compile-error-on-warn'.
   (defvar corfu-map)
+  ;; `corfu-insert' is likewise defined in corfu.el; the `:config' remap
+  ;; below sharp-quotes it, so declare it too (a clean per-file compile —
+  ;; the `elisp-compile-split' check — flags it "might not be defined at
+  ;; runtime"; the monolith's shared batch session has corfu loaded).
+  (declare-function corfu-insert "corfu" ())
   (defun jotain-completion--enable-auto ()
     "Turn on corfu's auto-popup in the current buffer.
 Must run before `corfu-mode' is enabled: `corfu-auto' is read exactly
