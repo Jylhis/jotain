@@ -1,9 +1,10 @@
 # The design-system assets vendored into website/public/ds, taken from the
 # pinned jylhis/design rev (nix/design-pin.nix).
 #
-# website/public/ is deliberately a no-build-step shell — `npx wrangler dev`
-# in website/ serves it directly — so these files are committed rather than
-# assembled at build time.  This derivation is what makes that safe: `just
+# website/public/ is deliberately a no-build-step shell — a plain static
+# server over website/public serves it directly — so these files are
+# committed rather than assembled at build time.  This derivation is what
+# makes that safe: `just
 # ds-sync` copies from it, and the ds-in-sync flake check diffs the committed
 # copy against it, so a stale vendored copy is a build failure instead of
 # something nobody notices.
