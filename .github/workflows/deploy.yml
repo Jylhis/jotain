@@ -1,14 +1,12 @@
 # Full validation + deploy for protected branches.
 #
 # On push to main:  check (full nix flake check) → test (devenv test),
-#                   then two independent publishes.  deploy-site pushes
-#                   the built site to the `site` branch, which Cloudflare
-#                   deploys as jotain.j10s.io; build-pages → deploy-pages
-#                   publishes the option-reference docs and the
-#                   jotain.info manual to GitHub Pages.  The `jylhis`
-#                   cachix cache (the owner's personal cache; unrelated
-#                   to any Emacs fork) is repopulated with any newly
-#                   built artifacts.
+#                   then build-pages → deploy-pages builds the full site
+#                   (`nix build .#site`) and publishes it to GitHub Pages,
+#                   served at page.jylhis.com/jotain/.  The `jylhis` cachix
+#                   cache (the owner's personal cache; unrelated to any
+#                   Emacs fork) is repopulated with any newly built
+#                   artifacts.
 #
 # On push to next:  check + test only (no deploys).
 #
@@ -86,56 +84,19 @@ jobs:
       - name: devenv test
         run: devenv test
 
-  deploy-site:
-    # Build the full jotain.j10s.io site and publish it to the `site`
-    # branch. The Cloudflare GitHub integration watches that branch
-    # (Workers Builds: production branch `site`, root `/`; the
-    # wrangler.jsonc at the branch root serves public/ as static
-    # assets) — no Cloudflare credentials live in this repo.
-    name: Site branch
+  build-pages:
+    # Build the full site (`nix build .#site`, including the /help/api/
+    # reference) and upload its public/ tree as the GitHub Pages artifact.
+    # GitHub serves it as this repo's project site at page.jylhis.com/jotain/
+    # (the site is built with baseHref=/jotain to match).
+    name: Build site
     if: github.ref == 'refs/heads/main'
     needs: check
-    # 60 (not 30): builds the full `.#site` including the /help/api/
+    # 60 (not 15): builds the full `.#site` including the /help/api/
     # reference. `needs: check` runs after the Check job has built and
     # pushed emacs-api-doc to the jylhis cache, so this normally pulls it
     # as a cache hit; the extra headroom covers a cold cache.
     timeout-minutes: 60
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    concurrency:
-      group: site-branch
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: cachix/install-nix-action@v31
-
-      - uses: cachix/cachix-action@v17
-        with:
-          name: jylhis
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          # The site renders man pages and the Emacs/Elisp manuals from
-          # jotainEmacs (emacs-unstable base, cached on nix-community).
-          extraPullNames: nix-community
-
-      # `just deploy-site` builds .#site and force-pushes the output as
-      # an orphan commit, using the credentials actions/checkout wrote
-      # into the local git config. Deliberately not a third-party
-      # publish action: this repo's Actions policy allows only
-      # github-owned and cachix/* actions, and a disallowed `uses:`
-      # fails the whole workflow at startup, not just its own job.
-      - name: Build and publish to the site branch
-        env:
-          GIT_AUTHOR_NAME: github-actions[bot]
-          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
-        run: nix run --inputs-from . nixpkgs#just -- deploy-site
-
-  build-pages:
-    name: Build docs
-    if: github.ref == 'refs/heads/main'
-    needs: check
-    timeout-minutes: 15
     runs-on: ubuntu-latest
     # Serialize Pages builds so concurrent main pushes queue instead of
     # racing the upload-pages-artifact step.
@@ -151,19 +112,19 @@ jobs:
         with:
           name: jylhis
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          # The site renders man pages and the Emacs/Elisp manuals from
+          # jotainEmacs (emacs-unstable base, cached on nix-community).
           extraPullNames: nix-community
 
-      - name: Build option docs
-        run: nix build .#docs -o result-docs
+      - name: Build site
+        run: nix build .#site -o result-site
 
-      - name: Build Info manual
-        run: nix build .#info -o result-info
-
+      # Copy out of the read-only Nix store into a writable tree
+      # (dereferencing symlinks) so upload-pages-artifact can tar it.
       - name: Assemble Pages artifact
         run: |
           mkdir -p site
-          cp -rL result-docs/. site/
-          cp result-info/share/info/jotain.info site/
+          cp -rL result-site/public/. site/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
