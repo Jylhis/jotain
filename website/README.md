@@ -1,4 +1,4 @@
-# website — jotain.j10s.io
+# website — page.jylhis.com/jotain
 
 The landing page and docs site for Jotain, styled as an Emacs frame: a tab
 bar of three buffers (`README.org` landing, `*Man JOTAIN(7)*` docs index,
@@ -23,9 +23,6 @@ Mono).
     they come from is pinned in `nix/design-pin.nix`, the same pin the
     Emacs themes are built from; `just ds-sync` re-vendors this directory
     from it and the `ds-in-sync` flake check fails when the two disagree.
-  - `_headers` — long-lived immutable caching for fonts, basic security
-    headers (honored by Cloudflare's static-asset serving)
-- `wrangler.jsonc` — Cloudflare Workers static-assets config
 
 ## Generated content
 
@@ -48,28 +45,25 @@ adds everything the repo can generate:
 
 ## Deployment
 
-`deploy.yml` runs `just deploy-site` on every push to main: it builds
-`.#site` and force-pushes the output to the **`site` branch** as an
-orphan commit (wrangler.jsonc at the root, the site under `public/`).
-The same recipe publishes by hand, and `DRY_RUN=1 just deploy-site`
-builds and reports without pushing. Deployment itself happens on the
-Cloudflare side via the GitHub integration:
+The site is published to **GitHub Pages** by `deploy.yml` on every push
+to main: the `build-pages` job runs `nix build .#site` and uploads the
+`public/` tree as the Pages artifact, and `deploy-pages` publishes it.
+GitHub serves it as this repo's project site at
+**<https://page.jylhis.com/jotain/>** — `page.jylhis.com` is the account's
+Pages custom domain (a CNAME to `jylhis.github.io`), so every project
+repo's Pages appear under it at `/<repo>/`.
 
-- **Workers Builds**: connect this repo in the Cloudflare dashboard,
-  set the production branch to `site` and the root directory to `/` —
-  the branch's `wrangler.jsonc` serves `public/` as static assets.
-- **Cloudflare Pages** (alternative): watch the `site` branch, empty
-  build command, output directory `public`.
-
-Either way, attach the `jotain.j10s.io` custom domain to the
-project/Worker in the dashboard (the `j10s.io` zone is already on
-Cloudflare, so the DNS record is created automatically).
+Because the site is served under the `/jotain/` subpath, `nix build .#site`
+bakes that base path into every internal absolute URL via `nix/site.nix`'s
+`baseHref` argument (default `/jotain`); pass `baseHref = ""` to build a
+root-served copy. `index.html`'s own nav links are document-relative, so
+the shell works at any base without rewriting.
 
 ## Local preview
 
 ```
-just serve-site          # full site: nix build .#site + http.server
-python3 -m http.server -d website/public 8080   # shell only
+just serve-site          # full site: nix build .#site, served under /jotain/
+python3 -m http.server -d website/public 8080   # shell only (at the root)
 ```
 
 ## Conventions

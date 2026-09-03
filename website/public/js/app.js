@@ -1,5 +1,5 @@
 /*
- * app.js — jotain.j10s.io
+ * app.js — page.jylhis.com/jotain
  * Emacs-frame chrome: buffer switching (tabs / C-x b / n / p / hash),
  * I-search over a section index, modeline position, echo area, theme toggle.
  * No dependencies.
