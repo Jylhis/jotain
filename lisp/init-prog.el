@@ -545,7 +545,27 @@ connection alongside any existing language server."
 (use-package xref
   :ensure nil
   :custom
-  (xref-search-program 'ripgrep))
+  (xref-search-program 'ripgrep)
+  :config
+  ;; Emacs 31+: mouse-1 follows an identifier to its definition and the
+  ;; mouse-over shows a "jump to definition" hint. Guarded for Emacs 30.
+  (when (fboundp 'global-xref-mouse-mode)
+    (global-xref-mouse-mode 1))
+  ;; `etags-regen-mode' (Emacs 30) regenerates a project TAGS table on
+  ;; demand, giving `xref' a definition source in buffers without an LSP
+  ;; server. Adopted from the newcomers-presets theme; guarded for safety.
+  (when (fboundp 'etags-regen-mode)
+    (etags-regen-mode 1)))
+
+;;;; imenu
+
+;;; @doc Built-in symbol index (the source behind `consult-imenu', M-g i).
+;;; `imenu-auto-rescan' reparses the buffer on each invocation so the
+;;; index never goes stale after you add or rename a definition.
+(use-package imenu
+  :ensure nil
+  :custom
+  (imenu-auto-rescan t))
 
 ;;;; tagref
 
