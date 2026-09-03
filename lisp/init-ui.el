@@ -244,6 +244,28 @@ availability on the right display."
 (setopt cursor-in-non-selected-windows nil)
 (setopt highlight-nonselected-windows nil)
 
+;; Resize the frame and its windows to exact pixels rather than rounding
+;; to whole character cells — the frame then sits flush against a tiling
+;; window manager's gaps (pgtk/Wayland is the Linux GUI default) and
+;; horizontal splits divide evenly. (`frame-inhibit-implied-resize' is
+;; set in early-init.el.)
+(setopt frame-resize-pixelwise t)
+(setopt window-resize-pixelwise t)
+
+;; From the newcomers-presets theme. `mode-line-compact' `long only
+;; compacts (collapses runs of spaces in) the mode line when it is longer
+;; than the window — mostly inert here since doom-modeline builds its own
+;; format, but harmless and correct for the stock mode line. Prefer the
+;; system's configured font for the default face; Jotain's explicit font
+;; probing (`jotain-ui-apply-font' above) still sets the default face on
+;; each GUI frame, so this only governs the pre-font-hook default.
+(setopt mode-line-compact 'long)
+;; `font-use-system-font' only exists on builds with system-font support
+;; (xsettings); the terminal-only distribution loads this same config, so
+;; guard it or `setopt' errors at startup there.
+(when (boundp 'font-use-system-font)
+  (setopt font-use-system-font t))
+
 (defcustom jotain-line-numbers-in-prog t
   "When non-nil, show line numbers in `prog-mode' and `conf-mode' buffers."
   :type 'boolean
@@ -262,17 +284,19 @@ availability on the right display."
   :ensure nil
   :hook ((prog-mode conf-mode) . jotain-ui--maybe-line-numbers))
 
-;;; @doc Built-in pixel-precision smooth scrolling, plus the scrolling
-;;; behaviour tuning from James Cherti's "Enhancing Emacs Scrolling"
-;;; (jamescherti.com). `pixel-scroll-precision-mode' is required for
-;;; usable trackpad / smooth-mouse scrolling; `fast-but-imprecise-scrolling'
-;;; lets large jumps skip exact intermediate fontification — a worthwhile
-;;; redisplay win on this integrated-GPU Intel machine. `scroll-conservatively'
-;;; 20 scrolls just enough to keep point visible instead of eagerly
-;;; recentering (0, the default, is too eager); `auto-window-vscroll' nil
-;;; avoids random half-screen jumps on long lines; `scroll-error-top-bottom'
-;;; moves point to the buffer edge before signalling; and the `hscroll-*'
-;;; pair steps horizontal scrolling one column at a time.
+;;; @doc Built-in smooth scrolling, plus the scrolling behaviour tuning
+;;; from James Cherti's "Enhancing Emacs Scrolling" (jamescherti.com).
+;;; `pixel-scroll-mode' (the newcomers-presets theme's choice) smooths
+;;; mouse-wheel scrolling; the theme deliberately prefers it over
+;;; `pixel-scroll-precision-mode', which it leaves off citing bug#69972.
+;;; `fast-but-imprecise-scrolling' lets large jumps skip exact
+;;; intermediate fontification — a worthwhile redisplay win on this
+;;; integrated-GPU Intel machine. `scroll-conservatively' 20 scrolls just
+;;; enough to keep point visible instead of eagerly recentering (0, the
+;;; default, is too eager); `auto-window-vscroll' nil avoids random
+;;; half-screen jumps on long lines; `scroll-error-top-bottom' moves point
+;;; to the buffer edge before signalling; and the `hscroll-*' pair steps
+;;; horizontal scrolling one column at a time.
 ;;; (`scroll-preserve-screen-position' is set in init-core.el.)
 (use-package pixel-scroll
   :ensure nil
@@ -283,7 +307,7 @@ availability on the right display."
   (auto-window-vscroll nil)
   (hscroll-margin 2)
   (hscroll-step 1)
-  :config (pixel-scroll-precision-mode 1))
+  :config (pixel-scroll-mode 1))
 
 ;;; @doc Built-in current-line highlight — on for code and prose, off
 ;;; in shells/dired where it would fight the cursor.

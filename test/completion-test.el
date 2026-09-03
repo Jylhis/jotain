@@ -219,9 +219,12 @@ corfu's own default is `insert', which commits the selected candidate on
 further input -- exactly the accidental-accept this config avoids."
   (should (eq corfu-preview-current nil)))
 
-(ert-deftest completion-test-tab-indents-only ()
-  "TAB is on the stock default, so `indent-for-tab-command' cannot complete."
-  (should (eq tab-always-indent t)))
+(ert-deftest completion-test-tab-completes-when-indented ()
+  "TAB completes once the line is indented: `tab-always-indent' is `complete'.
+Adopted from the newcomers-presets theme.  While the corfu popup is open TAB
+stays unbound in `corfu-map' (see `completion-test-corfu-map-frees-return-and-tab'),
+so it indents rather than accepting a candidate."
+  (should (eq tab-always-indent 'complete)))
 
 (ert-deftest completion-test-auto-popup-is-opt-in-per-mode ()
   "Auto-popup is off globally and opted into per mode hook, buffer-locally."
@@ -258,12 +261,16 @@ the mode, so Enter stays a newline."
   (should (eq (lookup-key completion-preview-active-mode-map (kbd "M-RET"))
               #'completion-preview-insert)))
 
-(ert-deftest completion-test-inline-preview-is-per-mode-like-auto ()
-  "Inline preview rides the same mode list as the auto-popup, so prose stays quiet.
-`completion-preview-mode' is enabled in `jotain-completion-auto-modes'
-buffers (prog-mode) and nowhere prose lives (text-mode)."
-  (should (memq #'completion-preview-mode prog-mode-hook))
-  (should-not (memq #'completion-preview-mode text-mode-hook)))
+(ert-deftest completion-test-inline-preview-is-global ()
+  "Inline preview is enabled globally (adopted from the newcomers-presets theme).
+On Emacs 31 `global-completion-preview-mode' is turned on, so the ghost text
+rides `completion-preview-mode' in every buffer rather than a per-mode hook
+list.  On the Emacs 30.1 floor, which lacks the globalized variant, the config
+falls back to the `jotain-completion-auto-modes' hooks; that path is asserted
+only when the global mode is unavailable."
+  (if (fboundp 'global-completion-preview-mode)
+      (should (bound-and-true-p global-completion-preview-mode))
+    (should (memq #'completion-preview-mode prog-mode-hook))))
 
 (ert-deftest completion-test-one-key-opens-and-accepts ()
   "`C-M-i' resolves to `completion-at-point', which `corfu-map' remaps.
