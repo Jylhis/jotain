@@ -229,6 +229,13 @@ immediately for writes."
 ;;; the editor on a DNS lookup — reject means "treat as not a host".
 (use-package ffap
   :ensure nil
+  ;; Purely on-demand (find-file-at-point and friends), yet its ~2k-line
+  ;; body pulled in the largest built-in load on the eager startup path
+  ;; (~67ms in an isolated Emacs 31 measurement). Defer it: the built-in
+  ;; autoloads still trigger the load when a ffap command runs, and the
+  ;; `:custom' value below is recorded now and applied by the deferred
+  ;; `defcustom' when ffap finally loads.
+  :defer t
   :custom
   (ffap-machine-p-known 'reject))
 
@@ -361,6 +368,9 @@ freezes — start, reproduce, stop."
 ;;; glyph is suppressed because it adds visual noise without info.
 (use-package bookmark
   :ensure nil
+  ;; On-demand: nothing on the startup path uses bookmarks. Autoloaded via
+  ;; `bookmark-jump'/`consult-bookmark'; the customs apply on that load.
+  :defer t
   :custom
   (bookmark-default-file (jotain-var-file "bookmarks.el"))
   (bookmark-fringe-mark nil)
@@ -387,6 +397,11 @@ freezes — start, reproduce, stop."
 ;;; predictable layout.
 (use-package shr
   :ensure nil
+  ;; The HTML renderer, only reached on demand (eww, rendered mail, etc.),
+  ;; but the heaviest built-in on the eager startup path (~74ms, ~41 deps
+  ;; in an isolated Emacs 31 measurement). Defer it; callers that need it
+  ;; require it themselves, and the customs below apply on that load.
+  :defer t
   :custom
   (shr-use-colors nil)
   (shr-use-fonts nil))

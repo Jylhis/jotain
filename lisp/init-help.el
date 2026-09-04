@@ -34,6 +34,8 @@
 ;;; faces, classes, and customs alongside functions and variables.
 (use-package apropos
   :ensure nil
+  ;; On-demand (M-x apropos*); autoloaded, so keep it off the startup path.
+  :defer t
   :custom
   (apropos-do-all t))
 
