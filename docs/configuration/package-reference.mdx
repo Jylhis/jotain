@@ -482,30 +482,36 @@ matches first.
 
 ### `emacs` *(built-in / Nix)*
 
-`tab-always-indent' = t is the stock Emacs default, restored here
-deliberately: TAB indents the line and does nothing else.
-`indent-for-tab-command's only call to `completion-at-point' is
-guarded by (eq tab-always-indent 'complete), so with t that branch is
-unreachable and TAB provably cannot summon a capf. Completion lives on
-`C-M-i' instead (`jotain-completion-key'). `tab-first-completion' is
-inert unless `tab-always-indent' is `complete', so it is irrelevant
-here and is never set.
+TAB indents and completes. `tab-always-indent' is `complete'
+(unless `jotain-completion-free-tab' is set, which restores the stock
+`t' -- indent only): TAB first indents the line, and once the line is
+already indented `indent-for-tab-command' runs `completion-at-point',
+opening the corfu popup. Inside the popup TAB is repointed to
+`corfu-insert' (see the corfu block below), so a second TAB accepts the
+candidate -- the same open-then-accept gesture as `C-M-i'
+(`jotain-completion-key'), which stays bound as a GUI-safe alternative.
+`tab-first-completion' stays at its default nil (complete right after
+indenting); set it to e.g. `word' if you want TAB not to complete
+immediately after typing a word.
 
 ### `corfu`
 
 In-buffer completion popup — the corfu equivalent of company.
 The popup appears on its own only in the modes listed by
 `jotain-completion-auto-modes' (default: programming modes), so prose
-stays quiet. `C-M-i' is the whole gesture, used twice: with no popup it
-runs the global `completion-at-point' and opens the popup; with the popup
-showing the same key inserts the selected candidate. RET and TAB are
-unbound in `corfu-map', so Enter always inserts a newline and TAB
-always indents, even while the popup is showing. The top candidate is
+stays quiet. Two keys open-and-accept, used twice each: with no popup
+they run `completion-at-point' and open the popup; with the popup
+showing they insert the selected candidate. TAB is one of them (via
+`tab-always-indent' `complete' to open, and `corfu-map's TAB rebound to
+`corfu-insert' to accept), and `C-M-i' (`jotain-completion-key') is the
+GUI-safe alternative. RET stays unbound in `corfu-map', so Enter always
+inserts a newline even while the popup is showing. The top candidate is
 always preselected (`corfu-preselect' `first'), so it is highlighted and
-ready the instant the popup opens; the second `C-M-i' commits it (the
-map's `<remap> <completion-at-point>' is repointed from `corfu-complete'
-to `corfu-insert', which finishes the completion and expands a snippet).
-`M-n'/`M-p' move, `C-g' dismisses.
+ready the instant the popup opens; the accept key commits it (the map's
+`<remap> <completion-at-point>' is repointed from `corfu-complete' to
+`corfu-insert', which finishes the completion and expands a snippet).
+`M-n'/`M-p' move, `C-g' dismisses. Set `jotain-completion-free-tab' to
+restore the stricter "TAB indents only" behaviour.
 
 ### `corfu-history` *(built-in / Nix)*
 
@@ -543,13 +549,15 @@ after point as you type, the way a modern editor does, drawing its
 candidate from the same `completion-at-point-functions' the corfu
 popup uses. Enabled only in `jotain-completion-auto-modes' buffers (so
 prose stays quiet), and only when `jotain-completion-inline-preview'
-is non-nil. Two things keep it inside this config's rules: it binds
-`C-i' — which is the TAB event — to accept the preview, so that entry
-is removed and TAB still only indents; and it never binds RET, so
-Enter stays a newline. Accept the whole preview with `M-RET', or just
-the common prefix with `M-i'. The preview is suppressed inside
-comments and strings, and its sort is paired with corfu's so the ghost
-text matches the popup's top row.
+is non-nil. RET is never bound by the mode, so Enter always stays a
+newline. TAB tracks `jotain-completion-free-tab': by default the mode's
+shipped `C-i' (which IS the TAB event) → `completion-preview-insert'
+binding is kept, so when only the ghost text shows (no popup yet) TAB
+accepts it -- the modern-editor feel; with the strict "TAB indents only"
+opt-in that binding is removed so TAB still only indents. `M-RET' also
+accepts the whole preview, and `M-i' just the common prefix. The preview
+is suppressed inside comments and strings, and its sort is paired with
+corfu's so the ghost text matches the popup's top row.
 
 ## `init-navigation.el` — dired, project, windows
 
@@ -871,10 +879,11 @@ Lightweight template/snippet engine from the corfu/cape author.
 Templates are read from `templates/*.eld' (keyed by major mode);
 `M-+' completes a snippet by name, `M-*' inserts one interactively,
 and once fields are active `M-}'/`M-{' or `C-M-n'/`C-M-p' move
-between them, with `M-RET' to finish. TAB is deliberately not
-involved: in this configuration TAB indents and nothing else. Set
-`jotain-completion-snippets' to nil to keep snippet names out of the
-completion popup; `M-+' and `M-*' still work.
+between them, with `M-RET' to finish. TAB is deliberately not a
+field-navigation key -- it indents and drives completion instead, so it
+never fights the snippet fields. Set `jotain-completion-snippets' to nil
+to keep snippet names out of the completion popup; `M-+' and `M-*' still
+work.
 
 ### `eglot-tempel`
 

@@ -210,6 +210,7 @@ These servers may evaluate project JavaScript configuration files."
   ;; eglot itself is not loaded at compile time.
   (declare-function eglot-ensure "eglot")
   (declare-function eglot--guess-contact "eglot")
+  (declare-function eglot-alternatives "eglot")
   (defvar eglot--managed-mode)
 
   (defun jotain-prog--eglot-guess-program ()
@@ -381,6 +382,20 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
   ;; project/devenv-provided qmlls still wins via the `--suffix' ordering.
   (add-to-list 'eglot-server-programs
                '((qml-ts-mode) . ("qmlls" "-E")))
+
+  ;; HTML (init-lang-web).  `.html' opens in `mhtml-ts-mode' (Emacs 31),
+  ;; which does NOT derive from `html-mode'/`mhtml-mode' — so eglot's own
+  ;; default HTML entry (keyed on those classic modes) never matches it, and
+  ;; HTML buffers get no language server.  Key the tree-sitter modes on the
+  ;; same server, using `eglot-alternatives' exactly as eglot's default does
+  ;; so either vscode's server or the older `html-languageserver' resolves.
+  ;; The binary comes from the project/host PATH, like the other servers; a
+  ;; project without it just falls back to the cape capfs.
+  (add-to-list 'eglot-server-programs
+               (cons '(mhtml-ts-mode html-ts-mode)
+                     (eglot-alternatives
+                      '(("vscode-html-language-server" "--stdio")
+                        ("html-languageserver" "--stdio")))))
 
   ;; C/C++/CUDA (init-lang-systems).  clangd serves all three — it treats a
   ;; `.cu' buffer as CUDA by extension.  Keyed on the tree-sitter modes with
