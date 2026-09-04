@@ -434,6 +434,23 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
   (add-to-list 'eglot-server-programs
                (cons '(likec4-mode) #'jotain-prog--likec4-server)))
 
+;;; @doc Wrap local stdio language servers in emacs-lsp-booster, which
+;;; converts server JSON into Elisp bytecode Emacs reads directly and
+;;; buffers I/O so a busy server can't block the UI. Function-valued
+;;; contacts (the `rass` resolvers above) are boosted at their result, so
+;;; multiplexed sessions are boosted too. The binary rides the distribution
+;;; wrapper PATH (nix/runtime-deps.nix), not a devenv: the mode resolves it
+;;; once at enable time, before any buffer-local exec-path exists. Only
+;;; local stdio servers are boosted — a server over TRAMP needs the binary
+;;; on the remote host, and network-port servers are never boosted.
+;;; Provided by Nix (not on MELPA); `:if' skips the block cleanly in the
+;;; MELPA-fallback launch where the library is absent.
+(use-package eglot-booster
+  :ensure nil ; Provided by Nix
+  :if (locate-library "eglot-booster")
+  :after eglot
+  :config (eglot-booster-mode))
+
 ;;; @doc Consult-driven workspace symbol search — C-M-. opens an
 ;;; orderless-filtered list of symbols across the LSP workspace.
 (use-package consult-eglot
@@ -468,7 +485,27 @@ connect time, so it sees the project's devenv env — not Jotain's own shell."
   ;; them at exit. Both run in :config, so a session that never loads
   ;; dape never touches the breakpoints file.
   (dape-breakpoint-load)
-  (add-hook 'kill-emacs-hook #'dape-breakpoint-save))
+  (add-hook 'kill-emacs-hook #'dape-breakpoint-save)
+
+  ;; Cargo-shaped Rust launch config.  dape's shipped `lldb-dap' config
+  ;; defaults to `:program "a.out"' / `:cwd "."', unusable on a cargo
+  ;; layout without hand-editing every time; this one compiles with cargo
+  ;; and prompts for the built binary under target/debug/.  `lldb-dap'
+  ;; comes from `lldb' on the project/host PATH — same convention as
+  ;; `dlv' for Go, not bundled on the wrapper.
+  (add-to-list 'dape-configs
+               `(cargo-lldb
+                 modes (rust-ts-mode rust-mode)
+                 ensure dape-ensure-command
+                 command "lldb-dap"
+                 command-cwd dape-command-cwd
+                 compile "cargo build"
+                 :type "lldb-dap"
+                 :request "launch"
+                 :cwd "."
+                 :program (lambda ()
+                            (read-file-name "Binary: " (dape-cwd) nil t
+                                            "target/debug/")))))
 
 ;;;; SonarLint (SonarCloud connected mode)
 
