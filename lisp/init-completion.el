@@ -86,12 +86,24 @@ Set to nil to restore corfu's default."
   :type 'boolean
   :group 'jotain-completion)
 
-(defcustom jotain-completion-free-tab t
+(defcustom jotain-completion-free-tab nil
   "When non-nil, TAB never completes -- it only indents.
-Two things are needed for that: `tab-always-indent' set to t (the stock
-Emacs default), and corfu's own TAB binding removed, since the popup's
-keymap would otherwise take precedence while it is open.  This option
-covers the second.  Set to nil to restore corfu's default."
+Non-nil is the stricter \"TAB indents, only\" mode: `tab-always-indent'
+is set to t (the stock Emacs default) and corfu's own TAB binding is
+removed, so the popup's keymap cannot make TAB complete while it is open.
+
+The default is nil: TAB both indents and completes, the way most editors
+behave.  Concretely, with nil:
+  - `tab-always-indent' is `complete', so TAB indents the line and, once
+    the line is already indented, runs `completion-at-point' (opening the
+    corfu popup);
+  - inside the popup TAB is bound to `corfu-insert', so a second TAB
+    accepts the highlighted candidate (and expands a snippet), mirroring
+    the `jotain-completion-key' gesture;
+  - when only the inline preview shows (no popup yet), TAB keeps
+    completion-preview's own `C-i' binding, so it accepts the ghost text.
+RET is governed separately by `jotain-completion-free-return' and stays a
+newline regardless of this option."
   :type 'boolean
   :group 'jotain-completion)
 
@@ -439,18 +451,21 @@ ignoring sentinel to just that process."
 
 ;;;; In-buffer completion
 
-;;; @doc `tab-always-indent' = t is the stock Emacs default, restored here
-;;; deliberately: TAB indents the line and does nothing else.
-;;; `indent-for-tab-command's only call to `completion-at-point' is
-;;; guarded by (eq tab-always-indent 'complete), so with t that branch is
-;;; unreachable and TAB provably cannot summon a capf. Completion lives on
-;;; `C-M-i' instead (`jotain-completion-key'). `tab-first-completion' is
-;;; inert unless `tab-always-indent' is `complete', so it is irrelevant
-;;; here and is never set.
+;;; @doc TAB indents and completes. `tab-always-indent' is `complete'
+;;; (unless `jotain-completion-free-tab' is set, which restores the stock
+;;; `t' -- indent only): TAB first indents the line, and once the line is
+;;; already indented `indent-for-tab-command' runs `completion-at-point',
+;;; opening the corfu popup. Inside the popup TAB is repointed to
+;;; `corfu-insert' (see the corfu block below), so a second TAB accepts the
+;;; candidate -- the same open-then-accept gesture as `C-M-i'
+;;; (`jotain-completion-key'), which stays bound as a GUI-safe alternative.
+;;; `tab-first-completion' stays at its default nil (complete right after
+;;; indenting); set it to e.g. `word' if you want TAB not to complete
+;;; immediately after typing a word.
 (use-package emacs
   :ensure nil
   :custom
-  (tab-always-indent t))
+  (tab-always-indent (if jotain-completion-free-tab t 'complete)))
 
 ;; The one completion gesture.  `completion-at-point' rather than the stock
 ;; `complete-symbol' is load-bearing: `corfu-map' contains a
@@ -465,16 +480,19 @@ ignoring sentinel to just that process."
 ;;; @doc In-buffer completion popup — the corfu equivalent of company.
 ;;; The popup appears on its own only in the modes listed by
 ;;; `jotain-completion-auto-modes' (default: programming modes), so prose
-;;; stays quiet. `C-M-i' is the whole gesture, used twice: with no popup it
-;;; runs the global `completion-at-point' and opens the popup; with the popup
-;;; showing the same key inserts the selected candidate. RET and TAB are
-;;; unbound in `corfu-map', so Enter always inserts a newline and TAB
-;;; always indents, even while the popup is showing. The top candidate is
+;;; stays quiet. Two keys open-and-accept, used twice each: with no popup
+;;; they run `completion-at-point' and open the popup; with the popup
+;;; showing they insert the selected candidate. TAB is one of them (via
+;;; `tab-always-indent' `complete' to open, and `corfu-map's TAB rebound to
+;;; `corfu-insert' to accept), and `C-M-i' (`jotain-completion-key') is the
+;;; GUI-safe alternative. RET stays unbound in `corfu-map', so Enter always
+;;; inserts a newline even while the popup is showing. The top candidate is
 ;;; always preselected (`corfu-preselect' `first'), so it is highlighted and
-;;; ready the instant the popup opens; the second `C-M-i' commits it (the
-;;; map's `<remap> <completion-at-point>' is repointed from `corfu-complete'
-;;; to `corfu-insert', which finishes the completion and expands a snippet).
-;;; `M-n'/`M-p' move, `C-g' dismisses.
+;;; ready the instant the popup opens; the accept key commits it (the map's
+;;; `<remap> <completion-at-point>' is repointed from `corfu-complete' to
+;;; `corfu-insert', which finishes the completion and expands a snippet).
+;;; `M-n'/`M-p' move, `C-g' dismisses. Set `jotain-completion-free-tab' to
+;;; restore the stricter "TAB indents only" behaviour.
 (use-package corfu
   :hook (after-init . global-corfu-mode)
   :preface
@@ -503,24 +521,39 @@ Setting `corfu-auto' from `corfu-mode-hook' would be too late, since
   ;; inline AND commits it on further input -- so typing past an open popup
   ;; can silently accept a candidate you never chose.  `nil' shows the
   ;; menu with no inline text and inserts nothing until an explicit
-  ;; `corfu-complete' (`C-M-i'), which is the "never accept unless I ask"
-  ;; behaviour the freed RET/TAB already aim for -- and it leaves the one
-  ;; inline surface to `completion-preview-mode's ghost text.
+  ;; `corfu-complete' -- the "never accept unless I ask" behaviour the freed
+  ;; RET and the explicit TAB/`C-M-i' accept gestures already aim for -- and
+  ;; it leaves the one inline surface to `completion-preview-mode's ghost text.
   (corfu-preview-current nil)
   ;; Always preselect (and highlight, via the `corfu-current' face) the top
-  ;; candidate, so `C-M-i' has something to insert and the user sees what it
-  ;; will insert.  Safe here because RET/TAB are freed -- only the explicit
-  ;; `C-M-i' commits, so `first' cannot cause the accidental accept it can
-  ;; when RET/TAB accept.
+  ;; candidate, so the accept key has something to insert and the user sees
+  ;; what it will insert.  Safe here because nothing commits on continued
+  ;; typing (`corfu-preview-current' nil) and RET is freed: only the explicit
+  ;; TAB / `C-M-i' commits, so `first' cannot cause the accidental accept it
+  ;; risks when a key accepts on its own.
   (corfu-preselect 'first)
   :config
   ;; REMOVE = t genuinely deletes the entry rather than binding it to nil,
   ;; so the key falls through to the buffer and global maps.
   (when jotain-completion-free-return
     (keymap-unset corfu-map "RET" t))
-  (when jotain-completion-free-tab
-    (keymap-unset corfu-map "TAB" t)
-    (keymap-unset corfu-map "<tab>" t))
+  ;; TAB inside the popup.  With the strict "TAB indents only" opt-in we
+  ;; delete corfu's TAB binding so it falls through to
+  ;; `indent-for-tab-command'.  Otherwise (the default) we repoint TAB from
+  ;; corfu's own `corfu-complete' (extends the common prefix, does not run a
+  ;; capf `:exit-function', so snippets would not expand) to `corfu-insert',
+  ;; the same "finish the completion" command the `<remap>' below uses -- so
+  ;; a second TAB accepts the highlighted candidate, matching `C-M-i'.  Both
+  ;; "TAB" and "<tab>" are covered so the GUI function key and the terminal
+  ;; ASCII event behave alike.  corfu binds its map through
+  ;; `overriding-terminal-local-map' while the popup is open, so this wins
+  ;; over both `indent-for-tab-command' and completion-preview's `C-i'.
+  (if jotain-completion-free-tab
+      (progn
+        (keymap-unset corfu-map "TAB" t)
+        (keymap-unset corfu-map "<tab>" t))
+    (keymap-set corfu-map "TAB" #'corfu-insert)
+    (keymap-set corfu-map "<tab>" #'corfu-insert))
   ;; `C-M-i' reaches the popup via corfu-map's `<remap> <completion-at-point>'.
   ;; corfu's default target, `corfu-complete', only extends the common prefix
   ;; (status `exact'), so it neither commits the highlighted candidate nor runs
@@ -592,13 +625,15 @@ comments and docstrings."
 ;;; candidate from the same `completion-at-point-functions' the corfu
 ;;; popup uses. Enabled only in `jotain-completion-auto-modes' buffers (so
 ;;; prose stays quiet), and only when `jotain-completion-inline-preview'
-;;; is non-nil. Two things keep it inside this config's rules: it binds
-;;; `C-i' — which is the TAB event — to accept the preview, so that entry
-;;; is removed and TAB still only indents; and it never binds RET, so
-;;; Enter stays a newline. Accept the whole preview with `M-RET', or just
-;;; the common prefix with `M-i'. The preview is suppressed inside
-;;; comments and strings, and its sort is paired with corfu's so the ghost
-;;; text matches the popup's top row.
+;;; is non-nil. RET is never bound by the mode, so Enter always stays a
+;;; newline. TAB tracks `jotain-completion-free-tab': by default the mode's
+;;; shipped `C-i' (which IS the TAB event) → `completion-preview-insert'
+;;; binding is kept, so when only the ghost text shows (no popup yet) TAB
+;;; accepts it -- the modern-editor feel; with the strict "TAB indents only"
+;;; opt-in that binding is removed so TAB still only indents. `M-RET' also
+;;; accepts the whole preview, and `M-i' just the common prefix. The preview
+;;; is suppressed inside comments and strings, and its sort is paired with
+;;; corfu's so the ghost text matches the popup's top row.
 (use-package completion-preview
   :ensure nil
   :when jotain-completion-inline-preview
@@ -627,10 +662,18 @@ text does not appear where symbol completion is meaningless."
   ;; (after load) rather than `:custom' so touching this deferred built-in
   ;; never forces it to load at startup.
   (setopt completion-preview-idle-delay jotain-completion-auto-delay)
-  ;; R2: `C-i' is the TAB event, and the active-mode map binds it to
-  ;; `completion-preview-insert'.  REMOVE = t drops it so TAB falls
-  ;; through to `indent-for-tab-command' while a preview shows.
-  (keymap-unset completion-preview-active-mode-map "C-i" t)
+  ;; `C-i' is the TAB event, and the active-mode map ships it bound to
+  ;; `completion-preview-insert'.  With the strict "TAB indents only" opt-in
+  ;; we drop it so TAB falls through to `indent-for-tab-command' while a
+  ;; preview shows; by default we keep it (rebinding explicitly so the
+  ;; behaviour does not silently depend on the shipped default), so TAB
+  ;; accepts the ghost text when no popup is open yet.  A visible popup wins
+  ;; regardless: corfu installs `corfu-map' via `overriding-terminal-local-map'
+  ;; and its own TAB → `corfu-insert' takes precedence over this minor-mode map.
+  (if jotain-completion-free-tab
+      (keymap-unset completion-preview-active-mode-map "C-i" t)
+    (keymap-set completion-preview-active-mode-map "C-i"
+                #'completion-preview-insert))
   ;; A non-TAB, non-RET accept gesture for the whole candidate; `M-i'
   ;; (common-prefix complete) is left as upstream ships it.
   (keymap-set completion-preview-active-mode-map "M-RET"

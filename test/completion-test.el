@@ -205,7 +205,7 @@ This is why `init-snippets.el' wraps its eglot merge."
   (should (equal jotain-completion-auto-prefix 3))
   (should (equal jotain-completion-key "C-M-i"))
   (should (eq jotain-completion-free-return t))
-  (should (eq jotain-completion-free-tab t))
+  (should (eq jotain-completion-free-tab nil))
   (should (eq jotain-completion-fallbacks t))
   (should (eq jotain-completion-snippets t))
   (should (eq jotain-completion-eglot-nonexclusive t))
@@ -219,9 +219,13 @@ corfu's own default is `insert', which commits the selected candidate on
 further input -- exactly the accidental-accept this config avoids."
   (should (eq corfu-preview-current nil)))
 
-(ert-deftest completion-test-tab-indents-only ()
-  "TAB is on the stock default, so `indent-for-tab-command' cannot complete."
-  (should (eq tab-always-indent t)))
+(ert-deftest completion-test-tab-indents-and-completes ()
+  "TAB indents and completes: `tab-always-indent' is `complete'.
+With the default `jotain-completion-free-tab' nil, `indent-for-tab-command'
+indents the line and then runs `completion-at-point' once it is already
+indented.  Setting the knob restores the stock `t' (indent only)."
+  (should (eq jotain-completion-free-tab nil))
+  (should (eq tab-always-indent 'complete)))
 
 (ert-deftest completion-test-auto-popup-is-opt-in-per-mode ()
   "Auto-popup is off globally and opted into per mode hook, buffer-locally."
@@ -235,24 +239,28 @@ further input -- exactly the accidental-accept this config avoids."
   ;; The opt-in never touches the global value.
   (should (eq (default-value 'corfu-auto) nil)))
 
-(ert-deftest completion-test-corfu-map-frees-return-and-tab ()
-  "RET and TAB are removed from `corfu-map', and navigation still works."
+(ert-deftest completion-test-corfu-map-frees-return-and-accepts-on-tab ()
+  "RET is removed from `corfu-map'; TAB accepts the selected candidate.
+RET stays freed (newline only) via `jotain-completion-free-return'.  With
+`jotain-completion-free-tab' nil, TAB and `<tab>' are repointed to
+`corfu-insert' so a second TAB commits the highlighted candidate (and runs
+its `:exit-function', expanding snippets), the same command the
+`<remap> <completion-at-point>' below uses.  Navigation still works."
   (should-not (lookup-key corfu-map (kbd "RET")))
-  (should-not (lookup-key corfu-map (kbd "TAB")))
-  (should-not (lookup-key corfu-map [tab]))
+  (should (eq (lookup-key corfu-map (kbd "TAB")) #'corfu-insert))
+  (should (eq (lookup-key corfu-map [tab]) #'corfu-insert))
   (should (eq (lookup-key corfu-map (kbd "M-n")) #'corfu-next))
   (should (eq (lookup-key corfu-map (kbd "M-p")) #'corfu-previous)))
 
-(ert-deftest completion-test-inline-preview-tab-is-freed ()
-  "The inline preview never lets TAB (or RET) accept a candidate.
+(ert-deftest completion-test-inline-preview-tab-accepts-ghost-text ()
+  "TAB accepts the inline preview; RET is never bound, so Enter stays a newline.
 `completion-preview-active-mode-map' ships `C-i' -> `completion-preview-insert',
-and `C-i' IS the TAB event, so leaving it bound would let TAB accept the
-preview -- violating the TAB-indents-only rule.  This config removes it and
-puts the whole-candidate accept on `M-RET' instead; RET is never bound by
-the mode, so Enter stays a newline."
-  (should-not (lookup-key completion-preview-active-mode-map (kbd "C-i")))
-  (should-not (lookup-key completion-preview-active-mode-map (kbd "TAB")))
-  (should-not (lookup-key completion-preview-active-mode-map [tab]))
+and `C-i' IS the TAB event.  With `jotain-completion-free-tab' nil that
+binding is kept (set explicitly), so when only the ghost text shows TAB
+accepts it; the whole-candidate accept is also on `M-RET'.  RET is never
+bound by the mode, so Enter stays a newline regardless."
+  (should (eq (lookup-key completion-preview-active-mode-map (kbd "C-i"))
+              #'completion-preview-insert))
   (should-not (lookup-key completion-preview-active-mode-map (kbd "RET")))
   (should-not (lookup-key completion-preview-active-mode-map [return]))
   (should (eq (lookup-key completion-preview-active-mode-map (kbd "M-RET"))

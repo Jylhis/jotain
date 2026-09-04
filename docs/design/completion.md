@@ -21,7 +21,7 @@ These are the owner's stated requirements. They are inputs, not conclusions.
 | # | Requirement |
 | --- | --- |
 | R1 | Completion pops up **automatically in code**, and **only on request in prose** (text/org/markdown/commit buffers). |
-| R2 | **TAB indents. Only.** TAB never triggers completion. |
+| R2 | **TAB indents. Only.** TAB never triggers completion. *(Superseded 2026-09-04 — TAB now indents **and** completes; see §7. Restore with `jotain-completion-free-tab`.)* |
 | R3 | A **separate, explicit key** drives the snippet + completion chain. |
 | R4 | **RET never accepts a completion.** Enter inserts a newline, always. |
 | R5 | Sources that matter: **eglot (LSP)**, **dabbrev/file**, **tempel snippets**, **history/abbrev/spelling**. AI inline suggestions are **surveyed only** — no adoption decision. |
@@ -497,3 +497,53 @@ once auto-insert is gone), a buffer-local `orderless-literal-only`/`basic` style
 for the corfu popup (a real predictability lever, but it changes matching
 semantics and is orthogonal to "annoying popup" — deferred as its own decision),
 and cosmetic width-pinning. See research §6.
+
+---
+
+## 7. Addendum — TAB drives completion (2026-09-04)
+
+**R2 is superseded on the owner's instruction.** The original R2 ("TAB indents.
+Only.") put the whole completion gesture on `C-M-i`. In practice `C-M-i` is
+unreliable: it is the same event as `M-TAB` / `ESC TAB` (§2.3 already recorded
+this), which window managers grab for Alt+Tab and which a TTY cannot tell apart —
+so on the affected setups the chain key never reached Emacs and completion
+"did not work." The owner authorised using TAB for both indent and completion.
+This addendum records that reversal; it does not revisit the trigger model (§2.1),
+the freed **RET** (R4 — see below), the capf chain (§2.4), or the 2026-08 UX round
+(§6), all of which stand. Validated in `test/completion-test.el`.
+
+**7.1 What R2 becomes.** `tab-always-indent` moves from `t` back to `complete`
+(the value §2.2 had reverted): TAB first indents the line, and once the line is
+already indented `indent-for-tab-command` runs `completion-at-point`, opening the
+popup. This is the standard Emacs idiom, not a fight with core.
+
+**7.2 TAB accepts inside the popup.** With the popup open, `corfu-map`'s `TAB` and
+`<tab>` are repointed from corfu's default `corfu-complete` to **`corfu-insert`**
+— the same "finish the completion, run the `:exit-function`, expand a snippet"
+command the `<remap> <completion-at-point>` already used for `C-M-i` (§2.3). So
+TAB is now the open-then-accept gesture, used twice exactly as `C-M-i` was, and
+`C-M-i` stays bound as the GUI-safe alternative. corfu installs `corfu-map`
+through `overriding-terminal-local-map` while the popup is shown, so this TAB
+wins over both `indent-for-tab-command` and completion-preview's `C-i`.
+
+**7.3 TAB accepts the inline ghost text.** `completion-preview-active-mode-map`
+ships `C-i` (the TAB event) → `completion-preview-insert`. §6.4 removed it to
+protect R2; that removal is reversed here (rebound explicitly, not left implicit),
+so when only the preview shows — before the popup opens — TAB accepts the ghost
+text. `M-RET` and `M-i` stay as §6.4 left them.
+
+**7.4 RET is untouched — R4 stands.** RET remains newline-only (`corfu-map` RET
+unbound, the preview map binds no RET). The owner kept R4 explicitly. Only TAB and
+`C-M-i` accept.
+
+**7.5 One knob, one meaning, `nil` = stricter core.** `jotain-completion-free-tab`
+flips default `t` → `nil`. Its meaning is unchanged ("non-nil ⇒ TAB never
+completes"); only the default moved, so setting it restores the whole §2.2 /
+2026-08 "TAB indents only" behaviour — `tab-always-indent` `t`, corfu's TAB
+deleted, the preview's `C-i` deleted — in one place. The knob remains load-time
+(§3.3): changing it needs a restart.
+
+**7.6 Prose.** `tab-always-indent complete` is global, so TAB also completes in
+prose buffers — but only as a *manual* trigger (you pressed TAB, after the line is
+indented), which §2.5 already licenses alongside `C-M-i`. R1's rule is about the
+*auto*-popup, which stays prog-only; nothing here makes prose pop up on its own.
