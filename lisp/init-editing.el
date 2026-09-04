@@ -142,6 +142,8 @@
 ;;; syntax that requires escaping every backslash twice.
 (use-package re-builder
   :ensure nil
+  ;; On-demand (M-x re-builder); autoloaded, so keep it off the startup path.
+  :defer t
   :custom (reb-re-syntax 'string))
 
 ;;; @doc Counts command invocations to disk; `M-x keyfreq-show` ranks
